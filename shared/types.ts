@@ -1,5 +1,5 @@
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type Phase = 'idle' | 'active' | 'paused' | 'cooldown';
+export type Phase = 'idle' | 'active' | 'paused' | 'settling' | 'cooldown';
 export type Outcome = 'caught' | 'escaped' | 'skipped' | 'ended' | 'overturned';
 export interface Settings {
   difficulty: Difficulty;
@@ -63,6 +63,7 @@ export interface GameView {
     duration: number;
     remaining: number;
     endsAt: number | null;
+    settleUntil: number | null;
     epoch: number;
     target?: string;
     forbiddenClues?: string[];
@@ -103,6 +104,12 @@ export interface SessionInfo {
   user?: { name: string; mode: 'demo' | 'twitch' };
   csrf?: string;
 }
+export interface TranscriptWord {
+  text: string;
+  confidence: number;
+  capturedAt: number;
+  endedAt: number;
+}
 export interface Transcript {
   roundId: string;
   epoch: number;
@@ -111,4 +118,5 @@ export interface Transcript {
   capturedAt: number;
   confidence: number;
   id: string;
+  words?: TranscriptWord[];
 }

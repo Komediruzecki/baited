@@ -2,6 +2,12 @@
 
 Start with the [quick rules](quick-rules.md). Single-word rounds during an ordinary stream remain the default. Guest/co-streamer missions are future work.
 
+## Microphone readiness and the deadline
+
+Real Twitch rounds require connected Twitch, a configured speech service and an armed microphone belonging to the current studio session. Readiness is renewed while the studio owns its microphone; it expires if the session stops renewing. Disabling/disconnecting the microphone pauses live play. Local demo controls remain a separate simulated path.
+
+When a live round reaches zero while the microphone is listening, the server allows at most 1.5 seconds for a provider final covering speech completed before the deadline. It accepts no new speaking time during that settlement. Word-level confidence and capture timing determine whether a target counts. This policy needs real-provider latency/accuracy acceptance; fixture timing is not a microphone benchmark.
+
 ## Forbidden clues
 
 | Difficulty | Forbidden clues per card |

@@ -33,11 +33,12 @@ export const defaults: Settings = {
   cooldown: 10,
   auto: false,
   skipVotes: 3,
-  sound: true,
+  sound: false,
   mission: 'single',
   missionDuration: 180,
   callBait: false,
 };
+export const SPEECH_SETTLE_MS = 1500;
 export const tokens = (s: string): string[] =>
   s
     .normalize('NFKC')
@@ -66,6 +67,7 @@ interface Round {
   startedAt: number;
   segmentAt: number;
   endsAt: number;
+  settleUntil: number | null;
   remaining: number;
   duration: number;
   epoch: number;
@@ -118,6 +120,7 @@ export class Game {
   private chatIds = new Set<string>();
   private skipUsed = false;
   onChange: () => void = () => {};
+  canRun: () => boolean = () => true;
   constructor(
     public data: SavedGame,
     private clock = Date.now,
@@ -143,7 +146,7 @@ export class Game {
   }
   start() {
     this.tick();
-    if (this.phase === 'active' || this.phase === 'paused')
+    if (['active', 'paused', 'settling'].includes(this.phase))
       throw new Error('Finish the current round first.');
     if (this.phase === 'cooldown' && this.nextAt !== null && this.clock() < this.nextAt)
       throw new Error('Let the cooldown finish first.');
@@ -178,6 +181,7 @@ export class Game {
       startedAt: now,
       segmentAt: now,
       endsAt: now + duration,
+      settleUntil: null,
       remaining: duration,
       duration,
       epoch: 1,
@@ -202,13 +206,17 @@ export class Game {
     this.changed();
   }
   pause() {
+    if (!this.pauseIfActive()) throw new Error('No live round to pause.');
+  }
+  pauseIfActive() {
     this.tick();
-    if (this.phase !== 'active' || !this.round) throw new Error('No live round to pause.');
+    if (this.phase !== 'active' || !this.round) return false;
     this.round.remaining = Math.max(0, this.round.endsAt - this.clock());
     if (this.mission?.status === 'active') this.mission.remaining = this.round.remaining;
     this.round.epoch++;
     this.phase = 'paused';
     this.changed();
+    return true;
   }
   resume() {
     if (this.phase !== 'paused' || !this.round) throw new Error('No paused round.');
@@ -220,10 +228,13 @@ export class Game {
     this.changed();
   }
   end(outcome: Outcome) {
+    if (!this.endIfRunning(outcome)) throw new Error('No round is running.');
+  }
+  endIfRunning(outcome: Outcome) {
     this.tick();
-    if (!this.round || !['active', 'paused'].includes(this.phase))
-      throw new Error('No round is running.');
+    if (!this.round || !['active', 'paused', 'settling'].includes(this.phase)) return false;
     this.finish(outcome);
+    return true;
   }
   private finish(outcome: Outcome, reason?: Result['reason']) {
     if (!this.round) return;
@@ -326,30 +337,34 @@ export class Game {
       this.review = null;
       this.changed();
     }
-    if (
-      this.mission?.status === 'active' &&
-      this.phase !== 'paused' &&
-      now >= this.mission.endsAt
-    ) {
-      if (this.phase === 'active') this.finish('escaped', 'timer');
-      else {
-        this.mission.status = 'failed';
-        this.mission.remaining = 0;
-        this.phase = this.data.settings.auto ? 'cooldown' : 'idle';
-        this.nextAt = this.data.settings.auto ? now + this.data.settings.cooldown * 1000 : null;
-        this.changed();
-      }
+    if (this.phase === 'settling' && this.round) {
+      if (now >= this.round.settleUntil!) this.finish('escaped', 'timer');
       return;
     }
-    if (this.phase === 'active' && this.round && now >= this.round.endsAt)
-      this.finish('escaped', 'timer');
-    else if (this.phase === 'cooldown' && this.nextAt !== null && now >= this.nextAt) {
+    if (this.phase === 'active' && this.round && now >= this.round.endsAt) {
+      if (this.data.mode === 'twitch' && this.mic === 'listening' &&
+        now < this.round.endsAt + SPEECH_SETTLE_MS) {
+        this.round.settleUntil = this.round.endsAt + SPEECH_SETTLE_MS;
+        this.phase = 'settling';
+        this.changed();
+      } else this.finish('escaped', 'timer');
+      return;
+    }
+    if (this.mission?.status === 'active' && this.phase !== 'paused' && now >= this.mission.endsAt) {
+      this.mission.status = 'failed';
+      this.mission.remaining = 0;
+      this.phase = this.data.settings.auto ? 'cooldown' : 'idle';
+      this.nextAt = this.data.settings.auto ? now + this.data.settings.cooldown * 1000 : null;
+      this.changed();
+      return;
+    }
+    if (this.phase === 'cooldown' && this.nextAt !== null && now >= this.nextAt) {
       this.phase = 'idle';
       this.nextAt = null;
       this.changed();
       if (
         (this.data.settings.auto || this.mission?.status === 'active') &&
-        (this.data.mode === 'demo' || this.connection.status === 'connected')
+        (this.data.mode === 'demo' || (this.connection.status === 'connected' && this.canRun()))
       )
         this.begin();
     }
@@ -452,21 +467,23 @@ export class Game {
     const r = this.round,
       now = this.clock();
     if (
-      this.phase !== 'active' ||
-      !r ||
-      t.roundId !== r.id ||
-      t.epoch !== r.epoch ||
-      !t.final ||
-      t.confidence < 0.8 ||
-      t.capturedAt < r.segmentAt ||
-      t.capturedAt > now + 1000 ||
-      now - t.capturedAt > 5000 ||
-      r.seen.has(t.id)
-    )
-      return false;
+      !['active', 'settling'].includes(this.phase) ||
+      !r || t.roundId !== r.id || t.epoch !== r.epoch || !t.final || r.seen.has(t.id)
+    ) return false;
     if (r.seen.size > 2000) r.seen.clear();
     r.seen.add(t.id);
-    if (!matches(t.text, r.word)) return false;
+    // Provider finals carry individual words. An unrelated uncertain word must neither
+    // reject a clear target nor let an uncertain target inherit the sentence average.
+    const candidates = t.words ?? [{
+      text: t.text, confidence: t.confidence, capturedAt: t.capturedAt, endedAt: t.capturedAt,
+    }];
+    const matched = candidates.some((word) =>
+      matches(word.text, r.word) && Number.isFinite(word.confidence) && word.confidence >= 0.8 &&
+      Number.isFinite(word.capturedAt) && Number.isFinite(word.endedAt) &&
+      word.capturedAt >= r.segmentAt && word.endedAt >= word.capturedAt &&
+      word.endedAt < r.endsAt && word.endedAt <= now + 1000 && now - word.endedAt <= 5000,
+    );
+    if (!matched) return false;
     this.finish('caught');
     return true;
   }
@@ -519,13 +536,14 @@ export class Game {
                 : this.phase === 'paused'
                   ? r.remaining
                   : 0,
-            endsAt: this.phase === 'active' ? r.endsAt : null,
+            endsAt: ['active', 'settling'].includes(this.phase) ? r.endsAt : null,
+            settleUntil: this.phase === 'settling' ? r.settleUntil : null,
             epoch: r.epoch,
             difficulty: r.difficulty,
             guessEnabled: r.guessEnabled,
             guessUsed: r.guessUsed,
             wrongGuessBonus: r.wrongGuessBonus,
-            ...(role === 'viewer' && ['active', 'paused'].includes(this.phase)
+            ...(role === 'viewer' && ['active', 'paused', 'settling'].includes(this.phase)
               ? { target: r.word, forbiddenClues: [...r.clues] }
               : {}),
           }

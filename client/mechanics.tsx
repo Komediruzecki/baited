@@ -28,7 +28,7 @@ export function MissionStatus({
   const remaining =
     mission.endsAt !== null ? Math.max(0, mission.endsAt - now - offset) : mission.remaining;
   const label = {
-    active: game.phase === 'paused' ? 'MISSION PAUSED' : 'THREE-WORD MISSION',
+    active: game.phase === 'settling' ? 'CHECKING FINAL WORDS' : game.phase === 'paused' ? 'MISSION PAUSED' : 'THREE-WORD MISSION',
     complete: 'MISSION COMPLETE',
     failed: 'MISSION TIME UP',
     escaped: 'BAIT CALLED',

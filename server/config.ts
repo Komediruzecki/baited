@@ -1,6 +1,16 @@
 import { resolve } from 'node:path';
+import { isIP } from 'node:net';
 import { z } from 'zod';
 export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
+  // Trust only named proxy addresses/subnets, never arbitrary forwarded headers or hop counts.
+  const trustedProxies = (env.TRUSTED_PROXIES || '').split(',').map((s) => s.trim()).filter(Boolean);
+  for (const proxy of trustedProxies) {
+    const [address, prefix, extra] = proxy.split('/');
+    const version = isIP(address);
+    if (!version || extra !== undefined || (prefix !== undefined &&
+      (!/^\d+$/.test(prefix) || Number(prefix) < 1 || Number(prefix) > (version === 4 ? 32 : 128))))
+      throw new Error('TRUSTED_PROXIES must contain explicit IP addresses or non-global CIDR ranges.');
+  }
   const production = env.NODE_ENV === 'production';
   const origin = (env.PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, '');
   const url = new URL(origin);
@@ -21,6 +31,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     .parse(env.PORT ?? 3000);
   return {
     production,
+    trustedProxies,
     origin,
     port,
     host: env.HOST || '127.0.0.1',

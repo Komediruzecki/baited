@@ -7,11 +7,13 @@ export class Microphone {
   private cancelled = false;
   private generation = 0;
   private streaming = false;
+  private suspended = false;
   constructor(
     private onStatus: (status: string) => void,
     private onLevel: (level: number) => void,
     private onError: (error: string) => void,
   ) {}
+  get enabled() { return !!this.stream && !this.cancelled; }
   async enable() {
     this.cancelled = false;
     try {
@@ -48,8 +50,14 @@ export class Microphone {
         e: MessageEvent<{ buffer: ArrayBuffer; generation: number }>,
       ) => {
         if (!this.streaming || e.data.generation !== this.generation) return;
-        if (this.socket?.readyState === WebSocket.OPEN && this.socket.bufferedAmount < 64000)
+        if (this.socket?.readyState === WebSocket.OPEN) {
+          if (this.socket.bufferedAmount >= 64000) {
+            this.onError('Audio could not keep up with the connection. Enable the microphone again to resume.');
+            this.stop();
+            return;
+          }
           this.socket.send(e.data.buffer);
+        }
         const values = new Int16Array(e.data.buffer);
         let energy = 0;
         for (const v of values) energy += (v / 32768) ** 2;
@@ -58,6 +66,7 @@ export class Microphone {
       stream.getTracks().forEach(
         (t) =>
           (t.onended = () => {
+            if (this.cancelled || this.stream !== stream) return;
             this.onError('Microphone disconnected. Enable it again.');
             this.stop();
           }),
@@ -65,6 +74,7 @@ export class Microphone {
       this.onStatus('armed');
       return true;
     } catch (e) {
+      if (this.cancelled) return false;
       this.stop();
       this.onError(
         e instanceof DOMException && e.name === 'NotAllowedError'
@@ -74,13 +84,14 @@ export class Microphone {
       return false;
     }
   }
-  connect(round: string, epoch: number, csrf: string) {
+  connect(round: string, epoch: number, csrf: string, leaseId: string) {
     this.disconnect();
     if (!this.stream || this.cancelled) return;
+    this.suspended = false;
     this.onStatus('connecting');
     const url = new URL('/api/speech', location.href);
     url.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    url.search = new URLSearchParams({ round, epoch: String(epoch), csrf }).toString();
+    url.search = new URLSearchParams({ round, epoch: String(epoch), csrf, leaseId }).toString();
     const socket = new WebSocket(url);
     this.socket = socket;
     let failed = false;
@@ -89,8 +100,8 @@ export class Microphone {
         const message = JSON.parse(e.data);
         if (this.socket !== socket) return;
         if (message.type === 'status') {
-          this.onStatus(message.status);
-          if (message.status === 'listening') {
+          if (!this.suspended) this.onStatus(message.status);
+          if (message.status === 'listening' && !this.suspended) {
             this.streaming = true;
             this.worklet?.port.postMessage({ enabled: true, generation: this.generation });
           }
@@ -125,6 +136,14 @@ export class Microphone {
         this.stop();
       }
     };
+  }
+  /** Keep the provider socket alive for final results, but stop sending audio. */
+  suspend() {
+    this.suspended = true;
+    this.streaming = false;
+    this.worklet?.port.postMessage({ enabled: false, generation: ++this.generation });
+    this.onLevel(0);
+    if (this.stream) this.onStatus('settling');
   }
   disconnect() {
     this.streaming = false;

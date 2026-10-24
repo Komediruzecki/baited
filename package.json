@@ -12,6 +12,7 @@
     "dev": "tsx watch server/index.ts",
     "build": "tsc --noEmit && vite build && tsup server/index.ts --format esm --platform node --target node22 --out-dir dist/server --external vite",
     "start": "node --env-file-if-exists=.env dist/server/index.js --static",
+    "preview:local": "node scripts/preview-local.mjs",
     "test": "tsx --test tests/*.test.ts",
     "check": "tsc --noEmit",
     "licenses": "node scripts/licenses.mjs"

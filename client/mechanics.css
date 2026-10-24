@@ -296,9 +296,13 @@
   grid-column: 2/-1;
   display: flex;
   gap: 5px;
-  font-size: 10px !important;
+  min-width: 0;
+  padding-bottom: 10px;
+  font-size: 11px !important;
   color: #e1c38f;
 }
+.result-award > svg { flex: none; margin-top: 2px; }
+.result-award > span { min-width: 0; overflow-wrap: anywhere; }
 .leader-credit {
   text-align: right;
   font-size: 11px !important;
@@ -457,7 +461,7 @@
     font-size: 18px;
   }
   .result-award {
-    font-size: 9px !important;
+    font-size: 11px !important;
   }
   .leader-credit {
     font-size: 10px !important;

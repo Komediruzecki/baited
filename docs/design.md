@@ -1,5 +1,17 @@
 # Design and copy
 
+## Local preview changes, 25 October 2026
+
+The preview retains the supplied purple, yellow and charcoal direction. The teaching card now uses the supplied BAIT logo instead of a typed imitation. Original inline SVG drawings of the banana, penguin and microwave replace platform-dependent emoji. The mobile example stacks the card, conversation and result so it can be followed at narrow widths.
+
+Russo One is bundled for short headings, target words and timers. Its angular shape fits the existing identity; it is not claimed to be the exact typeface in the supplied logo. The font comes from the [official Google Fonts repository](https://github.com/google/fonts/tree/main/ofl/russoone) under the SIL Open Font License. Its license is bundled in `public/fonts/RussoOne-OFL.txt` and listed in `THIRD_PARTY_NOTICES.md`.
+
+The studio uses a branded card back while the word is hidden and places readiness information near the start controls. Audio requires an explicit choice for each visit. The brief end-of-round speech settlement state has visible feedback in the studio, viewer room and overlay.
+
+Design reference review used the Holo Cases and Cartridge Shelf examples in the local animated-lessons design package for object focus, responsive layout and consistent type and shape. No reference artwork or code was copied. The supplied logo still needs the entrant's rights confirmation before publication. Browser verification of these changes is recorded separately in [validation.md](validation.md).
+
+The sections below describe the supplied design foundation.
+
 ## Direction
 
 BAIT uses the visual cues of a Twitch workspace: charcoal surfaces, purple actions, a compact sidebar, clear connection status and readable chat-like content. The supplied redesign and icon references guided the direction. Their artwork and icons are not bundled. The project owner supplied the BAIT logo. Its original PNG is retained. The UI uses an imagegen background-extraction derivative with true alpha transparency; CSS crops the empty margins for a header wordmark and the first letter for a compact sidebar. An original SVG streamer illustration remains in the landing example.

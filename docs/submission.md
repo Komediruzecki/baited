@@ -1,5 +1,9 @@
 # BAIT: Make the streamer say it.
 
+> Imported project narrative, retained for context. The current submission draft and unresolved requirements are in [devpost-submission.md](../devpost-submission.md). This narrative is not evidence that the current build has passed a real Twitch, microphone and OBS test or been submitted to Devpost.
+
+Current repository: [Komediruzecki/bait](https://github.com/Komediruzecki/bait), private. The archive-time availability statements below describe the supplied package; use the current draft for repository access and remaining live/video links.
+
 ## Short description
 
 Chat knows the word. The streamer doesn’t. Viewers drop hints in Twitch chat, trying to make the streamer say it. When they do, microphone recognition triggers a win for the whole chat.

@@ -365,7 +365,8 @@ test('speech adapter accepts final timed words and rejects interim, stale and im
   const t = providerTranscript(speechResult(), binding, 101000);
   assert.equal(t?.text, 'Penguin!');
   assert.equal(t?.epoch, 2);
-  assert.equal(t?.confidence, 0.96);
+  assert.equal(t?.confidence, 0.98);
+  assert.equal(t?.words?.[0].confidence, 0.96);
   assert.equal(providerTranscript(speechResult({ is_final: false }), binding, 101000), null);
   assert.equal(providerTranscript(speechResult({ duration: 10 }), binding, 101000), null);
   assert.equal(providerTranscript(speechResult(), { ...binding, audioSeconds: 10 }, 110000), null);

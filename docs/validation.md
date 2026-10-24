@@ -1,8 +1,50 @@
 # Validation record
 
-Test date: October 24, 2026. Host: Windows, Node 24.22.1, pnpm 10.7.1.
+## October 25 local improvement pass
 
-## Automated checks
+The imported source was retained separately; this work is in `/home/maff/foss/worktrees/twigame/bait-preview` on `feat/bait-preview`. The imported baseline is `bad578ddcc0428ecdb8582f49d9f3933bab22f72`, preserved on private `main` and tag `paolo-original-2026-10-24`. The results here cover the later local fixes and design pass; the October 24 record below remains historical.
+
+### Current automated and container results
+
+| Check | Observed result |
+| --- | --- |
+| `pnpm test` | **106 passed**, zero failed, skipped or cancelled. Includes ten client tests and 26 new backend regression tests. |
+| `pnpm build` | TypeScript check, Vite client build and Node server bundle all passed. |
+| Production Docker build | Image built successfully. |
+| Isolated production container | Ran as UID 1000 with no network and a read-only root filesystem. Health, static page and bundled font returned 200. Local demo was disabled; no Twitch or speech providers were configured. Process exited gracefully. |
+| Documentation | Local links resolved across the current Markdown packet; `git diff --check` passed. |
+| GitHub Actions | A read-only Node 24 test/build workflow runs on pushes and pull requests. Check the [live workflow result](https://github.com/Komediruzecki/bait/actions) for the exact remote revision; local results do not establish CI status. |
+
+The added regression coverage addresses matching-word confidence, pre-deadline final-result settlement, microphone lease ownership/renewal, absent or stalled capture, explicit trusted-proxy identity, late OAuth refresh after revocation and stale authorization responses after a newer login. Provider behavior is exercised through local fixtures, not live credentials.
+
+The container smoke harness initially used a fetch Host override and received 421 from the application's host guard. It was corrected to send an explicit Host through Node's HTTP client; the production smoke check then passed. This was a harness correction, not removal of the guard.
+
+### Current browser checks
+
+The compiled local preview runs at `http://127.0.0.1:3318` with simulated chat and speech. Checked desktop and narrow mobile layouts, including a 390-pixel studio:
+
+- The landing example's original SVG illustrations and supplied BAIT logo render. Essential mobile labels are 11 pixels; the long MICROWAVE target renders at 25 pixels without overflow.
+- Reduced-motion preference immediately reveals the final illustrated example state.
+- An intentionally failed session response showed retry UI; a successful retry restored the landing page without requiring a reload.
+- Studio pause/resume, a simulated win and a long award name rendered without horizontal overflow.
+
+The final fresh multi-role check passed using simulated input:
+
+- During an active DISCO round, only the viewer displayed the target; studio and overlay kept it hidden.
+- Resuming a paused round, adding a clean hint from `a_very_long_viewer_name_2`, and submitting “That was disco.” produced one synchronized win in studio, viewer and overlay.
+- Selecting that hint awarded the viewer. Reversing the result removed the win, streak and award across all three views.
+- The mobile studio stayed within 390 pixels with the long award name. The mobile viewer document was 390 pixels wide with a 350-pixel main region. A scoped browser capture corrected screenshot emulation scaling; the layout measurement used CSS pixels.
+- Turning sound on and reloading returned sound to off, preserving explicit per-visit consent. This checks UI state, not subjective speaker or microphone quality.
+
+Local receipts are retained in the registered run `/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/2c3339a32ba84d73ad991f9ce45337fc`: `tests.txt`, `build.txt`, `docker-build.txt` and `container-smoke.txt` under `scratch/raw-logs/`, plus browser images under `evidence/`. The test/build/container log outcomes were read back after completion; the final container smoke rerun also exited successfully. These paths are local evidence, not judge-facing URLs.
+
+No real Twitch consent, physical microphone/Deepgram round, actual OBS capture, public hosting or Devpost entry has been performed by this pass. The owner separately authorized the private GitHub repository and checkpoint pushes; the final pushed revision is recorded once verified. The [local preview guide](local-preview.md) describes the isolated simulated runtime. The [deployment runbook](deployment-runbook.md) prepares the later release without deploying it.
+
+## Imported October 24 record
+
+The following is the source package's historical record. Test date: October 24, 2026. Host: Windows, Node 24.22.1, pnpm 10.7.1. Its original claims are retained for provenance; the October 25 verification is recorded separately.
+
+### Automated checks
 
 | Check               | Observed result                                                                                                                                                                                    |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -15,7 +57,7 @@ Test date: October 24, 2026. Host: Windows, Node 24.22.1, pnpm 10.7.1.
 
 The audit initially found an advisory affecting the original validator version. It was updated to Zod 4.6.7; the resulting suite, type check and build passed. The lockfile records installed versions. An audit is a point-in-time registry result, not a security certification.
 
-## Initial browser rehearsal, before the redesign
+### Initial browser rehearsal, before the redesign
 
 Used the compiled application through the in-app browser, with a narrow 486-pixel studio view and a 1280-pixel desktop view. The viewer and OBS pages were opened in separate tabs against the same live Node instance.
 
@@ -36,7 +78,7 @@ Observed:
 
 Separate screenshots show the narrow studio, desktop studio, viewer target and OBS celebration. All depict local rehearsal. No screenshot is evidence of a live Twitch broadcast or physical microphone transcription.
 
-## Redesign verification
+### Redesign verification
 
 The purple and charcoal redesign was checked in the in-app browser at a 1280-pixel desktop viewport, a 486-pixel studio viewport, and 390-pixel embedded landing/studio viewports. The screenshots in `images/` show the current interface. The 390-pixel check used a temporary same-origin preview page; that page is excluded from the source package.
 
@@ -55,7 +97,7 @@ The copy pass covered the landing page, studio, viewer room, dialogs, privacy te
 
 The final TypeScript/client/server build passed. A fresh compiled-runtime launch after the redesign was blocked by automatic approval review, which supplied only “blocked by policy.” The redesigned browser checks above used the development server. The earlier compiled-start result belongs to the initial build. The owned preview server was stopped after verification.
 
-## Clues, missions, awards and card redesign
+### Clues, missions, awards and card redesign
 
 The later browser checks used isolated development rooms. All chat and speech inputs described here were simulated. The main rules now teach three actions, with optional rules in a native disclosure. The core game remains a single hidden word during ordinary streaming.
 
@@ -73,7 +115,7 @@ Observed:
 
 The final source passed 70 automated tests, the TypeScript check and the client/server production build. No Twitch or speech credentials were introduced. The card/chat example remains explicitly labeled as illustrated. Images taken before the final alpha update show the earlier white-backed logo; the latest landing and overlay images show the transparent derivative.
 
-## What the fixtures verify
+### What the fixtures verify
 
 - Whole-word/case/punctuation matching; pause/resume timing; stale, future, interim, low-confidence and wrong-round results; cooldowns; expiry; automatic rounds; score reversal and history compaction.
 - The actual AudioWorklet’s capture gate, 48 kHz to 16 kHz PCM output, generation tags, and reset of partial buffers.
@@ -84,7 +126,7 @@ The final source passed 70 automated tests, the TypeScript check and the client/
 - Server-side provider authorization, binary forwarding, rejected browser text injection, final-result normalization, one victory, and invalidated speech epochs, using a fixture speech socket.
 - Original clue-card coverage, literal clue variants, per-hint eligibility, bounded review, private projections, manual award assignment/reassignment/reversal, private guesses, one continuous mission clock, cooldown expiry, skip replacement and third-word reversal.
 
-## Checks requiring credentials or infrastructure
+### Checks requiring credentials or infrastructure
 
 These have **not** been run:
 

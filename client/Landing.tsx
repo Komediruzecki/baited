@@ -41,6 +41,29 @@ const examples = [
   },
 ];
 
+function CardPicture({ word }: { word: string }) {
+  return <svg viewBox="0 0 120 100" className="card-picture" aria-hidden="true">
+    {word === 'banana' ? <>
+      <path d="M82 15c8 30-9 58-43 65C21 82 12 73 13 65c26 9 54-11 57-42l-2-10Z" fill="#fff0a1" stroke="#35260b" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M75 31c11 27 1 43-15 48 10-15 10-26 8-37M71 38c-9 13-20 17-32 17 15-8 20-17 21-28" fill="#f6af20" stroke="#35260b" strokeWidth="3" strokeLinejoin="round" />
+      <path d="m72 16 9-3M25 71c17 1 31-7 39-19" fill="none" stroke="#35260b" strokeWidth="3" strokeLinecap="round" />
+    </> : word === 'penguin' ? <>
+      <path d="M39 42 20 67l20-7m41-18 19 25-20-7" fill="#322147" stroke="#281043" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M34 77V37c0-33 52-33 52 0v40Z" fill="#322147" stroke="#281043" strokeWidth="3" />
+      <path d="M43 75V47c0-21 34-21 34 0v28Z" fill="#f8f0ff" />
+      <path d="m43 79-9 8h23v-8m20 0 9 8H63v-8" fill="#ffda44" stroke="#281043" strokeWidth="3" strokeLinejoin="round" />
+      <path d="m54 42 6 8 6-8Z" fill="#ffda44" stroke="#281043" strokeWidth="2" />
+      <circle cx="49" cy="34" r="3" fill="#f8f0ff"/><circle cx="71" cy="34" r="3" fill="#f8f0ff"/>
+    </> : <>
+      <rect x="9" y="24" width="102" height="58" rx="5" fill="#c9ecff" stroke="#082a3c" strokeWidth="3" />
+      <rect x="17" y="33" width="65" height="40" rx="2" fill="#18465e" />
+      <path d="M26 62h43l-5 6H31ZM38 54c-8-8 7-10 0-18m15 18c-8-8 7-10 0-18" fill="none" stroke="#8cd8ff" strokeWidth="3" strokeLinecap="round" />
+      <path d="M89 35h13M89 42h13m-8 13v9M21 84v5m78-5v5" stroke="#082a3c" strokeWidth="4" strokeLinecap="round" />
+      <circle cx="95" cy="59" r="8" fill="none" stroke="#082a3c" strokeWidth="3"/>
+    </>}
+  </svg>;
+}
+
 function ExampleRound() {
   const [example, setExample] = useState(0),
     [step, setStep] = useState(0),
@@ -71,11 +94,11 @@ function ExampleRound() {
             <article className="deal-card" aria-label={'Chat’s secret card: ' + current.word}>
               <div className="deal-corner"><Eye size={17} /><span>CHAT’S CARD</span></div>
               <div className="deal-face">
-                <span className="card-picture" aria-hidden="true">{['🍌', '🐧', '♨️'][example]}</span>
+                <CardPicture word={current.word} />
                 <strong>{current.word}</strong>
                 <span>MAKE THEM SAY IT</span>
               </div>
-              <div className="deal-bottom"><b>bait</b><span>KEEP IT SECRET</span></div>
+              <div className="deal-bottom"><span className="deal-brand">{brand}</span><span>KEEP IT SECRET</span></div>
             </article>
           </div>
           <div className="deal-arrow" aria-hidden="true"><ArrowRight size={27} /></div>
@@ -359,7 +382,7 @@ export default function Landing({ session, reload }: { session: SessionInfo; rel
               <ol className="setup-list">
                 <li>Create a confidential app in the Twitch Developer Console.</li>
                 <li>
-                  Add its Client ID, Client Secret and a token encryption key to <code>.env</code>.
+                  Store its Client ID, Client Secret and a token encryption key in Proton Pass.
                 </li>
                 <li>
                   Register <code>{location.origin}/auth/twitch/callback</code> as the redirect URL.

@@ -1761,7 +1761,8 @@ a:hover {
   margin-bottom: 13px;
 }
 .result-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   min-height: 49px;
@@ -1787,12 +1788,13 @@ a:hover {
   color: #4cedc6;
 }
 .result-row > strong {
+  overflow-wrap: anywhere;
+  min-width: 0;
   font-size: 12px;
   font-weight: 550;
   text-transform: capitalize;
 }
-.result-row > span:nth-last-child(2) {
-  margin-left: auto;
+.result-row > .result-time {
   font-size: 11px;
   color: #a598b2;
   font-variant-numeric: tabular-nums;
@@ -4019,7 +4021,7 @@ body.overlay-body,
   .result-row > .tag {
     font-size: 7px;
   }
-  .result-row > span:nth-last-child(2) {
+  .result-row > .result-time {
     font-size: 10px;
   }
   .recent-rounds .section-heading h3 {

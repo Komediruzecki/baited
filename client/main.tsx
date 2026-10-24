@@ -34,6 +34,7 @@ import {
 import type { GameView, Studio, SessionInfo, Settings, Result } from '../shared/types';
 import { request } from './api';
 import { Microphone } from './microphone';
+import { microphoneReady, MicrophoneLease, WinSoundGate } from './safety';
 import './style.css';
 import Landing from './Landing';
 import { brand, Button, Tag, CopyButton, Modal, HowTo } from './ui';
@@ -41,6 +42,7 @@ import './brand.css';
 import { MissionStatus, GuessForm, AwardReview, ForbiddenClueCard, PublicAward } from './mechanics';
 import './angular.css';
 import './landing-game.css';
+import './refinement.css';
 
 const fmt = (ms: number) => {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -108,9 +110,8 @@ function Stat({
     </div>
   );
 }
-function playWin() {
+function playWin(context: AudioContext) {
   try {
-    const context = new AudioContext();
     [0, 4, 7, 12].forEach((note, i) => {
       const osc = context.createOscillator(),
         gain = context.createGain(),
@@ -125,7 +126,6 @@ function playWin() {
       osc.start(time);
       osc.stop(time + 0.4);
     });
-    setTimeout(() => void context.close(), 1300);
   } catch {}
 }
 function Confetti() {
@@ -148,6 +148,8 @@ function Confetti() {
   );
 }
 
+type Capture = { microphone: Microphone; lease: MicrophoneLease };
+
 function Dashboard({ session, reload }: { session: SessionInfo; reload: () => void }) {
   const [studio, setStudio] = useState<Studio | null>(null),
     [offline, setOffline] = useState(false),
@@ -157,47 +159,99 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [tab, setTab] = useState('studio');
   const [micStatus, setMicStatus] = useState('off'),
     [level, setLevel] = useState(0),
-    [consent, setConsent] = useState(false);
-  const microphone = useRef<Microphone | null>(null),
-    lastResult = useRef(''),
+    [consent, setConsent] = useState(false),
+    [soundEnabled, setSoundEnabled] = useState(false);
+  const capture = useRef<Capture | null>(null),
+    sound = useRef(new WinSoundGate()),
+    soundContext = useRef<AudioContext | null>(null),
+    currentStudio = useRef<Studio | null>(null),
     offset = useRef(0);
   const now = useNow();
   const receive = useCallback((s: Studio) => {
     offset.current = s.room.serverTime - Date.now();
+    currentStudio.current = s;
+    if (sound.current.receive(s.room.result) && soundContext.current) playWin(soundContext.current);
     setStudio(s);
   }, []);
+  const pauseForMicrophone = useCallback(async (owner: Capture, message?: string, refresh = true) => {
+    owner.microphone.stop();
+    if (capture.current === owner) {
+      setConsent(false);
+      if (message) setError(message);
+    }
+    try {
+      await owner.lease.cancel();
+      if (refresh && capture.current === owner) {
+        const fresh = await request<Studio>('/api/studio');
+        if (capture.current === owner) receive(fresh);
+      }
+    } catch {
+      if (capture.current === owner)
+        setError('Microphone stopped. Check the connection and pause the round before continuing.');
+    }
+  }, [receive]);
   const connectionError = useCallback(
     (lost: boolean) => {
       setOffline(lost);
-      if (lost)
+      if (lost) {
+        if (capture.current) void pauseForMicrophone(capture.current, undefined, false);
+        else setConsent(false);
+        sound.current.enabled = false;
+        setSoundEnabled(false);
+        void soundContext.current?.suspend();
         void request<SessionInfo>('/api/session')
           .then((s) => {
             if (!s.authenticated) reload();
           })
           .catch(() => {});
+      }
     },
-    [reload],
+    [reload, pauseForMicrophone],
   );
   useLive('/api/studio/events', receive, connectionError);
   useEffect(() => {
     void request<Studio>('/api/studio')
       .then(receive)
       .catch((e) => setError(e.message));
-    return () => microphone.current?.stop();
+    return () => {
+      const owner = capture.current;
+      capture.current = null;
+      owner?.microphone.stop();
+      void owner?.lease.cancel().catch(() => {});
+      void soundContext.current?.close();
+    };
   }, [receive]);
   const g = studio?.room;
   useEffect(() => {
-    if (!g?.result || g.result.id === lastResult.current) return;
-    lastResult.current = g.result.id;
-    if (g.result.outcome === 'caught' && g.settings.sound) playWin();
-  }, [g?.result?.id]);
+    const muteWhenHidden = () => {
+      if (document.visibilityState !== 'hidden') return;
+      sound.current.enabled = false;
+      setSoundEnabled(false);
+      void soundContext.current?.suspend();
+    };
+    document.addEventListener('visibilitychange', muteWhenHidden);
+    return () => document.removeEventListener('visibilitychange', muteWhenHidden);
+  }, []);
   useEffect(() => {
-    if (!consent || !g || !session.csrf) return;
+    const owner = capture.current;
+    if (!consent || !g || !session.csrf || !owner?.lease.active) return;
     if (g.phase === 'active' && !offline)
-      microphone.current?.connect(g.round!.id, g.round!.epoch, session.csrf);
-    else microphone.current?.disconnect();
+      owner.microphone.connect(g.round!.id, g.round!.epoch, session.csrf, owner.lease.id);
+    else if (g.phase === 'settling' && !offline) owner.microphone.suspend();
+    else owner.microphone.disconnect();
   }, [consent, g?.phase, g?.round?.id, g?.round?.epoch, offline, session.csrf]);
+  useEffect(() => {
+    const owner = capture.current;
+    if (!consent || offline || g?.mode !== 'twitch' || !owner?.lease.active) return;
+    const renew = () => void owner.lease.renew().catch(() => {
+      if (capture.current === owner && owner.lease.active)
+        void pauseForMicrophone(owner, 'Microphone readiness could not be confirmed. Reconnect, then enable it again.');
+    });
+    const interval = setInterval(renew, 10000);
+    return () => clearInterval(interval);
+  }, [consent, offline, g?.mode, pauseForMicrophone]);
   const action = async (action: string) => {
+    if (currentStudio.current?.room.phase === 'settling') return;
     setBusy(true);
     setError('');
     try {
@@ -221,9 +275,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     }
   };
   const stopMic = () => {
-    microphone.current?.stop();
-    microphone.current = null;
-    setConsent(false);
+    if (capture.current) void pauseForMicrophone(capture.current);
   };
   const enableMic = async () => {
     if (!studio?.speechReady) {
@@ -235,14 +287,49 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const acceptMic = async () => {
     setModal('');
     setError('');
-    microphone.current?.stop();
-    const mic = new Microphone(setMicStatus, setLevel, (message) => {
-      setError(message);
-      setConsent(false);
-    });
-    microphone.current = mic;
-    const enabled = await mic.enable();
-    if (enabled && microphone.current === mic) setConsent(true);
+    setConsent(false);
+    const previous = capture.current;
+    const previousCancelled = previous ? previous.lease.cancel().catch(() => {}) : Promise.resolve();
+    previous?.microphone.stop();
+    const lease = new MicrophoneLease(crypto.randomUUID(), (body) =>
+      currentStudio.current?.room.mode === 'twitch'
+        ? request('/api/studio/microphone', body, session.csrf)
+        : Promise.resolve());
+    const owner: Capture = {
+      lease,
+      microphone: new Microphone(
+        (status) => { if (capture.current === owner) setMicStatus(status); },
+        (value) => { if (capture.current === owner) setLevel(value); },
+        (message) => { if (capture.current === owner) void pauseForMicrophone(owner, message); },
+      ),
+    };
+    capture.current = owner;
+    const enabled = await owner.microphone.enable();
+    await previousCancelled;
+    if (!enabled || capture.current !== owner || !lease.active) return;
+    try {
+      if (await lease.arm() && capture.current === owner && owner.microphone.enabled)
+        setConsent(true);
+    } catch {
+      if (capture.current === owner && lease.active)
+        void pauseForMicrophone(owner, 'Microphone readiness could not be confirmed. Reconnect, then enable it again.');
+    }
+  };
+  const toggleSound = async () => {
+    if (soundEnabled) {
+      sound.current.enabled = false;
+      setSoundEnabled(false);
+      void soundContext.current?.suspend();
+      return;
+    }
+    try {
+      soundContext.current ??= new AudioContext();
+      await soundContext.current.resume();
+      sound.current.enabled = true;
+      setSoundEnabled(true);
+    } catch {
+      setError('Sound could not be enabled. Check your browser’s audio permission and try again.');
+    }
   };
   const logOut = async () => {
     stopMic();
@@ -261,14 +348,16 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       </div>
     );
   const active = g.phase === 'active',
+    settling = g.phase === 'settling',
     paused = g.phase === 'paused',
     cool = g.phase === 'cooldown',
     ms = remaining(g, now, offset.current),
     next = Math.max(0, (g.nextAt ?? 0) - (now + offset.current)),
     progress = g.round ? ms / g.round.duration : 1;
-  const canStart = !active && !paused && (!cool || next <= 0),
+  const canStart = !active && !paused && !settling && (!cool || next <= 0),
     connected = g.connection.status === 'connected',
-    demo = g.mode === 'demo';
+    demo = g.mode === 'demo',
+    readyToBegin = demo || (connected && microphoneReady(studio.speechReady, consent, micStatus));
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -333,6 +422,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </strong>
           </div>
           <div className="topbar-right">
+            <button className="sound-toggle" aria-pressed={soundEnabled} onClick={() => void toggleSound()} title="Celebration sound resets to off when you leave or reload">
+              <span aria-hidden="true">♪</span> Sound {soundEnabled ? 'on' : 'off'}
+            </button>
             <span className={cx('connection-pill', (connected || demo) && 'online')}>
               <span className="dot" />
               {demo
@@ -365,7 +457,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     : 'Share the viewer room and add BAIT to OBS.'}
               </p>
             </div>
-            <Button className="secondary" onClick={() => setModal('settings')}>
+            <Button className="secondary" disabled={settling} onClick={() => setModal('settings')}>
               <Settings2 size={16} /> Game settings
             </Button>
           </div>
@@ -420,11 +512,13 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           ? 'PAUSED'
                           : cool
                             ? 'ROUND COMPLETE'
-                            : 'READY'}
+                            : settling
+                              ? 'CHECKING'
+                              : readyToBegin ? 'READY' : 'SETUP NEEDED'}
                     </Tag>
                   </div>
                   <div className="mission-center">
-                    {!active && !paused && g.result ? (
+                    {!active && !paused && !settling && g.result ? (
                       <>
                         <span className="small-label">
                           {g.result.outcome === 'caught'
@@ -471,23 +565,27 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       </>
                     ) : (
                       <>
-                        <div className={cx('secret-lock', active && 'pulsing')}>
-                          <Eye size={29} />
-                          <span className="lock-cross">+</span>
+                        <div className={cx('secret-card-back', active && 'in-play')} aria-hidden="true">
+                          <div className="card-back-mark">{brand}</div>
+                          <Eye size={20} />
                         </div>
                         <h2>
-                          {active
+                          {settling
+                            ? 'Checking final words'
+                            : active
                             ? 'Chat has the word.'
                             : paused
                               ? 'Round paused'
                               : 'Ready when chat is.'}
                         </h2>
                         <p>
-                          {active
+                          {settling
+                            ? 'The clock has stopped. Checking speech from before the buzzer.'
+                            : active
                             ? 'Keep streaming. Viewers will try to steer the conversation.'
                             : paused
                               ? 'The timer and speech detection are paused.'
-                              : 'Share the viewer link, enable your microphone, and start a round.'}
+                              : demo ? 'Share the viewer link and try a round with simulated chat and speech.' : 'Share the viewer link, enable your microphone, and start a round.'}
                         </p>
                         <div className="secret-capsule">
                           <ShieldCheck size={15} />
@@ -521,7 +619,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           ? g.mission?.status === 'active'
                             ? 'NEXT WORD'
                             : 'NEXT ROUND'
-                          : active || paused
+                          : active || paused || settling
                             ? g.mission
                               ? `WORD ${Math.min(3, g.mission.completed + 1)} OF 3`
                               : `ROUND ${String(g.round?.number).padStart(2, '0')}`
@@ -532,7 +630,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       <div className={cx('timer', active && ms < 15000 && 'urgent')}>
                         {cool
                           ? fmt(next)
-                          : active || paused
+                          : active || paused || settling
                             ? fmt(ms)
                             : fmt(
                                 (g.settings.mission === 'three'
@@ -545,7 +643,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       </div>
                     </div>
                     <div className="round-actions">
-                      {active ? (
+                      {settling ? (
+                        <Button className="primary" disabled><Timer size={16} /> Checking final words</Button>
+                      ) : active ? (
                         <Button
                           className="primary"
                           disabled={busy || offline}
@@ -556,7 +656,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       ) : paused ? (
                         <Button
                           className="primary"
-                          disabled={busy || offline}
+                          disabled={busy || offline || !readyToBegin}
                           onClick={() => void action('resume')}
                         >
                           <Play size={16} /> Resume round
@@ -564,7 +664,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       ) : (
                         <Button
                           className="primary"
-                          disabled={busy || offline || !canStart || (!demo && !connected)}
+                          disabled={busy || offline || !canStart || !readyToBegin}
                           onClick={() => void action('start')}
                         >
                           <Play size={16} fill="currentColor" />
@@ -598,6 +698,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         </>
                       )}
                     </div>
+                  </div>
+                  <div className="round-readiness" role="status">
+                    {demo ? <><Terminal size={15} /><span>Demo round. No microphone or Twitch connection needed.</span></> :
+                      <>
+                        <span className={connected ? 'ready-check' : ''}>{connected ? <Check size={15} /> : <Wifi size={15} />} Twitch {connected ? 'connected' : 'disconnected'}</span>
+                        <span className={consent ? 'ready-check' : ''}>{consent ? <Mic size={15} /> : <MicOff size={15} />}{settling ? 'Finishing speech check' : micStatus === 'listening' ? 'Speech live' : consent ? 'Microphone armed' : !studio.speechReady ? 'Speech setup needed' : 'Microphone off'}</span>
+                        {!consent && <button type="button" disabled={offline || settling} onClick={() => void enableMic()}>{studio.speechReady ? 'Enable microphone' : 'Set up speech'} <ArrowUpRight size={14} /></button>}
+                      </>}
                   </div>
                   <div className="round-progress">
                     <div
@@ -643,14 +751,22 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     </div>
                   </div>
                   <h3>
-                    {micStatus === 'listening'
+                    {settling
+                      ? 'Checking final words'
+                      : micStatus === 'connecting'
+                        ? 'Connecting speech'
+                        : micStatus === 'listening'
                       ? 'Listening'
                       : consent
                         ? 'Microphone ready'
                         : 'Microphone off'}
                   </h3>
                   <p>
-                    {micStatus === 'listening'
+                    {settling
+                      ? 'No more audio is being sent. Waiting for the final word check.'
+                      : micStatus === 'connecting'
+                        ? 'Opening the speech connection. The round pauses if it cannot connect.'
+                        : micStatus === 'listening'
                       ? 'Listening for complete words. Audio is streamed, never saved by BAIT.'
                       : consent
                         ? 'Mic enabled. Recognition starts with the next active round.'
@@ -658,7 +774,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   </p>
                   <Button
                     className={consent ? 'secondary' : 'light'}
-                    disabled={offline}
+                    disabled={offline || settling}
                     onClick={() => (consent ? stopMic() : void enableMic())}
                   >
                     {consent ? <MicOff size={16} /> : <Mic size={16} />}
@@ -744,7 +860,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   key={studio.awardBoard.roundId}
                   board={studio.awardBoard}
                   csrf={session.csrf!}
-                  offline={offline}
+                  offline={offline || settling}
                   onReceive={receive}
                   onError={setError}
                 />
@@ -789,7 +905,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           onClose={() => setModal('')}
         >
           {modal === 'settings' ? (
-            <SettingsForm settings={g.settings} busy={busy} onSave={save} />
+            <SettingsForm settings={g.settings} busy={busy || settling} onSave={save} />
           ) : modal === 'how' ? (
             <HowTo />
           ) : modal === 'guess' ? (
@@ -816,7 +932,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                 <Button className="secondary" onClick={() => setModal('')}>
                   Cancel
                 </Button>
-                <Button className="primary" onClick={() => void acceptMic()}>
+                <Button className="primary" disabled={settling} onClick={() => void acceptMic()}>
                   <Mic size={16} /> Allow microphone
                 </Button>
               </div>
@@ -826,6 +942,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               <p>The current target will be revealed and automatic rounds will stop.</p>
               <Button
                 className="danger"
+                disabled={settling || busy || offline}
                 onClick={() => {
                   setModal('');
                   void action('end');
@@ -854,8 +971,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           ) : modal === 'twitch' ? (
             <>
               <p>
-                Add Twitch application credentials to your local <code>.env</code> and restart the
-                server. The full setup guide is in the README.
+                Store Twitch application credentials in Proton Pass, then restart BAIT with the
+                reference template in the README.
               </p>
               <p className="muted">
                 Only chat-read permission is requested. BAIT does not post target words or
@@ -867,7 +984,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               <p>Live microphone recognition uses Deepgram’s streaming speech service.</p>
               <ol className="setup-list">
                 <li>
-                  Add <code>DEEPGRAM_API_KEY</code> to your local <code>.env</code>.
+                  Store your Deepgram key in Proton Pass and add its reference to the README’s setup template.
                 </li>
                 <li>Restart BAIT, then enable your microphone here.</li>
               </ol>
@@ -890,14 +1007,14 @@ function ResultRow({ result: r }: { result: Result }) {
         {r.outcome === 'caught' ? <Check size={14} /> : <ArrowUpRight size={14} />}
       </span>
       <strong>{r.word}</strong>
-      <span>{r.outcome === 'caught' ? `${r.elapsed}s` : '—'}</span>
+      <span className="result-time">{r.outcome === 'caught' ? `${r.elapsed}s` : '—'}</span>
       <Tag tone={r.outcome === 'caught' ? 'lime' : 'muted'}>
         {r.reason === 'guess' ? 'BAIT CALLED' : outcomeLabel[r.outcome]}
       </Tag>
       {r.award && (
         <span className="result-award">
           <Trophy size={12} />
-          Streamer’s pick: @{r.award.name}
+          <span>Streamer’s pick: @{r.award.name}</span>
         </span>
       )}
     </div>
@@ -1021,17 +1138,6 @@ function SettingsForm({
           type="checkbox"
           checked={s.auto}
           onChange={(e) => set({ ...s, auto: e.target.checked })}
-        />
-      </label>
-      <label className="toggle-row">
-        <span>
-          <strong>Celebration sound</strong>
-          <small>Play a short chime when chat wins.</small>
-        </span>
-        <input
-          type="checkbox"
-          checked={s.sound}
-          onChange={(e) => set({ ...s, sound: e.target.checked })}
         />
       </label>
       <label className="toggle-row">
@@ -1374,7 +1480,8 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     ms = remaining(g, now, offset.current),
     active = g.phase === 'active',
     paused = g.phase === 'paused',
-    finished = !active && !paused && !!g.result,
+    settling = g.phase === 'settling',
+    finished = !active && !paused && !settling && !!g.result,
     won = g.result?.outcome === 'caught' && finished;
   const stale = offline;
   if (overlay)
@@ -1389,6 +1496,8 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
               {g.mode === 'demo' ? 'LOCAL DEMO · ' : ''}
               {stale
                 ? 'RECONNECTING'
+                : settling
+                  ? 'CHECKING FINAL WORDS'
                 : won
                   ? 'CHAT WINS'
                   : active
@@ -1404,7 +1513,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             <strong>
               {won
                 ? g.result?.word
-                : active || paused
+                : active || paused || settling
                   ? g.mission
                     ? `WORD ${Math.min(3, g.mission.completed + 1)} OF 3`
                     : `ROUND ${g.round?.number}`
@@ -1413,7 +1522,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
                     : 'MAKE THEM SAY IT.'}
             </strong>
           </div>
-          <div className="obs-time">{active || paused ? fmt(ms) : won ? '+1' : finished && g.result?.reason === 'timer' ? '00:00' : '—'}</div>
+          <div className="obs-time">{active || paused || settling ? fmt(ms) : won ? '+1' : finished && g.result?.reason === 'timer' ? '00:00' : '—'}</div>
           <div className="obs-progress">
             <i style={{ width: `${g.round ? (ms / g.round.duration) * 100 : 0}%` }} />
           </div>
@@ -1449,7 +1558,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
       </div>
     );
   return (
-    <div className={cx('viewer-page', (active || paused) && 'viewer-playing')}>
+    <div className={cx('viewer-page', (active || paused || settling) && 'viewer-playing')}>
       <header className="viewer-header">
         <a className="brand" href="/">
           {brand}
@@ -1464,7 +1573,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
           <Eye size={15} /> VIEWER ROOM
         </div>
         <h1>
-          {g.mission?.status === 'complete'
+          {settling ? 'Checking final words.' : g.mission?.status === 'complete'
             ? 'Chat cleared the mission.'
             : g.mission?.status === 'failed'
               ? 'Time ran out.'
@@ -1475,7 +1584,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
                   : 'You have one job.'}
         </h1>
         <p className="viewer-intro">
-          {g.mission?.status === 'complete'
+          {settling ? 'The clock has stopped. Waiting for the final speech result.' : g.mission?.status === 'complete'
             ? 'All three words landed before the timer.'
             : g.mission?.status === 'failed'
               ? `${g.mission.completed} of 3 words landed. Those word wins still count.`
@@ -1497,6 +1606,8 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             <Tag tone={active ? 'lime' : 'muted'}>
               {active
                 ? 'LIVE'
+                : settling
+                  ? 'CHECKING'
                 : paused
                   ? 'PAUSED'
                   : finished
@@ -1508,7 +1619,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
           <div className="target-display">
             {stale ? (
               <h2>Hold tight.</h2>
-            ) : active || paused ? (
+            ) : active || paused || settling ? (
               <>
                 <span className="target-number">
                   ROUND {String(g.round?.number).padStart(2, '0')}
@@ -1517,7 +1628,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
                   {g.round?.target}
                   <span>.</span>
                 </h2>
-                <p>Use hints in Twitch chat. Keep the target out of your messages.</p>
+                <p>{settling ? 'Only words spoken before the buzzer can count.' : 'Use hints in Twitch chat. Keep the target out of your messages.'}</p>
               </>
             ) : finished ? (
               <>
@@ -1550,14 +1661,14 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             <div>
               <Timer size={16} />
               <span>
-                {active || paused
+                {active || paused || settling
                   ? fmt(ms)
                   : finished
                     ? fmt(Math.max(0, (g.nextAt ?? 0) - (now + offset.current)))
                     : '—:—'}
               </span>
               <small>
-                {paused
+                {settling ? 'CHECKING' : paused
                   ? 'PAUSED'
                   : finished
                     ? g.nextAt !== null
@@ -1719,7 +1830,7 @@ function App() {
   const path = location.pathname.split('/').filter(Boolean),
     reload = useCallback(() => {
       void request<SessionInfo>('/api/session')
-        .then(setSession)
+        .then((s) => { setSession(s); setError(''); })
         .catch((e) => setError(e.message));
     }, []);
   useEffect(() => {

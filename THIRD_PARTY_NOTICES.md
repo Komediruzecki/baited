@@ -4,6 +4,8 @@ Original BAIT code, SVG illustration and sound are MIT licensed. The project own
 
 The interface uses Inter and Inter Tight from Google Fonts under SIL Open Font License 1.1. Earlier unused Barlow Condensed, DM Sans and Space Grotesk font files are retained with their licenses. Full copyright and license notices are in `licenses/fonts/`. Font files are unmodified.
 
+Short card titles and display headings also use **Russo One**, copyright 2011–2012 Jovanny Lemonad, under SIL Open Font License 1.1. The unmodified font is self-hosted at `public/fonts/russo-one.ttf`; its complete notice is bundled at `public/fonts/RussoOne-OFL.txt`. Downloaded October 25, 2026 from the official [Google Fonts source](https://github.com/google/fonts/tree/main/ofl/russoone): [font](https://raw.githubusercontent.com/google/fonts/main/ofl/russoone/RussoOne-Regular.ttf) and [license](https://raw.githubusercontent.com/google/fonts/main/ofl/russoone/OFL.txt). It is a compatible display choice, not an identification of the supplied logo’s font. No external font request is made by the app.
+
 Google Material Icons Outlined are bundled as SVG components under Apache 2.0. The full license is in `licenses/material-icons/LICENSE`. Twitch and Deepgram are external services, subject to their own terms; neither service’s proprietary code is included.
 
 | Package | Version | License |

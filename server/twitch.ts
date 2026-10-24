@@ -20,11 +20,29 @@ const validationSchema = z.object({
 });
 export class TwitchAuth {
   private refreshing = new Map<string, Promise<Credentials>>();
+  private generations = new Map<string, number>();
   constructor(
     private config: Config,
     private store: Store,
     private fetcher: typeof fetch = fetch,
   ) {}
+  generation(id: string) { return this.generations.get(id) ?? 0; }
+  isCurrent(id: string, generation: number) { return this.generation(id) === generation; }
+  private assertCurrent(id: string, generation: number) {
+    if (!this.isCurrent(id, generation)) throw new AuthSuperseded();
+  }
+  private async scoped<T>(id: string, task: (generation: number) => Promise<T>) {
+    const generation = this.generation(id);
+    try {
+      const result = await task(generation);
+      this.assertCurrent(id, generation);
+      return result;
+    } catch (error) {
+      this.assertCurrent(id, generation);
+      if (error instanceof AuthRevoked) error.generation = generation;
+      throw error;
+    }
+  }
   private async token(params: Record<string, string>) {
     const response = await this.fetcher('https://id.twitch.tv/oauth2/token', {
       method: 'POST',
@@ -43,6 +61,8 @@ export class TwitchAuth {
     return tokenSchema.parse(await response.json());
   }
   async exchange(code: string) {
+    // An authorization begun before a disconnect must not recreate that account.
+    const generations = new Map(this.generations);
     const token = await this.token({
       grant_type: 'authorization_code',
       code,
@@ -72,7 +92,13 @@ export class TwitchAuth {
       name: user.display_name,
       scope: valid.scopes,
     };
+    if ((this.generations.get(c.userId) ?? 0) !== (generations.get(c.userId) ?? 0)) {
+      await this.revokeToken(c.access_token);
+      throw new AuthSuperseded();
+    }
+    const generation = this.bump(c.userId);
     await this.store.setCredentials(c.userId, c);
+    this.assertCurrent(c.userId, generation);
     return c;
   }
   async validateAccess(access: string) {
@@ -89,11 +115,11 @@ export class TwitchAuth {
   }
   async access(id: string, force = false): Promise<Credentials> {
     const c = this.store.credentials(id);
-    if (!c) throw new AuthRevoked();
+    if (!c) throw new AuthRevoked(this.generation(id));
     if (!force && c.expiresAt > Date.now() + 60000) return c;
     const existing = this.refreshing.get(id);
     if (existing) return existing;
-    const promise = (async () => {
+    const promise = this.scoped(id, async (generation) => {
       const t = await this.token({ grant_type: 'refresh_token', refresh_token: c.refresh_token });
       const next = {
         ...c,
@@ -102,61 +128,91 @@ export class TwitchAuth {
         expiresAt: Date.now() + t.expires_in * 1000,
         scope: t.scope,
       };
+      if ((this.generations.get(id) ?? 0) !== generation || !this.store.credentials(id)) {
+        await this.revokeToken(next.access_token);
+        throw new AuthSuperseded();
+      }
       await this.store.setCredentials(id, next);
       return next;
-    })();
+    });
     this.refreshing.set(id, promise);
     try {
       return await promise;
     } finally {
-      this.refreshing.delete(id);
+      if (this.refreshing.get(id) === promise) this.refreshing.delete(id);
     }
   }
   async validate(id: string) {
-    const c = await this.access(id);
-    const v = await this.validateAccess(c.access_token);
-    if (v.user_id !== id) throw new AuthRevoked();
-    return c;
+    return this.scoped(id, async (generation) => {
+      const c = await this.access(id);
+      this.assertCurrent(id, generation);
+      const v = await this.validateAccess(c.access_token);
+      if (v.user_id !== id) throw new AuthRevoked(generation);
+      return c;
+    });
   }
   async api(id: string, path: string, init: RequestInit = {}, retried = false): Promise<Response> {
-    const c = await this.access(id);
-    const r = await this.fetcher(`https://api.twitch.tv/helix/${path}`, {
-      ...init,
-      headers: {
-        ...init.headers,
-        'Client-Id': this.config.clientId,
-        Authorization: `Bearer ${c.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      signal: AbortSignal.timeout(12000),
+    return this.scoped(id, async (generation) => {
+      const c = await this.access(id);
+      this.assertCurrent(id, generation);
+      const r = await this.fetcher(`https://api.twitch.tv/helix/${path}`, {
+        ...init,
+        headers: {
+          ...init.headers,
+          'Client-Id': this.config.clientId,
+          Authorization: `Bearer ${c.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(12000),
+      });
+      this.assertCurrent(id, generation);
+      if (r.status === 401 && !retried) {
+        await this.access(id, true);
+        this.assertCurrent(id, generation);
+        return this.api(id, path, init, true);
+      }
+      if (r.status === 401) throw new AuthRevoked(generation);
+      if (r.status === 429) {
+        const reset = Number(r.headers.get('Ratelimit-Reset'));
+        throw new RateLimited(Math.max(1000, Math.min(60000, reset * 1000 - Date.now() || 10000)));
+      }
+      if (!r.ok)
+        throw new Error(`Twitch request failed (${r.status}). Check authorization and reconnect.`);
+      return r;
     });
-    if (r.status === 401 && !retried) {
-      await this.access(id, true);
-      return this.api(id, path, init, true);
-    }
-    if (r.status === 401) throw new AuthRevoked();
-    if (r.status === 429) {
-      const reset = Number(r.headers.get('Ratelimit-Reset'));
-      throw new RateLimited(Math.max(1000, Math.min(60000, reset * 1000 - Date.now() || 10000)));
-    }
-    if (!r.ok)
-      throw new Error(`Twitch request failed (${r.status}). Check authorization and reconnect.`);
-    return r;
+  }
+  private bump(id: string) {
+    const generation = (this.generations.get(id) ?? 0) + 1;
+    this.generations.set(id, generation);
+    this.refreshing.delete(id);
+    return generation;
+  }
+  invalidate(id: string) {
+    this.bump(id);
+    // Store deletion is synchronous in memory; its persistence promise is awaited by callers.
+    return this.store.deleteCredentials(id);
+  }
+  private async revokeToken(token: string) {
+    await this.fetcher('https://id.twitch.tv/oauth2/revoke', {
+      method: 'POST',
+      body: new URLSearchParams({ client_id: this.config.clientId, token }),
+      signal: AbortSignal.timeout(10000),
+    }).catch(() => {});
   }
   async revoke(id: string) {
     const c = this.store.credentials(id);
-    if (c) {
-      await this.fetcher('https://id.twitch.tv/oauth2/revoke', {
-        method: 'POST',
-        body: new URLSearchParams({ client_id: this.config.clientId, token: c.access_token }),
-        signal: AbortSignal.timeout(10000),
-      }).catch(() => {});
-    }
-    await this.store.deleteCredentials(id);
+    const invalidation = this.invalidate(id);
+    const generation = this.generation(id);
+    await invalidation;
+    if (c) await this.revokeToken(c.access_token);
+    return generation;
   }
 }
+export class AuthSuperseded extends Error {
+  constructor() { super('Twitch authorization changed. Reload your studio.'); }
+}
 export class AuthRevoked extends Error {
-  constructor() {
+  constructor(public generation?: number) {
     super('Twitch authorization expired or was revoked. Connect again.');
   }
 }
@@ -187,6 +243,7 @@ export class TwitchConnection {
   private sockets = new Set<WebSocket>();
   private current: WebSocket | undefined;
   private stopped = true;
+  private authorizationGeneration: number | undefined;
   private retry: ReturnType<typeof setTimeout> | undefined;
   private attempts = 0;
   private seen = new Map<string, number>();
@@ -194,12 +251,13 @@ export class TwitchConnection {
   constructor(
     private game: Game,
     private auth: TwitchAuth,
-    private invalid: () => void,
+    private invalid: (generation?: number) => void,
     private socketFactory: SocketFactory = (url) => new WebSocket(url),
   ) {}
   start() {
     this.stop();
     this.stopped = false;
+    this.authorizationGeneration = this.auth.generation?.(this.game.data.owner);
     this.status('connecting', 'Opening Twitch chat');
     this.open('wss://eventsub.wss.twitch.tv/ws', false);
   }
@@ -274,13 +332,16 @@ export class TwitchConnection {
         } else if (m.message_type === 'revocation') {
           this.stop();
           this.status('error', 'Twitch authorization revoked. Reconnect your account.');
-          this.invalid();
+          this.invalid(this.authorizationGeneration);
         } else if (m.message_type === 'notification') this.acceptNotification(parsed.data);
       } catch (e) {
+        // An older connection may finish an awaited subscription after stop/reconnect.
+        if (this.stopped) return;
+        if (e instanceof AuthSuperseded) { this.stop(); return; }
         if (e instanceof AuthRevoked) {
           this.stop();
           this.status('error', e.message);
-          this.invalid();
+          this.invalid(e.generation ?? this.authorizationGeneration);
         } else {
           this.status(
             'reconnecting',

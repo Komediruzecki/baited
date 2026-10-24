@@ -18,9 +18,9 @@ const resultSchema = z.object({
             .array(
               z.object({
                 word: z.string(),
-                start: z.number(),
-                end: z.number(),
-                confidence: z.number(),
+                start: z.number().nonnegative(),
+                end: z.number().nonnegative(),
+                confidence: z.number().min(0).max(1),
               }),
             )
             .optional(),
@@ -38,25 +38,25 @@ export function providerTranscript(
   if (!parsed.success || !parsed.data.is_final) return null;
   const r = parsed.data,
     a = r.channel.alternatives[0];
-  if (
-    r.start + r.duration > binding.audioSeconds + 0.5 ||
-    r.start < Math.max(0, binding.audioSeconds - 7)
-  )
-    return null;
-  // Require confidence on every word: a single uncertain target cannot ride a high average.
-  const confidence = Math.min(
-    a.confidence,
-    ...(a.words?.map((w) => w.confidence) ?? [a.confidence]),
-  );
-  const capturedAt = binding.firstAudioAt + r.start * 1000;
-  if (capturedAt > now + 1000) return null;
+  const segmentEnd = r.start + r.duration;
+  if (segmentEnd > binding.audioSeconds + 0.5 || segmentEnd < Math.max(0, binding.audioSeconds - 5) ||
+    !a.words?.length) return null;
+  const words = a.words.map((w) => ({
+    text: w.word,
+    confidence: w.confidence,
+    capturedAt: binding.firstAudioAt + w.start * 1000,
+    endedAt: binding.firstAudioAt + w.end * 1000,
+  }));
+  if (a.words.some((w) => w.end < w.start || w.start < r.start || w.end > segmentEnd + 0.1) ||
+    words.some((w) => w.endedAt > now + 1000)) return null;
   return {
     roundId: binding.roundId,
     epoch: binding.epoch,
     text: a.transcript,
     final: true,
-    confidence,
-    capturedAt,
+    confidence: a.confidence,
+    capturedAt: binding.firstAudioAt + r.start * 1000,
+    words,
     id: `${r.start}:${r.duration}`,
   };
 }
@@ -65,8 +65,11 @@ export class SpeechBridge {
   private keepalive: ReturnType<typeof setInterval> | undefined;
   private timeout: ReturnType<typeof setTimeout> | undefined;
   private firstAudioAt = 0;
+  private listeningAt: number | undefined;
+  private lastAudioAt: number | undefined;
   private audioBytes = 0;
   private closed = false;
+  private finalized = false;
   readonly roundId: string;
   readonly epoch: number;
   constructor(
@@ -102,6 +105,7 @@ export class SpeechBridge {
     this.upstream.on('open', () => {
       if (this.closed) return;
       clearTimeout(this.timeout);
+      this.listeningAt = Date.now();
       this.status('listening');
       this.keepalive = setInterval(() => {
         if (this.upstream?.readyState === WebSocket.OPEN)
@@ -109,6 +113,7 @@ export class SpeechBridge {
       }, 4000);
     });
     this.upstream.on('message', (raw) => {
+      this.game.tick();
       if (!this.valid() || !this.firstAudioAt) return;
       try {
         const data = JSON.parse(raw.toString());
@@ -139,10 +144,12 @@ export class SpeechBridge {
       ),
     );
     client.on('message', (data, binary) => {
+      this.game.tick();
       if (!this.valid()) {
         this.close();
         return;
       }
+      if (this.game.phase === 'settling') { this.sync(); return; }
       const buffer = Array.isArray(data)
         ? Buffer.concat(data)
         : data instanceof ArrayBuffer
@@ -162,6 +169,13 @@ export class SpeechBridge {
         this.close('Audio arrived too quickly. Re-enable the microphone.');
         return;
       }
+      // A sustained capture/upload gap invalidates the cumulative provider clock.
+      // Pause instead of accepting words against an increasingly stale timeline.
+      if (Date.now() - this.firstAudioAt - this.audioBytes / 32 > 2000) {
+        this.close('Audio was interrupted. Re-enable the microphone and resume.');
+        return;
+      }
+      this.lastAudioAt = Date.now();
       this.audioBytes += buffer.length;
       if (this.upstream.bufferedAmount > 128000) {
         this.close('Speech connection is too slow. Try again.');
@@ -169,17 +183,29 @@ export class SpeechBridge {
       }
       this.upstream.send(buffer, { binary: true });
     });
-    client.on('close', () => this.close());
-    client.on('error', () => this.close());
+    client.on('close', () => this.close(this.game.phase === 'active' ? 'Microphone disconnected. Re-enable it and resume.' : undefined));
+    client.on('error', () => this.close('Microphone connection failed. Re-enable it and resume.'));
   }
   valid() {
     return (
       !this.closed &&
       this.validSession() &&
-      this.game.phase === 'active' &&
+      ['active', 'settling'].includes(this.game.phase) &&
       this.game.round?.id === this.roundId &&
       this.game.round.epoch === this.epoch
     );
+  }
+  sync() {
+    if (!this.valid()) { this.close(); return; }
+    const lastCapture = this.lastAudioAt ?? this.listeningAt;
+    if (this.game.phase === 'active' && lastCapture !== undefined && Date.now() - lastCapture > 2000) {
+      this.close('No microphone audio arrived. Re-enable the microphone and resume.');
+      return;
+    }
+    if (this.game.phase === 'settling' && !this.finalized && this.upstream?.readyState === WebSocket.OPEN) {
+      this.finalized = true;
+      this.upstream.send(JSON.stringify({ type: 'Finalize' }));
+    }
   }
   private status(status: 'connecting' | 'listening') {
     this.game.mic = status;
@@ -201,6 +227,7 @@ export class SpeechBridge {
     }
     this.game.mic = error ? 'error' : 'off';
     this.done();
+    if (this.game.phase === 'active') this.game.pauseIfActive();
     this.game.onChange();
   }
 }

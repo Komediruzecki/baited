@@ -6,7 +6,7 @@ import { WebSocketServer } from 'ws';
 import { Game, defaults } from './game.js';
 import { Store } from './store.js';
 import { Sessions, Limiter, cookies, equal, isLoopback, randomKey } from './security.js';
-import { TwitchAuth, TwitchConnection, AuthRevoked } from './twitch.js';
+import { TwitchAuth, TwitchConnection, AuthRevoked, AuthSuperseded } from './twitch.js';
 import { SpeechBridge } from './speech.js';
 import type { Config } from './config.js';
 import type { Session } from './security.js';
@@ -24,6 +24,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     auth = new TwitchAuth(config, store);
   const twitch = new Map<string, TwitchConnection>(),
     speech = new Map<string, SpeechBridge>();
+  const microphoneLeases = new Map<string, { session: Session; leaseId: string; expires: number }>();
   const pendingOAuth = new Map<string, { cookie: string; expires: number }>();
   type Subscriber = {
     roomId: string;
@@ -80,11 +81,26 @@ export async function createBait(config: Config, developmentHmr = false) {
       `event: state\ndata: ${JSON.stringify(s.role === 'studio' ? studio(room) : room.view(s.role))}\n\n`,
     );
   }
+  function microphoneReady(game: Game) {
+    const lease = microphoneLeases.get(game.data.id);
+    return !!(config.speechKey && lease && lease.expires > Date.now() &&
+      sessions.get(`bait_session=${lease.session.id}`) === lease.session);
+  }
+  function disarm(roomId: string, ownerSession?: Session, leaseId?: string) {
+    const lease = microphoneLeases.get(roomId);
+    if (ownerSession && lease?.session !== ownerSession) return;
+    if (leaseId !== undefined && lease?.leaseId !== leaseId) return;
+    microphoneLeases.delete(roomId);
+    const game = rooms.get(roomId);
+    if (game?.phase === 'active') game.pauseIfActive();
+    speech.get(roomId)?.close();
+  }
   function register(game: Game) {
     rooms.set(game.data.id, game);
+    game.canRun = () => microphoneReady(game);
     game.onChange = () => {
       const bridge = speech.get(game.data.id);
-      if (bridge && !bridge.valid()) bridge.close();
+      bridge?.sync();
       if (!broadcasts.has(game.data.id))
         broadcasts.set(
           game.data.id,
@@ -97,26 +113,27 @@ export async function createBait(config: Config, developmentHmr = false) {
     };
   }
   for (const saved of store.snapshot.rooms) register(new Game(saved));
-  function invalidate(id: string) {
+  function invalidate(id: string, generation?: number) {
+    if (generation !== undefined && !auth.isCurrent(id, generation)) return;
     sessions.deleteUser(id);
+    void auth.invalidate(id).catch(() => {
+      storageError = true;
+    });
     for (const game of rooms.values())
       if (game.data.owner === id) {
         twitch.get(game.data.id)?.stop();
-        speech.get(game.data.id)?.close();
-        if (['active', 'paused'].includes(game.phase)) game.end('ended');
+        disarm(game.data.id);
+        if (['active', 'paused', 'settling'].includes(game.phase)) game.endIfRunning('ended');
         game.connection = {
           status: 'error',
           detail: 'Authorization revoked. Connect Twitch again.',
         };
         game.onChange();
       }
-    void store.deleteCredentials(id).catch(() => {
-      storageError = true;
-    });
   }
   function connect(game: Game) {
     twitch.get(game.data.id)?.stop();
-    const connection = new TwitchConnection(game, auth, () => invalidate(game.data.owner));
+    const connection = new TwitchConnection(game, auth, (generation) => invalidate(game.data.owner, generation));
     twitch.set(game.data.id, connection);
     connection.start();
   }
@@ -124,11 +141,13 @@ export async function createBait(config: Config, developmentHmr = false) {
   async function validateAll(start = false) {
     for (const game of rooms.values())
       if (game.data.mode === 'twitch' && store.snapshot.vault[game.data.owner]) {
+        const generation = auth.generation(game.data.owner);
         try {
           await auth.validate(game.data.owner);
-          if (start && !closed) connect(game);
+          if (start && !closed && rooms.get(game.data.id) === game && auth.isCurrent(game.data.owner, generation)) connect(game);
         } catch (e) {
-          if (e instanceof AuthRevoked) invalidate(game.data.owner);
+          if (e instanceof AuthSuperseded || !auth.isCurrent(game.data.owner, generation)) continue;
+          if (e instanceof AuthRevoked) invalidate(game.data.owner, generation);
           else {
             game.connection = {
               status: 'error',
@@ -142,6 +161,7 @@ export async function createBait(config: Config, developmentHmr = false) {
   const validation = setInterval(() => void validateAll(), 3600000);
   const startupValidation = validateAll(true);
   app.disable('x-powered-by');
+  app.set('trust proxy', config.trustedProxies);
   app.use(
     helmet({
       contentSecurityPolicy: config.production
@@ -214,7 +234,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     role: Subscriber['role'],
     s?: Session,
   ) {
-    if (subscribers.size >= 2000 || !limiter.hit(`sse:${req.socket.remoteAddress}`, 120)) {
+    if (subscribers.size >= 2000 || !limiter.hit(`sse:${req.ip}`, 120)) {
       res.status(429).end();
       return;
     }
@@ -228,7 +248,11 @@ export async function createBait(config: Config, developmentHmr = false) {
     const sub: Subscriber = { roomId: game.data.id, role, res, session: s };
     subscribers.add(sub);
     send(sub);
-    req.on('close', () => subscribers.delete(sub));
+    req.on('close', () => {
+      subscribers.delete(sub);
+      if (role === 'studio' && s && ![...subscribers].some((other) => other.role === 'studio' && other.session === s))
+        disarm(game.data.id, s);
+    });
   }
   app.get('/api/health', (_req, res) =>
     res.status(storageError ? 503 : 200).json({ ok: !storageError, version: '1.0.0' }),
@@ -239,16 +263,16 @@ export async function createBait(config: Config, developmentHmr = false) {
       authenticated: !!s,
       twitchReady: config.twitchReady,
       speechReady: !!config.speechKey,
-      demoAvailable: config.demo && isLoopback(req.socket.remoteAddress),
+      demoAvailable: config.demo && isLoopback(req.ip),
       ...(s ? { user: { name: s.name, mode: s.mode }, csrf: s.csrf } : {}),
     });
   });
   app.post('/api/demo/start', (req, res) => {
-    if (!config.demo || !isLoopback(req.socket.remoteAddress)) {
+    if (!config.demo || !isLoopback(req.ip)) {
       res.status(404).end();
       return;
     }
-    if (!limiter.hit(`demo:${req.socket.remoteAddress}`, 10)) {
+    if (!limiter.hit(`demo:${req.ip}`, 10)) {
       res.status(429).json({ error: 'Demo limit reached. Try again shortly.' });
       return;
     }
@@ -294,7 +318,7 @@ export async function createBait(config: Config, developmentHmr = false) {
       res.redirect('/?notice=setup');
       return;
     }
-    if (!limiter.hit(`oauth:${req.socket.remoteAddress}`, 20)) {
+    if (!limiter.hit(`oauth:${req.ip}`, 20)) {
       res.status(429).send('Try again shortly.');
       return;
     }
@@ -410,12 +434,20 @@ export async function createBait(config: Config, developmentHmr = false) {
           res.status(409).json({ error: 'Connect live Twitch chat before starting.' });
           return;
         }
+        if (s.mode === 'twitch' && !microphoneReady(game)) {
+          res.status(409).json({ error: 'Enable your microphone before starting.' });
+          return;
+        }
         game.begin();
         break;
       case 'pause':
         game.pause();
         break;
       case 'resume':
+        if (s.mode === 'twitch' && (game.connection.status !== 'connected' || !microphoneReady(game))) {
+          res.status(409).json({ error: 'Connect chat and enable your microphone before resuming.' });
+          return;
+        }
         game.resume();
         break;
       case 'skip':
@@ -438,12 +470,41 @@ export async function createBait(config: Config, developmentHmr = false) {
         twitch.get(game.data.id)?.stop();
         speech.get(game.data.id)?.close();
         game.data.settings.auto = false;
-        if (['active', 'paused'].includes(game.phase)) game.end('ended');
+        if (['active', 'paused', 'settling'].includes(game.phase)) game.endIfRunning('ended');
         game.connection = { status: 'offline', detail: 'Twitch chat disconnected' };
         game.onChange();
         break;
     }
     res.json(studio(game));
+  });
+  app.post('/api/studio/microphone', protect, (req, res) => {
+    const { armed, leaseId, renew } = z.object({
+      armed: z.boolean(), leaseId: z.string().uuid(), renew: z.boolean().default(false),
+    }).strict().parse(req.body),
+      s = res.locals.session as Session,
+      game = gameFor(res),
+      lease = microphoneLeases.get(game.data.id);
+    if (!armed) disarm(game.data.id, s, leaseId);
+    else {
+      if (![...subscribers].some((subscriber) => subscriber.role === 'studio' && subscriber.session === s)) {
+        res.status(409).json({ error: 'Reconnect your studio before enabling the microphone.' });
+        return;
+      }
+      if (!config.speechKey) {
+        res.status(409).json({ error: 'Speech recognition is not configured on this server.' });
+        return;
+      }
+      if (renew && (!lease || lease.session !== s || lease.leaseId !== leaseId || !microphoneReady(game))) {
+        res.status(409).json({ error: 'Microphone readiness expired. Enable it again.' });
+        return;
+      }
+      if (lease && (lease.session !== s || lease.leaseId !== leaseId) && microphoneReady(game)) {
+        res.status(409).json({ error: 'The microphone is already enabled in another studio session.' });
+        return;
+      }
+      microphoneLeases.set(game.data.id, { session: s, leaseId, expires: Date.now() + 30000 });
+    }
+    res.json({ armed: microphoneReady(game) });
   });
   app.post('/api/studio/settings', protect, (req, res) => {
     const game = gameFor(res);
@@ -474,15 +535,16 @@ export async function createBait(config: Config, developmentHmr = false) {
   });
   app.post('/api/logout', protect, (req, res) => {
     const s = res.locals.session as Session;
-    speech.get(s.roomId)?.close();
+    disarm(s.roomId, s);
     sessions.clear(res, s.id);
     res.json({ ok: true });
   });
   app.post('/api/account/disconnect', protect, async (_req, res) => {
     const s = res.locals.session as Session;
     if (s.mode === 'twitch') {
-      await auth.revoke(s.userId);
-      invalidate(s.userId);
+      const revoking = auth.revoke(s.userId);
+      invalidate(s.userId, auth.generation(s.userId));
+      await revoking;
     }
     sessions.clear(res, s.id);
     res.json({ ok: true });
@@ -490,8 +552,8 @@ export async function createBait(config: Config, developmentHmr = false) {
   app.post('/api/account/delete', protect, async (_req, res) => {
     const s = res.locals.session as Session;
     twitch.get(s.roomId)?.stop();
-    speech.get(s.roomId)?.close();
-    await auth.revoke(s.userId);
+    disarm(s.roomId);
+    const revoking = auth.revoke(s.userId);
     sessions.deleteUser(s.userId);
     rooms.delete(s.roomId);
     for (const sub of subscribers)
@@ -502,7 +564,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     store.snapshot.rooms = [...rooms.values()]
       .filter((g) => g.data.mode === 'twitch')
       .map((g) => g.data);
-    await store.save();
+    await Promise.all([store.save(), revoking]);
     sessions.clear(res, s.id);
     res.json({ ok: true });
   });
@@ -534,7 +596,7 @@ export async function createBait(config: Config, developmentHmr = false) {
   });
   app.post('/api/demo/:kind', protect, (req, res) => {
     const game = gameFor(res);
-    if (game.data.mode !== 'demo' || !config.demo || !isLoopback(req.socket.remoteAddress)) {
+    if (game.data.mode !== 'demo' || !config.demo || !isLoopback(req.ip)) {
       res.status(404).end();
       return;
     }
@@ -587,6 +649,8 @@ export async function createBait(config: Config, developmentHmr = false) {
       !game ||
       !equal(url.searchParams.get('csrf') || '', s.csrf) ||
       !config.speechKey ||
+      (s.mode === 'twitch' && (!microphoneReady(game) || microphoneLeases.get(game.data.id)?.session !== s ||
+        microphoneLeases.get(game.data.id)?.leaseId !== url.searchParams.get('leaseId'))) ||
       game.phase !== 'active' ||
       url.searchParams.get('round') !== game.round?.id ||
       Number(url.searchParams.get('epoch')) !== game.round.epoch ||
@@ -616,7 +680,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     }
     if (error instanceof AuthRevoked) {
       const s = res.locals.session as Session | undefined;
-      if (s) invalidate(s.userId);
+      if (s) invalidate(s.userId, error.generation);
       res.status(401).json({ error: error.message });
       return;
     }
@@ -632,7 +696,12 @@ export async function createBait(config: Config, developmentHmr = false) {
     });
   });
   const ticker = setInterval(() => {
-    for (const game of rooms.values()) game.tick();
+    for (const game of rooms.values()) {
+      if (game.data.mode === 'twitch' && microphoneLeases.has(game.data.id) && !microphoneReady(game))
+        disarm(game.data.id);
+      game.tick();
+      speech.get(game.data.id)?.sync();
+    }
   }, 250);
   const heartbeat = setInterval(() => {
     sessions.prune();
