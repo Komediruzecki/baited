@@ -1,0 +1,86 @@
+.logo-lockup {
+  --logo-width: 136px;
+  display: block;
+  position: relative;
+  width: var(--logo-width);
+  height: calc(var(--logo-width) * 0.47);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: transparent;
+  border-radius: 4px;
+}
+.logo-lockup > img {
+  position: absolute;
+  display: block;
+  width: var(--logo-width);
+  height: var(--logo-width);
+  max-width: none;
+  left: 0;
+  top: calc(var(--logo-width) * -0.359375);
+}
+.logo-glyph {
+  display: none;
+  position: relative;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: transparent;
+  border-radius: 4px;
+}
+.logo-glyph > img {
+  position: absolute;
+  width: 124px;
+  height: 124px;
+  max-width: none;
+  left: -1.78px;
+  top: -44.7px;
+}
+.small-brand .logo-lockup {
+  --logo-width: 112px;
+}
+.landing-header {
+  gap: 24px;
+}
+.viewer-header {
+  padding-block: 16px;
+}
+.obs-logo > .logo-lockup {
+  --logo-width: 104px;
+}
+.obs-logo {
+  margin-right: 18px;
+}
+.landing-footer .brand {
+  margin-right: 10px;
+}
+@media (max-width: 1000px) {
+  .sidebar > .brand > .logo-lockup {
+    display: none;
+  }
+  .sidebar > .brand > .logo-glyph {
+    display: block;
+  }
+  .sidebar > .brand {
+    margin-left: 0;
+    justify-content: center;
+    width: 100%;
+  }
+}
+@media (max-width: 480px) {
+  .landing-header .logo-lockup {
+    --logo-width: 126px;
+  }
+  .viewer-header .logo-lockup {
+    --logo-width: 126px;
+  }
+  .sidebar > .brand {
+    margin-left: 0;
+  }
+  .landing-header {
+    gap: 12px;
+  }
+  .obs-logo > .logo-lockup {
+    --logo-width: 88px;
+  }
+}

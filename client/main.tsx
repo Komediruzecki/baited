@@ -1,0 +1,1752 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  ArrowUpRight,
+  Mic,
+  MicOff,
+  Play,
+  Pause,
+  SkipForward,
+  Square,
+  Flame,
+  Users,
+  Trophy,
+  Settings2,
+  LayoutDashboard,
+  Check,
+  Link2,
+  Monitor,
+  Eye,
+  ShieldCheck,
+  ChevronRight,
+  RotateCcw,
+  X,
+  HelpCircle,
+  LogOut,
+  Timer,
+  Wifi,
+  AlertTriangle,
+  Terminal,
+  Target,
+  Trash2,
+  ChevronDown,
+} from './icons';
+import type { GameView, Studio, SessionInfo, Settings, Result } from '../shared/types';
+import { request } from './api';
+import { Microphone } from './microphone';
+import './style.css';
+import Landing from './Landing';
+import { brand, Button, Tag, CopyButton, Modal, HowTo } from './ui';
+import './brand.css';
+import { MissionStatus, GuessForm, AwardReview, ForbiddenClueCard, PublicAward } from './mechanics';
+import './angular.css';
+import './landing-game.css';
+
+const fmt = (ms: number) => {
+  const seconds = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+};
+const outcomeLabel: Record<Result['outcome'], string> = {
+  caught: 'CHAT WINS',
+  escaped: 'TIME UP',
+  skipped: 'SKIPPED',
+  ended: 'ENDED',
+  overturned: 'WIN REVERSED',
+};
+const cx = (...values: (string | false | undefined)[]) => values.filter(Boolean).join(' ');
+function useNow() {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 150);
+    return () => clearInterval(interval);
+  }, []);
+  return now;
+}
+function remaining(g: GameView, now: number, offset: number) {
+  return g.phase === 'active' && g.round?.endsAt
+    ? Math.max(0, g.round.endsAt - (now + offset))
+    : g.phase === 'paused'
+      ? (g.round?.remaining ?? 0)
+      : 0;
+}
+function useLive<T>(url: string, onState: (s: T) => void, onError: (s: boolean) => void) {
+  const stateRef = useRef(onState),
+    errorRef = useRef(onError);
+  stateRef.current = onState;
+  errorRef.current = onError;
+  useEffect(() => {
+    const source = new EventSource(url);
+    source.addEventListener('state', (e) => {
+      stateRef.current(JSON.parse((e as MessageEvent).data));
+      errorRef.current(false);
+    });
+    source.onerror = () => errorRef.current(true);
+    return () => source.close();
+  }, [url]);
+}
+function Stat({
+  label,
+  value,
+  icon,
+  detail,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  detail: string;
+}) {
+  return (
+    <div className="stat">
+      <div className="stat-top">
+        <span>{label}</span>
+        {icon}
+      </div>
+      <strong>{value}</strong>
+      <span className="stat-detail">{detail}</span>
+    </div>
+  );
+}
+function playWin() {
+  try {
+    const context = new AudioContext();
+    [0, 4, 7, 12].forEach((note, i) => {
+      const osc = context.createOscillator(),
+        gain = context.createGain(),
+        time = context.currentTime + i * 0.09;
+      osc.type = 'sine';
+      osc.frequency.value = 440 * 2 ** (note / 12);
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.045, time + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+      osc.connect(gain);
+      gain.connect(context.destination);
+      osc.start(time);
+      osc.stop(time + 0.4);
+    });
+    setTimeout(() => void context.close(), 1300);
+  } catch {}
+}
+function Confetti() {
+  return (
+    <div className="confetti" aria-hidden="true">
+      {Array.from({ length: 24 }, (_, i) => (
+        <i
+          key={i}
+          style={
+            {
+              '--x': `${(i * 37) % 100}%`,
+              '--delay': `${(i % 7) * 0.08}s`,
+              '--turn': `${i * 51}deg`,
+              '--color': ['#a970ff', '#00e5b0', '#ffd37a'][i % 3],
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+function Dashboard({ session, reload }: { session: SessionInfo; reload: () => void }) {
+  const [studio, setStudio] = useState<Studio | null>(null),
+    [offline, setOffline] = useState(false),
+    [error, setError] = useState(''),
+    [busy, setBusy] = useState(false),
+    [modal, setModal] = useState(''),
+    [tab, setTab] = useState('studio');
+  const [micStatus, setMicStatus] = useState('off'),
+    [level, setLevel] = useState(0),
+    [consent, setConsent] = useState(false);
+  const microphone = useRef<Microphone | null>(null),
+    lastResult = useRef(''),
+    offset = useRef(0);
+  const now = useNow();
+  const receive = useCallback((s: Studio) => {
+    offset.current = s.room.serverTime - Date.now();
+    setStudio(s);
+  }, []);
+  const connectionError = useCallback(
+    (lost: boolean) => {
+      setOffline(lost);
+      if (lost)
+        void request<SessionInfo>('/api/session')
+          .then((s) => {
+            if (!s.authenticated) reload();
+          })
+          .catch(() => {});
+    },
+    [reload],
+  );
+  useLive('/api/studio/events', receive, connectionError);
+  useEffect(() => {
+    void request<Studio>('/api/studio')
+      .then(receive)
+      .catch((e) => setError(e.message));
+    return () => microphone.current?.stop();
+  }, [receive]);
+  const g = studio?.room;
+  useEffect(() => {
+    if (!g?.result || g.result.id === lastResult.current) return;
+    lastResult.current = g.result.id;
+    if (g.result.outcome === 'caught' && g.settings.sound) playWin();
+  }, [g?.result?.id]);
+  useEffect(() => {
+    if (!consent || !g || !session.csrf) return;
+    if (g.phase === 'active' && !offline)
+      microphone.current?.connect(g.round!.id, g.round!.epoch, session.csrf);
+    else microphone.current?.disconnect();
+  }, [consent, g?.phase, g?.round?.id, g?.round?.epoch, offline, session.csrf]);
+  const action = async (action: string) => {
+    setBusy(true);
+    setError('');
+    try {
+      const s = await request<Studio>('/api/studio/action', { action }, session.csrf);
+      receive(s);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const save = async (settings: Settings) => {
+    setBusy(true);
+    try {
+      receive(await request<Studio>('/api/studio/settings', settings, session.csrf));
+      setModal('');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const stopMic = () => {
+    microphone.current?.stop();
+    microphone.current = null;
+    setConsent(false);
+  };
+  const enableMic = async () => {
+    if (!studio?.speechReady) {
+      setModal('speech');
+      return;
+    }
+    setModal('consent');
+  };
+  const acceptMic = async () => {
+    setModal('');
+    setError('');
+    microphone.current?.stop();
+    const mic = new Microphone(setMicStatus, setLevel, (message) => {
+      setError(message);
+      setConsent(false);
+    });
+    microphone.current = mic;
+    const enabled = await mic.enable();
+    if (enabled && microphone.current === mic) setConsent(true);
+  };
+  const logOut = async () => {
+    stopMic();
+    try {
+      await request('/api/logout', {}, session.csrf);
+      reload();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  if (!g || !studio)
+    return (
+      <div className="loading">
+        <span className="brand">{brand}</span>
+        <p>{error || 'Opening your studio…'}</p>
+      </div>
+    );
+  const active = g.phase === 'active',
+    paused = g.phase === 'paused',
+    cool = g.phase === 'cooldown',
+    ms = remaining(g, now, offset.current),
+    next = Math.max(0, (g.nextAt ?? 0) - (now + offset.current)),
+    progress = g.round ? ms / g.round.duration : 1;
+  const canStart = !active && !paused && (!cool || next <= 0),
+    connected = g.connection.status === 'connected',
+    demo = g.mode === 'demo';
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <a href="/about" className="brand" aria-label="About BAIT">
+          {brand}
+        </a>
+        <div className="sidebar-caption small-label">STREAM CONTROL</div>
+        <nav>
+          {[
+            ['studio', 'Studio', LayoutDashboard],
+            ['community', 'Community', Users],
+            ['setup', 'Stream setup', Monitor],
+          ].map(([id, label, Icon]) => {
+            const I = Icon as typeof Monitor;
+            return (
+              <button
+                key={id as string}
+                onClick={() => setTab(id as string)}
+                className={cx('nav-item', tab === id && 'selected')}
+              >
+                <I size={18} />
+                {label as string}
+                {id === 'studio' && <span className="nav-indicator" />}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="sidebar-note">
+          <div className="note-symbol">
+            <Eye size={24} />
+          </div>
+          <h3>Keep the word hidden.</h3>
+          <p>Share the viewer link, then carry on streaming.</p>
+          <button className="text-button" onClick={() => setModal('how')}>
+            How it works <ArrowUpRight size={14} />
+          </button>
+        </div>
+        <div className="sidebar-bottom">
+          <button className="nav-item" onClick={() => setModal('how')}>
+            <HelpCircle size={17} /> How to play
+          </button>
+          <div className="profile">
+            <div className="avatar">
+              {demo ? 'P' : session.user?.name.slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <strong>{demo ? 'Demo studio' : session.user?.name}</strong>
+              <span>{demo ? 'LOCAL DEMO' : 'TWITCH CONNECTED'}</span>
+            </div>
+            <button className="icon-button" aria-label="Sign out" onClick={() => void logOut()}>
+              <LogOut size={16} />
+            </button>
+          </div>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <div className="breadcrumb">
+            BAIT <ChevronRight size={14} />
+            <strong>
+              {tab === 'studio' ? 'Studio' : tab === 'community' ? 'Community' : 'Stream setup'}
+            </strong>
+          </div>
+          <div className="topbar-right">
+            <span className={cx('connection-pill', (connected || demo) && 'online')}>
+              <span className="dot" />
+              {demo
+                ? 'LOCAL DEMO'
+                : connected
+                  ? `TWITCH / ${g.channel}`
+                  : g.connection.status.toUpperCase()}
+            </span>
+            <button className="icon-button" aria-label="Help" onClick={() => setModal('how')}>
+              <HelpCircle size={18} />
+            </button>
+          </div>
+        </header>
+        <main className="main-content">
+          <div className="page-title">
+            <div>
+              <div className="eyebrow">STREAM CONTROL</div>
+              <h1>
+                {tab === 'studio'
+                  ? 'Stream studio'
+                  : tab === 'community'
+                    ? 'Community'
+                    : 'Stream setup'}
+              </h1>
+              <p>
+                {tab === 'studio'
+                  ? 'Start a round. Keep talking. Try not to say the word.'
+                  : tab === 'community'
+                    ? 'Round participation and shared wins.'
+                    : 'Share the viewer room and add BAIT to OBS.'}
+              </p>
+            </div>
+            <Button className="secondary" onClick={() => setModal('settings')}>
+              <Settings2 size={16} /> Game settings
+            </Button>
+          </div>
+          {demo && (
+            <div className="rehearsal-banner">
+              <span>
+                <Terminal size={15} />
+                <strong>Demo mode</strong> Simulated chat and speech. Twitch is not connected.
+              </span>
+              <button
+                onClick={() =>
+                  session.twitchReady ? location.assign('/auth/twitch') : setModal('twitch')
+                }
+              >
+                Set up Twitch <ArrowUpRight size={14} />
+              </button>
+            </div>
+          )}
+          {offline && (
+            <div className="error-banner" role="status">
+              <Wifi size={17} /> Connection lost. Controls will return when the studio reconnects.
+            </div>
+          )}
+          {error && (
+            <div className="error-banner" role="alert">
+              <AlertTriangle size={17} />
+              <span>{error}</span>
+              <button aria-label="Dismiss error" onClick={() => setError('')}>
+                <X size={16} />
+              </button>
+            </div>
+          )}
+          {tab === 'studio' && (
+            <>
+              <MissionStatus game={g} now={now} offset={offset.current} />
+              <div className="studio-grid">
+                <section
+                  className={cx(
+                    'mission-card',
+                    active && 'is-active',
+                    g.result?.outcome === 'caught' && cool && 'is-caught',
+                    g.result?.outcome === 'escaped' && cool && 'is-escaped',
+                  )}
+                >
+                  <div className="card-heading">
+                    <span className="small-label">CURRENT ROUND</span>
+                    <Tag tone={active ? 'lime' : paused ? 'amber' : 'muted'}>
+                      <span className="dot" />
+                      {active
+                        ? 'ROUND LIVE'
+                        : paused
+                          ? 'PAUSED'
+                          : cool
+                            ? 'ROUND COMPLETE'
+                            : 'READY'}
+                    </Tag>
+                  </div>
+                  <div className="mission-center">
+                    {!active && !paused && g.result ? (
+                      <>
+                        <span className="small-label">
+                          {g.result.outcome === 'caught'
+                            ? g.mission?.status === 'complete'
+                              ? 'MISSION COMPLETE'
+                              : 'CHAT WINS'
+                            : g.result.outcome === 'escaped'
+                              ? g.result.reason === 'guess'
+                                ? 'YOU CALLED THE BAIT'
+                                : 'TIME UP'
+                              : g.result.outcome === 'overturned'
+                                ? 'WIN REVERSED'
+                                : 'ROUND ENDED'}
+                        </span>
+                        <h2 className="revealed-word">
+                          {g.result.word}
+                          <span>{g.result.outcome === 'caught' ? '.' : '?'}</span>
+                        </h2>
+                        <p>
+                          {g.result.outcome === 'caught'
+                            ? `Detected after ${g.result.elapsed} seconds.`
+                            : g.result.outcome === 'overturned'
+                              ? 'Win removed. The next round gets a new word.'
+                              : g.result.reason === 'guess'
+                                ? 'Correct guess. You escaped.'
+                                : 'Start a new round when you’re ready.'}
+                        </p>
+                        {g.result.outcome === 'caught' && (
+                          <button
+                            className="undo-button"
+                            disabled={busy}
+                            onClick={() => void action('reverse')}
+                          >
+                            <RotateCcw size={13} /> Wrong detection? Reverse win
+                          </button>
+                        )}
+                        {g.result.outcome === 'caught' && studio.awardBoard && (
+                          <a href="#award-review" className="text-button">
+                            {g.result.award ? 'Change the award' : 'Choose “You baited me” award'}
+                            <ChevronDown size={16} />
+                          </a>
+                        )}
+                        <PublicAward award={g.result.award} />
+                      </>
+                    ) : (
+                      <>
+                        <div className={cx('secret-lock', active && 'pulsing')}>
+                          <Eye size={29} />
+                          <span className="lock-cross">+</span>
+                        </div>
+                        <h2>
+                          {active
+                            ? 'Chat has the word.'
+                            : paused
+                              ? 'Round paused'
+                              : 'Ready when chat is.'}
+                        </h2>
+                        <p>
+                          {active
+                            ? 'Keep streaming. Viewers will try to steer the conversation.'
+                            : paused
+                              ? 'The timer and speech detection are paused.'
+                              : 'Share the viewer link, enable your microphone, and start a round.'}
+                        </p>
+                        <div className="secret-capsule">
+                          <ShieldCheck size={15} />
+                          <span>The target stays hidden in your studio.</span>
+                        </div>
+                        {(active || paused) && g.round?.guessEnabled && (
+                          <div className="guess-control">
+                            {g.round.guessUsed ? (
+                              <p className="guess-used">
+                                Guess used. Chat got {g.round.wrongGuessBonus} extra seconds.
+                              </p>
+                            ) : (
+                              <Button
+                                className="secondary"
+                                disabled={!active || busy || offline}
+                                onClick={() => setModal('guess')}
+                              >
+                                <Target size={16} />
+                                Call the bait
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <div className="round-console">
+                    <div className="timer-block">
+                      <span className="small-label">
+                        {cool
+                          ? g.mission?.status === 'active'
+                            ? 'NEXT WORD'
+                            : 'NEXT ROUND'
+                          : active || paused
+                            ? g.mission
+                              ? `WORD ${Math.min(3, g.mission.completed + 1)} OF 3`
+                              : `ROUND ${String(g.round?.number).padStart(2, '0')}`
+                            : g.settings.mission === 'three'
+                              ? 'SESSION TIMER'
+                              : 'ROUND TIMER'}
+                      </span>
+                      <div className={cx('timer', active && ms < 15000 && 'urgent')}>
+                        {cool
+                          ? fmt(next)
+                          : active || paused
+                            ? fmt(ms)
+                            : fmt(
+                                (g.settings.mission === 'three'
+                                  ? g.settings.missionDuration
+                                  : g.settings.duration) * 1000,
+                              )}
+                        <span>
+                          {cool ? (g.settings.auto ? 'AUTO START' : 'COOLDOWN') : 'REMAINING'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="round-actions">
+                      {active ? (
+                        <Button
+                          className="primary"
+                          disabled={busy || offline}
+                          onClick={() => void action('pause')}
+                        >
+                          <Pause size={16} /> Pause round
+                        </Button>
+                      ) : paused ? (
+                        <Button
+                          className="primary"
+                          disabled={busy || offline}
+                          onClick={() => void action('resume')}
+                        >
+                          <Play size={16} /> Resume round
+                        </Button>
+                      ) : (
+                        <Button
+                          className="primary"
+                          disabled={busy || offline || !canStart || (!demo && !connected)}
+                          onClick={() => void action('start')}
+                        >
+                          <Play size={16} fill="currentColor" />
+                          {cool && next > 0
+                            ? 'Next round soon'
+                            : g.settings.mission === 'three'
+                              ? 'Start mission'
+                              : 'Start round'}
+                        </Button>
+                      )}
+                      {(active || paused) && (
+                        <>
+                          <button
+                            className="round-icon"
+                            aria-label="Skip current round"
+                            title="Skip round"
+                            disabled={busy || offline}
+                            onClick={() => void action('skip')}
+                          >
+                            <SkipForward size={18} />
+                          </button>
+                          <button
+                            className="round-icon"
+                            aria-label="End current round"
+                            title="End round"
+                            disabled={busy || offline}
+                            onClick={() => setModal('end')}
+                          >
+                            <Square size={16} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="round-progress">
+                    <div
+                      style={{ width: `${active || paused ? progress * 100 : cool ? 0 : 100}%` }}
+                    />
+                  </div>
+                  <div className="mission-footer">
+                    <span>
+                      <Target size={13} />
+                      {(g.round?.difficulty ?? g.settings.difficulty).toUpperCase()} DIFFICULTY
+                    </span>
+                    <span>
+                      {g.mission?.status === 'active'
+                        ? 'ONE SESSION CLOCK'
+                        : g.settings.auto
+                          ? 'AUTOMATIC ROUNDS'
+                          : 'MANUAL ROUNDS'}
+                    </span>
+                  </div>
+                  {cool && g.result?.outcome === 'caught' && <Confetti />}
+                </section>
+                <section className="mic-card">
+                  <div className="card-heading">
+                    <span className="small-label">YOUR MICROPHONE</span>
+                    <span className={cx('status-dot', micStatus === 'listening' && 'online')} />
+                  </div>
+                  <div className="mic-visual">
+                    <div className="mic-orbit" />
+                    <div className="mic-icon">
+                      {consent ? <Mic size={28} /> : <MicOff size={28} />}
+                    </div>
+                    <div className="waveform" aria-hidden="true">
+                      {Array.from({ length: 23 }, (_, i) => (
+                        <i
+                          key={i}
+                          style={{
+                            height: consent
+                              ? `${8 + Math.sin(i * 1.7) ** 2 * level * 48}px`
+                              : `${5 + Math.sin(i * 2.8) ** 2 * 9}px`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <h3>
+                    {micStatus === 'listening'
+                      ? 'Listening'
+                      : consent
+                        ? 'Microphone ready'
+                        : 'Microphone off'}
+                  </h3>
+                  <p>
+                    {micStatus === 'listening'
+                      ? 'Listening for complete words. Audio is streamed, never saved by BAIT.'
+                      : consent
+                        ? 'Mic enabled. Recognition starts with the next active round.'
+                        : 'Enable your microphone so BAIT can detect the target word.'}
+                  </p>
+                  <Button
+                    className={consent ? 'secondary' : 'light'}
+                    disabled={offline}
+                    onClick={() => (consent ? stopMic() : void enableMic())}
+                  >
+                    {consent ? <MicOff size={16} /> : <Mic size={16} />}
+                    {consent ? 'Disable microphone' : 'Enable microphone'}
+                  </Button>
+                  <div className="mic-footnote">
+                    <ShieldCheck size={12} />
+                    {studio.speechReady
+                      ? 'MIC INPUT ONLY · NO AUDIO STORAGE'
+                      : 'LIVE SPEECH NEEDS A DEEPGRAM KEY'}
+                  </div>
+                </section>
+              </div>
+              <div className="stats-grid">
+                <Stat
+                  label="COMMUNITY WINS"
+                  value={g.score.wins}
+                  icon={<Trophy size={17} />}
+                  detail={`${g.score.played} rounds played`}
+                />
+                <Stat
+                  label="CURRENT STREAK"
+                  value={String(g.score.streak).padStart(2, '0')}
+                  icon={<Flame size={18} />}
+                  detail={`Best streak: ${g.score.best}`}
+                />
+                <Stat
+                  label="PARTICIPANTS"
+                  value={g.participants}
+                  icon={<Users size={18} />}
+                  detail="Unique chatters this round"
+                />
+                <Stat
+                  label="SKIP VOTES"
+                  value={`${g.voters} / ${g.voteThreshold}`}
+                  icon={<SkipForward size={18} />}
+                  detail="One !skip vote per chatter"
+                />
+              </div>
+              <div className="bottom-grid">
+                <section className="panel viewer-share">
+                  <div className="section-heading">
+                    <div>
+                      <span className="small-label">VIEWER ROOM</span>
+                      <h3>Share the viewer link</h3>
+                    </div>
+                    <Link2 size={21} />
+                  </div>
+                  <p>Post this link in Twitch chat. It reveals the target to viewers.</p>
+                  <div className="link-field">
+                    <input aria-label="Viewer room link" readOnly value={studio.viewerUrl} />
+                    <CopyButton value={studio.viewerUrl} />
+                  </div>
+                  <div className="share-footer">
+                    <span>
+                      <Users size={13} /> No viewer account needed
+                    </span>
+                    <a href={studio.viewerUrl} target="_blank" rel="noreferrer">
+                      Open viewer room <ArrowUpRight size={14} />
+                    </a>
+                  </div>
+                </section>
+                <section className="panel recent-rounds">
+                  <div className="section-heading">
+                    <h3>Recent rounds</h3>
+                    <span className="small-label">LAST {Math.min(g.history.length, 3)}</span>
+                  </div>
+                  {g.history.length ? (
+                    g.history.slice(0, 3).map((r) => <ResultRow key={r.id} result={r} />)
+                  ) : (
+                    <div className="empty-history">
+                      <Timer size={22} />
+                      <div>
+                        <strong>No finished rounds yet.</strong>
+                        <p>Start a round to begin.</p>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              </div>
+              {studio.awardBoard && (
+                <AwardReview
+                  key={studio.awardBoard.roundId}
+                  board={studio.awardBoard}
+                  csrf={session.csrf!}
+                  offline={offline}
+                  onReceive={receive}
+                  onError={setError}
+                />
+              )}
+              {demo && <Rehearsal game={g} csrf={session.csrf!} onError={setError} />}
+            </>
+          )}
+          {tab === 'community' && <Community game={g} />}
+          {tab === 'setup' && (
+            <Setup studio={studio} game={g} action={action} onDelete={() => setModal('delete')} />
+          )}
+          <footer className="studio-footer">
+            <span className="footer-brand">
+              BAIT<span> / MAKE THE STREAMER SAY IT.</span>
+            </span>
+            <a href="/privacy" target="_blank" rel="noreferrer">
+              Privacy
+            </a>
+            <span>CHAT VS. STREAMER</span>
+          </footer>
+        </main>
+      </div>
+      {modal && (
+        <Modal
+          title={
+            modal === 'settings'
+              ? 'Game settings'
+              : modal === 'how'
+                ? 'How to play'
+                : modal === 'guess'
+                  ? 'Call the bait'
+                  : modal === 'consent'
+                    ? 'Let BAIT listen to your microphone?'
+                    : modal === 'end'
+                      ? 'End this round?'
+                      : modal === 'delete'
+                        ? 'Delete your BAIT data?'
+                        : modal === 'twitch'
+                          ? 'Set up Twitch'
+                          : 'Set up microphone recognition'
+          }
+          onClose={() => setModal('')}
+        >
+          {modal === 'settings' ? (
+            <SettingsForm settings={g.settings} busy={busy} onSave={save} />
+          ) : modal === 'how' ? (
+            <HowTo />
+          ) : modal === 'guess' ? (
+            <GuessForm
+              key={g.round?.id}
+              game={g}
+              csrf={session.csrf!}
+              offline={offline}
+              onReceive={receive}
+              onClose={() => setModal('')}
+            />
+          ) : modal === 'consent' ? (
+            <>
+              <p>
+                BAIT will request your microphone and stream it through this server to Deepgram
+                during active rounds only.
+              </p>
+              <p className="muted">
+                BAIT does not record or store audio or transcripts. Deepgram processes the audio
+                under its own terms. Use headphones to reduce sound from your stream reaching the
+                mic. You can stop at any time.
+              </p>
+              <div className="modal-actions">
+                <Button className="secondary" onClick={() => setModal('')}>
+                  Cancel
+                </Button>
+                <Button className="primary" onClick={() => void acceptMic()}>
+                  <Mic size={16} /> Allow microphone
+                </Button>
+              </div>
+            </>
+          ) : modal === 'end' ? (
+            <>
+              <p>The current target will be revealed and automatic rounds will stop.</p>
+              <Button
+                className="danger"
+                onClick={() => {
+                  setModal('');
+                  void action('end');
+                }}
+              >
+                End this round
+              </Button>
+            </>
+          ) : modal === 'delete' ? (
+            <>
+              <p>
+                Your settings, scores, participation records, and Twitch authorization will be
+                removed. Shared links will stop working.
+              </p>
+              <Button
+                className="danger"
+                onClick={() => {
+                  void request('/api/account/delete', {}, session.csrf)
+                    .then(reload)
+                    .catch((e) => setError(e.message));
+                }}
+              >
+                Delete my data
+              </Button>
+            </>
+          ) : modal === 'twitch' ? (
+            <>
+              <p>
+                Add Twitch application credentials to your local <code>.env</code> and restart the
+                server. The full setup guide is in the README.
+              </p>
+              <p className="muted">
+                Only chat-read permission is requested. BAIT does not post target words or
+                announcements.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>Live microphone recognition uses Deepgram’s streaming speech service.</p>
+              <ol className="setup-list">
+                <li>
+                  Add <code>DEEPGRAM_API_KEY</code> to your local <code>.env</code>.
+                </li>
+                <li>Restart BAIT, then enable your microphone here.</li>
+              </ol>
+              <p className="muted">
+                {demo
+                  ? 'You can test game matching below with a simulated transcript. It does not use the microphone or a transcription provider.'
+                  : 'Recognition needs a provider key. No simulated transcript endpoint is available in Twitch mode.'}
+              </p>
+            </>
+          )}
+        </Modal>
+      )}
+    </div>
+  );
+}
+function ResultRow({ result: r }: { result: Result }) {
+  return (
+    <div className="result-row">
+      <span className={cx('result-icon', r.outcome === 'caught' && 'win')}>
+        {r.outcome === 'caught' ? <Check size={14} /> : <ArrowUpRight size={14} />}
+      </span>
+      <strong>{r.word}</strong>
+      <span>{r.outcome === 'caught' ? `${r.elapsed}s` : '—'}</span>
+      <Tag tone={r.outcome === 'caught' ? 'lime' : 'muted'}>
+        {r.reason === 'guess' ? 'BAIT CALLED' : outcomeLabel[r.outcome]}
+      </Tag>
+      {r.award && (
+        <span className="result-award">
+          <Trophy size={12} />
+          Streamer’s pick: @{r.award.name}
+        </span>
+      )}
+    </div>
+  );
+}
+function SettingsForm({
+  settings,
+  busy,
+  onSave,
+}: {
+  settings: Settings;
+  busy: boolean;
+  onSave: (s: Settings) => void;
+}) {
+  const [s, set] = useState(settings);
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(s);
+      }}
+    >
+      <p className="muted">
+        Clue rules and guessing apply to the next word. Changing the format takes effect after the
+        current mission.
+      </p>
+      <label className="field-label">Game format</label>
+      <div className="segmented" role="group" aria-label="Game format">
+        {(['single', 'three'] as const).map((mission) => (
+          <button
+            key={mission}
+            type="button"
+            aria-pressed={s.mission === mission}
+            className={cx(s.mission === mission && 'selected')}
+            onClick={() => set({ ...s, mission })}
+          >
+            {mission === 'single' ? 'Single word' : 'Three-word mission'}
+          </button>
+        ))}
+      </div>
+      <label className="field-label">Difficulty</label>
+      <div className="segmented">
+        {(['easy', 'medium', 'hard'] as const).map((d) => (
+          <button
+            key={d}
+            type="button"
+            aria-pressed={s.difficulty === d}
+            className={cx(s.difficulty === d && 'selected')}
+            onClick={() => set({ ...s, difficulty: d })}
+          >
+            {d}
+          </button>
+        ))}
+      </div>
+      <div className="form-grid">
+        <label>
+          {s.mission === 'three' ? 'Mission timer' : 'Round duration'}
+          <select
+            value={s.mission === 'three' ? s.missionDuration : s.duration}
+            onChange={(e) =>
+              set({
+                ...s,
+                [s.mission === 'three' ? 'missionDuration' : 'duration']: Number(e.target.value),
+              })
+            }
+          >
+            {(s.mission === 'three'
+              ? [60, 90, 120, 180, 300, 600, 900]
+              : [30, 60, 90, 120, 180, 300, 600]
+            ).map((n) => (
+              <option key={n} value={n}>
+                {n} seconds
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Cooldown
+          <select
+            value={s.cooldown}
+            onChange={(e) => set({ ...s, cooldown: Number(e.target.value) })}
+          >
+            {[5, 10, 15, 30, 60].map((n) => (
+              <option key={n} value={n}>
+                {n} seconds
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className="field-help">
+        {s.difficulty === 'easy'
+          ? 'No forbidden clues.'
+          : s.difficulty === 'medium'
+            ? 'Viewers must avoid two obvious clues.'
+            : 'Viewers must avoid four obvious clues.'}{' '}
+        Only a violating hint loses award eligibility.
+      </p>
+      {s.mission === 'three' && (
+        <p className="field-help">
+          Land three words before this timer runs out. The clock keeps running between words and
+          freezes when you pause. A skip replaces a word; a correct private guess ends the mission.
+        </p>
+      )}
+      <label className="number-label">
+        Votes to skip
+        <input
+          type="number"
+          min="1"
+          max="50"
+          value={s.skipVotes}
+          onChange={(e) => set({ ...s, skipVotes: Number(e.target.value) })}
+        />
+      </label>
+      <label className="toggle-row">
+        <span>
+          <strong>Automatic rounds</strong>
+          <small>Start a fresh round or mission after each cooldown.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={s.auto}
+          onChange={(e) => set({ ...s, auto: e.target.checked })}
+        />
+      </label>
+      <label className="toggle-row">
+        <span>
+          <strong>Celebration sound</strong>
+          <small>Play a short chime when chat wins.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={s.sound}
+          onChange={(e) => set({ ...s, sound: e.target.checked })}
+        />
+      </label>
+      <label className="toggle-row">
+        <span>
+          <strong>Call the bait</strong>
+          <small>One private typed guess per word. A miss gives chat 15 extra seconds.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={s.callBait}
+          onChange={(e) => set({ ...s, callBait: e.target.checked })}
+        />
+      </label>
+      <div className="modal-actions">
+        <Button type="submit" className="primary" disabled={busy}>
+          Save game settings <Check size={16} />
+        </Button>
+      </div>
+    </form>
+  );
+}
+function Rehearsal({
+  game,
+  csrf,
+  onError,
+}: {
+  game: GameView;
+  csrf: string;
+  onError: (e: string) => void;
+}) {
+  const [open, setOpen] = useState(false),
+    [name, setName] = useState('friendly_viewer'),
+    [text, setText] = useState(''),
+    [transcript, setTranscript] = useState(''),
+    [feedback, setFeedback] = useState('');
+  const send = async (kind: string) => {
+    try {
+      if (kind === 'chat') {
+        const r = await request<{ accepted: boolean }>('/api/demo/chat', { name, text }, csrf);
+        setFeedback(
+          r.accepted
+            ? 'Test chatter counted.'
+            : 'Not counted: inactive, cooldown, duplicate chatter, or target spoiler.',
+        );
+        setText('');
+      } else {
+        const r = await request<{ matched: boolean }>(
+          '/api/demo/transcript',
+          { text: transcript, roundId: game.round?.id, epoch: game.round?.epoch },
+          csrf,
+        );
+        setFeedback(
+          r.matched
+            ? 'Complete target word matched. Community win recorded.'
+            : 'No match. Only the exact complete target word wins.',
+        );
+        setTranscript('');
+      }
+    } catch (e) {
+      onError((e as Error).message);
+    }
+  };
+  return (
+    <section className="rehearsal-tools">
+      <button onClick={() => setOpen(!open)} aria-expanded={open}>
+        <Terminal size={15} />
+        <span>Demo controls</span>
+        <span className="small-label">DEVELOPMENT ONLY</span>
+        <ChevronDown size={16} />
+      </button>
+      {open && (
+        <div className="rehearsal-body">
+          <p>
+            Open the viewer room in a separate tab to learn the target. These inputs simulate
+            events; they are not Twitch messages or speech recognition.
+          </p>
+          <div className="rehearsal-inputs">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send('chat');
+              }}
+            >
+              <label>
+                Test chatter
+                <input
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={25}
+                  pattern="[a-zA-Z0-9_]+"
+                />
+              </label>
+              <label>
+                Simulated chat
+                <input
+                  required
+                  placeholder="A subtle nudge, or !skip"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                />
+              </label>
+              <Button className="secondary" disabled={game.phase !== 'active'}>
+                Send test chat
+              </Button>
+            </form>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send('transcript');
+              }}
+            >
+              <label>
+                Simulated final transcript
+                <textarea
+                  required
+                  placeholder="Something the streamer might say…"
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                />
+              </label>
+              <Button className="secondary" disabled={game.phase !== 'active'}>
+                Test word detection
+              </Button>
+            </form>
+          </div>
+          <p role="status" className="test-feedback">
+            {feedback}
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+function Community({ game: g }: { game: GameView }) {
+  return (
+    <>
+      <div className="stats-grid">
+        <Stat
+          label="SHARED WINS"
+          value={g.score.wins}
+          icon={<Trophy size={18} />}
+          detail="The whole community wins"
+        />
+        <Stat
+          label="BEST STREAK"
+          value={g.score.best}
+          icon={<Flame size={18} />}
+          detail="Consecutive community wins"
+        />
+        <Stat
+          label="ROUNDS PLAYED"
+          value={g.score.played}
+          icon={<Target size={18} />}
+          detail="Completed rounds"
+        />
+        <Stat
+          label="THIS ROUND"
+          value={g.participants}
+          icon={<Users size={18} />}
+          detail="Unique participating chatters"
+        />
+      </div>
+      <div className="bottom-grid">
+        <section className="panel">
+          <div className="section-heading">
+            <h3>Participation</h3>
+            <Users size={19} />
+          </div>
+          <p className="muted">
+            Each chatter earns participation credit once per completed round. “You baited me” awards
+            are chosen by the streamer after a win.
+          </p>
+          {g.leaders.length ? (
+            g.leaders.map((l, i) => (
+              <div className="leader-row" key={l.name}>
+                <span>{String(i + 1).padStart(2, '0')}</span>
+                <strong>{l.name}</strong>
+                <span className="leader-credit">
+                  {l.rounds} rounds<small>{l.baits} streamer picks</small>
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="empty-history">
+              <Users />
+              <p>No participants yet. Chat during a round to join in.</p>
+            </div>
+          )}
+        </section>
+        <section className="panel">
+          <div className="section-heading">
+            <h3>Round history</h3>
+            <span className="small-label">RECENT ROUNDS</span>
+          </div>
+          {g.history.map((r) => (
+            <ResultRow key={r.id} result={r} />
+          ))}
+          {!g.history.length && <p className="muted">No rounds yet.</p>}
+        </section>
+      </div>
+    </>
+  );
+}
+function Setup({
+  studio,
+  game,
+  action,
+  onDelete,
+}: {
+  studio: Studio;
+  game: GameView;
+  action: (s: string) => Promise<void>;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="setup-grid">
+      <section className="panel">
+        <div className="step-number">01 / THE AUDIENCE</div>
+        <h2>Viewer room</h2>
+        <p className="muted">
+          Share the viewer-room link in Twitch chat or a channel panel. Viewers keep this page
+          beside your stream.
+        </p>
+        <div className="link-field">
+          <input aria-label="Viewer room URL" value={studio.viewerUrl} readOnly />
+          <CopyButton value={studio.viewerUrl} />
+        </div>
+        <a className="inline-link" href={studio.viewerUrl} target="_blank" rel="noreferrer">
+          Open the viewer experience <ArrowUpRight size={15} />
+        </a>
+        <div className="notice">
+          <Eye size={19} />
+          <p>Opening the viewer room reveals the word to you. Keep it closed while you play.</p>
+        </div>
+      </section>
+      <section className="panel">
+        <div className="step-number">02 / THE BROADCAST</div>
+        <h2>OBS overlay</h2>
+        <p className="muted">
+          In OBS, add a Browser Source and paste this URL. Set it to 1920 × 1080. The background is
+          transparent.
+        </p>
+        <div className="link-field">
+          <input aria-label="OBS overlay URL" value={studio.overlayUrl} readOnly />
+          <CopyButton value={studio.overlayUrl} />
+        </div>
+        <a className="inline-link" href={studio.overlayUrl} target="_blank" rel="noreferrer">
+          Preview the OBS overlay <ArrowUpRight size={15} />
+        </a>
+        <div className="notice">
+          <ShieldCheck size={19} />
+          <p>
+            This link can only read the overlay. It cannot control rounds or read the active target.
+          </p>
+        </div>
+      </section>
+      <section className="panel connection-settings">
+        <div>
+          <div className="step-number">03 / TWITCH CHAT</div>
+          <h3>{game.mode === 'demo' ? 'Local demo' : `Connected account: ${game.channel}`}</h3>
+          <p className="muted">
+            {game.connection.detail}. Commands: <code>!bait</code> to participate,{' '}
+            <code>!skip</code> to vote. Ordinary, non-spoiler chat also counts.
+          </p>
+        </div>
+        {game.mode === 'twitch' && (
+          <div className="connection-buttons">
+            <Button className="secondary" onClick={() => void action('connect')}>
+              Reconnect chat <Wifi size={16} />
+            </Button>
+            <Button className="secondary" onClick={() => void action('disconnect')}>
+              Disconnect chat
+            </Button>
+          </div>
+        )}
+      </section>
+      <section className="panel privacy-panel">
+        <ShieldCheck size={22} />
+        <div>
+          <h3>Stored data</h3>
+          <p className="muted">
+            BAIT stores settings, scores, participation and award counts. Recent chat hints stay in
+            memory for award review, then clear ten minutes after the round. Chat text, audio and
+            transcripts are never written to disk.
+          </p>
+        </div>
+        <Button className="danger-outline" onClick={onDelete}>
+          <Trash2 size={16} /> Delete my data
+        </Button>
+      </section>
+    </div>
+  );
+}
+
+function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
+  const [game, setGame] = useState<GameView | null>(null),
+    [error, setError] = useState(''),
+    [offline, setOffline] = useState(false);
+  const offset = useRef(0),
+    now = useNow();
+  const role = overlay ? 'overlay' : 'viewer',
+    query = overlay ? location.search : '';
+  const receive = useCallback((g: GameView) => {
+    offset.current = g.serverTime - Date.now();
+    setGame(g);
+    setError('');
+  }, []);
+  useLive<GameView>(
+    `/api/rooms/${encodeURIComponent(id)}/events/${role}${query}`,
+    receive,
+    setOffline,
+  );
+  useEffect(() => {
+    void request<GameView>(`/api/rooms/${encodeURIComponent(id)}/${role}${query}`)
+      .then(receive)
+      .catch((e) => setError(e.message));
+  }, [id, role, query, receive]);
+  useEffect(() => {
+    document.body.classList.toggle('overlay-body', overlay);
+    return () => document.body.classList.remove('overlay-body');
+  }, [overlay]);
+  if (error)
+    return (
+      <div className={overlay ? 'overlay-error' : 'public-error'}>
+        <AlertTriangle />
+        <h2>Room unavailable</h2>
+        <p>{error}</p>
+        {!overlay && <a href="/">Back to BAIT</a>}
+      </div>
+    );
+  if (!game)
+    return overlay ? null : (
+      <div className="loading">
+        <span className="brand">{brand}</span>
+        <p>Loading the room…</p>
+      </div>
+    );
+  const g = game,
+    ms = remaining(g, now, offset.current),
+    active = g.phase === 'active',
+    paused = g.phase === 'paused',
+    finished = !active && !paused && !!g.result,
+    won = g.result?.outcome === 'caught' && finished;
+  const stale = offline;
+  if (overlay)
+    return (
+      <div className="obs-root">
+        <PublicAward award={g.history[0]?.award} />
+        <div className={cx('obs-hud', won && 'obs-hud-win', paused && 'obs-hud-paused')}>
+        <div className={cx('obs-widget', won && 'obs-win')}>
+          <div className="obs-logo">{brand}</div>
+          <div className="obs-message">
+            <span>
+              {g.mode === 'demo' ? 'LOCAL DEMO · ' : ''}
+              {stale
+                ? 'RECONNECTING'
+                : won
+                  ? 'CHAT WINS'
+                  : active
+                    ? 'CHAT HAS A WORD'
+                    : paused
+                      ? 'ROUND PAUSED'
+                      : finished
+                        ? g.result?.reason === 'guess'
+                          ? 'BAIT CALLED'
+                          : outcomeLabel[g.result!.outcome]
+                        : 'WAITING FOR A ROUND'}
+            </span>
+            <strong>
+              {won
+                ? g.result?.word
+                : active || paused
+                  ? g.mission
+                    ? `WORD ${Math.min(3, g.mission.completed + 1)} OF 3`
+                    : `ROUND ${g.round?.number}`
+                  : finished
+                    ? g.result?.word
+                    : 'MAKE THEM SAY IT.'}
+            </strong>
+          </div>
+          <div className="obs-time">{active || paused ? fmt(ms) : won ? '+1' : finished && g.result?.reason === 'timer' ? '00:00' : '—'}</div>
+          <div className="obs-progress">
+            <i style={{ width: `${g.round ? (ms / g.round.duration) * 100 : 0}%` }} />
+          </div>
+        </div>
+        <MissionStatus compact game={g} now={now} offset={offset.current} />
+        <div className="obs-score">
+          <Trophy size={15} />
+          {g.score.wins} WINS<span>·</span>
+          <Flame size={15} />
+          {g.score.streak} STREAK
+        </div>
+        </div>
+        {won && now + offset.current - g.result!.at < 5500 && (
+          <div className="obs-celebration">
+            <Confetti />
+            <span>THEY SAID IT.</span>
+            <h1>
+              {g.result!.word}
+              <span>!</span>
+            </h1>
+            <p>CHAT WINS</p>
+          </div>
+        )}
+        {finished &&
+          g.result?.outcome === 'escaped' &&
+          now + offset.current - g.result.at < 5000 && (
+            <div className="obs-escape">
+              <span>THE STREAMER ESCAPED.</span>
+              <strong>{g.result.word}</strong>
+              <small>{g.result.reason === 'guess' ? 'BAIT CALLED' : 'TIME’S UP'}</small>
+            </div>
+          )}
+      </div>
+    );
+  return (
+    <div className={cx('viewer-page', (active || paused) && 'viewer-playing')}>
+      <header className="viewer-header">
+        <a className="brand" href="/">
+          {brand}
+        </a>
+        <Tag tone={active ? 'lime' : 'muted'}>
+          <span className="dot" />
+          {g.mode === 'demo' ? 'LOCAL DEMO' : `@${g.channel}`}
+        </Tag>
+      </header>
+      <main className="viewer-main">
+        <div className="eyebrow">
+          <Eye size={15} /> VIEWER ROOM
+        </div>
+        <h1>
+          {g.mission?.status === 'complete'
+            ? 'Chat cleared the mission.'
+            : g.mission?.status === 'failed'
+              ? 'Time ran out.'
+              : g.result?.reason === 'guess' && !active && !paused
+                ? 'The streamer called it.'
+                : won
+                  ? 'The streamer said it.'
+                  : 'You have one job.'}
+        </h1>
+        <p className="viewer-intro">
+          {g.mission?.status === 'complete'
+            ? 'All three words landed before the timer.'
+            : g.mission?.status === 'failed'
+              ? `${g.mission.completed} of 3 words landed. Those word wins still count.`
+              : g.result?.reason === 'guess' && !active && !paused
+                ? 'The private guess was right. The streamer escaped.'
+                : won
+                  ? 'One word. One win for the whole chat.'
+                  : 'Make the streamer say this word. Keep it subtle.'}
+        </p>
+        {stale && (
+          <div className="error-banner">
+            <Wifi size={16} /> Connection lost. Waiting for a fresh game update.
+          </div>
+        )}
+        <MissionStatus game={g} now={now} offset={offset.current} />
+        <section className={cx('target-card', won && 'target-win')}>
+          <div className="card-heading">
+            <span className="small-label">{finished ? 'THE REVEAL' : 'YOUR SECRET TARGET'}</span>
+            <Tag tone={active ? 'lime' : 'muted'}>
+              {active
+                ? 'LIVE'
+                : paused
+                  ? 'PAUSED'
+                  : finished
+                    ? g.result &&
+                      (g.result.reason === 'guess' ? 'BAIT CALLED' : outcomeLabel[g.result.outcome])
+                    : 'WAITING'}
+            </Tag>
+          </div>
+          <div className="target-display">
+            {stale ? (
+              <h2>Hold tight.</h2>
+            ) : active || paused ? (
+              <>
+                <span className="target-number">
+                  ROUND {String(g.round?.number).padStart(2, '0')}
+                </span>
+                <h2>
+                  {g.round?.target}
+                  <span>.</span>
+                </h2>
+                <p>Use hints in Twitch chat. Keep the target out of your messages.</p>
+              </>
+            ) : finished ? (
+              <>
+                <h2>
+                  {g.result?.word}
+                  <span>{won ? '!' : '.'}</span>
+                </h2>
+                <p>
+                  {g.result?.reason === 'guess'
+                    ? 'The streamer guessed the word without saying it.'
+                    : g.result?.outcome === 'overturned'
+                      ? 'The detection was reversed. A fresh word is up next.'
+                      : won
+                        ? `Target detected after ${g.result?.elapsed} seconds.`
+                        : 'Round finished. Wait for the streamer to start the next one.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="waiting-eyes">
+                  <Eye size={40} />
+                </div>
+                <h2>Waiting for a round</h2>
+                <p>The word will appear when the streamer starts.</p>
+              </>
+            )}
+          </div>
+          <ForbiddenClueCard game={g} />
+          <div className="viewer-timer">
+            <div>
+              <Timer size={16} />
+              <span>
+                {active || paused
+                  ? fmt(ms)
+                  : finished
+                    ? fmt(Math.max(0, (g.nextAt ?? 0) - (now + offset.current)))
+                    : '—:—'}
+              </span>
+              <small>
+                {paused
+                  ? 'PAUSED'
+                  : finished
+                    ? g.nextAt !== null
+                      ? 'COOLDOWN'
+                      : 'NEXT ROUND READY'
+                    : 'ON THE CLOCK'}
+              </small>
+            </div>
+            <span>
+              <Users size={15} />
+              {g.participants} participating
+            </span>
+          </div>
+          <div className="viewer-progress">
+            <i style={{ width: `${g.round ? (ms / g.round.duration) * 100 : 0}%` }} />
+          </div>
+          {won && <Confetti />}
+        </section>
+        <PublicAward award={g.history[0]?.award} />
+        <div className="viewer-playbook">
+          <h3>How to play</h3>
+          <div>
+            <span>01</span>
+            <p>Ask a question or start a conversation that could lead to the word.</p>
+          </div>
+          <div>
+            <span>02</span>
+            <p>Keep the target and any forbidden clues out of Twitch chat.</p>
+          </div>
+          <div>
+            <span>03</span>
+            <p>
+              Talk in chat to participate. Type <code>!skip</code> if you’re stuck.
+            </p>
+          </div>
+        </div>
+        <div className="viewer-bottom">
+          <div>
+            <Trophy size={19} />
+            <strong>{g.score.wins}</strong>
+            <span>COMMUNITY WINS</span>
+          </div>
+          <div>
+            <Flame size={19} />
+            <strong>{g.score.streak}</strong>
+            <span>WIN STREAK</span>
+          </div>
+        </div>
+        <div className="viewer-skip">
+          <span>
+            Skip votes{' '}
+            <strong>
+              {g.voters} / {g.voteThreshold}
+            </strong>
+          </span>
+          <span>Vote once in Twitch chat.</span>
+        </div>
+        {g.mode === 'twitch' && (
+          <a
+            className="button primary twitch-chat-link"
+            href={`https://www.twitch.tv/${encodeURIComponent(g.channel)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Back to Twitch chat <ArrowUpRight size={17} />
+          </a>
+        )}
+      </main>
+      <footer className="viewer-footer">
+        BAIT · MAKE THE STREAMER SAY IT
+        <a href="/privacy" target="_blank" rel="noreferrer">
+          Privacy
+        </a>
+        <span>BAIT / 2026</span>
+      </footer>
+    </div>
+  );
+}
+function Privacy() {
+  return (
+    <div className="viewer-page">
+      <header className="viewer-header">
+        <a className="brand" href="/">
+          {brand}
+        </a>
+        <a className="text-button" href="/">
+          Back to BAIT <ArrowUpRight size={16} />
+        </a>
+      </header>
+      <main className="privacy-copy">
+        <div className="eyebrow">BAIT</div>
+        <h1>Privacy</h1>
+        <p>
+          BAIT is an independent community game. The person running this server operates this
+          instance.
+        </p>
+        <h2>Microphone audio</h2>
+        <p>
+          The streamer chooses whether to enable the microphone. During active rounds, audio travels
+          through this server to Deepgram for English speech recognition. BAIT does not save audio
+          or transcript text. Audio capture is stopped when the microphone is disabled, the studio
+          closes, or the input device disconnects. Pausing a round stops transmission.
+        </p>
+        <p>
+          Requests opt out of Deepgram’s Model Improvement Program. Deepgram processes audio under
+          its{' '}
+          <a href="https://deepgram.com/privacy" target="_blank" rel="noreferrer">
+            privacy policy
+          </a>{' '}
+          and the operator’s service agreement.
+        </p>
+        <h2>Twitch and participation</h2>
+        <p>
+          The streamer authorizes BAIT to read their channel’s chat. For each word, BAIT keeps up
+          to 40 eligible hints and 20 flagged hints in memory for a post-round award. The current word and the previous review can coexist. Each chatter
+          has at most three clean hints and one flagged hint in that set. Raw text clears when the
+          next round ends or ten minutes after its own round ends, whichever comes first. It is
+          never written to disk. Hints are shown to the streamer only after the word is revealed.
+        </p>
+        <p>
+          Channel identity, settings, results, participation and award counts are stored. Up to
+          1,000 participant IDs and display names are retained per room; leading totals and the
+          streamer’s selected award name appear publicly. Awards are manual picks. BAIT does not
+          infer which hint caused a win or delete messages from Twitch.
+        </p>
+        <h2>Private guesses</h2>
+        <p>
+          Call the bait sends a typed guess to this server. The guess text is not retained or
+          broadcast. A correct guess ends the word and reveals its target. An incorrect guess shares
+          only the fifteen-second time bonus.
+        </p>
+        <h2>Session cookies and access</h2>
+        <p>
+          The studio uses an essential session cookie that expires after 12 hours. Twitch access and
+          refresh tokens are encrypted on this server. Viewers can use the room without signing in.
+          BAIT adds no advertising or analytics cookies.
+        </p>
+        <h2>Delete or disconnect</h2>
+        <p>
+          Streamers can use Stream setup → Delete my data to delete the room, scores, and stored
+          Twitch authorization. You can also revoke BAIT in Twitch’s connection settings. For a
+          participant record or other privacy request, contact the broadcaster whose room you
+          joined.
+        </p>
+        <h2>Secret words</h2>
+        <p>
+          The viewer page intentionally reveals the target to anyone with its link, including a
+          streamer who opens it. OBS links provide read-only game information. Keep studio sessions
+          and server credentials private.
+        </p>
+        <p className="muted">Updated October 24, 2026.</p>
+      </main>
+    </div>
+  );
+}
+function App() {
+  const [session, setSession] = useState<SessionInfo | null>(null),
+    [error, setError] = useState('');
+  const path = location.pathname.split('/').filter(Boolean),
+    reload = useCallback(() => {
+      void request<SessionInfo>('/api/session')
+        .then(setSession)
+        .catch((e) => setError(e.message));
+    }, []);
+  useEffect(() => {
+    if (!['play', 'overlay', 'privacy'].includes(path[0])) reload();
+  }, [reload]);
+  if (path[0] === 'privacy') return <Privacy />;
+  if (path[0] === 'about' && session) return <Landing session={session} reload={reload} />;
+  if (['play', 'overlay'].includes(path[0]) && path[1])
+    return <PublicRoom id={path[1]} overlay={path[0] === 'overlay'} />;
+  if (error)
+    return (
+      <div className="loading">
+        <p role="alert">{error}</p>
+        <Button onClick={reload}>Try again</Button>
+      </div>
+    );
+  if (!session)
+    return (
+      <div className="loading">
+        <span className="brand">{brand}</span>
+        <p>Loading BAIT…</p>
+      </div>
+    );
+  return session.authenticated ? (
+    <Dashboard key={session.csrf} session={session} reload={reload} />
+  ) : (
+    <Landing session={session} reload={reload} />
+  );
+}
+createRoot(document.getElementById('root')!).render(<App />);

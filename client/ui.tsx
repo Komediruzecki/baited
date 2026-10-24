@@ -1,0 +1,137 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Check, Copy, Eye, MessageSquare, Mic, ShieldCheck, X } from './icons';
+
+export const brand = (
+  <>
+    <span className="logo-lockup" role="img" aria-label="BAIT">
+      <img src="/brand/baitlogo-transparent.png" alt="" width="1254" height="1254" />
+    </span>
+    <span className="logo-glyph" role="img" aria-label="BAIT">
+      <img src="/brand/baitlogo-transparent.png" alt="" width="1254" height="1254" />
+    </span>
+  </>
+);
+export function Button({
+  children,
+  className = '',
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button className={`button ${className}`} {...props}>
+      {children}
+    </button>
+  );
+}
+export function Tag({ children, tone = 'muted' }: { children: React.ReactNode; tone?: string }) {
+  return <span className={`tag ${tone}`}>{children}</span>;
+}
+export function CopyButton({ value, label = 'Copy link' }: { value: string; label?: string }) {
+  const [copied, setCopied] = useState(false),
+    [error, setError] = useState(false);
+  return (
+    <button
+      className="copy-button"
+      aria-label={label}
+      title={error ? 'Select the link and copy it manually.' : label}
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(value)
+          .then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          })
+          .catch(() => setError(true));
+      }}
+    >
+      {copied ? <Check size={18} /> : <Copy size={18} />}
+      <span aria-live="polite">{copied ? 'Copied' : error ? 'Select link' : label}</span>
+    </button>
+  );
+}
+export function Modal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="modal"
+      aria-label={title}
+      onCancel={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="modal-heading">
+        <h2>{title}</h2>
+        <button className="icon-button" aria-label="Close dialog" onClick={onClose}>
+          <X size={22} />
+        </button>
+      </div>
+      {children}
+    </dialog>
+  );
+}
+export function HowTo() {
+  return (
+    <div className="how-to">
+      <p className="rules-goal">Make the streamer say the secret word.</p>
+      {[
+        [
+          '01',
+          'Chat gets the word.',
+          'Share the viewer link. The studio and OBS keep the word hidden.',
+          Eye,
+        ],
+        [
+          '02',
+          'Chat drops hints.',
+          'Ask questions in Twitch chat. Don’t type the target or its forbidden clues.',
+          MessageSquare,
+        ],
+        [
+          '03',
+          'You say it. Chat wins.',
+          'Enable your mic. Say the whole word before time runs out, and chat gets the win. Outlast the clock to escape.',
+          Mic,
+        ],
+      ].map(([n, title, description, Icon]) => {
+        const I = Icon as typeof Eye;
+        return (
+          <div className="how-step" key={n as string}>
+            <span className="how-number">{n as string}</span>
+            <div>
+              <h3>{title as string}</h3>
+              <p>{description as string}</p>
+            </div>
+            <I size={24} />
+          </div>
+        );
+      })}
+      <details className="how-options">
+        <summary>Optional rules</summary>
+        <ul>
+          <li><strong>Forbidden clues:</strong> Easy: none. Medium: two. Hard: four. A flagged hint can’t win an award. The round continues.</li>
+          <li><strong>Three-word mission:</strong> Land three targets on one clock. Gaps count. Pause freezes it; a skip replaces the word.</li>
+          <li><strong>Call the bait:</strong> One private typed guess per word. Correct: escape the round and mission. Wrong: chat gets +15 seconds.</li>
+          <li><strong>You baited me:</strong> After a win, the streamer can award one eligible hint. The community keeps the shared win.</li>
+        </ul>
+      </details>
+      <div className="notice">
+        <ShieldCheck size={20} />
+        <p>
+          Play along: no peeking, no spoilers. Wrong detection? Reverse the win in your studio.
+        </p>
+      </div>
+    </div>
+  );
+}

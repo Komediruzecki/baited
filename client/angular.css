@@ -1,0 +1,224 @@
+/* BAIT's card frames: square faces, clipped corners and a hard purple offset. */
+.landing-copy h1 em { color: #ffda44; }
+.landing-copy h1 em::after { background: #ffda44; }
+.button, .copy-button, .tag, .modal, .panel, .stat,
+.mission-card, .target-card, .mission-strip, .clue-card, .public-award,
+.landing-options article, .rule-card, .example-secret,
+.hint-filter button, .hint-ineligible, .hint-list > .hint-picked,
+.guess-form input, .clue-chips li, .logo-lockup, .logo-glyph {
+  border-radius: 2px;
+}
+.button.primary {
+  box-shadow: 4px 4px 0 #491591;
+}
+.button.primary:hover:not(:disabled) {
+  box-shadow: 5px 5px 0 #a970ff;
+  translate: -1px -1px;
+}
+.button.primary:active:not(:disabled) {
+  box-shadow: 1px 1px 0 #a970ff;
+  translate: 2px 2px;
+}
+.rule-card {
+  border-top: 3px solid #9146ff;
+  box-shadow: 5px 5px 0 #332344;
+}
+.rule-card > div > span {
+  font-family: 'Inter Tight', Inter, sans-serif;
+  font-size: 36px;
+  font-weight: 850;
+  letter-spacing: -1.5px;
+  color: #bf94ff;
+}
+.landing-options article {
+  border-left: 3px solid #9146ff;
+}
+.example-secret {
+  box-shadow: 6px 6px 0 #9146ff;
+}
+.mission-card, .target-card {
+  border: 2px solid #8f60c2;
+  box-shadow: 7px 7px 0 #7134bb;
+}
+.mission-card.is-caught, .target-card.target-win {
+  border-color: #00e5b0;
+  box-shadow: 7px 7px 0 #006b53;
+}
+.mission-strip {
+  border-left: 4px solid #9146ff;
+}
+.mission-pips > span {
+  border-radius: 2px;
+  height: 35px;
+  width: 27px;
+  font-weight: 800;
+  box-shadow: 2px 2px 0 #0e0e10;
+}
+.target-card > .clue-card {
+  border: 0;
+  border-top: 1px solid #644575;
+  padding-top: 15px;
+}
+.clue-chips li {
+  border-left: 3px solid #f8a88f;
+  background: #4d2c361f;
+}
+.public-award {
+  border-left: 4px solid #ffd37a;
+  box-shadow: 4px 4px 0 #59401e;
+}
+.modal {
+  box-shadow: 9px 9px 0 #6230a8, 0 24px 70px #0009;
+}
+.rules-goal {
+  color: #f3e9ff;
+  font-size: 19px;
+  font-weight: 700;
+  margin-bottom: 13px;
+}
+.how-to .how-step {
+  padding-block: 18px;
+}
+.how-options {
+  margin: 18px 0;
+  padding: 0;
+  border: 1px solid #4f3c65;
+  background: #241b2e;
+}
+.how-options summary {
+  cursor: pointer;
+  min-height: 48px;
+  padding: 16px 18px;
+  color: #d7baff;
+  font-size: 14px;
+  font-weight: 700;
+}
+.how-options summary:focus-visible {
+  outline: 3px solid #d9bdff;
+  outline-offset: 4px;
+}
+.how-options ul {
+  padding: 0 25px 10px 35px;
+  margin: 0;
+}
+.how-options li {
+  padding: 0 0 15px 3px;
+  color: #c9bdd5;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.how-options strong { color: #efeff1; }
+
+/* The source remains transparent outside these deliberately opaque frames. */
+.obs-root { padding: 40px; }
+.obs-hud {
+  position: relative;
+  isolation: isolate;
+  width: 532px;
+  max-width: calc(100vw - 92px);
+  padding: 3px;
+  background: #9146ff;
+  box-shadow: 10px 10px 0 #5a1daf;
+}
+.obs-hud::after {
+  content: '';
+  display: block;
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 26px;
+  height: 26px;
+  background: #5a1daf;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  transform: translateY(25px);
+}
+.obs-hud .obs-widget {
+  width: 100%;
+  max-width: none;
+  min-height: 102px;
+  padding: 17px 22px 20px 17px;
+  gap: 16px;
+  background: #18181b;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 17px), calc(100% - 17px) 100%, 0 100%);
+}
+.obs-hud .obs-logo { margin: 0; }
+.obs-logo > .logo-lockup { display: block; --logo-width: 106px; border-radius: 0; margin: 0; }
+.obs-logo > .logo-glyph { display: none; }
+.obs-message { min-width: 0; flex: 1; gap: 8px; }
+.obs-message > span { font-size: 9px; line-height: 1.5; letter-spacing: .7px; color: #bf94ff; }
+.obs-message > strong { font-size: 16px; font-weight: 800; letter-spacing: .2px; overflow-wrap: anywhere; }
+.obs-time { font-family: 'Inter Tight', Inter, sans-serif; font-size: 42px; font-weight: 850; color: #fff; }
+.obs-progress { height: 5px; background: #38313f; right: 20px; }
+.obs-progress > i { background: #bf94ff; max-width: 100%; }
+.obs-hud .mission-strip {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 3px 0 0;
+  padding: 12px 17px;
+  border: 0;
+  background: #22172f;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+.obs-hud .mission-strip-label > svg { display: none; }
+.obs-hud .mission-strip-label span { font-size: 8px; }
+.obs-hud .mission-strip-label strong { font-size: 12px; }
+.obs-hud .mission-pips { display: flex; }
+.obs-hud .mission-pips > span { width: 21px; height: 28px; font-size: 10px; }
+.obs-hud .mission-clock > span { display: none; }
+.obs-hud .mission-clock { display: none; }
+.obs-hud .mission-clock > svg { display: none; }
+.obs-hud .mission-clock strong { font-size: 20px; }
+.obs-hud .obs-score {
+  margin: 3px 0 0;
+  padding: 11px 17px;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: #18181b;
+  font-size: 10px;
+  font-weight: 650;
+  color: #d3c5e5;
+}
+.obs-hud-win { background: #00e5b0; box-shadow: 10px 10px 0 #00674f; }
+.obs-hud-win::after { background: #00674f; }
+.obs-hud .obs-win { background: #00e5b0; color: #072f24; }
+.obs-win .obs-time, .obs-win .obs-message > span { color: #073f30; }
+.obs-hud-paused { background: #ffd37a; box-shadow: 10px 10px 0 #8c5a1e; }
+.obs-hud-paused::after { background: #8c5a1e; }
+.obs-hud-paused .obs-message > span, .obs-hud-paused .obs-time { color: #ffd37a; }
+.obs-root > .public-award { border-radius: 0; background: #241e16; }
+.obs-celebration {
+  border-radius: 0;
+  border: 4px solid #101014;
+  background: #a970ff;
+  box-shadow: 14px 14px 0 #4f1898;
+  padding: 38px 30px;
+}
+.obs-escape {
+  border-radius: 0;
+  background: #18181b;
+  box-shadow: 8px 8px 0 #6d32be;
+}
+@media (max-width: 760px) {
+  .obs-root { padding: 25px; }
+  .obs-hud { max-width: calc(100vw - 62px); }
+  .obs-hud .obs-widget { gap: 12px; padding: 14px 18px 19px 13px; min-height: 90px; }
+  .obs-logo > .logo-lockup { --logo-width: 88px; }
+  .obs-message > strong { font-size: 13px; }
+  .obs-message > span { font-size: 8px; }
+  .obs-time { font-size: 34px; }
+  .obs-hud .mission-pips { gap: 4px; }
+  .obs-hud .mission-strip { padding-inline: 13px; }
+}
+@media (max-width: 480px) {
+  .mission-card, .target-card { box-shadow: 5px 5px 0 #7134bb; }
+  .obs-hud .obs-widget { flex-wrap: wrap; }
+  .obs-time { margin-left: 0; }
+  .obs-hud .mission-pips { display: none; }
+}
