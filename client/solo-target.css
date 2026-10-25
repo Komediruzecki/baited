@@ -1,0 +1,23 @@
+.solo-target {
+  width: min(100%, 360px);
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #624778;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.solo-target > .small-label { color: #d7b7ff; }
+.solo-target > p { margin: 0; font-size: 13px; color: #d5bfdc; line-height: 1.5; }
+.solo-target > small { font-size: 11px; line-height: 1.5; color: #b8acc7; }
+.solo-target > .button { min-height: 44px; white-space: normal; }
+.solo-target > .button:focus-visible { outline: 2px solid #fffc79; outline-offset: 4px; }
+.solo-target-result { display: grid; gap: 4px; width: 100%; }
+.solo-target-result > span { color: #d5bfdc; font-size: 12px; }
+.solo-target-result > strong {
+  font-family: var(--bait-display);
+  font-size: clamp(26px, 5vw, 36px);
+  font-weight: 400;
+  color: #fffc79;
+  overflow-wrap: anywhere;
+}

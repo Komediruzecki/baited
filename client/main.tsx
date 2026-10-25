@@ -47,6 +47,8 @@ import { MissionStatus, GuessForm, AwardReview, ForbiddenClueCard, PublicAward }
 import './angular.css';
 import './landing-game.css';
 import './refinement.css';
+import { canRevealSoloTarget, SoloTarget } from './SoloTarget';
+import './solo-target.css';
 
 const fmt = (ms: number) => {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -564,10 +566,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                               ? 'The timer and speech detection are paused.'
                               : demo ? 'Share the viewer link and try a round with simulated chat and speech.' : 'Share the viewer link, enable your microphone, and start a round.'}
                         </p>
-                        <div className="secret-capsule">
-                          <ShieldCheck size={15} />
-                          <span>The target stays hidden in your studio.</span>
-                        </div>
+                        {!offline && (active || paused || settling) && g.round &&
+                          canRevealSoloTarget(window.location.hostname, g.mode) ? (
+                          <SoloTarget key={`${g.id}:${g.round.id}`} roomId={g.id} roundId={g.round.id} phase={g.phase} />
+                        ) : (
+                          <div className="secret-capsule">
+                            <ShieldCheck size={15} />
+                            <span>The target stays hidden in your studio.</span>
+                          </div>
+                        )}
                         {(active || paused) && g.round?.guessEnabled && (
                           <div className="guess-control">
                             {g.round.guessUsed ? (
