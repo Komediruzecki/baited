@@ -278,7 +278,7 @@ test('gateway reports upstream errors generically and bounds response size', asy
 
 test('CLI missing or invalid TLS material fails closed without echoing values', () => {
   const script = new URL('../scripts/serve-extension-local.mjs', import.meta.url);
-  const env = { ...process.env, EXTENSION_DIAGNOSTICS: '1' };
+  const env: NodeJS.ProcessEnv = { ...process.env, EXTENSION_DIAGNOSTICS: '1' };
   delete env.EXTENSION_TLS_CERT;
   delete env.EXTENSION_TLS_KEY;
   const missing = spawnSync(process.execPath, [script.pathname], { env, encoding: 'utf8', timeout: 5000 });
