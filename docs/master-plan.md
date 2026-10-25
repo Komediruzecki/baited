@@ -2,6 +2,8 @@
 
 Checked 25 October 2026 against the game source and current official Twitch documentation. This is the current entry point; earlier planning was split across the documents linked below. No account registration, live-game deployment or Extension submission was performed while preparing it.
 
+**Latest setup plan:** [baited v0.0.1 branding and first-test guide](baited-v0.0.1-plan.md). The owner chose **baited** as the new name; visual production and integration are pending. Twitch validated the existing OAuth app credentials through Proton, and both test accounts are resolved: `komediruzecki7` (501062940) and `yahwehwastaken` (566058624). Reuse the existing application and Extension; do not register duplicates. The new guide supersedes the older account-creation instructions below where an object already exists.
+
 ## Where we are
 
 | Part | Current state |
@@ -29,7 +31,7 @@ Record one complete round: Paolo sees the secret, posts a real hint in Twitch ch
 | Order | Work | Done when |
 | --- | --- | --- |
 | 1 | Repair the Moonshine rehearsal setup | `scripts/rehearse-local.mjs` no longer demands a Deepgram key in Moonshine mode; its reference-only template explicitly selects Moonshine. Missing Twitch/encryption credentials still fail clearly. |
-| 2 | Register/connect the Twitch application | Intended channel signs in and a second account's actual chat reaches the game. |
+| 2 | Connect the existing Twitch application | Intended channel signs in and a second account's actual chat reaches the game. |
 | 3 | Test the real microphone | Both teammates test natural speech, similar words, game audio, near-buzzer speech, confirm/reject and reconnect. Keep confirmation mandatory. |
 | 4 | Check OBS Browser Source and record locally | Actual BAIT overlay, camera/game and audio appear correctly. No duplicate sound or captured viewer page. |
 | 5 | Host the live game for remote viewers | One persistent Node process, disk, HTTPS, working SSE/WebSockets, exact OAuth callback and restart checks. Choose host, game hostname and operating cost first. |
@@ -42,9 +44,9 @@ The saved synthetic comparison found 4 of 6 targets and one false target candida
 
 ## Account setup: start here
 
-1. Choose the broadcaster channel. Sign into the [Twitch Developer Console](https://dev.twitch.tv/console/apps), verify the account email and enable 2FA.
-2. Under **Applications**, choose **Register Your Application**. Use an available BAIT name and **Confidential** client type. Register the exact local callback `http://localhost:3000/auth/twitch/callback`. The server handles the secret and authorization-code exchange. [Official app registration](https://dev.twitch.tv/docs/authentication/register-app/).
-3. Save the Client ID, Client Secret and BAIT's persistent token-encryption key in Proton Pass. Share only their `pass://` references. No Twitch password, stream key or speech-provider key is needed for Moonshine.
+1. Use broadcaster `komediruzecki7`. Sign into the [Twitch Developer Console](https://dev.twitch.tv/console/apps), verify the account email and enable 2FA.
+2. Under **Applications**, open the existing application. Confirm its **Confidential** client type and exact local callback `http://localhost:3000/auth/twitch/callback`. The server handles the secret and authorization-code exchange. [Official app registration](https://dev.twitch.tv/docs/authentication/register-app/).
+3. The OAuth ID/secret already resolve from Proton item `dev / tw-bait-ids`. Still verify or securely provision the persistent token-encryption key and separate Extension shared secret. Share only field names or `pass://` references. No Twitch password, stream key or speech-provider key is needed by the app for Moonshine.
 4. After the rehearsal helper is corrected, connect the intended broadcaster and authorize the existing `user:read:chat` scope. BAIT's code uses EventSub to read that channel's chat. Use `localhost:3000` consistently for this callback.
 5. In the studio, load Moonshine, enable the microphone and use headphones. The model runs in the standalone studio. Audio stays on that computer; final text goes to the game server for matching without being persisted.
 6. In OBS, add the **OBS overlay URL** from Stream setup as a 1920×1080 Browser Source. Keep the secret viewer page and studio out of the captured scene. Record first; verify the sound is captured once. The overlay itself stays silent.
@@ -55,11 +57,11 @@ The earlier [Twitch/Deepgram/OBS guide](twitch-deepgram-obs-setup.md) contains e
 
 One account can own the first Extension. Shared management in Twitch's console uses an organization; it need not be an incorporated company. GitHub collaboration can continue while approval is pending.
 
-Open [the console](https://dev.twitch.tv/console) → account dropdown → **Create Organization**. Enter the real Irchiinnuss details, Developer type, website, matching-domain contact email, team size and location. Select Extensions; do not claim an unrelated game. Both members need verified email and 2FA. Approval typically takes two business weeks. After approval, use **Manage Members** to add Paolo as Developer and create the Extension in that organization's console. A later transfer from personal ownership is not established by the docs. [Twitch organization guide](https://dev.twitch.tv/docs/companies/).
+Open [the console](https://dev.twitch.tv/console) → account dropdown → **Create Organization**. Enter the real Irchiinnuss details, Developer type, website, matching-domain contact email, team size and location. Select Extensions; do not claim an unrelated game. Both members need verified email and 2FA. Approval typically takes two business weeks. After approval, use **Manage Members** to add Paolo as Developer. Before changing ownership, verify Twitch's supported transfer path for the existing Extension; do not recreate it. [Twitch organization guide](https://dev.twitch.tv/docs/companies/).
 
 ## Make BAIT a native Twitch Extension
 
-Recommended first version: a small **viewer panel** containing the secret card, forbidden clues, round state and skip control. Keep Moonshine and the microphone in the standalone broadcaster studio. OBS displays the existing secret-free overlay. Viewers should not download the speech model.
+Recommended first version: a small **viewer panel** containing the secret card, forbidden clues, round state and result. The [v0.0.1 plan](baited-v0.0.1-plan.md) keeps existing `!skip` chat commands and defers a new panel voting control. Keep Moonshine and the microphone in the standalone broadcaster studio. OBS displays the existing secret-free overlay. Viewers should not download the speech model.
 
 ```mermaid
 flowchart LR
@@ -84,8 +86,8 @@ Implementation checklist:
 
 ## Create, test and submit the Extension
 
-1. In the intended owner's [Extensions console](https://dev.twitch.tv/console/extensions), choose **Create Extension**, name it BAIT, select **Panel**, and create version `0.0.1`. This version is independent of the landing's `bait-v1.0.0` tag. [Creation tutorial](https://dev.twitch.tv/docs/tutorials/extension-101-tutorial-series/create-extension/).
-2. **Local Test:** configure the HTTPS testing base URI and viewer/config paths. Install and activate on the test channel. Add Paolo to the testing-account allowlist.
+1. In the intended owner's [Extensions console](https://dev.twitch.tv/console/extensions), open the existing Extension and confirm **Panel** and version `0.0.1`. The planned display name is **baited**. This version is independent of the landing's `bait-v1.0.0` tag. [Creation tutorial](https://dev.twitch.tv/docs/tutorials/extension-101-tutorial-series/create-extension/).
+2. **Local Test:** configure the HTTPS testing base URI and viewer/config paths. Install and activate on the test channel. Use numeric IDs `501062940,566058624` in the testing-account allowlist, not usernames.
 3. Upload the built frontend ZIP with files at its root, then enter **Hosted Test**. Keep Node code, credentials, local data and speech models out of that ZIP. Test against the reachable game backend.
 4. Complete the listing, author/contact fields, privacy and terms URLs, logo, discovery image and screenshots. Supply the review channel and walkthrough. Submit for **Review**.
 5. Resolve requested changes. Once approved, choose **Release**. Twitch estimates 8–14 days for review, sometimes longer. A website tag does not submit or release an Extension. [Lifecycle and exact submission fields](https://dev.twitch.tv/docs/extensions/life-cycle/).
@@ -119,8 +121,7 @@ Suggested split: maff handles runtime/accounts/hosting; Paolo tests as the indep
 
 ## What the owner needs to provide next
 
-- Broadcaster channel name and Paolo's test-account name.
-- Whether the eventual Extension should be personally owned or managed through an Irchiinnuss Twitch organization. For the latter, its actual website and matching contact address.
-- Twitch app status and Proton Pass references for the app credentials and encryption key. No secret values in chat.
+- Extension shared-secret field/reference; the OAuth fields and both test identities have been verified. The game also needs a persistent token-encryption key, provisioned securely if none exists.
+- Confirm the existing Extension's owner, version state and display type. An Irchiinnuss organization can follow if both teammates need console administration.
 - Which microphone to use and whether OBS currently offers Browser Source.
 - A hosting/domain/budget decision for the live game after the local round passes. The existing landing deployment does not supply that runtime.
