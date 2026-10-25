@@ -11,11 +11,12 @@ FORM: Hook Line, grounded candidate 4, seed e3785e96. Composition C's opening ce
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#5426ed">
-  <meta name="description" content="A local BAIT motion study. Chat gets a secret word and tries to make the streamer say it.">
+  <meta name="description" content="Chat gets a secret word. The streamer tries not to say it. Meet BAIT, a conversation trap for your Twitch stream.">
   <title>BAIT · Make the streamer say it.</title>
   <link rel="preload" href="/assets/russo-one.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="/style.css">
   <script src="/scene.js" defer></script>
+  <script src="/gallery.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#example">Skip to the example</a>
@@ -23,8 +24,7 @@ FORM: Hook Line, grounded candidate 4, seed e3785e96. Composition C's opening ce
     <section class="violet-stage" aria-labelledby="page-title">
       <header class="masthead">
         <a class="wordmark" href="#top" aria-label="BAIT home">bait<span aria-hidden="true">!</span></a>
-        <span class="study-label">Local motion study</span>
-        <nav aria-label="Main navigation"><a href="#how-to-play">How to play</a><a class="game-link" href="http://127.0.0.1:3318/">Open local game <span aria-hidden="true">↗</span></a></nav>
+        <nav aria-label="Main navigation"><a href="#how-to-play">How to play</a><a class="game-link" href="http://127.0.0.1:3318/">Open local game <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-out"/></svg></a></nav>
       </header>
       <div class="intro">
         <h1 id="page-title"><span>Make the</span><span>streamer say it.</span></h1>
@@ -39,7 +39,7 @@ FORM: Hook Line, grounded candidate 4, seed e3785e96. Composition C's opening ce
       <section class="example" id="example" aria-labelledby="example-heading">
         <div class="scene-heading"><h2 id="example-heading">Example round</h2><span class="silent-note">No sound. Just the trap.</span></div>
         <div class="stage-art" aria-hidden="true">
-          <div class="dealt-card" id="dealt-card"><span>Chat's secret</span><strong data-word>BANANA</strong><svg class="deal-picture" viewBox="0 0 120 100"><use href="#art-banana" data-art></use></svg><small>Keep it from the streamer.</small></div>
+          <div class="dealt-card" id="dealt-card"><span>Chat's secret</span><strong data-word>BANANA</strong><img class="deal-picture" src="/cards/proofs/banana.png" width="1254" height="1254" alt="" data-art><small>Keep it from the streamer.</small></div>
           <div class="censor-strip">
             <span class="censor-noise">&amp;$!</span>
             <div class="word-window"><strong data-word>BANANA</strong><span class="censor-cover cover-left" id="cover-left">&amp;$</span><span class="censor-cover cover-right" id="cover-right">!#%</span></div>
@@ -52,7 +52,7 @@ FORM: Hook Line, grounded candidate 4, seed e3785e96. Composition C's opening ce
           </div>
         </div>
         <div class="playback" id="playback" hidden>
-          <div class="playback-top"><p id="beat-caption" role="status" aria-live="polite">Chat's card is BANANA. The streamer can't see it.</p><button class="replay-button" id="replay-example" type="button" aria-label="Replay the example from the start"><span aria-hidden="true">↻</span> Replay</button></div>
+          <div class="playback-top"><p id="beat-caption" role="status" aria-live="polite">Chat's card is BANANA. The streamer can't see it.</p><button class="replay-button" id="replay-example" type="button" aria-label="Replay the example from the start"><svg class="ui-icon replay-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-replay"/></svg> Replay</button></div>
           <div class="timeline" aria-hidden="true"><span id="timeline-fill"></span></div>
           <ol class="beat-controls" aria-label="Example beats">
             <li><button type="button" data-beat="0" aria-current="step"><span>1</span>Deal the card</button></li>
@@ -61,39 +61,193 @@ FORM: Hook Line, grounded candidate 4, seed e3785e96. Composition C's opening ce
             <li><button type="button" data-beat="3"><span>4</span>Word caught</button></li>
             <li><button type="button" data-beat="4"><span>5</span>Chat wins</button></li>
           </ol>
+          <div class="example-picker">
+            <p id="card-instruction">Choose a word, then play the example.</p>
+            <div role="group" aria-label="Choose an example word"><button type="button" data-card="banana" aria-pressed="true" disabled>Banana</button><button type="button" data-card="penguin" aria-pressed="false" disabled>Penguin</button><button type="button" data-card="microwave" aria-pressed="false" disabled>Microwave</button></div>
+            <p class="selection-note" id="selection-note" role="status" aria-live="polite">BANANA is on the table.</p>
+          </div>
           <p class="motion-note" id="motion-note" hidden>Reduced motion is on. Play moves through still scenes; each beat is also a button.</p>
         </div>
         <details class="transcript"><summary>Read the example</summary><ol><li>Chat's secret word: <strong data-word>BANANA</strong>.</li><li>Chat asks: “<span data-prompt>What goes in your smoothie?</span>”</li><li>The streamer answers: “<span data-spoken>Banana.</span> <span data-tail>Wait.</span>”</li><li>The word is caught. Chat wins the round.</li></ol></details>
         <noscript><p class="no-script">This is a still example. Chat gets BANANA, asks about a smoothie, and catches the streamer's answer. Enable JavaScript to play or choose a different word.</p></noscript>
       </section>
     </section>
-    <section class="deck-section" aria-labelledby="deck-heading">
-      <div class="deck-intro"><h2 id="deck-heading">Pick your<br>next trap.</h2><p>Same rules. A different conversation.<br><span id="card-instruction">Three example words from the deck.</span></p></div>
-      <div class="card-hand" role="group" aria-label="Choose an example word">
-        <button class="word-card selected" data-card="banana" type="button" aria-pressed="true" disabled>
-          <span class="card-edition">Chat's secret <span aria-hidden="true">↗</span></span><strong>BANANA</strong><img class="card-art" src="/cards/proofs/banana.png" alt="" width="1254" height="1254" loading="lazy"><span class="card-question">“What goes in your smoothie?”</span><span class="card-answer">“Banana. Wait.”</span><span class="card-action">Current example <span aria-hidden="true">✓</span></span>
-        </button>
-        <button class="word-card" data-card="penguin" type="button" aria-pressed="false" disabled>
-          <span class="card-edition">Chat's secret <span aria-hidden="true">↗</span></span><strong>PENGUIN</strong><img class="card-art" src="/cards/proofs/penguin.png" alt="" width="1254" height="1254" loading="lazy"><span class="card-question">“Which animal always looks overdressed?”</span><span class="card-answer">“A penguin? Oh, come on.”</span><span class="card-action">Try this trap <span aria-hidden="true">↗</span></span>
-        </button>
-        <button class="word-card" data-card="microwave" type="button" aria-pressed="false" disabled>
-          <span class="card-edition">Chat's secret <span aria-hidden="true">↗</span></span><strong>MICROWAVE</strong><img class="card-art" src="/cards/proofs/microwave.png" alt="" width="1254" height="1254" loading="lazy"><span class="card-question">“How do you reheat leftover pizza?”</span><span class="card-answer">“The microwave. You got me.”</span><span class="card-action">Try this trap <span aria-hidden="true">↗</span></span>
-        </button>
+    <section class="deck-section" id="cards" aria-labelledby="deck-heading">
+      <div class="deck-intro"><h2 id="deck-heading">Pick your<br>next trap.</h2><div class="deck-copy"><p>Eighteen cards. One wrong word.<br>How would you get them to say it?</p><a href="http://127.0.0.1:3318/card-proofs">Try a card reveal <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-out"/></svg></a></div></div>
+      <div class="gallery-toolbar">
+        <p id="gallery-help">Drag the deck. Find your bait.</p>
+        <div class="gallery-controls" hidden>
+          <button id="gallery-previous" type="button" aria-label="Previous cards" aria-controls="card-gallery"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-left"/></svg></button>
+          <button id="gallery-toggle" type="button" aria-controls="card-gallery"><svg class="ui-icon gallery-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-pause"/></svg><svg class="ui-icon gallery-play-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-play"/></svg><span>Pause gallery</span></button>
+          <button id="gallery-next" type="button" aria-label="Next cards" aria-controls="card-gallery"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-right"/></svg></button>
+        </div>
       </div>
-      <p class="selection-note" id="selection-note" role="status" aria-live="polite">BANANA is on the table.</p>
-      <a class="proof-deck-link" href="http://127.0.0.1:3318/card-proofs">Inspect all 18 cards and Sound Lab effects ↗</a>
+      <div class="card-gallery" id="card-gallery" role="region" aria-label="The BAIT card deck" aria-describedby="gallery-help" tabindex="0">
+        <ol class="gallery-deck">
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>01 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/banana.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>BANANA</h3>
+            <p>What goes in your smoothie?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>02 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/penguin.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>PENGUIN</h3>
+            <p>Which bird would win a belly-slide race?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>03 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/microwave.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>MICROWAVE</h3>
+            <p>How do you rescue cold leftovers?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>04 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/dragon.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>DRAGON</h3>
+            <p>What would you put in charge of a castle?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>05 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/volcano.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>VOLCANO</h3>
+            <p>Where would you definitely not build a house?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>06 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/monocle.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>MONOCLE</h3>
+            <p>What is the smallest possible pair of glasses?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>07 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/pizza.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>PIZZA</h3>
+            <p>What would you order for the whole chat?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>08 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/robot.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>ROBOT</h3>
+            <p>Who should do the chores while you stream?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>09 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/rocket.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>ROCKET</h3>
+            <p>What would you take to the moon?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>10 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/pirate.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>PIRATE</h3>
+            <p>Who keeps burying all this treasure?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>11 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/cactus.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>CACTUS</h3>
+            <p>Which plant absolutely refuses a hug?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>12 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/jellyfish.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>JELLYFISH</h3>
+            <p>What looks like a swimming lava lamp?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>13 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/telescope.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>TELESCOPE</h3>
+            <p>How would you get a closer look at Saturn?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>14 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/saxophone.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>SAXOPHONE</h3>
+            <p>What instrument belongs in a smoky jazz club?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>15 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/octopus.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>OCTOPUS</h3>
+            <p>Who could hold eight controllers at once?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>16 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/boomerang.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>BOOMERANG</h3>
+            <p>What is the worst thing to throw away?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>17 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/narwhal.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>NARWHAL</h3>
+            <p>Which sea creature borrowed a unicorn’s horn?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+          <li class="gallery-card">
+            <div class="gallery-card-top"><span>18 / 18</span><svg class="hook-mark" viewBox="0 0 32 40" aria-hidden="true"><use href="#bait-hook"/></svg></div>
+            <img src="/cards/proofs/parachute.png" alt="" width="1254" height="1254" loading="lazy" decoding="async" draggable="false">
+            <h3>PARACHUTE</h3>
+            <p>What would you double-check before jumping?</p>
+            <span class="gallery-card-bottom">Make them say it.<b>bait!</b></span>
+          </li>
+        </ol>
+      </div>
+      <p class="gallery-note">The cards are real. These questions are examples. Your chat supplies the trouble.</p>
     </section>
     <section class="how-section" id="how-to-play" aria-labelledby="how-heading">
       <h2 id="how-heading">You're in the dark.<br>Chat is in on it.</h2>
       <ol class="rules"><li><h3>Chat sees the card.</h3><p>Viewers get a secret word. The streamer and the stream overlay keep it hidden.</p></li><li><h3>The hints come in.</h3><p>Chat steers the conversation toward the word. The streamer tries to spot the trap.</p></li><li><h3>One word gives it away.</h3><p>Say the target before time runs out, and chat wins. Make it to the end, and you escape.</p></li></ol>
-      <div class="closing"><div><h2>Your chat has<br>ideas.</h2><p>Try a practice round in the local game.</p></div><a class="launch-button" href="http://127.0.0.1:3318/">Open local game <span aria-hidden="true">↗</span></a></div>
-      <footer><a class="footer-brand" href="#top">bait!</a><p>Local design study · Staged examples<br>The working game opens separately.</p><a href="#example">Back to the example ↑</a></footer>
+      <div class="closing"><div><h2>Your chat has<br>ideas.</h2><p>Try a practice round in the local game.</p></div><a class="launch-button" href="http://127.0.0.1:3318/">Open local game <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-out"/></svg></a></div>
+      <footer class="site-footer">
+        <div class="footer-identity">
+          <a class="footer-brand" href="#top" aria-label="BAIT home">bait!</a>
+          <p>An independent game for Twitch communities.</p>
+        </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="#how-to-play">How to play</a>
+          <a href="http://127.0.0.1:3318/privacy">Game privacy</a>
+          <a href="https://irchiinnuss.com/contact/">Contact</a>
+        </nav>
+        <div class="footer-base">
+          <a class="footer-maker" href="https://irchiinnuss.com/" aria-label="Made by Irchiinnuss">
+            <span>Made by</span>
+            <!-- Existing Irchiinnuss A1 mono mark and plain wordmark from disjoint-colliders/packages/brand. -->
+            <span class="footer-lockup"><img class="maker-mark" src="/assets/irchiinnuss-mark.svg" width="48" height="48" alt="" loading="lazy"><img class="maker-wordmark" src="/assets/irchiinnuss-wordmark.svg" width="155" height="29" alt="" loading="lazy"></span>
+          </a>
+          <a class="footer-return" href="#example">Back to the example <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></a>
+        </div>
+      </footer>
     </section>
   </main>
   <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
-    <symbol id="art-banana" viewBox="0 0 120 100"><path d="M82 15c8 30-9 58-43 65C21 82 12 73 13 65c26 9 54-11 57-42l-2-10Z" fill="#fff0a1" stroke="#35260b" stroke-width="3" stroke-linejoin="round"/><path d="M75 31c11 27 1 43-15 48 10-15 10-26 8-37M71 38c-9 13-20 17-32 17 15-8 20-17 21-28" fill="#f6af20" stroke="#35260b" stroke-width="3" stroke-linejoin="round"/><path d="m72 16 9-3M25 71c17 1 31-7 39-19" fill="none" stroke="#35260b" stroke-width="3" stroke-linecap="round"/></symbol>
-    <symbol id="art-penguin" viewBox="0 0 120 100"><path d="M39 42 20 67l20-7m41-18 19 25-20-7" fill="#322147" stroke="#281043" stroke-width="3" stroke-linejoin="round"/><path d="M34 77V37c0-33 52-33 52 0v40Z" fill="#322147" stroke="#281043" stroke-width="3"/><path d="M43 75V47c0-21 34-21 34 0v28Z" fill="#fffdf0"/><path d="m43 79-9 8h23v-8m20 0 9 8H63v-8" fill="#ffbd39" stroke="#281043" stroke-width="3" stroke-linejoin="round"/><path d="m54 42 6 8 6-8Z" fill="#ffbd39" stroke="#281043" stroke-width="2"/><circle cx="49" cy="34" r="3" fill="#fffdf0"/><circle cx="71" cy="34" r="3" fill="#fffdf0"/></symbol>
-    <symbol id="art-microwave" viewBox="0 0 120 100"><rect x="9" y="24" width="102" height="58" rx="3" fill="#c9ecff" stroke="#082a3c" stroke-width="3"/><rect x="17" y="33" width="65" height="40" fill="#18465e"/><path d="M26 62h43l-5 6H31ZM38 54c-8-8 7-10 0-18m15 18c-8-8 7-10 0-18" fill="none" stroke="#8cd8ff" stroke-width="3" stroke-linecap="round"/><path d="M89 35h13M89 42h13m-8 13v9M21 84v5m78-5v5" stroke="#082a3c" stroke-width="4" stroke-linecap="round"/><circle cx="95" cy="59" r="8" fill="none" stroke="#082a3c" stroke-width="3"/></symbol>
+    <symbol id="bait-hook" viewBox="0 0 32 40"><path class="hook-line" d="M22 3v22a9 9 0 0 1-18 0v-7l5 5M22 3h6v6h-6"/><path class="hook-barb" d="m4 18 7 3"/></symbol>
+    <symbol id="icon-out" viewBox="0 0 24 24"><path d="M5 19 19 5M7 5h12v12"/></symbol>
+    <symbol id="icon-left" viewBox="0 0 24 24"><path d="m10 5-7 7 7 7M3 12h18"/></symbol>
+    <symbol id="icon-right" viewBox="0 0 24 24"><path d="m14 5 7 7-7 7M3 12h18"/></symbol>
+    <symbol id="icon-up" viewBox="0 0 24 24"><path d="m5 10 7-7 7 7M12 3v18"/></symbol>
+    <symbol id="icon-replay" viewBox="0 0 24 24"><path d="M4 9a8 8 0 1 1 0 7M4 3v6h6"/></symbol>
+    <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="icon-play" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8Z"/></symbol>
   </defs></svg>
 </body>
 </html>

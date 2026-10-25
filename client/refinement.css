@@ -43,7 +43,7 @@
 .deal-bottom > span:last-child { font-size: 11px; letter-spacing: 0; }
 .deal-brand .logo-lockup { --logo-width: 52px; }
 .deal-brand .logo-glyph { display: none; }
-.card-picture { display: block; width: 104px; height: 84px; margin: 0 auto 5px; }
+.card-picture.bait-card-art { display: block; width: 104px; height: 84px; object-fit: contain; margin: 0 auto 5px; }
 .stream-preview-heading { font-size: 11px; white-space: normal; line-height: 1.4; }
 .stream-caption { font-size: 11px; color: #c3afd3; }
 .stream-response > span { font-size: 11px; letter-spacing: .03em; }
@@ -154,7 +154,7 @@
   .deal-face > span:last-child, .deal-bottom > span:last-child { font-size: 11px; }
   .deal-bottom { padding: 8px 11px; }
   .deal-brand .logo-lockup { --logo-width: 58px; }
-  .card-picture { width: 110px; height: 92px; }
+  .card-picture.bait-card-art { width: 110px; height: 92px; }
   .deal-arrow { display: none; }
   .stream-preview { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 4px 12px; align-items: center; padding: 12px 0 0; border-top: 1px solid #5c446c; }
   .stream-preview-heading { grid-column: 1/-1; font-size: 11px; margin-bottom: 6px; }

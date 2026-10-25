@@ -1,6 +1,6 @@
 {
   "name": "bait-twitch",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "BAIT: chat gets a secret word and tries to make the streamer say it.",

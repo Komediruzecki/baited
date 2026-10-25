@@ -16,10 +16,12 @@ const files = new Map([
   ['/index.html', ['index.html', 'text/html; charset=utf-8']],
   ['/style.css', ['style.css', 'text/css; charset=utf-8']],
   ['/scene.js', ['scene.js', 'text/javascript; charset=utf-8']],
+  ['/gallery.js', ['gallery.js', 'text/javascript; charset=utf-8']],
+  ...['irchiinnuss-mark', 'irchiinnuss-wordmark'].map(name => [`/assets/${name}.svg`, [`assets/${name}.svg`, 'image/svg+xml']]),
   ['/assets/bait-bomb-logo.png', ['assets/bait-bomb-logo.png', 'image/png']],
   ['/assets/russo-one.ttf', ['assets/russo-one.ttf', 'font/ttf']],
   ['/assets/inter-latin.woff2', ['assets/inter-latin.woff2', 'font/woff2']],
-  ...['banana', 'penguin', 'microwave'].map((word) => [`/cards/proofs/${word}.png`, [`../../public/cards/proofs/${word}.png`, 'image/png']]),
+  ...['banana', 'penguin', 'microwave', 'dragon', 'volcano', 'monocle', 'pizza', 'robot', 'rocket', 'pirate', 'cactus', 'jellyfish', 'telescope', 'saxophone', 'octopus', 'boomerang', 'narwhal', 'parachute'].map((word) => [`/cards/proofs/${word}.png`, [`../../public/cards/proofs/${word}.png`, 'image/png']]),
 ]);
 const server = createServer((req, res) => {
   if (req.headers.host !== `127.0.0.1:${port}`) {

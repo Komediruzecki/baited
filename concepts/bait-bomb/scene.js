@@ -51,7 +51,7 @@
     if (reducedMotion.matches) return;
     const settle = 'cubic-bezier(.16,1,.3,1)';
     animate('#dealt-card', [
-      { offset: 0, transform: 'translate(-42px, 20px) rotate(-17deg)', easing: settle },
+      { offset: 0, transform: 'translate(0, 12px) rotate(-11deg)', easing: settle },
       { offset: .13, transform: 'translate(0, 0) rotate(-8deg)' },
       { offset: 1, transform: 'translate(0, 0) rotate(-8deg)' },
     ]);
@@ -168,18 +168,12 @@
     all('[data-prompt]').forEach((node) => { node.textContent = example.prompt; });
     all('[data-spoken]').forEach((node) => { node.textContent = example.spoken; });
     all('[data-tail]').forEach((node) => { node.textContent = example.tail; });
-    $('[data-art]').setAttribute('href', `#art-${word}`);
+    $('[data-art]').setAttribute('src', `/cards/proofs/${word}.png`);
     $('.word-window').classList.toggle('long-word', word === 'microwave');
     cards.forEach((card) => {
       const selected = card.dataset.card === word;
       card.classList.toggle('selected', selected);
       card.setAttribute('aria-pressed', String(selected));
-      const action = card.querySelector('.card-action');
-      action.replaceChildren(document.createTextNode(selected ? 'Current example ' : 'Try this trap '));
-      const symbol = document.createElement('span');
-      symbol.setAttribute('aria-hidden', 'true');
-      symbol.textContent = selected ? '✓' : '↗';
-      action.append(symbol);
     });
     $('#selection-note').textContent = `${example.word} is on the table. Ready to play.`;
     render(true);
@@ -189,7 +183,12 @@
   }
 
   playButton.addEventListener('click', () => playing ? pause() : play());
-  $('#replay-example').addEventListener('click', () => play(true));
+  $('#replay-example').addEventListener('click', () => {
+    if (matchMedia('(max-width: 700px)').matches) {
+      $('#example').scrollIntoView({ block: 'start', behavior: reducedMotion.matches ? 'instant' : 'smooth' });
+    }
+    play(true);
+  });
   beatButtons.forEach((button, index) => {
     button.addEventListener('click', () => seek(index));
     button.addEventListener('keydown', (event) => {
@@ -223,7 +222,7 @@
   document.body.dataset.enhanced = 'true';
   $('#playback').hidden = false;
   playButton.hidden = false;
-  $('#card-instruction').textContent = 'Choose a card to change the example.';
+  $('#card-instruction').textContent = 'Choose a word, then play the example.';
   render(true);
   updatePlayback();
 })();

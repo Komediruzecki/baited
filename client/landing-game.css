@@ -60,7 +60,7 @@
 .deal-bottom > span { font-size: 6px; }
 .deal-face { position: relative; text-align: center; padding: 0 3px; }
 .deal-face::before { content: ''; position: absolute; inset: 4px -30px; background: #ffffff38; transform: skewY(-15deg); pointer-events: none; }
-.card-picture { position: relative; display: block; font-family: 'Segoe UI Emoji', sans-serif; font-size: 53px; line-height: 1.1; margin-bottom: 5px; }
+.card-picture { position: relative; display: block; object-fit: contain; margin-bottom: 5px; }
 .deal-face strong { position: relative; font-family: 'Inter Tight', Inter, sans-serif; display: block; text-transform: uppercase; font-size: clamp(20px, 2.1vw, 31px); line-height: 1.1; font-weight: 900; letter-spacing: -.9px; }
 .word-microwave .deal-face strong { font-size: clamp(16px, 1.6vw, 25px); }
 .deal-face > span:last-child { position: relative; display: block; font-size: 6px; font-weight: 750; letter-spacing: .8px; margin-top: 7px; }
@@ -70,6 +70,18 @@
 .stream-preview-heading .live-dot { width: 5px; height: 5px; box-shadow: none; }
 .stream-portrait { width: 125px; height: 110px; margin: 11px auto 0; overflow: hidden; }
 .stream-portrait svg { width: 100%; height: auto; }
+.deal-hook { width: 17px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: square; stroke-linejoin: miter; }
+.stream-signal { color: #b98bf8; }
+.signal-mount { fill: none; stroke: #b98bf8; stroke-width: 5; stroke-linejoin: bevel; }
+.signal-capsule { fill: #f9df8c; stroke: #17131e; stroke-width: 4; transition: fill 180ms ease-out; }
+.signal-grille { fill: none; stroke: #5426ed; stroke-width: 4; }
+.signal-notch { fill: none; stroke: #17131e; stroke-width: 3; }
+.signal-bar { transform-box: fill-box; transform-origin: center; transform: scaleY(.3); }
+.step-2 .signal-bar { animation: voice-syllable 750ms cubic-bezier(.16,1,.3,1) both; }
+.step-2 .signal-bar:nth-child(2) { animation-delay: 90ms; }
+.step-2 .signal-bar:nth-child(3) { animation-delay: 160ms; }
+.step-3 .signal-capsule { fill: #fff35b; }
+@keyframes voice-syllable { 0%, 100% { transform: scaleY(.3); } 25% { transform: scaleY(1); } 55% { transform: scaleY(.5); } 75% { transform: scaleY(.8); } }
 .stream-caption { font-size: 8px; color: #a895b9; text-align: center; margin: 0 0 11px; }
 .stream-response { border: 1px solid #6d4d88; padding: 11px 9px; background: #100c16; box-shadow: 3px 3px 0 #6f39a9; text-align: center; min-height: 66px; }
 .stream-response > span { display: block; font-size: 6px; color: #ba99dc; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px; }
@@ -126,7 +138,6 @@
   .deal-bottom { padding: 7px; gap: 3px; }
   .deal-bottom b { font-size: 17px; }
   .deal-bottom span { font-size: 5px; }
-  .card-picture { font-size: 44px; }
   .deal-face strong { font-size: 24px; letter-spacing: -.8px; }
   .word-microwave .deal-face strong { font-size: 17px; }
   .deal-face > span:last-child { font-size: 5px; }
@@ -151,4 +162,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .card-win-chip { transition: none; }
+  .signal-capsule { transition: none; }
+  .step-2 .signal-bar { animation: none; transform: scaleY(.8); }
 }
