@@ -15,7 +15,9 @@ const policy = [
   "default-src 'none'", "script-src 'self' https://extension-files.twitch.tv",
   "style-src 'self'", "img-src 'self'", "font-src 'self'", "connect-src 'self'",
   "base-uri 'none'", "form-action 'none'",
-  'frame-ancestors https://twitch.tv https://*.twitch.tv',
+  // Twitch's supervisor is an iframe ancestor on ext-twitch.tv, outside *.twitch.tv.
+  // https://dev.twitch.tv/docs/extensions/life-cycle/#asset-hosting
+  'frame-ancestors https://twitch.tv https://*.twitch.tv https://supervisor.ext-twitch.tv',
 ].join('; ');
 
 function respond(res, status, message) {
@@ -80,10 +82,35 @@ function requestPath(raw) {
   return path === '/' ? '/viewer.html' : path;
 }
 
-export function createExtensionLocalHandler({ files, port = 3443, requestUpstream = httpRequest }) {
+// Opt in with EXTENSION_DIAGNOSTICS=1 when diagnosing a blank Twitch iframe.
+// Never serialize request URLs, query fields, headers, credentials or unknown paths.
+export function createExtensionDiagnostics({ enabled = false, write = console.log, now = Date.now } = {}) {
+  if (!enabled) return null;
+  const deadline = now() + 5 * 60 * 1000;
+  const paths = new Set(['/', ...EXTENSION_FILES.map((name) => `/${name}`), ...apiPaths]);
+  const methods = new Set(['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE', 'CONNECT', 'TRACE']);
+  let remaining = 100;
+  return (req, res) => {
+    if (remaining === 0 || now() >= deadline) return;
+    remaining -= 1;
+    const raw = typeof req.url === 'string' ? req.url : '';
+    const separator = raw.indexOf('?');
+    const path = separator === -1 ? raw : raw.slice(0, separator);
+    const record = { method: methods.has(req.method) ? req.method : '<other>',
+      path: paths.has(path) ? path : '<unrecognized>', queryPresent: separator !== -1 };
+    res.once('finish', () => {
+      if (now() >= deadline) return;
+      try { write(JSON.stringify({ ...record, status: res.statusCode })); }
+      catch { /* Diagnostics must never change request handling. */ }
+    });
+  };
+}
+
+export function createExtensionLocalHandler({ files, port = 3443, requestUpstream = httpRequest, diagnostics = null }) {
   const expectedHost = `localhost:${port}`;
   const origin = `https://${expectedHost}`;
   return (req, res) => {
+    diagnostics?.(req, res);
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
@@ -184,7 +211,8 @@ export async function main() {
   let files;
   try { files = await loadExtensionFiles(resolve(process.env.EXTENSION_BUILD_DIR || resolve(project, 'dist/extension')), origin); }
   catch { throw new Error('Native Extension build missing or invalid. Rebuild with this HTTPS API origin; symlinks and preview stubs are not allowed.'); }
-  server.on('request', createExtensionLocalHandler({ files, port }));
+  server.on('request', createExtensionLocalHandler({ files, port,
+    diagnostics: createExtensionDiagnostics({ enabled: process.env.EXTENSION_DIAGNOSTICS === '1' }) }));
   server.requestTimeout = 15_000;
   server.headersTimeout = 10_000;
   server.keepAliveTimeout = 5_000;

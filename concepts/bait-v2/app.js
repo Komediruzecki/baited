@@ -57,8 +57,8 @@ function cardFace(card, interactive = false) {
   }
   if (!card.clues.length)
     clues.append(node('span', 'no-clues', 'Easy: only the word itself is off limits.'));
-  const footer = node('span', 'card-footer', 'Bait them.');
-  footer.append(node('b', '', 'bait!'));
+  const footer = node('span', 'card-footer');
+  footer.append(node('b', '', 'bait'), document.createTextNode(' them.'));
   face.append(top, art, word, clues, node('span', 'card-question', card.question), footer);
   return face;
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { createServer, request, type IncomingHttpHeaders, type IncomingMessage, type RequestOptions, type Server } from 'node:http';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -122,13 +123,39 @@ test('proxy fixes target and Host, forwards only validated authorization/origin 
   } finally { await close(server); await close(backend); }
 });
 
+test('native views permit Twitch supervisor ancestry while keeping resource origins restricted', async () => {
+  const server = createServer(gateway.createExtensionLocalHandler({ files: new Map([
+    ['/viewer.html', Buffer.from('native viewer')], ['/config.html', Buffer.from('native setup')],
+  ]) }));
+  const port = await listen(server);
+  try {
+    for (const path of ['/viewer.html?anchor=panel&mode=viewer&state=testing', '/config.html?mode=config&state=testing']) {
+      const response = await get(port, path);
+      assert.equal(response.status, 200);
+      const directives = new Map((response.headers['content-security-policy'] as string)
+        .split(';').map((part) => {
+          const [name, ...sources] = part.trim().split(/\s+/);
+          return [name, sources];
+        }));
+      // The known Twitch chain needs both the channel/dashboard and its supervisor.
+      // No arbitrary ext-twitch.tv app, local page or non-HTTPS ancestor is permitted.
+      assert.deepEqual(directives.get('frame-ancestors'), [
+        'https://twitch.tv', 'https://*.twitch.tv', 'https://supervisor.ext-twitch.tv',
+      ]);
+      assert.deepEqual(directives.get('connect-src'), ["'self'"]);
+      assert.deepEqual(directives.get('default-src'), ["'none'"]);
+      assert.deepEqual(directives.get('script-src'), ["'self'", 'https://extension-files.twitch.tv']);
+    }
+  } finally { await close(server); }
+});
+
 test('proxy rejects cross-origin, malformed and duplicate credentials before contacting backend', async () => {
   let calls = 0;
   const server = createServer(gateway.createExtensionLocalHandler({ files: new Map(),
     requestUpstream: () => { calls++; throw new Error('unexpected'); } }));
   const port = await listen(server);
   try {
-    for (const badOrigin of ['null', 'https://evil.example', `${origin}/`, 'http://localhost:3443'])
+    for (const badOrigin of ['null', 'https://evil.example', 'https://supervisor.ext-twitch.tv', `${origin}/`, 'http://localhost:3443'])
       assert.equal((await get(port, '/api/extension/state', { Origin: badOrigin, Authorization: token })).status, 403);
     for (const authorization of ['Basic abc', 'Bearer missing-segments', `Bearer ${'x'.repeat(4100)}.b.c`])
       assert.equal((await get(port, '/api/extension/state', { Authorization: authorization })).status, 401);
@@ -162,6 +189,51 @@ test('gateway handles exact authenticated GET preflight and does not broaden the
     assert.equal((await get(port, '/api/extension/state', { ...headers, 'Access-Control-Request-Headers': 'authorization,cookie' }, 'OPTIONS')).status, 403);
     assert.equal((await get(port, '/api/extension/state', {}, 'OPTIONS')).status, 403);
   } finally { await close(server); await close(backend); }
+});
+
+test('opt-in diagnostics are sanitized and limited to 100 requests within five minutes', async () => {
+  assert.equal(gateway.createExtensionDiagnostics(), null);
+  let now = 1000;
+  const lines: string[] = [];
+  const diagnostics = gateway.createExtensionDiagnostics({ enabled: true,
+    write: (line: string) => lines.push(line), now: () => now });
+  const server = createServer(gateway.createExtensionLocalHandler({
+    files: new Map([['/config.html', Buffer.from('native setup')]]), diagnostics,
+  }));
+  const port = await listen(server);
+  try {
+    await get(port, '/config.html?mode=config', { Authorization: token, Cookie: 'secret-cookie' });
+    await get(port, '/config.html?secret-query=secret-value');
+    await get(port, '/secret-path', { 'X-Secret-Header': 'secret-header-value' });
+    assert.deepEqual(lines.map((line) => JSON.parse(line)), [
+      { method: 'GET', path: '/config.html', queryPresent: true, status: 200 },
+      { method: 'GET', path: '/config.html', queryPresent: true, status: 400 },
+      { method: 'GET', path: '<unrecognized>', queryPresent: false, status: 404 },
+    ]);
+    assert.doesNotMatch(lines.join('\n'), /secret|Bearer|header\.payload/);
+  } finally { await close(server); }
+  const finish = (logger: typeof diagnostics, method = 'GET') => {
+    const response = Object.assign(new EventEmitter(), { statusCode: 405 });
+    logger({ method, url: '/config.html' }, response);
+    response.emit('finish');
+  };
+  for (let index = 0; index < 110; index++) finish(diagnostics, 'SECRET-METHOD');
+  assert.equal(lines.length, 100);
+  assert.equal(JSON.parse(lines[99]).method, '<other>');
+  const timed: string[] = [];
+  const timedDiagnostics = gateway.createExtensionDiagnostics({ enabled: true,
+    write: (line: string) => timed.push(line), now: () => now });
+  now += 5 * 60 * 1000 - 1;
+  finish(timedDiagnostics);
+  const lateResponse = Object.assign(new EventEmitter(), { statusCode: 200 });
+  timedDiagnostics({ method: 'GET', url: '/config.html' }, lateResponse);
+  now += 1;
+  lateResponse.emit('finish');
+  finish(timedDiagnostics);
+  assert.equal(timed.length, 1);
+  const unavailableLogger = gateway.createExtensionDiagnostics({ enabled: true,
+    write: () => { throw new Error('output unavailable'); } });
+  assert.doesNotThrow(() => finish(unavailableLogger));
 });
 
 test('bundle loader rejects symlinks, preview Helpers and API origins that would bypass the gateway', async () => {
@@ -206,7 +278,7 @@ test('gateway reports upstream errors generically and bounds response size', asy
 
 test('CLI missing or invalid TLS material fails closed without echoing values', () => {
   const script = new URL('../scripts/serve-extension-local.mjs', import.meta.url);
-  const env = { ...process.env };
+  const env = { ...process.env, EXTENSION_DIAGNOSTICS: '1' };
   delete env.EXTENSION_TLS_CERT;
   delete env.EXTENSION_TLS_KEY;
   const missing = spawnSync(process.execPath, [script.pathname], { env, encoding: 'utf8', timeout: 5000 });

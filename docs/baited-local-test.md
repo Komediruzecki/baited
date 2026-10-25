@@ -9,6 +9,8 @@ This branch adds the native viewer panel, broadcaster configuration page, signed
 
 The first real installation is limited to this computer. Paolo cannot reach these loopback addresses from another computer. A reachable HTTPS backend needs a separate deployment decision after local review.
 
+For the current session, install and check the broadcaster connection locally first. Paolo confirmed he is remote, so his test is deferred. A later second account can use another local browser profile; a remote computer needs an explicitly arranged private connection or a separately approved hosted test backend. No public tunnel is part of this setup.
+
 ## Stored credentials
 
 All launch templates contain references only. Do not create `.env` or paste secret values into commands, chat, frontend code or the Developer Console's public fields.
@@ -54,13 +56,27 @@ Each server stops after three hours. Ctrl+C stops that terminal's server immedia
 ## Install the real panel on Twitch
 
 1. In [Developer Console → Applications](https://dev.twitch.tv/console/apps), open the existing OAuth app and confirm this exact callback: `http://localhost:3000/auth/twitch/callback`. Open the studio using **localhost**, not `127.0.0.1`, and connect as **komediruzecki7**. Complete consent yourself. Moonshine requires no Deepgram or ElevenLabs key.
-2. In [Developer Console → Extensions](https://dev.twitch.tv/console/extensions), open the existing Extension, version **0.0.1**, in **Local Test**. Confirm **Panel** is enabled. An organization is not needed for this first test.
+2. In [Developer Console → Extensions](https://dev.twitch.tv/console/extensions), open the existing **Bait The Streamer** Extension, version **0.0.1**, in **Local Test**. Those names and the owner `komediruzecki7` were verified in the console. Use **Panel** for this build; fullscreen and mobile views are not implemented. An organization is not needed for this first test.
 3. Set **Testing Base URI** to `https://localhost:3443/`, **Panel Viewer Path** to `viewer.html`, **Configuration Path** to `config.html`, and panel height to **500 px**. If this console version asks for an external fetch/domain allowlist, allow only `https://localhost:3443` for this build. Keep the HTTPS gateway running.
-4. Under **Access → Testing Account Allowlist**, enter numeric IDs `501062940,566058624` (host and Paolo). These are not the separate Streamer Allowlist.
+   In **Capabilities**, use **Custom/My Own Service** for configuration, leave **Required Per Channel Configuration** empty, and keep **Request Identity Link** and **Chat Capabilities** off. The game reads chat through the separate OAuth application, not Send Extension Chat Message. If an external configuration-link allowlist is requested, the local studio URL is `http://localhost:3000/studio`. Do not choose a required Twitch Configuration Service version: this build uses its own backend and does not publish that configuration marker.
+4. Under **Access → Testing Account Allowlist**, search for and select the host `komediruzecki7` (ID `501062940`). The host is already selected. When the second-account test is ready, add `yahwehwastaken` (ID `566058624`) there. The current UI accepts usernames or IDs, rather than a comma-separated text field. This is not the separate Streamer Allowlist.
 5. Choose **View on Twitch and Install**, install, configure, then **Activate → Set as Panel** in Creator Dashboard. Configuration shows the channel resolved from Twitch's signed token; **Open streamer studio** opens the separate studio. No manual channel ID or room password is needed.
 6. Open the host's channel in the allowlisted viewer's separate browser profile on this computer. Use that viewer's own Twitch session. The broadcaster's panel deliberately omits the active target. A viewer or moderator sees the target and forbidden clues.
 
 These console steps follow Twitch's [Local Test guide](https://dev.twitch.tv/docs/tutorials/extension-101-tutorial-series/local-test/) and [Extension lifecycle](https://dev.twitch.tv/docs/extensions/life-cycle/). Current installed behavior must still be verified in Twitch; local UI fixtures and generated signed test tokens are not real Twitch authorization.
+
+### Verified on 25 October 2026
+
+- The real studio signed in as `komediruzecki7` and showed **Twitch connected** after owner OAuth consent. The microphone remained off and no round was started by the agent.
+- The existing Extension is installed and activated as **Panel 1**. The base URI, viewer/config paths, custom configuration and local URL allowlists were saved and verified after reload.
+- The owner opened the direct HTTPS viewer successfully. Both native HTML routes returned 200 with the exact local certificate verified.
+- The embedded configuration remained blank. A bounded gateway trace saw the direct test request but no Twitch config request. Chrome Local Network Access or a pending Twitch supervisor frame are candidates, not a confirmed diagnosis. A real installed panel round is still pending.
+
+For local iframe troubleshooting, prefix the HTTPS launch command with `env EXTENSION_DIAGNOSTICS=1`. This opt-in trace records only method, recognized path, response status and whether a query exists. It stops after 100 requests or five minutes; it never logs headers, JWTs or query contents. It does not relax TLS, CORS or browser permissions.
+
+The separate landing package now contains `/terms` and `/privacy` for the personal Extension test, with `hello@irchiinnuss.com` as contact. The Irchiinnuss maker branding on the landing does not change the submitted project's personal ownership. Twitch currently links to the production policy URLs; deploying these pages to development alone does not repair those production links.
+
+Before formal review, resolve deletion on authorization revocation, Extension-uninstall handling and a participant deletion/opt-out process. The test policy describes the current distinction between disconnecting and **Delete my data**; it does not claim those review requirements are already implemented.
 
 ## First real round
 
