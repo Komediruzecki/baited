@@ -144,8 +144,12 @@ export class Game {
     this.data.settings = settingsSchema.parse(settings);
     this.changed();
   }
+  get pendingCatch() {
+    return this.phase === 'cooldown' && this.result?.outcome === 'review';
+  }
   start() {
     this.tick();
+    if (this.pendingCatch) throw new Error('Confirm or reject the catch before starting a new word.');
     if (['active', 'paused', 'settling'].includes(this.phase))
       throw new Error('Finish the current round first.');
     if (this.phase === 'cooldown' && this.nextAt !== null && this.clock() < this.nextAt)
@@ -236,11 +240,36 @@ export class Game {
     this.finish(outcome);
     return true;
   }
+  private proposeCatch() {
+    const r = this.round!;
+    const now = this.clock();
+    r.remaining = Math.max(0, r.endsAt - now);
+    if (this.mission?.status === 'active') this.mission.remaining = r.remaining;
+    this.result = {
+      id: r.id, number: r.number, word: r.word, outcome: 'review',
+      elapsed: Math.round((r.duration - r.remaining) / 1000),
+      participants: r.participants.size, at: now,
+    };
+    // Stop first, then reveal. Pending catches never enter score/history or awards.
+    this.phase = 'cooldown';
+    this.nextAt = null;
+    this.review = null;
+    this.changed();
+  }
+  decideCatch(roundId: string, decision: 'confirm' | 'reject') {
+    if (!this.pendingCatch || !this.round || this.result?.id !== roundId)
+      throw new Error('Only the current pending catch can be confirmed or rejected.');
+    this.finish(decision === 'confirm' ? 'caught' : 'overturned');
+  }
   private finish(outcome: Outcome, reason?: Result['reason']) {
     if (!this.round) return;
     const r = this.round,
       now = this.clock();
-    const remaining = this.phase === 'paused' ? r.remaining : Math.max(0, r.endsAt - now);
+    const wasPending = this.pendingCatch;
+    // Reviewing a catch does not extend raw chat retention from the round's stop.
+    const reviewExpiresAt = (wasPending ? this.result!.at : now) + 600000;
+    const frozen = this.phase === 'paused' || wasPending;
+    const remaining = frozen ? r.remaining : Math.max(0, r.endsAt - now);
     this.result = {
       id: r.id,
       number: r.number,
@@ -254,20 +283,21 @@ export class Game {
     if (this.mission?.status === 'active') {
       const mission = this.mission;
       mission.remaining =
-        this.phase === 'paused' ? mission.remaining : Math.max(0, mission.endsAt - now);
+        frozen ? mission.remaining : Math.max(0, mission.endsAt - now);
+      if (wasPending) mission.endsAt = now + mission.remaining;
       if (outcome === 'caught') {
         mission.completed++;
         if (mission.completed === 3) mission.status = 'complete';
       } else if (outcome === 'escaped') mission.status = reason === 'guess' ? 'escaped' : 'failed';
       else if (outcome === 'ended') mission.status = 'ended';
     }
-    this.review = {
+    this.review = outcome === 'caught' && now < reviewExpiresAt ? {
       roundId: r.id,
       word: r.word,
-      expiresAt: now + 600000,
+      expiresAt: reviewExpiresAt,
       selectedHintId: null,
       candidates: r.hints,
-    };
+    } : null;
     r.hints = [];
     this.data.history.unshift(this.result);
     // Retain 100 outcomes while retaining aggregate scores for older rounds.
@@ -277,7 +307,8 @@ export class Game {
       this.data.priorPlayed++;
       if (old.outcome === 'caught') this.data.priorWins++;
     }
-    this.streak = outcome === 'caught' ? this.streak + 1 : 0;
+    this.streak = outcome === 'caught' ? this.streak + 1 :
+      outcome === 'overturned' ? r.previousStreak : 0;
     this.data.priorBest = Math.max(this.data.priorBest, this.streak);
     for (const [id, name] of r.participants) {
       const item = this.data.leaders[id] ?? { name, rounds: 0 };
@@ -337,12 +368,19 @@ export class Game {
       this.review = null;
       this.changed();
     }
+    if (this.pendingCatch) {
+      if (this.round?.hints.length && now >= this.result!.at + 600000) {
+        this.round.hints = [];
+        this.changed();
+      }
+      return;
+    }
     if (this.phase === 'settling' && this.round) {
       if (now >= this.round.settleUntil!) this.finish('escaped', 'timer');
       return;
     }
     if (this.phase === 'active' && this.round && now >= this.round.endsAt) {
-      if (this.data.mode === 'twitch' && this.mic === 'listening' &&
+      if (this.mic === 'listening' &&
         now < this.round.endsAt + SPEECH_SETTLE_MS) {
         this.round.settleUntil = this.round.endsAt + SPEECH_SETTLE_MS;
         this.phase = 'settling';
@@ -462,7 +500,7 @@ export class Game {
       r.hints = r.hints.filter((hint) => hint.id !== bucket[0].id);
     if (reason) r.violations++;
   }
-  transcript(t: Transcript) {
+  transcript(t: Transcript, policy: 'automatic' | 'confirm' = 'automatic') {
     this.tick();
     const r = this.round,
       now = this.clock();
@@ -481,10 +519,15 @@ export class Game {
       matches(word.text, r.word) && Number.isFinite(word.confidence) && word.confidence >= 0.8 &&
       Number.isFinite(word.capturedAt) && Number.isFinite(word.endedAt) &&
       word.capturedAt >= r.segmentAt && word.endedAt >= word.capturedAt &&
-      word.endedAt < r.endsAt && word.endedAt <= now + 1000 && now - word.endedAt <= 5000,
+      word.endedAt < r.endsAt && word.endedAt <= now + 1000 &&
+      // A target early in a just-completed sentence is still fresh evidence.
+      // Adapters validate this complete segment end against their capture clock.
+      (t.endedAt === undefined ? now - word.endedAt <= 5000 :
+        Number.isFinite(t.endedAt) && t.endedAt >= word.endedAt && t.endedAt <= now + 1000 && now - t.endedAt <= 5000),
     );
     if (!matched) return false;
-    this.finish('caught');
+    if (policy === 'confirm') this.proposeCatch();
+    else this.finish('caught');
     return true;
   }
   chat(id: string, userId: string, name: string, text: string, at: number) {
@@ -563,11 +606,11 @@ export class Game {
         ? {
             ...this.mission,
             remaining:
-              this.mission.status === 'active' && this.phase !== 'paused'
+              this.mission.status === 'active' && this.phase !== 'paused' && !this.pendingCatch
                 ? Math.max(0, this.mission.endsAt - this.clock())
                 : this.mission.remaining,
             endsAt:
-              this.mission.status === 'active' && this.phase !== 'paused'
+              this.mission.status === 'active' && this.phase !== 'paused' && !this.pendingCatch
                 ? this.mission.endsAt
                 : null,
           }

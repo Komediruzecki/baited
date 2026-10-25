@@ -19,6 +19,7 @@ const files = new Map([
   ['/assets/bait-bomb-logo.png', ['assets/bait-bomb-logo.png', 'image/png']],
   ['/assets/russo-one.ttf', ['assets/russo-one.ttf', 'font/ttf']],
   ['/assets/inter-latin.woff2', ['assets/inter-latin.woff2', 'font/woff2']],
+  ...['banana', 'penguin', 'microwave'].map((word) => [`/cards/proofs/${word}.png`, [`../../public/cards/proofs/${word}.png`, 'image/png']]),
 ]);
 const server = createServer((req, res) => {
   if (req.headers.host !== `127.0.0.1:${port}`) {

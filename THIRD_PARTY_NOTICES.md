@@ -1,10 +1,8 @@
 # Third-party notices
 
-Original BAIT code, SVG illustration and sound are MIT licensed. The project owner supplied `public/brand/baitlogo.png`; the original is retained, a transparent derivative is used in the UI, and both are documented separately in `public/brand/README.md`. The following dependencies retain their own licenses. Full texts found in installed packages are copied into `licenses/dependencies/`; `licenses/dependencies.json` records exact versions. Build and test tools are included in this inventory.
+Original BAIT code and SVG illustration are MIT licensed. Sound Lab engine modules and recipes are adapted from Keys in disjoint-colliders (MIT, copyright2025 Dnzzk2). The full notice, pinned source revision and adaptations are documented in `client/sound-lab/PROVENANCE.md` and its bundled legal notice. The six proof illustrations were generated with ChatGPT image generation; prompts and source hashes are in `public/cards/proofs/manifest.json`. Moonshine WASM and the pinned English model use their upstream MIT license; see `licenses/moonshine/` and `docs/moonshine.md`. The project owner supplied `public/brand/baitlogo.png`; the original is retained, a transparent derivative is used in the UI, and both are documented separately in `public/brand/README.md`. The following dependencies retain their own licenses. Full texts found in installed packages are copied into `licenses/dependencies/`; `licenses/dependencies.json` records exact versions. Build and test tools are included in this inventory.
 
 The interface uses Inter and Inter Tight from Google Fonts under SIL Open Font License 1.1. Earlier unused Barlow Condensed, DM Sans and Space Grotesk font files are retained with their licenses. Full copyright and license notices are in `licenses/fonts/`. Font files are unmodified.
-
-Short card titles and display headings also use **Russo One**, copyright 2011–2012 Jovanny Lemonad, under SIL Open Font License 1.1. The unmodified font is self-hosted at `public/fonts/russo-one.ttf`; its complete notice is bundled at `public/fonts/RussoOne-OFL.txt`. Downloaded October 25, 2026 from the official [Google Fonts source](https://github.com/google/fonts/tree/main/ofl/russoone): [font](https://raw.githubusercontent.com/google/fonts/main/ofl/russoone/RussoOne-Regular.ttf) and [license](https://raw.githubusercontent.com/google/fonts/main/ofl/russoone/OFL.txt). It is a compatible display choice, not an identification of the supplied logo’s font. No external font request is made by the app.
 
 Google Material Icons Outlined are bundled as SVG components under Apache 2.0. The full license is in `licenses/material-icons/LICENSE`. Twitch and Deepgram are external services, subject to their own terms; neither service’s proprietary code is included.
 
@@ -29,17 +27,19 @@ Google Material Icons Outlined are bundled as SVG components under Apache 2.0. T
 | @babel/template | 7.29.7 | MIT |
 | @babel/traverse | 7.29.10 | MIT |
 | @babel/types | 7.29.11 | MIT |
-| @esbuild/win32-x64 | 0.25.12 | MIT |
-| @esbuild/win32-x64 | 0.27.7 | MIT |
-| @esbuild/win32-x64 | 0.28.2 | MIT |
+| @esbuild/linux-x64 | 0.25.12 | MIT |
+| @esbuild/linux-x64 | 0.27.7 | MIT |
+| @esbuild/linux-x64 | 0.28.2 | MIT |
 | @jridgewell/gen-mapping | 0.3.13 | MIT |
 | @jridgewell/remapping | 2.3.5 | MIT |
 | @jridgewell/resolve-uri | 3.1.2 | MIT |
 | @jridgewell/sourcemap-codec | 1.6.0 | MIT |
 | @jridgewell/trace-mapping | 0.3.31 | MIT |
+| @moonshine-ai/moonshine-wasm | 0.1.5 | MIT |
+| @napi-rs/lzma-linux-x64-gnu | 1.5.1 | MIT |
 | @rolldown/pluginutils | 1.0.0-beta.27 | MIT |
-| @rollup/rollup-win32-x64-gnu | 4.65.0 | MIT |
-| @rollup/rollup-win32-x64-msvc | 4.65.0 | MIT |
+| @rollup/rollup-linux-x64-gnu | 4.65.0 | MIT |
+| @rollup/rollup-linux-x64-musl | 4.65.0 | MIT |
 | @types/babel__core | 7.20.5 | MIT |
 | @types/babel__generator | 7.27.0 | MIT |
 | @types/babel__template | 7.4.4 | MIT |

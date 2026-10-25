@@ -101,7 +101,7 @@ export function HowTo() {
         [
           '03',
           'You say it. Chat wins.',
-          'Enable your mic. Say the whole word before time runs out, and chat gets the win. Outlast the clock to escape.',
+          'Enable your mic. Moonshine proposes a catch when it hears the whole word; confirm it to give chat the win. Outlast the clock to escape.',
           Mic,
         ],
       ].map(([n, title, description, Icon]) => {

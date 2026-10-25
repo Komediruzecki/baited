@@ -248,7 +248,7 @@ export default function Landing({ session, reload }: { session: SessionInfo; rel
             </div>
             <p className="landing-footnote">
               {session.demoAvailable && !session.authenticated
-                ? 'Local demo uses simulated chat and speech.'
+                ? 'Try simulated chat, or enable local speech.'
                 : 'Connect your channel, share the viewer link, and enable your mic.'}
             </p>
             {error && (
@@ -298,7 +298,7 @@ export default function Landing({ session, reload }: { session: SessionInfo; rel
               [
                 '03',
                 'You say it. Chat wins.',
-                'Enable your mic. Say the word before time runs out: chat wins. Outlast the clock: you escape.',
+                'Enable your mic and keep talking. Confirm a Moonshine catch to give chat the win. Outlast the clock to escape.',
                 Mic,
               ],
             ].map(([n, title, description, Icon]) => {

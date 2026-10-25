@@ -4,7 +4,7 @@
 
 Chat gets **banana**. Someone asks about smoothies. The streamer says it. Chat wins.
 
-BAIT runs alongside a normal Twitch stream. Viewers see the secret word on a companion page and drop hints in chat. Microphone recognition detects the word and triggers a shared win.
+BAIT runs alongside a normal Twitch stream. Viewers see the secret word on a companion page and drop hints in chat. Moonshine listens locally in the streamer’s browser. It proposes a catch; the streamer confirms it before chat earns a win.
 
 BAIT is an independent project created with Codex on October 24, 2026. There are no payments or subscriptions.
 
@@ -12,7 +12,7 @@ The source package records that creation date and its original Codex session. Th
 
 ## Run it now
 
-Use Node.js 22.12 or newer and pnpm 10. The supplied package records Windows tests with Node 24.22.1 and pnpm 10.7.1. The current Linux pass has 106 passing tests, a successful production build and an isolated Docker smoke check; see [validation](docs/validation.md) for scope.
+Use Node.js 22.12 or newer and pnpm 10. The supplied package records Windows tests with Node 24.22.1 and pnpm 10.7.1. See [validation](docs/validation.md) for the earlier Linux checks and [the Moonshine rehearsal](docs/moonshine-rehearsal.md) for this pass.
 
 ```sh
 rtk pnpm install --frozen-lockfile
@@ -22,7 +22,7 @@ rtk pnpm preview:local
 
 Open **http://127.0.0.1:3318** and choose **Try the local demo**. The preview helper binds only to loopback, clears Twitch/speech credentials and the encryption key in its child process, refuses a checkout containing `.env`, and stops after three hours or Ctrl+C. It fails if its fixed port is occupied. See [the local preview handoff](docs/local-preview.md) for the active worktree's exact command and output directory.
 
-Start a round, open the viewer room in a separate tab, and expand **Demo controls** to send test chat and a simulated final transcript. The demo needs no credentials and tests the game server with simulated inputs.
+Start a round, open the viewer room in a separate tab, and expand **Demo controls** to send test chat and a simulated final transcript. The demo needs no credentials. Simulated inputs remain available; enabling the microphone also lets you rehearse local Moonshine recognition.
 
 A separate [bomb-led motion study](concepts/bait-bomb/README.md) is available on port 3319 for design review. It uses a scripted example and does not connect to providers. Its public development copy is maintained in `packages/bait` on the `feat/bait-dev-landing` branch of the private disjoint-colliders repository, targeting [dev.bait.maff.app](https://dev.bait.maff.app/). The game server is not part of that deployment.
 
@@ -39,8 +39,8 @@ Keep `PUBLIC_URL` and the address you open identical, including `localhost` vers
 - A transparent, read-only OBS browser source with a timer, scores, and success animation.
 - An authoritative game engine with difficulty pools, pause/resume, deadlines, cooldowns, automatic rounds, shared streaks, participation records, and `!skip` votes.
 - Twitch authorization-code OAuth, encrypted server-side tokens, refresh deduplication, startup/hourly validation, and EventSub chat over WebSockets with recovery.
-- Microphone-only PCM capture through an AudioWorklet and a server-to-Deepgram streaming connection. Only final, sufficiently confident, fresh whole-word results can win.
-- A Twitch-inspired purple and charcoal interface, Google Material icons, original SVG illustration, reduced-motion support, confetti and a synthesized chime. Fonts and licenses are bundled locally. See [design decisions](docs/design.md).
+- Microphone-only PCM capture through an AudioWorklet. Moonshine runs in a browser worker by default; its proposed catches require broadcaster confirmation. Deepgram remains an optional server-side adapter for automatic scoring.
+- Eighteen original ChatGPT-generated pixel illustrations, a bomb-led landing study, reduced-motion support, and opt-in Sound Lab effects adapted from Keys. Fonts and licenses are bundled locally. Open `/card-proofs` to review the illustrated deck and audition the sounds.
 
 The automated tests use Twitch and speech provider fixtures. **Live Twitch sign-in, real-channel chat, a physical microphone, and Deepgram transcription have not been tested with credentials in this build session.** Those checks remain required before presenting this as a demonstrated live integration.
 
@@ -72,18 +72,18 @@ Tokens never enter browser storage. An HttpOnly session cookie controls the stud
 
 ## Enable real microphone recognition
 
-For the current Linux rehearsal, use the [Twitch, speech and OBS setup guide](docs/twitch-deepgram-obs-setup.md). Use Deepgram for the first rehearsal if the existing account still has usable starter credit: it is already integrated. Check the account's balance, expiry and billing settings before sending audio. Deepgram advertises $200 starting credit, then paid usage; this is not an unlimited free service. [Current pricing](https://deepgram.com/pricing).
+Moonshine is the default (`SPEECH_PROVIDER=moonshine`). It needs no speech-provider account or API key. The English Tiny Streaming model downloads about 84 MB on first use, then runs in a worker on this computer. Model files are cached by the browser. See [Moonshine implementation and limits](docs/moonshine.md).
 
-Neither Twitch nor the hackathon requires a speech provider. The static landing needs none. BAIT's current live game requires recognition to detect the spoken target and score automatically. A trusted moderator could confirm a catch manually in a future mode, but that live mode is not implemented. The saved ElevenLabs key has opened a Scribe v2 Realtime session without sending audio; its allowance and billing remain unverified. ElevenLabs remains an alternative that needs an adapter and recognition tests before use.
+1. Open the studio and choose **Enable microphone**. Read the consent message, allow microphone access, and use headphones.
+2. Wait for the model and microphone to be ready. Start a round and have a separate viewer give hints through chat.
+3. If Moonshine detects the target, the round stops and reveals the word for review. Confirm only if you actually said it. Rejecting the catch ends that revealed word without awarding chat a win.
+4. Rehearse your normal speaking voice and your real OBS scene before relying on it. The [speech bench](/speech-lab) can compare the same local WAV with OBS idle and recording; it does not send the file to a speech service.
 
-1. Open the existing [Deepgram Console](https://console.deepgram.com/) account and check its **first project**, where starting credit is assigned. Use that credited project, or confirm a credit transfer with Deepgram before choosing another. Create a key allowed to transcribe streaming audio only after confirming available credit. Provider usage can incur charges to the operator; BAIT does not charge viewers or judges. [Project credit guidance](https://developers.deepgram.com/guides/deep-dives/managing-projects).
-2. Store the key in Proton Pass and update the `DEEPGRAM_API_KEY` reference in the template. Restart through `pass-cli run`. See [deployment and secret handling](docs/deployment-runbook.md).
-3. In the studio, select **Enable microphone**, read the consent dialog, and allow the browser’s microphone permission. Use headphones and the intended microphone input. A real round requires a connected Twitch channel, configured speech provider and an armed microphone owned by the current studio session. Local demo rounds are explicitly simulated and do not require a microphone.
-4. Start a round. The microphone card should say **Listening**. Ask a separate viewer to confirm the word, then say it naturally. Confirm the synchronized win and use **Wrong detection? Reverse win** to verify correction. Losing microphone readiness pauses live play; re-enable it before resuming.
+The installed Moonshine SDK supplies a constant `1.0` in its word-confidence field. It is not a probability and cannot filter misrecognition. This is why Moonshine requires confirmation. Fresh capture times, whole-word matching, round epochs and session ownership are still checked. Active rounds get up to 1.5 seconds after the buzzer to deliver a final result for speech completed before the deadline; long unfinished utterances can miss that window.
 
-Audio is converted to mono, 16 kHz, signed 16-bit PCM and forwarded during active rounds. Fresh capture buffers are created for each speech generation so pre-round and pre-pause audio cannot spill into the next recognition session. A new provider connection is bound to each round ID and pause/resume epoch. Neither audio nor transcript text is stored by BAIT. Deepgram processing is covered by its own terms; requests set `mip_opt_out=true`. See [Deepgram’s streaming reference](https://developers.deepgram.com/reference/speech-to-text/listen-streaming).
+Raw Moonshine microphone audio stays in the browser. Final transcript text travels to the BAIT server for matching and is not persisted by BAIT. The studio never receives the active target until the round has ended. A provider failure pauses an active round.
 
-The English target list is literal: plurals, possessives and sound-alike words do not count as the singular target. The current implementation checks the matching word's confidence (at least 0.8), capture timing and round epoch, rather than rejecting an otherwise clear target because another word was uncertain. At a live deadline, an actively listening microphone gets up to 1.5 seconds to deliver a final result for a word already completed before the deadline; this does not extend speaking time. A provider/network failure or sustained audio gap stops recognition and pauses active play. Re-enable the microphone and resume to retry. Normal round changes keep the consented microphone armed while the owning studio session remains ready.
+Deepgram remains available with `SPEECH_PROVIDER=deepgram` and a Proton Pass-injected `DEEPGRAM_API_KEY`. That mode sends microphone audio through the server to Deepgram and scores qualifying final results automatically. Check the account’s current balance and billing before use; it is not an unlimited free service. The [Twitch and OBS setup guide](docs/twitch-deepgram-obs-setup.md) documents that original adapter. ElevenLabs has no adapter in this build. Neither the static landing nor Moonshine needs either cloud speech provider.
 
 ## Share the viewer room and add OBS
 
@@ -111,7 +111,7 @@ TRUSTED_PROXIES=
 
 The loopback bind suits a reverse proxy on the same host. A container may need `0.0.0.0` on its internal interface; restrict the published port to the intended proxy path. Set `TRUSTED_PROXIES` only to actual proxy IPs/CIDRs and require that proxy to overwrite forwarding headers.
 
-Keep the Twitch credentials, encryption key and Deepgram key in Proton Pass. Supply them to the process with a production reference-only template through `pass-cli run`; do not place secret values in this repository, Docker build arguments or shell history. Add the **exact** production callback `${PUBLIC_URL}/auth/twitch/callback` in Twitch. The [deployment runbook](docs/deployment-runbook.md) describes the configuration and acceptance checks. It is preparation, not evidence of a deployed service.
+Keep the Twitch credentials, encryption key and any optional Deepgram key in Proton Pass. Supply them to the process with a production reference-only template through `pass-cli run`; do not place secret values in this repository, Docker build arguments or shell history. Add the **exact** production callback `${PUBLIC_URL}/auth/twitch/callback` in Twitch. The [deployment runbook](docs/deployment-runbook.md) describes the configuration and acceptance checks. It is preparation, not evidence of a deployed service.
 
 Terminate HTTPS at your reverse proxy. Preserve the original `Host` header, forward WebSocket upgrades for `/api/speech`, disable response buffering for `/api/*/events*`, and permit long-lived connections. Do not log OAuth callback queries or speech query strings. Production enforces HTTPS in its configured public URL, Secure cookies, security headers and content policy. It disables the local demo even if `ENABLE_DEMO=true`.
 

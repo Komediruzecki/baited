@@ -279,3 +279,7 @@ footer>a:last-child{margin-left:0;min-height:44px}
 .word-card:not(:disabled):hover{transform:translateY(var(--lift)) rotate(var(--angle))}
 .play-button:hover,.launch-button:hover{transform:none}
 }
+
+/* Generated card proofs keep their alpha and aspect ratio. */
+.card-art{object-fit:contain}
+.proof-deck-link{display:table;margin:22px auto 0;color:#fff35b;text-underline-offset:5px;font-size:14px;line-height:1.6;padding:10px}

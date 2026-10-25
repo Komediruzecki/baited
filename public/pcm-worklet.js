@@ -10,6 +10,14 @@ class BaitPCM extends AudioWorkletProcessor {
     this.enabled = false;
     this.generation = 0;
     this.port.onmessage = (e) => {
+      // Only the deadline drains its trailing samples. Pause/reset discard them.
+      if (e.data.flush && this.enabled) {
+        if (this.used) {
+          const tail = this.samples.slice(0, this.used);
+          this.port.postMessage({ buffer: tail.buffer, generation: this.generation }, [tail.buffer]);
+        }
+        this.port.postMessage({ flushed: true, generation: this.generation });
+      }
       this.enabled = e.data.enabled === true;
       this.generation = e.data.generation;
       this.used = 0;

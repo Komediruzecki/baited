@@ -56,6 +56,7 @@ export function providerTranscript(
     final: true,
     confidence: a.confidence,
     capturedAt: binding.firstAudioAt + r.start * 1000,
+    endedAt: binding.firstAudioAt + segmentEnd * 1000,
     words,
     id: `${r.start}:${r.duration}`,
   };

@@ -1,0 +1,97 @@
+{
+  "generatedOn": "2026-10-25",
+  "tool": "ChatGPT built-in image_gen",
+  "styleReference": "concepts/bait-bomb/assets/bait-bomb-logo.png",
+  "assets": [
+    {
+      "id": "banana",
+      "file": "banana.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 647693,
+      "sha256": "dc12b34a08b31eeaa4853dc0093c86ce27c4a005ea4f216e41d11069066afc97",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "da7d6c07-9458-4317-bded-4b1452b7245e",
+      "prompt": "Use case: stylized-concept. Create ONE isolated BANANA illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. A ripe yellow banana, peel opened into three floppy angular flaps, unmistakable silhouette, a little mischievous shape but no face. Match the reference's chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange shadow bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app.",
+      "transformations": []
+    },
+    {
+      "id": "penguin",
+      "file": "penguin.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 840028,
+      "sha256": "9ddce2680486024fca3bcb894cf635e177c1eea005f67e0831bd636e5b6f77cc",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "b3dcf1e9-890f-499e-8302-e9492f754fc1",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: a stout little PENGUIN standing with flippers held slightly out, white cream belly and cheek, nearly black aubergine body, orange beak and oversized feet, one raised eyebrow suggested by simple pixels. A forward-facing three-quarter view, broad readable silhouette, warm highlights and a small cyan-blue cool shadow on its body. No accessories.",
+      "transformations": []
+    },
+    {
+      "id": "microwave",
+      "file": "microwave.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 939245,
+      "sha256": "2e5e35d5778ba9e862a74dbbe8eeba6be830b3903e36846d3f5b04dcbac2ec4b",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "669b1b89-c780-4883-a370-d9706f6485af",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: a compact retro MICROWAVE oven in three-quarter view, chunky light-purple and lavender metal body, black aubergine window with pale cyan glass highlights and a warm amber glow inside. A large circular orange dial and two simple square buttons. No display text, numbers or labels. Deliberately squat proportions and a strong recognizable microwave silhouette. Nothing outside the appliance.",
+      "transformations": []
+    },
+    {
+      "id": "dragon",
+      "file": "dragon.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 908630,
+      "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "1b36cccb-a235-4bef-a424-7ea118e67cd7",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: a small mischievous DRAGON in profile, squat purple body, amber-orange belly and wing membranes, two swept-back pale horns, chunky tail curled forward, small pointed wings held open. One little orange puff of fire, attached visually to its mouth, not a scene. Cheerful sly expression with one visible simple eye. Readable as a dragon at tiny card scale, not a dinosaur.",
+      "transformations": []
+    },
+    {
+      "id": "volcano",
+      "file": "volcano.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 735807,
+      "sha256": "ba1d79a8dde4058a33085d9f76c0a680b0d911f65d6a4cd31fdc639f9b784798",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "57222bce-c5d8-46f1-8c15-67c100972cbd",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: an erupting VOLCANO as one compact triangular dark purple mountain, bright red-orange glowing crater, a thick angular lava ribbon running down the front. A short explosive orange-and-cream plume of geometric pixel chunks above the crater. No sky, trees, ground plane or horizon. Strong silhouette, dramatic but playful arcade obstacle.",
+      "transformations": []
+    },
+    {
+      "id": "monocle",
+      "file": "monocle.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 804585,
+      "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "6df38c2c-37ee-4f93-963d-31f86513ca80",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: one oversized golden MONOCLE, a single round eyewear lens in a thick gold and amber ring, tiny side bridge, short curved golden chain hanging below. The lens is pale cyan translucent glass with two strong diagonal cream pixel highlights. The ring has a few chunky glints. No face, no eye, no second lens, no spectacles. Readable, slightly tilted three-quarter view.",
+      "transformations": []
+    }
+  ]
+}

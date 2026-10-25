@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@moonshine-ai/moonshine-wasm':
+        specifier: 0.1.5
+        version: 0.1.5
       express:
         specifier: ^5.1.0
         version: 5.3.0
@@ -626,6 +629,10 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@moonshine-ai/moonshine-wasm@0.1.5':
+    resolution: {integrity: sha512-b90GVFkbuQQthW8wZFU/dvJpnnsISHSSxs/p6Xv/NMfaHotLhRp0e9Risy5/np6QSF3SFust3jGE3Uj2LdecmQ==}
+    engines: {node: '>=18'}
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     resolution: {integrity: sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==}
@@ -1800,6 +1807,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  '@moonshine-ai/moonshine-wasm@0.1.5': {}
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true

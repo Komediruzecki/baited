@@ -1,0 +1,98 @@
+{
+  "batch": "expansion-a",
+  "generatedOn": "2026-10-25",
+  "tool": "ChatGPT built-in image_gen",
+  "styleReference": "concepts/bait-bomb/assets/bait-bomb-logo.png",
+  "assets": [
+    {
+      "id": "pizza",
+      "file": "pizza.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 796823,
+      "sha256": "0cfd35a161387a2fe20d6efcb583b9b43e5705653c5162e2aca4c1d1db959d65",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "94487a9e-ce8c-4161-930a-ca60fa566cb1",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: one large triangular PIZZA slice, golden crust with bright cream melted cheese, three chunky orange-red pepperoni circles, a single short stretch of cheese hanging from the point. Slightly tilted three-quarter view. Big simple silhouette, appetizing playful arcade icon. No face, no plate, no hands.",
+      "transformations": []
+    },
+    {
+      "id": "robot",
+      "file": "robot.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 830675,
+      "sha256": "a389d790bb407218a577eb80e62f95261d7ba293873c803ca0f1ffdd3196580a",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "2e851b47-2863-44d7-b74c-93ed3e40e1f8",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: a squat retro ROBOT with a square lavender-purple head and body, pale cream face panel, two glowing amber square eyes, a single short antenna, small chunky hands and wide orange feet. Simple front-facing three-quarter pose, one arm raised. A few cyan edge highlights; only large readable forms. No text on its chest, no tools or props.",
+      "transformations": []
+    },
+    {
+      "id": "rocket",
+      "file": "rocket.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 667780,
+      "sha256": "0cfefd6c50d1fcf1eed89fdd12088add3710a50c0760312be5120398227bdf0d",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "91fb16eb-555a-4966-9f86-fe0e79bc1ea3",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: one compact space ROCKET tilted slightly toward the upper right, cream-silver cylindrical body, purple pointed nose and two purple fins, one round cyan porthole in a thick dark rim, short bright orange and cream exhaust flame. Chunky retro arcade proportions, unmistakable silhouette, no stars or scenery.",
+      "transformations": []
+    },
+    {
+      "id": "pirate",
+      "file": "pirate.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 962317,
+      "sha256": "f172ad6f90c442b534400a779ac34dc979ca4d85d63c7cea2ccfa837e1ab0448",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "663355d7-b815-48a8-bfa4-c219b485ac70",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: a playful PIRATE captain bust, oversized dark-purple tricorn hat with a simple cream skull symbol, orange bandana under it, one black eyepatch, a short chunky ginger beard, warm medium-brown face and one expressive visible eye. Three-quarter view, confident grin with one cream tooth, broad simple silhouette. Purple coat collar with amber trim. No weapons, no hook, no background.",
+      "transformations": []
+    },
+    {
+      "id": "cactus",
+      "file": "cactus.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 736485,
+      "sha256": "7c31f8aaa2c7fd3e9495439c87574a4bb1e910dbcbe9750a47fed22ff2d86245",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "00707274-408e-45c5-98a0-7f7e033d3f8c",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: a plump green CACTUS with three upward-curving arms in a small orange terracotta pot. Bright lime and cream highlights, teal-green shadow bands, dark aubergine outline. A few large simple cream spines, one tiny orange flower on an arm. Chunky asymmetrical silhouette that reads clearly at card size. No face, no scenery, no desert floor.",
+      "transformations": []
+    },
+    {
+      "id": "jellyfish",
+      "file": "jellyfish.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 864169,
+      "sha256": "5dfa42deeb1b80d44e80e93de0dbbea5d95bb86b54c89ddad48b7f3da2e84a6f",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "44450c92-cd0c-4d2e-b23e-954fb59054f6",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card, a new subject using the attached bomb emblem only as a visual style reference. No bomb, no hook, no lettering from the reference. Match its chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights and warm orange accent bands. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. Subject: a single floating JELLYFISH with a large rounded translucent cyan bell, dark-purple lower rim and warm orange inner glow. Four broad wavy lavender-purple tentacles with cream highlights curl below; two are shorter. Slightly tilted lively silhouette, no eyes or face, no water background, no bubbles or other creatures. Large readable pixel clusters.",
+      "transformations": []
+    }
+  ]
+}

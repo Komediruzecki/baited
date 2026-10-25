@@ -20,6 +20,7 @@
     "licenses": "node scripts/licenses.mjs"
   },
   "dependencies": {
+    "@moonshine-ai/moonshine-wasm": "0.1.5",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "react": "^19.0.0",

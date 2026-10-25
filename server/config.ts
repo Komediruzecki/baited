@@ -41,6 +41,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     clientSecret,
     twitchReady: !!(key && clientId && clientSecret),
     speechKey: env.DEEPGRAM_API_KEY || '',
+    speechProvider: z.enum(['moonshine', 'deepgram']).parse(env.SPEECH_PROVIDER || 'moonshine'),
     dataDir: resolve(env.DATA_DIR || 'data'),
     callback: `${origin}/auth/twitch/callback`,
   };

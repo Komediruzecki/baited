@@ -1,0 +1,98 @@
+{
+  "generatedOn": "2026-10-25",
+  "tool": "ChatGPT built-in image_gen",
+  "styleReference": "concepts/bait-bomb/assets/bait-bomb-logo.png",
+  "referenceMethod": "Visual inspection of the bomb emblem and approved penguin proof, followed by explicit text description of their pixel style in each prompt.",
+  "assets": [
+    {
+      "id": "telescope",
+      "file": "telescope.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 682653,
+      "sha256": "778d2e72b285f0ff91522862851bf64aaf14eb2e183a956d14b39e6aa47840cd",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "2c42e5fb-82c2-456a-a2ef-f9eac973a037",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card. Style matches the approved BAIT bomb emblem and card art: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights, warm orange and amber accent bands, purple midtones, small pale cyan highlights. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. No bomb or hook. Subject: a compact brass TELESCOPE on a sturdy three-legged purple tripod, aimed diagonally upwards. Big amber-gold barrel with a pale cyan glass objective lens and cream block highlights, small dark eyepiece, a couple of broad metal bands. Three-quarter view, clear silhouette, chunky playful proportions. No stars, sky, moons, characters or extra props.",
+      "transformations": []
+    },
+    {
+      "id": "saxophone",
+      "file": "saxophone.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 570994,
+      "sha256": "4891e98afff3d6cd46c03834bd84cc1e21411fd23362f18d8c1067f2d6fd5dbf",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "df631342-12e7-4343-8425-b399ff969552",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card. Style matches the approved BAIT bomb emblem and card art: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights, warm orange and amber accent bands, purple midtones, small pale cyan highlights. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. No bomb or hook. Subject: one golden alto SAXOPHONE, its unmistakable curved J-shaped body upright and slightly tilted, wide flared bell, curved neck and dark mouthpiece. Rich amber brass, bright cream block highlights, simple chunky round keys and dark aubergine shadows. The whole instrument visible. No musician, hands, music notes, stand or other props.",
+      "transformations": []
+    },
+    {
+      "id": "octopus",
+      "file": "octopus.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1008328,
+      "sha256": "6e24d3ee04d8eb589da259e15e3018e059606e7bb28bfcdc4a769ff06aced294",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "dc59cbe3-fd35-4198-9f18-2962e7558a8a",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card. Style matches the approved BAIT bomb emblem and card art: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights, warm orange and amber accent bands, purple midtones, small pale cyan highlights. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. No bomb or hook. Subject: one mischievous purple OCTOPUS with a rounded bulbous head and exactly eight clearly arranged short curling arms, orange-amber suction cups, small cream highlights and simple bright eyes. A broad readable arcade-creature silhouette, facing the viewer in a slight three-quarter view. No ocean, bubbles, treasure, accessories or extra creatures.",
+      "transformations": []
+    },
+    {
+      "id": "boomerang",
+      "file": "boomerang.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 473824,
+      "sha256": "b25e7a3517759817cedc710baf6cbf479717fa36e8cc2a4c7b14e4fb2db65d6e",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "3cef6605-96b8-4a5e-ab85-db5487e6b402",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card. Style matches the approved BAIT bomb emblem and card art: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights, warm orange and amber accent bands, purple midtones, small pale cyan highlights. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. No bomb or hook. Subject: one unmistakable two-arm BOOMERANG, broad bent V shape with rounded ends and thick tapered wood, tilted diagonally in a readable three-quarter view. Warm orange-amber body, a few simple purple painted bands near each end, cream block highlights and aubergine stepped outline. No cultural motifs, text, motion trail, hand or other props.",
+      "transformations": []
+    },
+    {
+      "id": "narwhal",
+      "file": "narwhal.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 632733,
+      "sha256": "5b0248f1e98f06b8888d56bc2f28ed7b9ffa23a130e3b5d6536e4a1f66c1760c",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "ad0d56a8-2eca-4b2c-ac0c-fa9cc7f18f35",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card. Style matches the approved BAIT bomb emblem and card art: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights, warm orange and amber accent bands, purple midtones, small pale cyan highlights. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. No bomb or hook. Subject: one stout friendly NARWHAL swimming diagonally upward, a plump purple-indigo whale body, pale cream belly, two small flippers, a forked tail and one prominent straight cream-and-gold spiral tusk projecting from the forehead. One simple eye and a tiny sly smile. Clearly a tusked whale, not a dolphin or unicorn. Whole silhouette including tusk visible. No water, bubbles, ice or accessories.",
+      "transformations": []
+    },
+    {
+      "id": "parachute",
+      "file": "parachute.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 771735,
+      "sha256": "1360fb474ca3a425b1f7df674ed3b6211d3330821db5ce11ebb1a7fb5417ca8f",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "ab445000-622e-4e30-aa67-2f5e61689576",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAIT game card. Style matches the approved BAIT bomb emblem and card art: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, bright cream highlights, warm orange and amber accent bands, purple midtones, small pale cyan highlights. Limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, no blur, no tiny speckled details. Centered square composition, whole subject visible, generous transparent margin about 16 percent. Transparent background with genuine alpha, no scenery, no ground, no cast-shadow plane, no frame, no card border, no text, no numbers, no logos, no watermark. Illustration only; typography will be drawn in the app. No bomb or hook. Subject: one open PARACHUTE canopy shaped like a broad domed umbrella, alternating bold orange-amber and purple fabric panels, cream block highlights. Six clear cream suspension lines converge onto one small compact purple harness seat below. No person, face, sky, cloud, aircraft or landscape. An unmistakable complete parachute silhouette with generous space around canopy and harness.",
+      "transformations": []
+    }
+  ]
+}

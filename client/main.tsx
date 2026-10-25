@@ -34,7 +34,11 @@ import {
 import type { GameView, Studio, SessionInfo, Settings, Result } from '../shared/types';
 import { request } from './api';
 import { Microphone } from './microphone';
-import { microphoneReady, MicrophoneLease, WinSoundGate } from './safety';
+import { SpeechLab } from './SpeechLab';
+import CardProofs from './CardProofs';
+import { CardArt } from './CardArt';
+import { SoundControls } from './SoundControls';
+import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
 import Landing from './Landing';
 import { brand, Button, Tag, CopyButton, Modal, HowTo } from './ui';
@@ -55,7 +59,8 @@ const outcomeLabel: Record<Result['outcome'], string> = {
   escaped: 'TIME UP',
   skipped: 'SKIPPED',
   ended: 'ENDED',
-  overturned: 'WIN REVERSED',
+  overturned: 'CATCH REJECTED',
+  review: 'CHECK THIS CATCH',
 };
 const cx = (...values: (string | false | undefined)[]) => values.filter(Boolean).join(' ');
 function useNow() {
@@ -110,24 +115,6 @@ function Stat({
     </div>
   );
 }
-function playWin(context: AudioContext) {
-  try {
-    [0, 4, 7, 12].forEach((note, i) => {
-      const osc = context.createOscillator(),
-        gain = context.createGain(),
-        time = context.currentTime + i * 0.09;
-      osc.type = 'sine';
-      osc.frequency.value = 440 * 2 ** (note / 12);
-      gain.gain.setValueAtTime(0, time);
-      gain.gain.linearRampToValueAtTime(0.045, time + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
-      osc.connect(gain);
-      gain.connect(context.destination);
-      osc.start(time);
-      osc.stop(time + 0.4);
-    });
-  } catch {}
-}
 function Confetti() {
   return (
     <div className="confetti" aria-hidden="true">
@@ -159,18 +146,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [tab, setTab] = useState('studio');
   const [micStatus, setMicStatus] = useState('off'),
     [level, setLevel] = useState(0),
-    [consent, setConsent] = useState(false),
-    [soundEnabled, setSoundEnabled] = useState(false);
+    [consent, setConsent] = useState(false);
   const capture = useRef<Capture | null>(null),
-    sound = useRef(new WinSoundGate()),
-    soundContext = useRef<AudioContext | null>(null),
     currentStudio = useRef<Studio | null>(null),
     offset = useRef(0);
   const now = useNow();
   const receive = useCallback((s: Studio) => {
     offset.current = s.room.serverTime - Date.now();
     currentStudio.current = s;
-    if (sound.current.receive(s.room.result) && soundContext.current) playWin(soundContext.current);
     setStudio(s);
   }, []);
   const pauseForMicrophone = useCallback(async (owner: Capture, message?: string, refresh = true) => {
@@ -196,9 +179,6 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       if (lost) {
         if (capture.current) void pauseForMicrophone(capture.current, undefined, false);
         else setConsent(false);
-        sound.current.enabled = false;
-        setSoundEnabled(false);
-        void soundContext.current?.suspend();
         void request<SessionInfo>('/api/session')
           .then((s) => {
             if (!s.authenticated) reload();
@@ -218,20 +198,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       capture.current = null;
       owner?.microphone.stop();
       void owner?.lease.cancel().catch(() => {});
-      void soundContext.current?.close();
     };
   }, [receive]);
   const g = studio?.room;
-  useEffect(() => {
-    const muteWhenHidden = () => {
-      if (document.visibilityState !== 'hidden') return;
-      sound.current.enabled = false;
-      setSoundEnabled(false);
-      void soundContext.current?.suspend();
-    };
-    document.addEventListener('visibilitychange', muteWhenHidden);
-    return () => document.removeEventListener('visibilitychange', muteWhenHidden);
-  }, []);
   useEffect(() => {
     const owner = capture.current;
     if (!consent || !g || !session.csrf || !owner?.lease.active) return;
@@ -242,7 +211,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   }, [consent, g?.phase, g?.round?.id, g?.round?.epoch, offline, session.csrf]);
   useEffect(() => {
     const owner = capture.current;
-    if (!consent || offline || g?.mode !== 'twitch' || !owner?.lease.active) return;
+    if (!consent || offline || !owner?.lease.active) return;
     const renew = () => void owner.lease.renew().catch(() => {
       if (capture.current === owner && owner.lease.active)
         void pauseForMicrophone(owner, 'Microphone readiness could not be confirmed. Reconnect, then enable it again.');
@@ -257,6 +226,19 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     try {
       const s = await request<Studio>('/api/studio/action', { action }, session.csrf);
       receive(s);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const decideCatch = async (decision: 'confirm' | 'reject') => {
+    const result = currentStudio.current?.room.result;
+    if (result?.outcome !== 'review') return;
+    setBusy(true);
+    setError('');
+    try {
+      receive(await request<Studio>('/api/studio/catch', { roundId: result.id, decision }, session.csrf));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -291,16 +273,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     const previous = capture.current;
     const previousCancelled = previous ? previous.lease.cancel().catch(() => {}) : Promise.resolve();
     previous?.microphone.stop();
-    const lease = new MicrophoneLease(crypto.randomUUID(), (body) =>
-      currentStudio.current?.room.mode === 'twitch'
-        ? request('/api/studio/microphone', body, session.csrf)
-        : Promise.resolve());
+    const lease = new MicrophoneLease(crypto.randomUUID(), (body) => request('/api/studio/microphone', body, session.csrf));
     const owner: Capture = {
       lease,
       microphone: new Microphone(
         (status) => { if (capture.current === owner) setMicStatus(status); },
         (value) => { if (capture.current === owner) setLevel(value); },
         (message) => { if (capture.current === owner) void pauseForMicrophone(owner, message); },
+        studio?.speechProvider,
       ),
     };
     capture.current = owner;
@@ -313,22 +293,6 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     } catch {
       if (capture.current === owner && lease.active)
         void pauseForMicrophone(owner, 'Microphone readiness could not be confirmed. Reconnect, then enable it again.');
-    }
-  };
-  const toggleSound = async () => {
-    if (soundEnabled) {
-      sound.current.enabled = false;
-      setSoundEnabled(false);
-      void soundContext.current?.suspend();
-      return;
-    }
-    try {
-      soundContext.current ??= new AudioContext();
-      await soundContext.current.resume();
-      sound.current.enabled = true;
-      setSoundEnabled(true);
-    } catch {
-      setError('Sound could not be enabled. Check your browser’s audio permission and try again.');
     }
   };
   const logOut = async () => {
@@ -351,10 +315,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     settling = g.phase === 'settling',
     paused = g.phase === 'paused',
     cool = g.phase === 'cooldown',
+    pendingCatch = cool && g.result?.outcome === 'review',
     ms = remaining(g, now, offset.current),
     next = Math.max(0, (g.nextAt ?? 0) - (now + offset.current)),
     progress = g.round ? ms / g.round.duration : 1;
-  const canStart = !active && !paused && !settling && (!cool || next <= 0),
+  const canStart = !pendingCatch && !active && !paused && !settling && (!cool || next <= 0),
     connected = g.connection.status === 'connected',
     demo = g.mode === 'demo',
     readyToBegin = demo || (connected && microphoneReady(studio.speechReady, consent, micStatus));
@@ -422,9 +387,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </strong>
           </div>
           <div className="topbar-right">
-            <button className="sound-toggle" aria-pressed={soundEnabled} onClick={() => void toggleSound()} title="Celebration sound resets to off when you leave or reload">
-              <span aria-hidden="true">♪</span> Sound {soundEnabled ? 'on' : 'off'}
-            </button>
+            <a className="sound-toggle" href="#studio-sound">Sound controls</a>
             <span className={cx('connection-pill', (connected || demo) && 'online')}>
               <span className="dot" />
               {demo
@@ -465,7 +428,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <div className="rehearsal-banner">
               <span>
                 <Terminal size={15} />
-                <strong>Demo mode</strong> Simulated chat and speech. Twitch is not connected.
+                <strong>Demo mode</strong> Twitch is not connected. Chat is simulated; microphone recognition can be tested locally.
               </span>
               <button
                 onClick={() =>
@@ -504,12 +467,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                 >
                   <div className="card-heading">
                     <span className="small-label">CURRENT ROUND</span>
-                    <Tag tone={active ? 'lime' : paused ? 'amber' : 'muted'}>
+                    <Tag tone={active ? 'lime' : paused || pendingCatch ? 'amber' : 'muted'}>
                       <span className="dot" />
                       {active
                         ? 'ROUND LIVE'
                         : paused
                           ? 'PAUSED'
+                          : pendingCatch
+                            ? 'AWAITING CONFIRMATION'
                           : cool
                             ? 'ROUND COMPLETE'
                             : settling
@@ -521,7 +486,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     {!active && !paused && !settling && g.result ? (
                       <>
                         <span className="small-label">
-                          {g.result.outcome === 'caught'
+                          {pendingCatch
+                            ? 'CHECK THIS CATCH'
+                            : g.result.outcome === 'caught'
                             ? g.mission?.status === 'complete'
                               ? 'MISSION COMPLETE'
                               : 'CHAT WINS'
@@ -530,7 +497,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                 ? 'YOU CALLED THE BAIT'
                                 : 'TIME UP'
                               : g.result.outcome === 'overturned'
-                                ? 'WIN REVERSED'
+                                ? 'CATCH REJECTED'
                                 : 'ROUND ENDED'}
                         </span>
                         <h2 className="revealed-word">
@@ -538,14 +505,24 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           <span>{g.result.outcome === 'caught' ? '.' : '?'}</span>
                         </h2>
                         <p>
-                          {g.result.outcome === 'caught'
+                          {pendingCatch
+                            ? 'Moonshine heard this word. Did you say it? The round is stopped; the score has not changed.'
+                            : g.result.outcome === 'caught'
                             ? `Detected after ${g.result.elapsed} seconds.`
                             : g.result.outcome === 'overturned'
-                              ? 'Win removed. The next round gets a new word.'
+                              ? 'That catch does not count. The next round gets a new word.'
                               : g.result.reason === 'guess'
                                 ? 'Correct guess. You escaped.'
                                 : 'Start a new round when you’re ready.'}
                         </p>
+                        {pendingCatch && (
+                          <div className="round-actions" aria-label="Confirm speech result">
+                            <Button className="primary" disabled={busy || offline}
+                              onClick={() => void decideCatch('confirm')}>Confirm catch</Button>
+                            <Button className="secondary" disabled={busy || offline}
+                              onClick={() => void decideCatch('reject')}>Not said</Button>
+                          </div>
+                        )}
                         {g.result.outcome === 'caught' && (
                           <button
                             className="undo-button"
@@ -615,7 +592,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   <div className="round-console">
                     <div className="timer-block">
                       <span className="small-label">
-                        {cool
+                        {pendingCatch ? 'ROUND STOPPED' : cool
                           ? g.mission?.status === 'active'
                             ? 'NEXT WORD'
                             : 'NEXT ROUND'
@@ -628,7 +605,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                               : 'ROUND TIMER'}
                       </span>
                       <div className={cx('timer', active && ms < 15000 && 'urgent')}>
-                        {cool
+                        {pendingCatch ? '—:—' : cool
                           ? fmt(next)
                           : active || paused || settling
                             ? fmt(ms)
@@ -638,12 +615,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                   : g.settings.duration) * 1000,
                               )}
                         <span>
-                          {cool ? (g.settings.auto ? 'AUTO START' : 'COOLDOWN') : 'REMAINING'}
+                          {pendingCatch ? 'CONFIRM CATCH ABOVE' : cool ? (g.settings.auto ? 'AUTO START' : 'COOLDOWN') : 'REMAINING'}
                         </span>
                       </div>
                     </div>
                     <div className="round-actions">
-                      {settling ? (
+                      {pendingCatch ? (
+                        <Button className="primary" disabled>Waiting for your decision</Button>
+                      ) : settling ? (
                         <Button className="primary" disabled><Timer size={16} /> Checking final words</Button>
                       ) : active ? (
                         <Button
@@ -753,6 +732,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   <h3>
                     {settling
                       ? 'Checking final words'
+                      : micStatus.startsWith('Loading Moonshine') ? micStatus
                       : micStatus === 'connecting'
                         ? 'Connecting speech'
                         : micStatus === 'listening'
@@ -763,28 +743,31 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   </h3>
                   <p>
                     {settling
-                      ? 'No more audio is being sent. Waiting for the final word check.'
+                      ? 'Listening has stopped. Waiting for the final word check.'
                       : micStatus === 'connecting'
                         ? 'Opening the speech connection. The round pauses if it cannot connect.'
                         : micStatus === 'listening'
-                      ? 'Listening for complete words. Audio is streamed, never saved by BAIT.'
+                      ? studio.speechProvider === 'moonshine' ? 'Moonshine listens on this computer. Confirm catches before they count.' : 'Listening for complete words. Audio is streamed to Deepgram.'
                       : consent
                         ? 'Mic enabled. Recognition starts with the next active round.'
                         : 'Enable your microphone so BAIT can detect the target word.'}
                   </p>
+                  {studio.speechProvider === 'moonshine' && (
+                    <p><strong>Confirm catches.</strong> Similar words can fool the model. You check each catch before chat gets a win.</p>
+                  )}
                   <Button
                     className={consent ? 'secondary' : 'light'}
                     disabled={offline || settling}
-                    onClick={() => (consent ? stopMic() : void enableMic())}
+                    onClick={() => (consent || micStatus.startsWith('Loading Moonshine') ? stopMic() : void enableMic())}
                   >
                     {consent ? <MicOff size={16} /> : <Mic size={16} />}
-                    {consent ? 'Disable microphone' : 'Enable microphone'}
+                    {micStatus.startsWith('Loading Moonshine') ? 'Cancel model loading' : consent ? 'Disable microphone' : 'Enable microphone'}
                   </Button>
                   <div className="mic-footnote">
                     <ShieldCheck size={12} />
                     {studio.speechReady
                       ? 'MIC INPUT ONLY · NO AUDIO STORAGE'
-                      : 'LIVE SPEECH NEEDS A DEEPGRAM KEY'}
+                      : 'SPEECH SETUP NEEDED'}
                   </div>
                 </section>
               </div>
@@ -881,6 +864,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </a>
             <span>CHAT VS. STREAMER</span>
           </footer>
+        <section className="studio-sound-section" id="studio-sound" aria-labelledby="studio-sound-title">
+            <h2 id="studio-sound-title">Round sounds</h2>
+            <SoundControls roomId={g.id} game={g} offline={offline} />
+            <a href="/card-proofs">Open all 18 cards and Sound Lab ↗</a>
+          </section>
         </main>
       </div>
       {modal && (
@@ -920,13 +908,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           ) : modal === 'consent' ? (
             <>
               <p>
-                BAIT will request your microphone and stream it through this server to Deepgram
-                during active rounds only.
+                {studio.speechProvider === 'moonshine'
+                  ? 'BAIT will load Moonshine Tiny on this computer, then ask for your microphone. Recognition runs here during active rounds. Only final words and timing go to the game server.'
+                  : 'BAIT will request your microphone and stream it through this server to Deepgram during active rounds only.'}
               </p>
               <p className="muted">
-                BAIT does not record or store audio or transcripts. Deepgram processes the audio
-                under its own terms. Use headphones to reduce sound from your stream reaching the
-                mic. You can stop at any time.
+                {studio.speechProvider === 'moonshine'
+                  ? 'Confirm catches: this model can mistake similar words. BAIT stops the round and asks you before awarding a win. The first model download is about 84 MB and is cached in your browser.'
+                  : 'BAIT does not record or store audio or transcripts. Deepgram processes the audio under its own terms.'}
+                {' '}Use headphones to reduce sound from your stream reaching the mic. You can stop at any time.
               </p>
               <div className="modal-actions">
                 <Button className="secondary" onClick={() => setModal('')}>
@@ -981,17 +971,17 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </>
           ) : (
             <>
-              <p>Live microphone recognition uses Deepgram’s streaming speech service.</p>
+              <p>{studio.speechProvider === 'moonshine' ? 'Moonshine runs in the standalone studio on your computer.' : 'This server is configured for Deepgram’s streaming speech service.'}</p>
               <ol className="setup-list">
                 <li>
-                  Store your Deepgram key in Proton Pass and add its reference to the README’s setup template.
+                  {studio.speechProvider === 'moonshine' ? 'Open BAIT on localhost or HTTPS in a current browser. The page needs cross-origin isolation for the speech model.' : 'Store your Deepgram key in Proton Pass and add its reference to the README’s setup template.'}
                 </li>
                 <li>Restart BAIT, then enable your microphone here.</li>
               </ol>
               <p className="muted">
                 {demo
                   ? 'You can test game matching below with a simulated transcript. It does not use the microphone or a transcription provider.'
-                  : 'Recognition needs a provider key. No simulated transcript endpoint is available in Twitch mode.'}
+                  : 'No simulated transcript endpoint is available in Twitch mode.'}
               </p>
             </>
           )}
@@ -1482,7 +1472,8 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     paused = g.phase === 'paused',
     settling = g.phase === 'settling',
     finished = !active && !paused && !settling && !!g.result,
-    won = g.result?.outcome === 'caught' && finished;
+    won = g.result?.outcome === 'caught' && finished,
+    pendingCatch = g.result?.outcome === 'review' && finished;
   const stale = offline;
   if (overlay)
     return (
@@ -1573,7 +1564,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
           <Eye size={15} /> VIEWER ROOM
         </div>
         <h1>
-          {settling ? 'Checking final words.' : g.mission?.status === 'complete'
+          {pendingCatch ? 'Check this catch.' : settling ? 'Checking final words.' : g.mission?.status === 'complete'
             ? 'Chat cleared the mission.'
             : g.mission?.status === 'failed'
               ? 'Time ran out.'
@@ -1584,7 +1575,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
                   : 'You have one job.'}
         </h1>
         <p className="viewer-intro">
-          {settling ? 'The clock has stopped. Waiting for the final speech result.' : g.mission?.status === 'complete'
+          {pendingCatch ? 'The round has stopped. The streamer is checking this catch.' : settling ? 'The clock has stopped. Waiting for the final speech result.' : g.mission?.status === 'complete'
             ? 'All three words landed before the timer.'
             : g.mission?.status === 'failed'
               ? `${g.mission.completed} of 3 words landed. Those word wins still count.`
@@ -1617,6 +1608,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             </Tag>
           </div>
           <div className="target-display">
+            {!stale && <CardArt word={active || paused || settling ? g.round?.target : finished ? g.result?.word : undefined} />}
             {stale ? (
               <h2>Hold tight.</h2>
             ) : active || paused || settling ? (
@@ -1637,7 +1629,9 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
                   <span>{won ? '!' : '.'}</span>
                 </h2>
                 <p>
-                  {g.result?.reason === 'guess'
+                  {pendingCatch
+                    ? 'No win has been awarded. Waiting for the streamer to confirm.'
+                    : g.result?.reason === 'guess'
                     ? 'The streamer guessed the word without saying it.'
                     : g.result?.outcome === 'overturned'
                       ? 'The detection was reversed. A fresh word is up next.'
@@ -1663,7 +1657,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
               <span>
                 {active || paused || settling
                   ? fmt(ms)
-                  : finished
+                  : pendingCatch ? '—:—' : finished
                     ? fmt(Math.max(0, (g.nextAt ?? 0) - (now + offset.current)))
                     : '—:—'}
               </span>
@@ -1767,13 +1761,15 @@ function Privacy() {
         </p>
         <h2>Microphone audio</h2>
         <p>
-          The streamer chooses whether to enable the microphone. During active rounds, audio travels
-          through this server to Deepgram for English speech recognition. BAIT does not save audio
-          or transcript text. Audio capture is stopped when the microphone is disabled, the studio
-          closes, or the input device disconnects. Pausing a round stops transmission.
+          The streamer chooses whether to enable the microphone. The consent screen names the
+          speech provider. With Moonshine, English recognition runs in the browser and only final
+          text and word timing reach this server. With Deepgram, audio travels through this server
+          to Deepgram. BAIT does not save audio or transcript text. Disabling the microphone,
+          closing the studio, or disconnecting the input stops capture. Pausing stops recognition.
         </p>
         <p>
-          Requests opt out of Deepgram’s Model Improvement Program. Deepgram processes audio under
+          Moonshine model files download from download.moonshine.ai and are cached in the browser.
+          If Deepgram is selected, requests opt out of its Model Improvement Program. It processes audio under
           its{' '}
           <a href="https://deepgram.com/privacy" target="_blank" rel="noreferrer">
             privacy policy
@@ -1834,9 +1830,11 @@ function App() {
         .catch((e) => setError(e.message));
     }, []);
   useEffect(() => {
-    if (!['play', 'overlay', 'privacy'].includes(path[0])) reload();
+    if (!['play', 'overlay', 'privacy', 'speech-lab', 'card-proofs'].includes(path[0])) reload();
   }, [reload]);
   if (path[0] === 'privacy') return <Privacy />;
+  if (path[0] === 'speech-lab') return <SpeechLab />;
+  if (path[0] === 'card-proofs') return <CardProofs />;
   if (path[0] === 'about' && session) return <Landing session={session} reload={reload} />;
   if (['play', 'overlay'].includes(path[0]) && path[1])
     return <PublicRoom id={path[1]} overlay={path[0] === 'overlay'} />;

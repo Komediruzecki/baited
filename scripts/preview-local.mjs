@@ -25,6 +25,7 @@ const child = spawn(process.execPath, ['dist/server/index.js', '--static'], {
     DATA_DIR: process.env.PREVIEW_DATA_DIR || resolve(root, 'data/local-preview'),
     TWITCH_CLIENT_ID: '', TWITCH_CLIENT_SECRET: '', TOKEN_ENCRYPTION_KEY: '',
     DEEPGRAM_API_KEY: '', TRUSTED_PROXIES: '',
+    SPEECH_PROVIDER: 'moonshine',
   },
 });
 console.log(`Local fixture preview: ${origin}. Stops after ${seconds / 60} minutes; Ctrl+C stops it now. The port is fixed and will not fall back.`);

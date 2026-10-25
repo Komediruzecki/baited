@@ -89,7 +89,7 @@ function microphoneHarness() {
   replace('WebSocket', FakeSocket);
   replace('location', { href: 'http://localhost:3317', protocol: 'http:' });
   const statuses: string[] = [], errors: string[] = [];
-  const mic = new Microphone((v) => statuses.push(v), () => {}, (v) => errors.push(v));
+  const mic = new Microphone((v) => statuses.push(v), () => {}, (v) => errors.push(v), 'deepgram');
   return {
     mic, sockets, track, device, stream, statuses, errors, posts,
     emit() {
@@ -171,7 +171,7 @@ test('unexpected speech closure stops the microphone and reports a recoverable e
 test('late permission rejection from a cancelled capture does not report against a new capture', async () => {
   const h = microphoneHarness();
   const nextStatuses: string[] = [], nextErrors: string[] = [];
-  const next = new Microphone((s) => nextStatuses.push(s), () => {}, (e) => nextErrors.push(e));
+  const next = new Microphone((s) => nextStatuses.push(s), () => {}, (e) => nextErrors.push(e), 'deepgram');
   try {
     let reject!: (error: Error) => void;
     h.device.getUserMedia = () => new Promise((_, r) => { reject = r; });

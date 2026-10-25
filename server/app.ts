@@ -8,6 +8,9 @@ import { Store } from './store.js';
 import { Sessions, Limiter, cookies, equal, isLoopback, randomKey } from './security.js';
 import { TwitchAuth, TwitchConnection, AuthRevoked, AuthSuperseded } from './twitch.js';
 import { SpeechBridge } from './speech.js';
+import { LocalSpeechBridge } from './local-speech.js';
+import { createRequire } from 'node:module';
+import { dirname } from 'node:path';
 import type { Config } from './config.js';
 import type { Session } from './security.js';
 import type { Studio } from '../shared/types.js';
@@ -23,7 +26,8 @@ export async function createBait(config: Config, developmentHmr = false) {
     limiter = new Limiter(),
     auth = new TwitchAuth(config, store);
   const twitch = new Map<string, TwitchConnection>(),
-    speech = new Map<string, SpeechBridge>();
+    speech = new Map<string, SpeechBridge | LocalSpeechBridge>();
+  const speechReady = () => config.speechProvider === 'moonshine' || !!config.speechKey;
   const microphoneLeases = new Map<string, { session: Session; leaseId: string; expires: number }>();
   const pendingOAuth = new Map<string, { cookie: string; expires: number }>();
   type Subscriber = {
@@ -60,7 +64,8 @@ export async function createBait(config: Config, developmentHmr = false) {
       room: game.view('studio'),
       viewerUrl: `${config.origin}/play/${game.data.id}`,
       overlayUrl: `${config.origin}/overlay/${game.data.id}?key=${game.data.overlayKey}`,
-      speechReady: !!config.speechKey,
+      speechReady: speechReady(),
+      speechProvider: config.speechProvider,
       awardBoard: game.awardBoard,
     };
   }
@@ -83,7 +88,7 @@ export async function createBait(config: Config, developmentHmr = false) {
   }
   function microphoneReady(game: Game) {
     const lease = microphoneLeases.get(game.data.id);
-    return !!(config.speechKey && lease && lease.expires > Date.now() &&
+    return !!(speechReady() && lease && lease.expires > Date.now() &&
       sessions.get(`bait_session=${lease.session.id}`) === lease.session);
   }
   function disarm(roomId: string, ownerSession?: Session, leaseId?: string) {
@@ -168,10 +173,11 @@ export async function createBait(config: Config, developmentHmr = false) {
         ? {
             directives: {
               defaultSrc: ["'self'"],
-              scriptSrc: ["'self'"],
+              scriptSrc: ["'self'", ...(config.speechProvider === 'moonshine' ? ["'wasm-unsafe-eval'"] : [])],
               styleSrc: ["'self'", "'unsafe-inline'"],
               imgSrc: ["'self'", 'data:'],
-              connectSrc: ["'self'"],
+              connectSrc: ["'self'", ...(config.speechProvider === 'moonshine' ? ['https://download.moonshine.ai'] : [])],
+              workerSrc: ["'self'"],
               fontSrc: ["'self'"],
               objectSrc: ["'none'"],
               frameAncestors: ["'self'"],
@@ -180,8 +186,13 @@ export async function createBait(config: Config, developmentHmr = false) {
           }
         : false,
       referrerPolicy: { policy: 'no-referrer' },
+      crossOriginEmbedderPolicy: config.speechProvider === 'moonshine' ? { policy: 'require-corp' } : false,
     }),
   );
+  if (config.speechProvider === 'moonshine') {
+    const runtime = dirname(createRequire(import.meta.url).resolve('@moonshine-ai/moonshine-wasm/moonshine.mjs'));
+    app.use('/moonshine/runtime', express.static(runtime, { index: false, dotfiles: 'deny', maxAge: '1h' }));
+  }
   app.use(express.json({ limit: '8kb' }));
   app.use('/api', (_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -262,7 +273,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     res.json({
       authenticated: !!s,
       twitchReady: config.twitchReady,
-      speechReady: !!config.speechKey,
+      speechReady: speechReady(),
       demoAvailable: config.demo && isLoopback(req.ip),
       ...(s ? { user: { name: s.name, mode: s.mode }, csrf: s.csrf } : {}),
     });
@@ -410,6 +421,14 @@ export async function createBait(config: Config, developmentHmr = false) {
   app.get('/api/studio/events', session, (req, res) =>
     subscribe(req, res, gameFor(res), 'studio', res.locals.session),
   );
+  app.post('/api/studio/catch', protect, (req, res) => {
+    const body = z.object({
+      roundId: z.string().uuid(), decision: z.enum(['confirm', 'reject']),
+    }).strict().parse(req.body);
+    const game = gameFor(res);
+    game.decideCatch(body.roundId, body.decision);
+    res.json(studio(game));
+  });
   app.post('/api/studio/action', protect, async (req, res) => {
     const body = z
         .object({
@@ -490,7 +509,7 @@ export async function createBait(config: Config, developmentHmr = false) {
         res.status(409).json({ error: 'Reconnect your studio before enabling the microphone.' });
         return;
       }
-      if (!config.speechKey) {
+      if (!speechReady()) {
         res.status(409).json({ error: 'Speech recognition is not configured on this server.' });
         return;
       }
@@ -648,9 +667,9 @@ export async function createBait(config: Config, developmentHmr = false) {
       !s ||
       !game ||
       !equal(url.searchParams.get('csrf') || '', s.csrf) ||
-      !config.speechKey ||
-      (s.mode === 'twitch' && (!microphoneReady(game) || microphoneLeases.get(game.data.id)?.session !== s ||
-        microphoneLeases.get(game.data.id)?.leaseId !== url.searchParams.get('leaseId'))) ||
+      !speechReady() ||
+      !microphoneReady(game) || microphoneLeases.get(game.data.id)?.session !== s ||
+      microphoneLeases.get(game.data.id)?.leaseId !== url.searchParams.get('leaseId') ||
       game.phase !== 'active' ||
       url.searchParams.get('round') !== game.round?.id ||
       Number(url.searchParams.get('epoch')) !== game.round.epoch ||
@@ -662,13 +681,12 @@ export async function createBait(config: Config, developmentHmr = false) {
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
-      const bridge = new SpeechBridge(
-        ws,
-        game,
-        config.speechKey,
-        () => sessions.get(req.headers.cookie) === s,
-        () => speech.delete(game.data.id),
-      );
+      const valid = () => sessions.get(req.headers.cookie) === s && microphoneReady(game) &&
+        microphoneLeases.get(game.data.id)?.session === s && microphoneLeases.get(game.data.id)?.leaseId === url.searchParams.get('leaseId');
+      const done = () => speech.delete(game.data.id);
+      const bridge = config.speechProvider === 'moonshine'
+        ? new LocalSpeechBridge(ws, game, valid, done)
+        : new SpeechBridge(ws, game, config.speechKey, valid, done);
       speech.set(game.data.id, bridge);
     });
   });
@@ -697,7 +715,7 @@ export async function createBait(config: Config, developmentHmr = false) {
   });
   const ticker = setInterval(() => {
     for (const game of rooms.values()) {
-      if (game.data.mode === 'twitch' && microphoneLeases.has(game.data.id) && !microphoneReady(game))
+      if (microphoneLeases.has(game.data.id) && !microphoneReady(game))
         disarm(game.data.id);
       game.tick();
       speech.get(game.data.id)?.sync();

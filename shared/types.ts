@@ -1,6 +1,7 @@
 export type Difficulty = 'easy' | 'medium' | 'hard';
+export type SpeechProvider = 'moonshine' | 'deepgram';
 export type Phase = 'idle' | 'active' | 'paused' | 'settling' | 'cooldown';
-export type Outcome = 'caught' | 'escaped' | 'skipped' | 'ended' | 'overturned';
+export type Outcome = 'caught' | 'escaped' | 'skipped' | 'ended' | 'overturned' | 'review';
 export interface Settings {
   difficulty: Difficulty;
   duration: number;
@@ -94,6 +95,7 @@ export interface Studio {
   viewerUrl: string;
   overlayUrl: string;
   speechReady: boolean;
+  speechProvider: SpeechProvider;
   awardBoard: AwardBoard | null;
 }
 export interface SessionInfo {
@@ -116,6 +118,8 @@ export interface Transcript {
   text: string;
   final: boolean;
   capturedAt: number;
+  /** Capture-clock end of the complete provider segment, validated by its adapter. */
+  endedAt?: number;
   confidence: number;
   id: string;
   words?: TranscriptWord[];

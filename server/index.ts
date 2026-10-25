@@ -32,7 +32,7 @@ if (!development) {
 }
 bait.server.listen(config.port, config.host, () =>
   console.log(
-    `BAIT is ready at ${config.origin}\n${config.demo ? 'Local demo is enabled.' : 'Local demo is disabled.'} Twitch: ${config.twitchReady ? 'configured' : 'needs credentials'}. Speech: ${config.speechKey ? 'configured' : 'needs DEEPGRAM_API_KEY'}.`,
+    `BAIT is ready at ${config.origin}\n${config.demo ? 'Local demo is enabled.' : 'Local demo is disabled.'} Twitch: ${config.twitchReady ? 'configured' : 'needs credentials'}. Speech: ${config.speechProvider === 'moonshine' ? 'Moonshine in the browser' : config.speechKey ? 'Deepgram configured' : 'needs DEEPGRAM_API_KEY'}.`,
   ),
 );
 let closing = false;

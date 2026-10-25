@@ -257,7 +257,7 @@ for (const trusted of [false, true]) {
 test('live start and resume require a session-owned microphone lease; disarm pauses and blocks auto', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const dir = await mkdtemp(join(tmpdir(), 'bait-mic-'));
-  const c = loadConfig({ PORT: '0', DATA_DIR: dir, DEEPGRAM_API_KEY: 'fixture-key' }), b = await createBait(c);
+  const c = loadConfig({ PORT: '0', DATA_DIR: dir, SPEECH_PROVIDER: 'deepgram', DEEPGRAM_API_KEY: 'fixture-key' }), b = await createBait(c);
   await new Promise<void>((resolve) => b.server.listen(0, '127.0.0.1', resolve));
   t.after(async () => { await b.close(); await rm(dir, { recursive: true, force: true }); });
   const base = `http://127.0.0.1:${(b.server.address() as AddressInfo).port}`;
