@@ -2,7 +2,7 @@
 
 Checked 25 October 2026 against the game source and current official Twitch documentation. This is the current entry point; earlier planning was split across the documents linked below. No account registration, live-game deployment or Extension submission was performed while preparing it.
 
-**Latest setup plan:** [baited v0.0.1 branding and first-test guide](baited-v0.0.1-plan.md). The owner chose **baited** as the new name; visual production and integration are pending. Twitch validated the existing OAuth app credentials through Proton, and both test accounts are resolved: `komediruzecki7` (501062940) and `yahwehwastaken` (566058624). Reuse the existing application and Extension; do not register duplicates. The new guide supersedes the older account-creation instructions below where an object already exists.
+**Current build:** [baited v0.0.1 local test guide](baited-local-test.md), including restart commands and exact console settings. The viewer/configuration panel and signed backend are implemented on the private task branch; real Twitch installation and a complete round remain acceptance checks. The [branding plan](baited-v0.0.1-plan.md) is still pending design review. Both test accounts are resolved: `komediruzecki7` (501062940) and `yahwehwastaken` (566058624). Reuse the existing application and Extension; do not register duplicates.
 
 ## Where we are
 
@@ -14,7 +14,7 @@ Checked 25 October 2026 against the game source and current official Twitch docu
 | Art and audio | 18 illustrated targets and six opt-in sound cues. Illustrations are not separate action-card mechanics. |
 | Speech | Local Moonshine is the default. A proposed catch needs broadcaster confirmation. Deepgram is optional; ElevenLabs has no adapter. |
 | Evidence | Synthetic speech and OBS-load checks exist. A physical-microphone round with real Twitch chat, the actual OBS overlay and a remote viewer still needs to pass. |
-| Native Extension | Not implemented or submitted. The deployed landing and OBS browser source are not an Extension. |
+| Native Extension | Viewer/configuration frontend, verified JWT API, frontend ZIP, local HTTPS gateway and labelled fixture preview implemented. Not installed, deployed or submitted; the first real Twitch round remains unverified. |
 
 ## V2 design review
 
@@ -38,7 +38,7 @@ Record one complete round: Paolo sees the secret, posts a real hint in Twitch ch
 | 6 | Rehearse from a second device/network | Viewer joining, complete round, pause/recovery and correction work without developer assistance. |
 | 7 | Prepare the Extension and submission packet | Follow the separate paths below. Do not make review approval a dependency of the real-game demonstration. |
 
-**Known setup mismatch:** the current `rehearsal:local` helper and both local vault templates still require `DEEPGRAM_API_KEY`. Supplying a dummy key would hide the problem. Fix the helper and template before using that workflow for Moonshine. The keyless local demo can already exercise Moonshine, but its simulated chat is not proof of Twitch integration.
+**Setup repair implemented:** `rehearsal:local` and the reference-only templates default to Moonshine and no longer require a Deepgram key in that mode. Twitch OAuth and a persistent encryption key remain required for a real rehearsal. The [local test guide](baited-local-test.md) links the provisioned Proton references and uses a fresh data directory. Simulated chat is not proof of Twitch integration.
 
 The saved synthetic comparison found 4 of 6 targets and one false target candidate among six negative sentences in both runs. These small fixture results do not establish human recognition accuracy. The installed SDK's confidence is a constant placeholder. See [Moonshine behavior](moonshine.md) and [the measured rehearsal](moonshine-rehearsal.md). The last OBS inspection lacked Browser Source; recheck **Sources → + → Browser** in the running installation.
 
@@ -46,8 +46,8 @@ The saved synthetic comparison found 4 of 6 targets and one false target candida
 
 1. Use broadcaster `komediruzecki7`. Sign into the [Twitch Developer Console](https://dev.twitch.tv/console/apps), verify the account email and enable 2FA.
 2. Under **Applications**, open the existing application. Confirm its **Confidential** client type and exact local callback `http://localhost:3000/auth/twitch/callback`. The server handles the secret and authorization-code exchange. [Official app registration](https://dev.twitch.tv/docs/authentication/register-app/).
-3. The OAuth ID/secret already resolve from Proton item `dev / tw-bait-ids`. Still verify or securely provision the persistent token-encryption key and separate Extension shared secret. Share only field names or `pass://` references. No Twitch password, stream key or speech-provider key is needed by the app for Moonshine.
-4. After the rehearsal helper is corrected, connect the intended broadcaster and authorize the existing `user:read:chat` scope. BAIT's code uses EventSub to read that channel's chat. Use `localhost:3000` consistently for this callback.
+3. The OAuth pair and Extension shared secret resolve from Proton item `dev / tw-bait-ids`. The new persistent encryption key is `dev / tw-bait-runtime / token-encryption-key`; the local guide provides reference-only launch templates. No Twitch password, stream key or speech-provider key is needed by the app for Moonshine.
+4. Connect the intended broadcaster and authorize the existing `user:read:chat` scope. BAIT's code uses EventSub to read that channel's chat. Use `localhost:3000` consistently for this callback.
 5. In the studio, load Moonshine, enable the microphone and use headphones. The model runs in the standalone studio. Audio stays on that computer; final text goes to the game server for matching without being persisted.
 6. In OBS, add the **OBS overlay URL** from Stream setup as a 1920×1080 Browser Source. Keep the secret viewer page and studio out of the captured scene. Record first; verify the sound is captured once. The overlay itself stays silent.
 
@@ -72,9 +72,9 @@ flowchart LR
   Game -->|Secret-free state| OBS[OBS overlay]
 ```
 
-This panel and its authentication are planned work. The current viewer URL and studio cookies cannot simply be moved into a Twitch iframe.
+The v0.0.1 branch implements this panel with signed-token authentication and read-only state/configuration endpoints. The standalone studio keeps its existing cookie and CSRF protections. Real installation, browser trust and gameplay evidence are still required.
 
-Implementation checklist:
+Implementation and acceptance checklist:
 
 - Build viewer and broadcaster configuration entry points. Start with the existing card UI, sized for a panel; keep the landing's large animation/gallery out of the first load.
 - Load Twitch's Extension Helper in every entry point. Use `onAuthorized` and validate the supplied JWT on the server, including signature, expiry, channel and role. Extension credentials are separate from the ordinary OAuth app's credentials.

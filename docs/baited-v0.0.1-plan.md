@@ -2,6 +2,8 @@
 
 Prepared 25 October 2026. This is a production and test plan, not a completed rebrand or an installable Extension. No deployment, Twitch configuration change, review submission or new artwork was performed for this plan. The private `Komediruzecki/bait` repository remains private.
 
+**Implementation update:** the later [v0.0.1 local-test guide](baited-local-test.md) supersedes the implementation/setup status below. The native panel and verified backend are now built on a private branch; the shared secret resolves, and persistent encryption/TLS keys are safely stored in Proton. No real Twitch installation or complete round has passed yet. This document retains the original brand brief and planning snapshot; the new logo and review artwork remain pending.
+
 ## Confirmed today
 
 | Item | Evidence / status |

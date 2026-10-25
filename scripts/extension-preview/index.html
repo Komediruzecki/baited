@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>baited · Local Extension preview</title>
+    <link rel="stylesheet" href="/__preview/styles.css" />
+  </head>
+  <body>
+    <main>
+      <header class="intro">
+        <p class="eyebrow">v0.0.1 · Local fixture preview</p>
+        <h1>baited, in the panel.</h1>
+        <p>The real viewer and setup screens, with simulated round data. This preview does not connect to Twitch or use your microphone.</p>
+      </header>
+      <div class="controls">
+        <label>Round state
+          <select id="fixture">
+            <option value="active">Active round</option><option value="idle">Waiting for a round</option>
+            <option value="paused">Paused</option><option value="settling">Checking final speech</option>
+            <option value="review">Catch awaiting confirmation</option><option value="caught">Confirmed catch</option>
+            <option value="escaped">Time ran out</option><option value="broadcaster">Broadcaster view</option>
+            <option value="unconfigured">Studio not connected</option><option value="reconnect">Disconnect, then recover</option>
+            <option value="error">Service unavailable</option><option value="longword">Long-word layout</option>
+          </select>
+        </label>
+        <label>Viewer width
+          <select id="width"><option value="320">320 px</option><option value="375">375 px</option><option value="480">480 px</option></select>
+        </label>
+        <button id="restart" type="button">Restart fixture</button>
+      </div>
+      <p class="fixture-note" id="fixture-note" role="status">The timer starts at 1:30. Change the state to inspect another moment.</p>
+      <div class="screens">
+        <section class="screen viewer-screen">
+          <h2>Viewer panel <span id="size-label">320 × 500</span></h2>
+          <iframe id="viewer" title="baited viewer panel fixture" src="/viewer.html?fixture=active" width="320" height="500" sandbox="allow-scripts allow-same-origin"></iframe>
+        </section>
+        <section class="screen config-screen">
+          <h2>Broadcaster setup <span>400 px wide</span></h2>
+          <iframe id="config" title="baited configuration fixture" src="/config.html?fixture=active" width="400" height="780" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+        </section>
+      </div>
+    </main>
+    <script src="/__preview/workbench.js"></script>
+  </body>
+</html>

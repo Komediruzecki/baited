@@ -9,6 +9,7 @@ import { Sessions, Limiter, cookies, equal, isLoopback, randomKey } from './secu
 import { TwitchAuth, TwitchConnection, AuthRevoked, AuthSuperseded } from './twitch.js';
 import { SpeechBridge } from './speech.js';
 import { LocalSpeechBridge } from './local-speech.js';
+import { extensionRouter } from './extension.js';
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
 import type { Config } from './config.js';
@@ -223,6 +224,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     res.locals.session = s;
     next();
   }
+  app.use('/api/extension', extensionRouter(config, rooms, (channelId) => !!store.snapshot.vault[channelId]));
   function protect(req: Request, res: Response, next: NextFunction) {
     session(req, res, () => {
       const s = res.locals.session as Session;

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>baited · Chat's secret</title>
+    <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+    <script src="./runtime-config.js"></script>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-surface="viewer">
+    <!-- THESIS: A secret card on the stream's side table. OWN-WORLD: Charcoal,
+    violet, Russo lettering and the approved hooked bomb. TYPE: Display face only
+    for the target and product name; Inter for the task. BEHAVIOR: Reveal one card,
+    then hold still while chat plays. STATUS: The clock and connection never pretend
+    to be live after a failed request. This extends the approved world, not the logo. -->
+    <main class="panel" aria-label="baited viewer panel">
+      <header class="masthead">
+        <h1 class="wordmark">baited<span class="brand-stop" aria-hidden="true">.</span></h1>
+        <span class="round-index" id="round-index">Chat's secret</span>
+      </header>
+      <div class="connection" id="connection" role="status" aria-live="polite">
+        <span id="connection-copy">Connecting to Twitch…</span>
+        <button class="retry" id="retry" type="button" hidden>Try again</button>
+      </div>
+      <section class="secret-card" id="card" aria-labelledby="card-title" data-state="waiting">
+        <div class="card-topline">
+          <p class="card-kicker" id="card-kicker">Next round</p>
+          <span class="phase-label" id="phase-label">Waiting</span>
+        </div>
+        <div class="card-center">
+          <img class="bomb" id="bomb" src="./assets/bait-bomb.png" alt="" width="80" height="80" />
+          <h2 class="target" id="card-title">The word is coming.</h2>
+          <p class="card-detail" id="card-detail">It appears here when the streamer starts a round.</p>
+        </div>
+        <section class="forbidden" id="forbidden" aria-labelledby="forbidden-heading" hidden>
+          <h3 id="forbidden-heading">Don't use these clues</h3>
+          <ul id="forbidden-list"></ul>
+        </section>
+        <div class="clock" id="clock" hidden>
+          <div class="clock-labels">
+            <span id="clock-caption">Time left</span>
+            <span id="clock-value" class="clock-value" aria-label="Time left">0:00</span>
+          </div>
+          <progress id="clock-progress" max="100" value="100" aria-label="Round time remaining"></progress>
+        </div>
+        <div class="card-baseline"><span>Bait them.</span><span class="card-stamp" id="card-stamp">Keep it in chat</span></div>
+      </section>
+      <footer class="panel-footer">
+        <p id="play-instruction">Write a hint in chat. Keep the secret word to yourself.</p>
+        <p class="skip-note" id="skip-note"><code>!skip</code> votes for another word.</p>
+      </footer>
+      <p id="announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+    </main>
+    <script type="module" src="./viewer.js"></script>
+  </body>
+</html>

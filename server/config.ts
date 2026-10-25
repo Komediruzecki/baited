@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { isIP } from 'node:net';
 import { z } from 'zod';
+import { extensionKey } from './extension.js';
 export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   // Trust only named proxy addresses/subnets, never arbitrary forwarded headers or hop counts.
   const trustedProxies = (env.TRUSTED_PROXIES || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -23,6 +24,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     throw new Error('TOKEN_ENCRYPTION_KEY must be 64 hexadecimal characters.');
   const clientId = env.TWITCH_CLIENT_ID || '',
     clientSecret = env.TWITCH_CLIENT_SECRET || '';
+  const extensionClientId = env.TWITCH_EXTENSION_CLIENT_ID || '';
+  const extensionSecret = env.TWITCH_EXTENSION_SECRET || '';
+  const validExtensionId = /^[a-z0-9]{1,64}$/.test(extensionClientId);
+  const extensionOrigins = (env.EXTENSION_ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+  for (const allowed of extensionOrigins) {
+    let parsed: URL;
+    try { parsed = new URL(allowed); }
+    catch { throw new Error('EXTENSION_ALLOWED_ORIGINS must contain explicit origins.'); }
+    const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname);
+    if (parsed.origin !== allowed || parsed.username || parsed.password ||
+      (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && loopback && !production)))
+      throw new Error('EXTENSION_ALLOWED_ORIGINS requires HTTPS origins, or development HTTP loopback origins.');
+  }
+  if (validExtensionId) extensionOrigins.push(`https://${extensionClientId}.ext-twitch.tv`);
   const port = z.coerce
     .number()
     .int()
@@ -40,6 +55,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     clientId,
     clientSecret,
     twitchReady: !!(key && clientId && clientSecret),
+    extensionClientId,
+    extensionSecret,
+    extensionOrigins: [...new Set(extensionOrigins)],
+    extensionReady: validExtensionId && !!extensionKey(extensionSecret),
     speechKey: env.DEEPGRAM_API_KEY || '',
     speechProvider: z.enum(['moonshine', 'deepgram']).parse(env.SPEECH_PROVIDER || 'moonshine'),
     dataDir: resolve(env.DATA_DIR || 'data'),

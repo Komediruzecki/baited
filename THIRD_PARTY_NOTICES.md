@@ -115,6 +115,7 @@ Google Material Icons Outlined are bundled as SVG components under Apache 2.0. T
 | inherits | 2.0.4 | ISC |
 | ipaddr.js | 1.9.1 | MIT |
 | is-promise | 4.0.0 | MIT |
+| jose | 6.2.13 | MIT |
 | joycon | 3.1.1 | MIT |
 | js-tokens | 4.0.0 | MIT |
 | jsesc | 3.1.0 | MIT |

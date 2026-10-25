@@ -2,7 +2,7 @@
 
 **Make the streamer say it.**
 
-Start with the [current master plan and Twitch Extension guide](docs/master-plan.md) for account setup, the Moonshine/OBS rehearsal, remaining game work, creative follow-ups and review submission. It also identifies the older Deepgram rehearsal helper that still needs updating.
+Start with the [baited v0.0.1 local Extension guide](docs/baited-local-test.md) for the new panel, local previews, Proton launch commands and first Twitch installation. The [master plan](docs/master-plan.md) covers remaining gameplay, creative follow-ups and review submission. The Moonshine rehearsal now starts without a Deepgram key.
 
 Chat gets **banana**. Someone asks about smoothies. The streamer says it. Chat wins.
 

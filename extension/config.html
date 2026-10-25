@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>baited · Stream setup</title>
+    <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+    <script src="./runtime-config.js"></script>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-surface="config">
+    <main class="setup" aria-labelledby="setup-title">
+      <header class="masthead">
+        <p class="wordmark">baited<span class="brand-stop" aria-hidden="true">.</span></p>
+        <span class="round-index">Stream setup</span>
+      </header>
+      <div class="connection" id="connection" role="status" aria-live="polite">
+        <span id="connection-copy">Checking your channel…</span>
+        <button class="retry" id="retry" type="button" hidden>Try again</button>
+      </div>
+      <section class="setup-intro">
+        <img class="setup-bomb" src="./assets/bait-bomb.png" alt="" width="80" height="80" />
+        <h1 id="setup-title">Let chat in on it.</h1>
+        <p>The panel gives viewers the word. Your studio runs the round and keeps the secret off your screen.</p>
+      </section>
+      <section class="channel-state" aria-labelledby="channel-heading">
+        <p class="section-label" id="channel-heading">Your channel</p>
+        <p class="channel-name" id="channel-name">Checking connection…</p>
+        <p id="channel-detail">Open this page from your Extension dashboard to connect the correct channel.</p>
+      </section>
+      <a class="primary-action" id="open-studio" target="_blank" rel="noopener noreferrer" hidden>
+        Open broadcaster studio <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg>
+        <span class="sr-only">(opens an external site in a new tab)</span>
+      </a>
+      <p class="external-note" id="external-note" hidden>Opens a separate site. Sign in with this channel's Twitch account.</p>
+      <ol class="setup-steps">
+        <li><strong>Connect Twitch in the studio.</strong><span>The panel follows the channel you sign in with.</span></li>
+        <li><strong>Load Moonshine and allow your mic.</strong><span>Speech recognition runs on your computer. Confirm each suggested catch.</span></li>
+        <li><strong>Add the OBS overlay, then start a round.</strong><span>Capture only the overlay. Viewers read their secret here.</span></li>
+      </ol>
+      <button class="secondary-action" id="check-connection" type="button">Check connection again</button>
+      <p class="setup-footnote">Once connected, activate baited in a free panel slot on your channel.</p>
+    </main>
+    <script type="module" src="./config.js"></script>
+  </body>
+</html>

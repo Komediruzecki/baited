@@ -948,6 +948,15 @@
     ]
   },
   {
+    "name": "jose",
+    "version": "6.2.13",
+    "license": "MIT",
+    "repository": "panva/jose",
+    "licenseFiles": [
+      "LICENSE.md"
+    ]
+  },
+  {
     "name": "joycon",
     "version": "3.1.1",
     "license": "MIT",

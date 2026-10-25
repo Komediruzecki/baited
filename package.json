@@ -15,14 +15,18 @@
     "preview:local": "node scripts/preview-local.mjs",
     "preview:concept": "node scripts/preview-concept.mjs",
     "rehearsal:local": "node scripts/rehearse-local.mjs",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --test tests/*.test.ts extension/tests/*.test.js",
     "check": "tsc --noEmit",
-    "licenses": "node scripts/licenses.mjs"
+    "licenses": "node scripts/licenses.mjs",
+    "build:extension": "node scripts/build-extension.mjs",
+    "preview:extension": "node scripts/preview-extension.mjs",
+    "extension:local": "node scripts/serve-extension-local.mjs"
   },
   "dependencies": {
     "@moonshine-ai/moonshine-wasm": "0.1.5",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
+    "jose": "^6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "ws": "^8.18.0",
