@@ -24,7 +24,7 @@ Open **http://127.0.0.1:3318** and choose **Try the local demo**. The preview he
 
 Start a round, open the viewer room in a separate tab, and expand **Demo controls** to send test chat and a simulated final transcript. The demo needs no credentials and tests the game server with simulated inputs.
 
-A separate [bomb-led motion study](concepts/bait-bomb/README.md) is available on port 3319 for design review. It uses a scripted example and does not connect to providers.
+A separate [bomb-led motion study](concepts/bait-bomb/README.md) is available on port 3319 for design review. It uses a scripted example and does not connect to providers. Its public development copy is maintained in `packages/bait` on the `feat/bait-dev-landing` branch of the private disjoint-colliders repository, targeting [dev.bait.maff.app](https://dev.bait.maff.app/). The game server is not part of that deployment.
 
 The current landing page also has an illustrated example. Select a different word or replay the exchange to see how a round works. Open `/about` to view it while signed in; the studio’s BAIT logo links there.
 
@@ -72,9 +72,11 @@ Tokens never enter browser storage. An HttpOnly session cookie controls the stud
 
 ## Enable real microphone recognition
 
-For the current Linux rehearsal, use the [Twitch, speech and OBS setup guide](docs/twitch-deepgram-obs-setup.md). Deepgram is the existing adapter, not a Twitch or hackathon requirement. The saved ElevenLabs key has opened a Scribe v2 Realtime session without sending audio; its allowance and billing remain unverified. The steps below apply only if Deepgram is selected. ElevenLabs still needs an adapter and recognition tests before use.
+For the current Linux rehearsal, use the [Twitch, speech and OBS setup guide](docs/twitch-deepgram-obs-setup.md). Use Deepgram for the first rehearsal if the existing account still has usable starter credit: it is already integrated. Check the account's balance, expiry and billing settings before sending audio. Deepgram advertises $200 starting credit, then paid usage; this is not an unlimited free service. [Current pricing](https://deepgram.com/pricing).
 
-1. Create a [Deepgram](https://console.deepgram.com/) project and a key allowed to transcribe streaming audio. Provider usage can incur charges to the operator; BAIT does not charge viewers or judges.
+Neither Twitch nor the hackathon requires a speech provider. The static landing needs none. BAIT's current live game requires recognition to detect the spoken target and score automatically. A trusted moderator could confirm a catch manually in a future mode, but that live mode is not implemented. The saved ElevenLabs key has opened a Scribe v2 Realtime session without sending audio; its allowance and billing remain unverified. ElevenLabs remains an alternative that needs an adapter and recognition tests before use.
+
+1. Open the existing [Deepgram Console](https://console.deepgram.com/) account and check its **first project**, where starting credit is assigned. Use that credited project, or confirm a credit transfer with Deepgram before choosing another. Create a key allowed to transcribe streaming audio only after confirming available credit. Provider usage can incur charges to the operator; BAIT does not charge viewers or judges. [Project credit guidance](https://developers.deepgram.com/guides/deep-dives/managing-projects).
 2. Store the key in Proton Pass and update the `DEEPGRAM_API_KEY` reference in the template. Restart through `pass-cli run`. See [deployment and secret handling](docs/deployment-runbook.md).
 3. In the studio, select **Enable microphone**, read the consent dialog, and allow the browser’s microphone permission. Use headphones and the intended microphone input. A real round requires a connected Twitch channel, configured speech provider and an armed microphone owned by the current studio session. Local demo rounds are explicitly simulated and do not require a microphone.
 4. Start a round. The microphone card should say **Listening**. Ask a separate viewer to confirm the word, then say it naturally. Confirm the synchronized win and use **Wrong detection? Reverse win** to verify correction. Losing microphone readiness pauses live play; re-enable it before resuming.
@@ -113,7 +115,7 @@ Keep the Twitch credentials, encryption key and Deepgram key in Proton Pass. Sup
 
 Terminate HTTPS at your reverse proxy. Preserve the original `Host` header, forward WebSocket upgrades for `/api/speech`, disable response buffering for `/api/*/events*`, and permit long-lived connections. Do not log OAuth callback queries or speech query strings. Production enforces HTTPS in its configured public URL, Secure cookies, security headers and content policy. It disables the local demo even if `ENABLE_DEMO=true`.
 
-For judging, provide an operator-hosted channel and speech service at no charge to judges through the judging period. A hosted URL, judge access to the private repository, broadcaster credentials and a recorded live demo are still needed; no public deployment was created here. See [the judge walkthrough](docs/judge-walkthrough.md).
+For judging, provide an operator-hosted channel and speech service at no charge to judges through the judging period. A hosted URL, judge access to the private repository, broadcaster credentials and a recorded live demo are still needed; the live game has not been publicly deployed. The development landing alone does not provide judge access to gameplay. See [the judge walkthrough](docs/judge-walkthrough.md).
 
 ## Tests and verification
 

@@ -14,4 +14,4 @@ The supplied bomb screenshot was regenerated with built-in ChatGPT image generat
 
 Russo One and Inter are bundled from the project's existing licensed fonts. See ../../THIRD_PARTY_NOTICES.md and ../../public/fonts/RussoOne-OFL.txt. The study introduces no package dependency. Fonts and image are copied here so future migration can preserve the study as one small package.
 
-See DESIGN.md for the visual world and direction.md for references and acceptance criteria. Migration into disjoint-colliders and bait.maff.app remains deferred.
+See DESIGN.md for the visual world and direction.md for references and acceptance criteria. A hosted-safe copy now lives in `packages/bait` on the `feat/bait-dev-landing` branch of the private disjoint-colliders repository, targeting `https://dev.bait.maff.app/`. Production `bait.maff.app` and the live game remain undeployed. This original local study stays preserved here.

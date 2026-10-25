@@ -25,9 +25,9 @@ The current build is a standalone browser game connected to Twitch chat through 
 ## Capabilities and Constraints
 
 - Keep Paolo's original source safe and the GitHub repository private.
-- Local preview and mockups are authorized. Production deployment and moving the landing to bait.maff.app are deferred.
+- Local previews and the public development landing at dev.bait.maff.app are authorized. Its static package lives in disjoint-colliders/packages/bait. The live game and production bait.maff.app remain undeployed. Both repositories stay private.
 - Simulated previews must identify themselves. A staged landing example must never be represented as a live Twitch session.
-- Current speech integration uses Deepgram. Neither Twitch nor the hackathon requires it. ElevenLabs Realtime is under consideration; no provider switch is approved or implemented yet.
+- Current speech integration uses Deepgram, recommended for the first rehearsal if the existing account has usable starter credit. Its balance and expiry still need checking. Neither Twitch nor the hackathon requires speech recognition; the static landing needs none. The current live game requires it for automatic scoring. A manual moderator mode is possible but not implemented. ElevenLabs Realtime remains an alternative; no provider switch is implemented.
 - Real provider, microphone and OBS acceptance testing remains pending credentials and channel confirmation.
 - Never show the active secret word on the streamer's studio or OBS overlay. The landing may explain it through a clearly labeled example.
 
