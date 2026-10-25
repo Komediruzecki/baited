@@ -1,4 +1,9 @@
 import type { MoonshineLine } from './moonshine';
+import type { GameView } from '../shared/types';
+
+export function canPreviewTranscript(hostname: string, mode: GameView['mode']) {
+  return mode === 'demo' || ['localhost', '127.0.0.1', '[::1]', '::1'].includes(hostname);
+}
 
 export const TRANSCRIPT_PREVIEW_LIMIT = 12;
 export const TRANSCRIPT_PREVIEW_TEXT_LIMIT = 2000;

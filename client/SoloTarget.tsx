@@ -4,8 +4,9 @@ import { request } from './api';
 import { Eye } from './icons';
 import { Button } from './ui';
 
-export function canRevealSoloTarget(hostname: string, mode: GameView['mode']) {
-  return mode === 'demo' || ['localhost', '127.0.0.1', '[::1]', '::1'].includes(hostname);
+export function canRevealSoloTarget(_hostname: string, mode: GameView['mode']) {
+  // A live Twitch studio can also run on localhost. Only demo rounds may reveal.
+  return mode === 'demo';
 }
 
 export function currentSoloTarget(view: GameView, roomId: string, roundId: string) {

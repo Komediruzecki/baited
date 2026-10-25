@@ -21,16 +21,21 @@ test('local catches stop before reveal and leave score, history and awards uncha
   assert.deepEqual(f.game.data.leaders, {});
   for (const role of ['studio', 'overlay', 'viewer'] as const) {
     const view = f.game.view(role);
-    assert.equal(view.phase, 'cooldown'); assert.equal(view.result?.word, target);
+    assert.equal(view.phase, 'cooldown');
+    assert.equal(view.result?.word, role === 'overlay' ? undefined : target);
     assert.equal(view.result?.outcome, 'review'); assert.equal(view.score.wins, 0);
     assert.equal(view.round?.target, undefined);
   }
+  const pendingOverlay = f.game.view('overlay');
+  assert.equal(Object.hasOwn(pendingOverlay.result!, 'word'), false);
+  assert.equal(JSON.stringify(pendingOverlay).includes(target), false);
   assert.throws(() => f.game.award(id, 'hint'));
   assert.throws(() => f.game.decideCatch('another-round', 'confirm'));
   assert.throws(() => f.game.start());
   f.advance(90000); f.game.tick();
   assert.equal(f.game.result?.outcome, 'review');
   f.game.decideCatch(id, 'confirm');
+  assert.equal(f.game.view('overlay').result?.word, target);
   assert.equal(f.game.score.wins, 1); assert.equal(f.game.score.played, 1);
   assert.equal(f.game.result?.elapsed, 1, 'waiting for confirmation does not increase elapsed play');
   assert.equal(f.game.data.leaders.viewer.rounds, 1);

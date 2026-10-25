@@ -562,6 +562,11 @@ export class Game {
   }
   view(role: 'studio' | 'viewer' | 'overlay'): GameView {
     const r = this.round;
+    let result: GameView['result'] = this.result;
+    if (role === 'overlay' && result?.outcome === 'review') {
+      const { word: _word, ...pendingResult } = result;
+      result = pendingResult;
+    }
     return {
       id: this.data.id,
       mode: this.data.mode,
@@ -591,7 +596,7 @@ export class Game {
               : {}),
           }
         : null,
-      result: this.result,
+      result,
       history: this.data.history.slice(0, 12),
       settings: this.data.settings,
       score: this.score,

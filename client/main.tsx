@@ -50,7 +50,11 @@ import './refinement.css';
 import { canRevealSoloTarget, SoloTarget } from './SoloTarget';
 import './solo-target.css';
 import { TranscriptPreview } from './TranscriptPreview';
-import { TranscriptPreviewBuffer, type TranscriptPreviewLine } from './transcript-preview';
+import {
+  canPreviewTranscript,
+  TranscriptPreviewBuffer,
+  type TranscriptPreviewLine,
+} from './transcript-preview';
 import './transcript-preview.css';
 import './product-brand.css';
 import './studio-refresh.css';
@@ -322,7 +326,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           if (
             capture.current !== owner ||
             !current ||
-            !canRevealSoloTarget(window.location.hostname, current.room.mode)
+            !canPreviewTranscript(window.location.hostname, current.room.mode)
           )
             return;
           const lines = transcriptBuffer.current.receive(line, segment);
@@ -896,7 +900,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       : 'SPEECH SETUP NEEDED'}
                   </div>
                   {studio.speechProvider === 'moonshine' &&
-                    canRevealSoloTarget(window.location.hostname, g.mode) && (
+                    canPreviewTranscript(window.location.hostname, g.mode) && (
                       <TranscriptPreview
                         enabled={transcriptEnabled}
                         lines={transcriptLines}
@@ -1721,28 +1725,32 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
                   ? 'RECONNECTING'
                   : settling
                     ? 'CHECKING FINAL WORDS'
-                    : won
-                      ? 'CHAT WINS'
-                      : active
-                        ? 'CHAT HAS A WORD'
-                        : paused
-                          ? 'ROUND PAUSED'
-                          : finished
-                            ? g.result?.reason === 'guess'
-                              ? 'BAIT CALLED'
-                              : outcomeLabel[g.result!.outcome]
-                            : 'WAITING FOR A ROUND'}
+                    : pendingCatch
+                      ? 'CHECKING A CATCH'
+                      : won
+                        ? 'CHAT WINS'
+                        : active
+                          ? 'CHAT HAS A WORD'
+                          : paused
+                            ? 'ROUND PAUSED'
+                            : finished
+                              ? g.result?.reason === 'guess'
+                                ? 'BAIT CALLED'
+                                : outcomeLabel[g.result!.outcome]
+                              : 'WAITING FOR A ROUND'}
               </span>
               <strong>
-                {won
-                  ? g.result?.word
-                  : active || paused || settling
-                    ? g.mission
-                      ? `WORD ${Math.min(3, g.mission.completed + 1)} OF 3`
-                      : `ROUND ${g.round?.number}`
-                    : finished
-                      ? g.result?.word
-                      : 'BAIT THEM.'}
+                {pendingCatch
+                  ? '—'
+                  : won
+                    ? g.result?.word
+                    : active || paused || settling
+                      ? g.mission
+                        ? `WORD ${Math.min(3, g.mission.completed + 1)} OF 3`
+                        : `ROUND ${g.round?.number}`
+                      : finished
+                        ? g.result?.word
+                        : 'BAIT THEM.'}
               </strong>
             </div>
             <div className="obs-time">

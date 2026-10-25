@@ -8,7 +8,7 @@ The standalone streamer studio and setup flow are Operate surfaces. Streamers us
 
 - **Thesis:** a round desk, with the current round and its controls on the left and microphone feedback on the right. Remove the oversized dashboard sidebar and decorative microphone orbit.
 - **World:** `#121016` ground, `#242426` card faces, `#9146ff` selected actions, `#fffc79` result emphasis, off-white text. Edges are precise, corners modest, no glowing panels.
-- **Story:** connect the channel, check the mic, start the round, judge catches. The word stays hidden except for the existing explicit localhost test reveal.
+- **Story:** connect the channel, check the mic, start the round, judge catches. The word stays hidden except for the explicit demo-only test reveal. A live Twitch room stays hidden even on localhost.
 - **First viewport:** compact brand/navigation/account masthead; round status, timer and action board; separate microphone column with optional transcript below it. Scores occupy one flat strip.
 - **Form:** extend the user-approved landing identity into functional product controls. No new concept selection is needed; the user requested implementation followed by Opus critique.
 
@@ -21,7 +21,7 @@ Inter carries labels, inputs, navigation and explanatory text. Russo One is rese
 - Preserve disconnected, model-loading, microphone-off, armed, listening, paused, settling, review, win and escape states.
 - Start/resume readiness and microphone lease rules are unchanged.
 - Moonshine transcript stays opt-in, right-hand-side on desktop, bounded in tab memory and available only under the existing local/demo gate.
-- The local test reveal is still explicit and cannot become a production studio feature through styling.
+- The demo target reveal is explicit. The separately opted-in local Moonshine transcript diagnostic remains available when testing Twitch connections.
 - Setup exposes viewer and overlay links with their different information boundaries. The OBS source never receives the active target.
 - Errors and confirmations must name the action and its consequence. Preserve all existing recovery controls.
 

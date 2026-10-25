@@ -1,9 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TranscriptPreviewBuffer, TRANSCRIPT_PREVIEW_LIMIT, TRANSCRIPT_PREVIEW_TEXT_LIMIT } from '../client/transcript-preview';
+import { canPreviewTranscript, TranscriptPreviewBuffer, TRANSCRIPT_PREVIEW_LIMIT, TRANSCRIPT_PREVIEW_TEXT_LIMIT } from '../client/transcript-preview';
 import type { MoonshineLine } from '../client/moonshine';
 
 const line = (id: string, text: string, isComplete = true) => ({ id, text, isComplete } as MoonshineLine);
+
+test('local speech diagnostics remain available separately from target reveal', () => {
+  for (const host of ['localhost', '127.0.0.1', '[::1]', '::1'])
+    assert.equal(canPreviewTranscript(host, 'twitch'), true);
+  for (const host of ['bait.maff.app', 'localhost.example.com', '192.168.1.10'])
+    assert.equal(canPreviewTranscript(host, 'twitch'), false);
+  assert.equal(canPreviewTranscript('preview.example.com', 'demo'), true);
+});
 
 test('transcript preview ignores speech until opted in and hiding erases its buffer', () => {
   const preview = new TranscriptPreviewBuffer();

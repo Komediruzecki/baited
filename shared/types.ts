@@ -73,7 +73,8 @@ export interface GameView {
     guessUsed: boolean;
     wrongGuessBonus: number;
   } | null;
-  result: Result | null;
+  // Overlay results omit the word while a suggested catch awaits confirmation.
+  result: (Omit<Result, 'word'> & { word?: string }) | null;
   history: Result[];
   settings: Settings;
   score: { wins: number; played: number; streak: number; best: number };

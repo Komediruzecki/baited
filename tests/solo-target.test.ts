@@ -3,12 +3,11 @@ import test from 'node:test';
 import { canRevealSoloTarget, currentSoloTarget } from '../client/SoloTarget';
 import type { GameView } from '../shared/types';
 
-test('solo reveal is available for local Twitch tests and demos, not a hosted Twitch studio', () => {
-  for (const host of ['localhost', '127.0.0.1', '[::1]', '::1'])
-    assert.equal(canRevealSoloTarget(host, 'twitch'), true);
-  for (const host of ['bait.maff.app', 'localhost.example.com', '192.168.1.10'])
+test('solo reveal is demo-only even when the live Twitch studio runs on loopback', () => {
+  for (const host of ['localhost', '127.0.0.1', '[::1]', '::1', 'bait.maff.app', 'localhost.example.com', '192.168.1.10']) {
     assert.equal(canRevealSoloTarget(host, 'twitch'), false);
-  assert.equal(canRevealSoloTarget('preview.example.com', 'demo'), true);
+    assert.equal(canRevealSoloTarget(host, 'demo'), true);
+  }
 });
 
 test('a viewer response cannot reveal a different room, next round, or a finished target', () => {

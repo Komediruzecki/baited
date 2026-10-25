@@ -6,7 +6,7 @@ export class WinSoundGate {
   private lastResult: string | null = null;
   enabled = false;
 
-  receive(result: Result | null): boolean {
+  receive(result: Pick<Result, 'id' | 'outcome'> | null): boolean {
     const fresh = this.seenSnapshot && !!result && result.id !== this.lastResult;
     this.seenSnapshot = true;
     this.lastResult = result?.id ?? null;
