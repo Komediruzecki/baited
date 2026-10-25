@@ -1,4 +1,4 @@
-import { Moonshine } from './moonshine';
+import { Moonshine, type MoonshineLine } from './moonshine';
 import { LocalFinalSequence } from './local-final-sequence';
 import type { SpeechProvider } from '../shared/types';
 
@@ -17,11 +17,13 @@ export class Microphone {
   private finals = new LocalFinalSequence();
   private draining = false;
   private drainTimer: ReturnType<typeof setTimeout> | undefined;
+  private transcriptSegment = '';
   constructor(
     private onStatus: (status: string) => void,
     private onLevel: (level: number) => void,
     private onError: (error: string) => void,
     private provider: SpeechProvider = 'moonshine',
+    private onTranscript?: (line: MoonshineLine, segment: string) => void,
   ) {}
   get enabled() { return !!this.stream && !this.cancelled; }
   async enable() {
@@ -33,6 +35,7 @@ export class Microphone {
           if (this.socket?.readyState === WebSocket.OPEN && !this.cancelled) {
             const final = this.finals.next(line);
             if (final) this.socket.send(JSON.stringify(final));
+            this.onTranscript?.(line, this.transcriptSegment);
           }
         }, this.onStatus, (message) => { this.onError(message); this.stop(); });
         await this.local.load();
@@ -128,6 +131,7 @@ export class Microphone {
     this.suspended = false;
     this.samples = 0;
     this.finals.reset();
+    this.transcriptSegment = `${round}:${epoch}`;
     this.onStatus('connecting');
     const url = new URL('/api/speech', location.href);
     url.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';

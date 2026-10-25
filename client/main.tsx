@@ -49,6 +49,9 @@ import './landing-game.css';
 import './refinement.css';
 import { canRevealSoloTarget, SoloTarget } from './SoloTarget';
 import './solo-target.css';
+import { TranscriptPreview } from './TranscriptPreview';
+import { TranscriptPreviewBuffer, type TranscriptPreviewLine } from './transcript-preview';
+import './transcript-preview.css';
 
 const fmt = (ms: number) => {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -149,6 +152,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const [micStatus, setMicStatus] = useState('off'),
     [level, setLevel] = useState(0),
     [consent, setConsent] = useState(false);
+  const [transcriptEnabled, setTranscriptEnabled] = useState(false);
+  const [transcriptLines, setTranscriptLines] = useState<TranscriptPreviewLine[]>([]);
+  const transcriptBuffer = useRef(new TranscriptPreviewBuffer());
   const capture = useRef<Capture | null>(null),
     currentStudio = useRef<Studio | null>(null),
     offset = useRef(0);
@@ -179,6 +185,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     (lost: boolean) => {
       setOffline(lost);
       if (lost) {
+        setTranscriptLines(transcriptBuffer.current.setEnabled(false));
+        setTranscriptEnabled(false);
         if (capture.current) void pauseForMicrophone(capture.current, undefined, false);
         else setConsent(false);
         void request<SessionInfo>('/api/session')
@@ -196,6 +204,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       .then(receive)
       .catch((e) => setError(e.message));
     return () => {
+      transcriptBuffer.current.setEnabled(false);
       const owner = capture.current;
       capture.current = null;
       owner?.microphone.stop();
@@ -272,6 +281,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     setModal('');
     setError('');
     setConsent(false);
+    setTranscriptLines(transcriptBuffer.current.clear());
     const previous = capture.current;
     const previousCancelled = previous ? previous.lease.cancel().catch(() => {}) : Promise.resolve();
     previous?.microphone.stop();
@@ -283,6 +293,13 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
         (value) => { if (capture.current === owner) setLevel(value); },
         (message) => { if (capture.current === owner) void pauseForMicrophone(owner, message); },
         studio?.speechProvider,
+        (line, segment) => {
+          const current = currentStudio.current;
+          if (capture.current !== owner || !current ||
+            !canRevealSoloTarget(window.location.hostname, current.room.mode)) return;
+          const lines = transcriptBuffer.current.receive(line, segment);
+          if (lines) setTranscriptLines(lines);
+        },
       ),
     };
     capture.current = owner;
@@ -776,6 +793,17 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       ? 'MIC INPUT ONLY · NO AUDIO STORAGE'
                       : 'SPEECH SETUP NEEDED'}
                   </div>
+                  {studio.speechProvider === 'moonshine' &&
+                    canRevealSoloTarget(window.location.hostname, g.mode) && (
+                    <TranscriptPreview enabled={transcriptEnabled} lines={transcriptLines}
+                      listening={micStatus === 'listening'}
+                      onToggle={() => {
+                        const enabled = !transcriptEnabled;
+                        setTranscriptLines(transcriptBuffer.current.setEnabled(enabled));
+                        setTranscriptEnabled(enabled);
+                      }}
+                      onClear={() => setTranscriptLines(transcriptBuffer.current.clear())} />
+                  )}
                 </section>
               </div>
               <div className="stats-grid">
