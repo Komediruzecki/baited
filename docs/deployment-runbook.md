@@ -1,6 +1,6 @@
 # Deployment runbook
 
-Preparation only. No hosting provider, domain, production service or paid resource has been selected or created. Local preview approval comes before deployment.
+Preparation for the live game only. Its host, game domain and operating cost remain to be selected. The separate static landing has already shipped at bait.maff.app and dev.bait.maff.app; it does not run this Node backend. Start with [the current master plan](master-plan.md).
 
 ## Required runtime
 
@@ -10,7 +10,7 @@ The production image passed the isolated build and non-root container smoke chec
 
 ## Secrets stay in Proton Pass
 
-Keep Twitch credentials, the 64-hex-character encryption key and the Deepgram key in Proton Pass. The example files contain only placeholders or `pass://` references. Never open, print, attach or commit a file containing resolved values. Do not place secret values in terminal arguments, Docker build arguments, chat, screenshots or setup notes.
+Keep Twitch credentials, the 64-hex-character encryption key and any optional Deepgram key in Proton Pass. Moonshine needs no speech-provider key. The existing production reference template still includes Deepgram and needs a provider-specific pass before use. The example files contain only placeholders or `pass://` references. Never open, print, attach or commit a file containing resolved values. Do not place secret values in terminal arguments, Docker build arguments, chat, screenshots or setup notes.
 
 Use [the production reference template](bait.production.env.tmpl), replacing only the vault/item references and non-secret deployment values. `pass-cli run --env-file` resolves the references into the child process environment and masks its normal output by default. Do not use `--no-masking`, `env`, `printenv`, shell tracing or vault-value output to debug the setup. The installed CLI's help and [official run documentation](https://protonpass.github.io/pass-cli/commands/contents/run/) were checked for this syntax. No vault was opened during preparation.
 
@@ -30,7 +30,8 @@ For a persistent data directory, preserve its existing encryption key across dep
 | `TRUSTED_PROXIES` | Empty for direct connections; otherwise only actual immediate proxy IPs/CIDRs approved for this host |
 | `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | Vault references for the Confidential Twitch application |
 | `TOKEN_ENCRYPTION_KEY` | Vault reference to the persistent 32-byte key, encoded as 64 hex characters |
-| `DEEPGRAM_API_KEY` | Vault reference to the operator's streaming speech key |
+| `SPEECH_PROVIDER` | `moonshine` for local browser recognition, or `deepgram` for the optional cloud adapter |
+| `DEEPGRAM_API_KEY` | Required only for Deepgram; omit its reference for Moonshine |
 
 The current proxy configuration accepts an explicit IP/CIDR allowlist. Do not use `true`, a hop count, `/0`, or an unbounded network range. Trust a loopback address only when the actual proxy connects from that address. The proxy must overwrite incoming forwarding headers and prevent clients reaching the app directly while spoofing a trusted path. Verify the resulting client identity through the real deployment before a large audience joins.
 

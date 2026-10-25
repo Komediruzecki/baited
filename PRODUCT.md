@@ -25,7 +25,7 @@ The current build is a standalone browser game connected to Twitch chat through 
 ## Capabilities and Constraints
 
 - Keep Paolo's original source safe and the GitHub repository private.
-- Local previews and the public development landing at dev.bait.maff.app are authorized. Its static package lives in disjoint-colliders/packages/bait. The live game and production bait.maff.app remain undeployed. Both repositories stay private.
+- The owner-authorized static landing is released at bait.maff.app and dev.bait.maff.app from disjoint-colliders/packages/bait, tag bait-v1.0.0. The live game remains undeployed. Both repositories stay private. See docs/master-plan.md for the current setup and Extension plan.
 - Simulated previews must identify themselves. A staged landing example must never be represented as a live Twitch session.
 - Current speech integration defaults to local English Moonshine in a browser worker. Its proposed catches require broadcaster confirmation because the SDK confidence field is a constant placeholder. Deepgram remains optional for automatic scoring; ElevenLabs has no adapter. The landing needs no speech provider. Human microphone and real OBS-scene acceptance remain outstanding. See docs/moonshine.md and docs/moonshine-rehearsal.md.
 - Real provider, microphone and OBS acceptance testing remains pending credentials and channel confirmation.

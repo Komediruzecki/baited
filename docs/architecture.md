@@ -1,5 +1,7 @@
 # Architecture
 
+> This document describes the original Deepgram path. For the current default, read [Moonshine's architecture and confirmation rules](moonshine.md): audio stays in a browser worker and authenticated final-text messages go to the server. The Deepgram-only diagram and statement below that browser JSON cannot submit transcripts do not describe Moonshine. See [the current master plan](master-plan.md) for the Extension work still required.
+
 ```mermaid
 flowchart LR
   D[Streamer studio] -->|Session + CSRF actions| N[Node server / game engine]

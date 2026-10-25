@@ -2,6 +2,8 @@
 
 **Make the streamer say it.**
 
+Start with the [current master plan and Twitch Extension guide](docs/master-plan.md) for account setup, the Moonshine/OBS rehearsal, remaining game work, creative follow-ups and review submission. It also identifies the older Deepgram rehearsal helper that still needs updating.
+
 Chat gets **banana**. Someone asks about smoothies. The streamer says it. Chat wins.
 
 BAIT runs alongside a normal Twitch stream. Viewers see the secret word on a companion page and drop hints in chat. Moonshine listens locally in the streamer’s browser. It proposes a catch; the streamer confirms it before chat earns a win.
@@ -24,7 +26,7 @@ Open **http://127.0.0.1:3318** and choose **Try the local demo**. The preview he
 
 Start a round, open the viewer room in a separate tab, and expand **Demo controls** to send test chat and a simulated final transcript. The demo needs no credentials. Simulated inputs remain available; enabling the microphone also lets you rehearse local Moonshine recognition.
 
-A separate [bomb-led motion study](concepts/bait-bomb/README.md) is available on port 3319 for design review. It uses a scripted example and does not connect to providers. Its public development copy is maintained in `packages/bait` on the `feat/bait-dev-landing` branch of the private disjoint-colliders repository, targeting [dev.bait.maff.app](https://dev.bait.maff.app/). The game server is not part of that deployment.
+A separate [bomb-led motion study](concepts/bait-bomb/README.md) is available on port 3319 for design review. It uses a scripted example and does not connect to providers. The released landing is maintained in `packages/bait` on `main` of the private disjoint-colliders repository, at [bait.maff.app](https://bait.maff.app/) and [dev.bait.maff.app](https://dev.bait.maff.app/), with release tag `bait-v1.0.0`. The game server is not part of that deployment.
 
 The current landing page also has an illustrated example. Select a different word or replay the exchange to see how a round works. Open `/about` to view it while signed in; the studio’s BAIT logo links there.
 

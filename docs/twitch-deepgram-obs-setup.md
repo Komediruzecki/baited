@@ -1,5 +1,7 @@
 # Set up BAIT with Twitch, speech recognition and OBS
 
+> Historical Deepgram workflow. Start with [the current master plan and Twitch Extension guide](master-plan.md). Moonshine is now the default and needs no speech-provider key. The `rehearsal:local` helper and its vault template still require a Deepgram key and must be corrected before a Moonshine live rehearsal. The provider recommendation, logo status and deployment status below describe an earlier checkpoint; the static landing has since shipped, while the live game remains undeployed. OAuth and OBS instructions remain useful, but this document is not the current end-to-end setup.
+
 Checked on 25 October 2026. This guide prepares a real provider rehearsal on this Linux computer. The GitHub repository stays private. These rehearsal steps do not publish the live game, release a Twitch Extension or start a public broadcast. The separately authorized development landing at `dev.bait.maff.app` contains only a scripted design preview.
 
 **Use Deepgram for the first rehearsal if the existing account still has usable starter credit.** BAIT already integrates it, so this avoids a provider rewrite before testing the game. Check the account's balance, expiry and billing settings before sending audio. No credit balance or real transcription has been verified yet. The existing ElevenLabs key opened a Scribe v2 Realtime session without sending audio; it remains an alternative, with allowance and game integration still unverified.
