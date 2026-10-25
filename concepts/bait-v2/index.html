@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta
+      name="description"
+      content="Chat gets a secret word. The streamer has to keep talking. A local study of BAIT, a game for Twitch chat."
+    />
+    <title>BAIT · Make the streamer say it.</title>
+    <link rel="icon" href="/assets/bait-bomb-logo.png" />
+    <link rel="preload" href="/assets/russo-one.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/assets/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+    <script type="module" src="/player.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#your-turn">Try a hint</a>
+    <header class="site-header" id="top">
+      <a class="wordmark" href="#top" aria-label="BAIT home">bait!</a>
+      <nav aria-label="Main navigation">
+        <a class="wide-link" href="#how">How it plays</a><a class="wide-link" href="#cards">Cards</a
+        ><a href="#your-turn"
+          >Your turn <svg class="icon" aria-hidden="true"><use href="#i-down" /></svg
+        ></a>
+      </nav>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <h1 id="hero-title">
+            Make the<br class="desktop-break" />
+            streamer<br class="desktop-break" />
+            say&nbsp;it.
+          </h1>
+          <p class="hero-sub">
+            Chat gets a secret word. The streamer doesn't know it and has to keep talking anyway.
+          </p>
+        </div>
+        <div class="hero-action">
+          <a class="stock-button deal-button" id="deal-first" href="#your-turn"
+            ><svg class="icon" aria-hidden="true"><use href="#i-card" /></svg>Deal me a card<svg
+              class="icon"
+              aria-hidden="true"
+            >
+              <use href="#i-arrow" /></svg
+          ></a>
+          <p class="microline">Then write a hint without the off-limits words.</p>
+        </div>
+        <div class="hero-stage">
+          <div class="film-wrap">
+            <div class="peeking-card" aria-hidden="true">
+              <span>bait!</span><svg viewBox="0 0 32 40"><use href="#bait-hook" /></svg
+              ><span class="peek-word"></span>
+            </div>
+            <div class="stage-tab">
+              <span class="small-square"></span>Example round <span class="tab-dot">·</span
+              ><span>Twitch Extension concept</span>
+            </div>
+            <div
+              class="film-frame"
+              id="film-frame"
+              tabindex="0"
+              aria-label="Example round film. Space or K to play or pause. Arrow keys move between chapters."
+            >
+              <video
+                id="hero-film"
+                controls
+                muted
+                playsinline
+                loop
+                preload="metadata"
+                poster="/media/poster-desktop.avif"
+                data-desktop-src="/media/hero-desktop.mp4"
+                data-phone-src="/media/hero-phone.mp4"
+                data-desktop-webm="/media/hero-desktop.webm"
+                data-phone-webm="/media/hero-phone.webm"
+                data-desktop-webm-type='video/webm; codecs="av01.0.05M.08,opus"'
+                data-phone-webm-type='video/webm; codecs="av01.0.04M.08,opus"'
+                data-desktop-poster="/media/poster-desktop.avif"
+                data-phone-poster="/media/poster-phone.avif"
+                aria-label="The Spicy Mountain. A staged BAIT round with fictional streamer mossbyte."
+              >
+                <source src="/media/hero-desktop.mp4" type="video/mp4" />
+                <track kind="captions" src="/media/captions.vtt" srclang="en" label="English" />
+                Your browser cannot play this film. Read the round below.
+              </video>
+              <button
+                class="film-big-play"
+                id="film-big-play"
+                type="button"
+                aria-label="Play the example"
+                hidden
+              >
+                <svg class="icon" aria-hidden="true"><use href="#i-play" /></svg>
+              </button>
+            </div>
+          </div>
+          <div class="film-chapters" id="film-chapters" aria-label="Film chapters"></div>
+          <div class="film-rail">
+            <p id="film-state" role="status" aria-live="polite">Sound off.</p>
+            <div class="film-buttons">
+              <button
+                id="film-toggle"
+                type="button"
+                aria-label="Pause the example"
+                aria-controls="hero-film"
+              >
+                <svg class="icon" aria-hidden="true">
+                  <use id="film-toggle-icon" href="#i-pause" /></svg
+                ><span class="sr-only" data-film-label>Pause</span>
+              </button>
+              <button
+                id="film-replay"
+                type="button"
+                aria-label="Watch from the start"
+                aria-controls="hero-film"
+              >
+                <svg class="icon" aria-hidden="true"><use href="#i-replay" /></svg>
+              </button>
+              <button
+                id="film-sound"
+                type="button"
+                aria-label="Turn sound on"
+                aria-pressed="false"
+                aria-controls="hero-film"
+              >
+                <svg class="icon" aria-hidden="true">
+                  <use id="film-sound-icon" href="#i-muted" />
+                </svg>
+              </button>
+              <button
+                class="text-button transcript-button"
+                id="read-round"
+                type="button"
+                aria-controls="round-transcript"
+                aria-expanded="false"
+              >
+                Read the round
+              </button>
+            </div>
+          </div>
+          <p class="film-note">
+            A staged round with made-up names. The card panel is a concept for a Twitch Extension.
+          </p>
+          <div
+            class="film-stills"
+            id="film-stills"
+            hidden
+            aria-label="The round in seven frames"
+          ></div>
+          <section
+            class="round-transcript"
+            id="round-transcript"
+            aria-labelledby="round-title"
+            hidden
+          >
+            <div class="transcript-heading">
+              <h2 id="round-title">The Spicy Mountain</h2>
+              <button id="close-transcript" class="text-button" type="button">Close</button>
+            </div>
+            <p>One staged round. No live stream or speech recognition is running on this page.</p>
+            <ol id="transcript-beats"></ol>
+          </section>
+        </div>
+      </section>
+
+      <section class="how-section" id="how" aria-labelledby="how-title">
+        <div class="how-sticky">
+          <div class="section-intro">
+            <h2 id="how-title">One word.<br />Three screens.</h2>
+            <p>
+              Everyone watches the same stream.<br />Only chat sees the card while the round is
+              live.
+            </p>
+          </div>
+          <div class="role-screens" id="role-screens">
+            <svg
+              class="role-line"
+              viewBox="0 0 1000 36"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path d="M0 18H980q16 0 16 12v3q0 9-9 9" />
+            </svg>
+            <article class="role-step is-active" data-step="0">
+              <div class="role-label"><span>01</span> CHAT'S CARD</div>
+              <div class="role-window viewer-window">
+                <div class="window-top">
+                  <span>Only chat sees this card</span><span class="concept-label">Concept</span>
+                </div>
+                <div class="mini-secret">
+                  <img
+                    src="/cards/proofs/volcano.png"
+                    alt=""
+                    width="1254"
+                    height="1254"
+                    loading="lazy"
+                  />
+                  <div>
+                    <span class="word">VOLCANO</span><span class="off-label">OFF LIMITS</span>
+                    <div class="clues"><span>LAVA</span><span>ERUPTION</span></div>
+                  </div>
+                </div>
+                <div class="window-bottom">Make the streamer say this word.</div>
+              </div>
+              <div class="step-copy">
+                <h3>Chat gets the word.</h3>
+                <p>
+                  Viewers see the secret word and the clues they can't type. The streamer sees the
+                  back of the card until the round stops.
+                </p>
+              </div>
+            </article>
+            <article class="role-step" data-step="1">
+              <div class="role-label"><span>02</span> THE STREAM</div>
+              <div class="role-window stream-window">
+                <div class="overlay-widget">
+                  <span>CHAT HAS A WORD</span><strong>01:52</strong>
+                  <div>ROUND 07 <b>3 WINS</b><b>1 STREAK</b></div>
+                </div>
+                <div class="stream-hint">
+                  <span class="chat-name">fernbrake</span> build your hut RIGHT next to it, best
+                  view
+                </div>
+                <img
+                  class="stream-world"
+                  src="/film/art/little-isle.png"
+                  alt=""
+                  width="1672"
+                  height="941"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <div class="step-copy">
+                <h3>Chat sets the trap.</h3>
+                <p>
+                  Hints are ordinary questions in Twitch chat. The overlay shows the clock and
+                  score, keeping the word hidden while play continues.
+                </p>
+              </div>
+            </article>
+            <article class="role-step" data-step="2">
+              <div class="role-label"><span>03</span> STREAMER'S SCREEN</div>
+              <div class="role-window studio-window">
+                <div class="studio-status"><span class="small-square"></span>ROUND LIVE</div>
+                <div class="studio-back" aria-hidden="true"><span>bait!</span></div>
+                <p>The target stays hidden<br />in your studio.</p>
+                <div class="window-bottom">
+                  Keep streaming. Viewers will try to steer the conversation.
+                </div>
+              </div>
+              <div class="step-copy">
+                <h3>The streamer says it.</h3>
+                <p>
+                  BAIT listens on the streamer's computer. When it hears the word, the round stops.
+                  The streamer confirms it before chat gets a win.
+                </p>
+              </div>
+            </article>
+          </div>
+          <div class="rules-tail">
+            <p>
+              Chat wins the round.<br /><span>Outlast the clock and the streamer escapes.</span>
+            </p>
+            <details>
+              <summary>
+                More ways to play <svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg>
+              </summary>
+              <ul>
+                <li>Medium cards ban two clues, Hard cards ban four.</li>
+                <li>Three-word mission: land three words on one clock.</li>
+                <li>
+                  Call the bait: the streamer gets one private guess. A wrong guess gives chat 15
+                  more seconds.
+                </li>
+                <li>Skip vote: chat types <b>!skip</b> to swap a word nobody can crack.</li>
+                <li>Streamer's pick: after a win, the streamer gives one clean hint the credit.</li>
+              </ul>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="deck-section" id="cards" aria-labelledby="deck-title">
+        <div class="section-intro">
+          <h2 id="deck-title">Pick a card.</h2>
+          <p>
+            Eighteen cards with their own art,<br />
+            each with a question chat could open with.
+          </p>
+        </div>
+        <div class="deck-help" id="deck-help">
+          <span class="desktop-help"
+            >← → browse <span>·</span> Enter inspect <span>·</span> Esc put back</span
+          ><span class="touch-help">Swipe to browse · Tap a card to inspect.</span>
+        </div>
+        <div
+          class="deck-hand"
+          id="deck-hand"
+          role="region"
+          aria-label="The BAIT card deck"
+          aria-describedby="deck-help"
+          tabindex="0"
+        >
+          <ol id="deck-cards"></ol>
+        </div>
+        <div class="deck-controls">
+          <button
+            id="deck-prev"
+            type="button"
+            aria-label="Previous card"
+            aria-controls="deck-cards"
+          >
+            <svg class="icon" aria-hidden="true"><use href="#i-left" /></svg></button
+          ><span id="deck-count">01 / 18</span
+          ><button id="deck-next" type="button" aria-label="Next card" aria-controls="deck-cards">
+            <svg class="icon" aria-hidden="true"><use href="#i-arrow" /></svg></button
+          ><button id="deck-auto" class="text-button" type="button" aria-pressed="true">
+            <svg class="icon" aria-hidden="true"><use id="deck-auto-icon" href="#i-pause" /></svg
+            ><span>Pause gallery</span>
+          </button>
+        </div>
+        <div class="deck-caption" aria-live="polite" aria-atomic="true">
+          <div>
+            <h3 id="deck-word">VOLCANO</h3>
+            <p class="deck-difficulty" id="deck-difficulty">MEDIUM · OFF LIMITS: LAVA, ERUPTION</p>
+            <p id="deck-question">Try: “Where would you definitely not build a house?”</p>
+          </div>
+          <button id="bait-with-card" class="stock-button" type="button">
+            Bait with this card <svg class="icon" aria-hidden="true"><use href="#i-down" /></svg>
+          </button>
+        </div>
+        <noscript
+          ><p class="no-script">
+            Turn on JavaScript to handle the deck and try a hint. The film and rules still work
+            without it.
+          </p></noscript
+        >
+      </section>
+
+      <section class="toy-section" id="your-turn" aria-labelledby="toy-title">
+        <div class="section-intro">
+          <h2 id="toy-title">Your turn.</h2>
+          <p>
+            Get the streamer to say it.<br />
+            Keep the off-limits words out of your hint.
+          </p>
+        </div>
+        <div class="toy-table">
+          <div class="toy-card-slot" id="toy-card"></div>
+          <div class="toy-chat">
+            <div class="toy-chat-heading">
+              <span>CHAT</span><span class="toy-for" id="toy-for">VOLCANO · MEDIUM</span>
+            </div>
+            <div
+              class="hint-log"
+              id="hint-log"
+              role="log"
+              aria-label="Your practice hints"
+              aria-live="polite"
+            >
+              <p class="log-empty" id="log-empty">
+                <span class="waiting-dots" aria-hidden="true"><i></i><i></i><i></i></span>Waiting
+                for your first hint…
+              </p>
+            </div>
+            <form id="hint-form">
+              <label for="hint-input">Your hint</label>
+              <div class="hint-input-row">
+                <input
+                  id="hint-input"
+                  name="hint"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="Ask the streamer something…"
+                  aria-describedby="hint-feedback hint-counter"
+                  maxlength="400"
+                /><button class="send-hint" type="submit">
+                  <span>Send hint</span
+                  ><svg class="icon" aria-hidden="true"><use href="#i-send" /></svg>
+                </button>
+              </div>
+              <div class="input-meta">
+                <button class="text-button" id="borrow-question" type="button">
+                  Stuck? Borrow the card's question.</button
+                ><span id="hint-counter">0 / 200</span>
+              </div>
+              <p id="hint-feedback" aria-live="polite" aria-atomic="true"></p>
+            </form>
+            <div class="toy-chat-footer">
+              <button class="text-button" id="deal-another" type="button">
+                <svg class="icon" aria-hidden="true"><use href="#i-card" /></svg>Deal another card</button
+              ><span>This chat is just you.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="today-section" id="today" aria-labelledby="today-title">
+        <h2 id="today-title">Where BAIT is today.</h2>
+        <div class="setup-board">
+          <div class="status-lane">
+            <h3>
+              <svg class="icon lamp" aria-hidden="true"><use href="#i-lamp-full" /></svg>Built
+            </h3>
+            <ul>
+              <li>A studio for the streamer, a secret page for chat and an overlay for OBS.</li>
+              <li>
+                Moonshine speech recognition on the streamer's computer, with a confirm step for
+                every catch.
+              </li>
+              <li>Easy, Medium and Hard cards, with off-limits clues on Medium and Hard.</li>
+              <li>Three-word missions, skip votes, Call the bait and the streamer's pick.</li>
+            </ul>
+          </div>
+          <div class="status-lane">
+            <h3>
+              <svg class="icon lamp" aria-hidden="true"><use href="#i-lamp-half" /></svg>Next test
+            </h3>
+            <p>
+              A full round with a real microphone, real Twitch chat and a viewer somewhere else.
+            </p>
+          </div>
+          <div class="status-lane">
+            <h3>
+              <svg class="icon lamp" aria-hidden="true"><use href="#i-lamp-ring" /></svg>Next
+            </h3>
+            <p>A Twitch Extension, so chat gets the card without leaving the stream.</p>
+          </div>
+        </div>
+        <p class="today-note">
+          The film at the top is a staged example. A recorded round will sit beside it once a real
+          one passes.
+        </p>
+      </section>
+
+      <section class="closing" aria-labelledby="closing-title">
+        <h2 id="closing-title">
+          Bait them<span class="closing-stop"
+            >.<img src="/assets/bait-bomb-logo.png" alt="" width="630" height="787" loading="lazy"
+          /></span>
+        </h2>
+        <div class="closing-bottom">
+          <p>BAIT isn't open for streams yet.<br />Want to run it on yours? Tell us.</p>
+          <a class="stock-button" href="https://irchiinnuss.com/contact/"
+            >Get in touch <svg class="icon" aria-hidden="true"><use href="#i-arrow" /></svg
+          ></a>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <div class="footer-top">
+        <a class="made-by" href="https://irchiinnuss.com"
+          ><span><b>bait!</b> is made by</span
+          ><img src="/assets/irchiinnuss-wordmark.svg" alt="irchiinnuss" width="180" height="38"
+        /></a>
+        <nav aria-label="Footer navigation">
+          <a href="#how">How it plays</a><a href="#cards">Cards</a><a href="#your-turn">Your turn</a
+          ><a href="https://irchiinnuss.com/contact/">Contact</a>
+        </nav>
+        <a class="back-top" href="#top" aria-label="Back to top"
+          ><svg class="icon" aria-hidden="true"><use href="#i-up" /></svg
+        ></a>
+      </div>
+      <p class="trademark">
+        Twitch is a trademark of Twitch Interactive, Inc. BAIT isn't made or endorsed by Twitch.
+      </p>
+    </footer>
+    <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <symbol id="bait-hook" viewBox="0 0 32 40">
+        <path
+          d="M22 3v22a9 9 0 0 1-18 0v-7l5 5M22 3h6v6h-6M4 18l7 3"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linejoin="miter"
+        />
+      </symbol>
+      <symbol id="i-card" viewBox="0 0 24 24">
+        <path d="M8 4h10l2 2v14H8zM4 6v12M12 8h4M12 16h4" />
+      </symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6" /></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="M20 12H4m6-6-6 6 6 6" /></symbol>
+      <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v16m-6-6 6 6 6-6" /></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V4m-6 6 6-6 6 6" /></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8z" /></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24">
+        <path d="M8 4v16M16 4v16" stroke-width="4" />
+      </symbol>
+      <symbol id="i-replay" viewBox="0 0 24 24"><path d="M6 8a8 8 0 1 1-2 6M4 3v6h6" /></symbol>
+      <symbol id="i-muted" viewBox="0 0 24 24">
+        <path d="M4 9h4l6-5v16l-6-5H4zM18 9l4 6m0-6-4 6" />
+      </symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24">
+        <path d="M2 9h4l6-5v16l-6-5H2zM16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M4 12h16M12 4v16" /></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="m4 4 16 8-16 8 3-8zm3 8h13" /></symbol>
+      <symbol id="i-lamp-full" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8" fill="currentColor" />
+      </symbol>
+      <symbol id="i-lamp-half" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" />
+      </symbol>
+      <symbol id="i-lamp-ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /></symbol>
+    </svg>
+  </body>
+</html>

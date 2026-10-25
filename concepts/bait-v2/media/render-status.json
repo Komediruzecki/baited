@@ -1,0 +1,287 @@
+{
+  "status": "rendered-for-owner-mockup-review",
+  "fps": 30,
+  "durationSeconds": 32,
+  "finalFps": 30,
+  "artApproval": "Opus accepted source art with code/CSS fixes; applied. Opus page/film review completed with required changes; film changes implemented and frame-checked by Codex. Owner acceptance pending.",
+  "audio": "Optional Sound Lab deal at 1.9s and confirmed catch at 23.3s; no voice",
+  "staged": true,
+  "renderTool": "HyperFrames 0.8.198",
+  "timeline": "GSAP 3.15.0",
+  "frameCount": 960,
+  "chapters": [
+    0,
+    4.2,
+    7.4,
+    13.4,
+    17.6,
+    20.4,
+    28.4
+  ],
+  "chapterStills": [
+    2.5,
+    5.8,
+    10.4,
+    16.5,
+    19.7,
+    22.3,
+    30.3
+  ],
+  "posterTime": 2.8,
+  "checks": {
+    "desktop": {
+      "tool": "HyperFrames0.8.198",
+      "ok": true,
+      "lintWarnings": 1,
+      "runtimeErrors": 0,
+      "layoutErrors": 0,
+      "contrastErrors": 0,
+      "craftWarnings": 4,
+      "motionAnalysisEnabled": false
+    },
+    "phone": {
+      "tool": "HyperFrames0.8.198",
+      "ok": true,
+      "lintWarnings": 1,
+      "runtimeErrors": 0,
+      "layoutErrors": 0,
+      "contrastErrors": 0,
+      "craftWarnings": 4,
+      "motionAnalysisEnabled": false
+    }
+  },
+  "soundtrack": {
+    "source": "Existing Sound Lab recipes",
+    "dealAt": 1.9,
+    "confirmedCatchAt": 23.3,
+    "integratedLufs": -16.76,
+    "truePeakDbtp": -1.52,
+    "speech": false,
+    "deliveredMeasurements": {
+      "mp4": {
+        "integratedLufs": -16.7,
+        "truePeakDbtp": -1.6
+      },
+      "webm": {
+        "integratedLufs": -17.0,
+        "truePeakDbtp": -2.0
+      }
+    }
+  },
+  "sizes": {
+    "chapter-01.avif": 76110,
+    "chapter-02.avif": 24050,
+    "chapter-03.avif": 91603,
+    "chapter-04.avif": 92115,
+    "chapter-05.avif": 92976,
+    "chapter-06.avif": 28160,
+    "chapter-07.avif": 89080,
+    "chapter-phone-01.avif": 61040,
+    "chapter-phone-02.avif": 21906,
+    "chapter-phone-03.avif": 66405,
+    "chapter-phone-04.avif": 63257,
+    "chapter-phone-05.avif": 63168,
+    "chapter-phone-06.avif": 24872,
+    "chapter-phone-07.avif": 58760,
+    "hero-desktop.mp4": 2190094,
+    "hero-desktop.webm": 1730033,
+    "hero-phone.mp4": 1690228,
+    "hero-phone.webm": 1489098,
+    "poster-desktop.avif": 39241,
+    "poster-phone.avif": 31188
+  },
+  "limitations": [
+    "This is a staged Extension concept, not a live Twitch or OBS recording.",
+    "The four required media exports and chapter stills are complete; browser and physical iPhone/Safari acceptance are separate.",
+    "HyperFrames motion analysis was disabled; no automated motion-pass claim is made.",
+    "Metadata labels are smaller than primary dialogue/chat. The short confirmation paragraph and final chat aside retain craft readability advisories.",
+    "The renderer silent-source advisory is expected because the optional existing Sound Lab soundtrack is muxed afterward.",
+    "One duplicate-image discovery lint warning remains; rendered frames and full media decode passed."
+  ],
+  "finalRender": "Both aspect ratios re-rendered after Opus mockup corrections; all four delivery files decode completely with no errors.",
+  "artFixes": [
+    "Alpha-only sprite cleanup, source PNG hashes unchanged",
+    "Facecam per-pose registration, stepped violet backdrop, tighter phone crop",
+    "Mirrored hammer-down frame aligned at the porch",
+    "Code-built orange eruption and lava tongue anchored to the crater",
+    "Approved bomb logo bookends; emotes remain chat-only",
+    "Short camera pushes into holds; crater minimum73 master pixels including rumble",
+    "Reduced-motion stills moved to settled16.5s and30.3s frames"
+  ],
+  "mockupReviewFixes": [
+    "Confirmation still22.3s shows both buttons before scoring",
+    "Face-down card labels lilac; only secret word yellow in B2",
+    "Phone pick panel preserves the game, facecam and award",
+    "Confirmation cursor appears only when movement starts at22.4s"
+  ],
+  "renderedAt": "2026-10-25T18:43:42.792987+00:00",
+  "exports": [
+    {
+      "file": "hero-desktop.mp4",
+      "bytes": 2190094,
+      "sha256": "74cab518782b7e903521a322c2d10c7f306838a85eb86fcdfa6110de074dffb3",
+      "codecParameter": "H.264 High/yuv420p and AAC-LC",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "profile": "High",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "pix_fmt": "yuv420p",
+            "level": 31,
+            "r_frame_rate": "30/1",
+            "duration": "32.000000",
+            "nb_read_frames": "960"
+          },
+          {
+            "codec_name": "aac",
+            "profile": "LC",
+            "codec_type": "audio",
+            "r_frame_rate": "0/0",
+            "duration": "32.000000",
+            "nb_read_frames": "1500"
+          }
+        ],
+        "format": {
+          "duration": "32.000000",
+          "size": "2190094"
+        }
+      },
+      "fullDecode": "passed"
+    },
+    {
+      "file": "hero-desktop.webm",
+      "bytes": 1730033,
+      "sha256": "a40c0b888900e66b6f3da10c93cd26e1b2935212fade4ccb8cf012dc32dd556b",
+      "codecParameter": "av01.0.05M.08,opus",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "av1",
+            "profile": "Main",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "pix_fmt": "yuv420p",
+            "level": 5,
+            "r_frame_rate": "30/1",
+            "nb_read_frames": "960"
+          },
+          {
+            "codec_name": "opus",
+            "codec_type": "audio",
+            "r_frame_rate": "0/0",
+            "nb_read_frames": "1601"
+          }
+        ],
+        "format": {
+          "duration": "32.008000",
+          "size": "1730033"
+        }
+      },
+      "fullDecode": "passed"
+    },
+    {
+      "file": "hero-phone.mp4",
+      "bytes": 1690228,
+      "sha256": "f8f3333c0df19f8fe68147e19d8be6a59fe97b2559edd369d88670530b21988f",
+      "codecParameter": "H.264 High/yuv420p and AAC-LC",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "profile": "High",
+            "codec_type": "video",
+            "width": 720,
+            "height": 800,
+            "pix_fmt": "yuv420p",
+            "level": 31,
+            "r_frame_rate": "30/1",
+            "duration": "32.000000",
+            "nb_read_frames": "960"
+          },
+          {
+            "codec_name": "aac",
+            "profile": "LC",
+            "codec_type": "audio",
+            "r_frame_rate": "0/0",
+            "duration": "32.000000",
+            "nb_read_frames": "1500"
+          }
+        ],
+        "format": {
+          "duration": "32.000000",
+          "size": "1690228"
+        }
+      },
+      "fullDecode": "passed"
+    },
+    {
+      "file": "hero-phone.webm",
+      "bytes": 1489098,
+      "sha256": "867657bbb94c82829cd683eedafd706cf25dedee4040840ab8de5f9885a8ddc6",
+      "codecParameter": "av01.0.04M.08,opus",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "av1",
+            "profile": "Main",
+            "codec_type": "video",
+            "width": 720,
+            "height": 800,
+            "pix_fmt": "yuv420p",
+            "level": 4,
+            "r_frame_rate": "30/1",
+            "nb_read_frames": "960"
+          },
+          {
+            "codec_name": "opus",
+            "codec_type": "audio",
+            "r_frame_rate": "0/0",
+            "nb_read_frames": "1601"
+          }
+        ],
+        "format": {
+          "duration": "32.008000",
+          "size": "1489098"
+        }
+      },
+      "fullDecode": "passed"
+    }
+  ],
+  "visualChecks": {
+    "reviewer": "Codex",
+    "chapterTimes": [
+      2.5,
+      5.8,
+      10.4,
+      16.5,
+      19.7,
+      22.3,
+      30.3
+    ],
+    "confirmation": "At22.3s both controls visible, no cursor and score unchanged; same chapter in transcript.",
+    "twoRoles": "At5.8s face-down bait label lilac; secret VOLCANO yellow.",
+    "phoneEnding": "At30.3s game/facecam/award remain visible above pick list.",
+    "maxCamera": "At16.5s porch/player remains above two-line caption in both formats.",
+    "sourceArt": "All three generated source PNG SHA256 hashes match provenance."
+  },
+  "sizeTargets": {
+    "desktopWebmMaxBytes": 1800000,
+    "phoneWebmMaxBytes": 1600000,
+    "desktopPassed": true,
+    "phonePassed": true,
+    "posterMaxBytes": 180000,
+    "postersPassed": true
+  }
+}

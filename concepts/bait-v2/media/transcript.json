@@ -1,0 +1,202 @@
+{
+  "title": "The Spicy Mountain",
+  "kind": "staged",
+  "duration": 32,
+  "disclosure": "A staged round with made-up names. The card panel is a concept for a Twitch Extension.",
+  "chapters": [
+    {
+      "time": 0,
+      "still": 2.5,
+      "title": "The deal"
+    },
+    {
+      "time": 4.2,
+      "still": 5.8,
+      "title": "Two screens"
+    },
+    {
+      "time": 7.4,
+      "still": 10.4,
+      "title": "Chat steers"
+    },
+    {
+      "time": 13.4,
+      "still": 16.5,
+      "title": "The dodge"
+    },
+    {
+      "time": 17.6,
+      "still": 19.7,
+      "title": "The slip"
+    },
+    {
+      "time": 20.4,
+      "still": 22.3,
+      "title": "The catch"
+    },
+    {
+      "time": 28.4,
+      "still": 30.3,
+      "title": "The pick"
+    }
+  ],
+  "chat": [
+    {
+      "at": 0,
+      "name": "owlbear_ok",
+      "text": "that hut is crooked"
+    },
+    {
+      "at": 0,
+      "name": "sir_snacks",
+      "text": "gm moss"
+    },
+    {
+      "at": 0,
+      "name": "nightbus",
+      "text": "hammer time"
+    },
+    {
+      "at": 3.2,
+      "name": "crumbqueen",
+      "text": "oh this is too easy"
+    },
+    {
+      "at": 7.6,
+      "name": "crumbqueen",
+      "text": "moss what's that big thing behind your house"
+    },
+    {
+      "at": 8.8,
+      "name": "owlbear_ok",
+      "text": "is it supposed to smoke like that"
+    },
+    {
+      "at": 10,
+      "name": "fernbrake",
+      "text": "build your hut RIGHT next to it, best view"
+    },
+    {
+      "at": 11.4,
+      "name": "sir_snacks",
+      "text": "[side-eye bomb]"
+    },
+    {
+      "at": 12.4,
+      "name": "kettle_kid",
+      "text": "totally normal mountain"
+    },
+    {
+      "at": 13.6,
+      "name": "crumbqueen",
+      "text": "just say what it is"
+    },
+    {
+      "at": 14.4,
+      "name": "nightbus",
+      "text": "name the mountain, coward"
+    },
+    {
+      "at": 15.6,
+      "name": "owlbear_ok",
+      "text": "SPICY MOUNTAIN"
+    },
+    {
+      "at": 15.9,
+      "name": "sir_snacks",
+      "text": "[laughing bomb] [laughing bomb] [laughing bomb]"
+    },
+    {
+      "at": 16.2,
+      "name": "deadlinedog",
+      "text": "the LAVA view tho"
+    },
+    {
+      "at": 17,
+      "name": "kettle_kid",
+      "text": "dog that word is off limits"
+    },
+    {
+      "at": 17.8,
+      "name": "sir_snacks",
+      "text": "uh oh"
+    },
+    {
+      "at": 18.3,
+      "name": "fernbrake",
+      "text": "moss look behind you"
+    },
+    {
+      "at": 24.6,
+      "name": "crumbqueen",
+      "text": "LETS GOOO"
+    },
+    {
+      "at": 25,
+      "name": "sir_snacks",
+      "text": "[grinning bomb] [grinning bomb] [grinning bomb] [grinning bomb]"
+    },
+    {
+      "at": 25.6,
+      "name": "nightbus",
+      "text": "SPICY MOUNTAIN"
+    },
+    {
+      "at": 26.4,
+      "name": "owlbear_ok",
+      "text": "fern called it"
+    },
+    {
+      "at": 27.2,
+      "name": "kettle_kid",
+      "text": "moss never stood a chance"
+    },
+    {
+      "at": 30,
+      "name": "fernbrake",
+      "text": "i'll take it"
+    }
+  ],
+  "dialogue": [
+    {
+      "at": 8.4,
+      "until": 10.6,
+      "text": "Why does everyone care about my view? It's a nice mountain."
+    },
+    {
+      "at": 11,
+      "until": 13.2,
+      "text": "Wait. You're all being weird about the mountain."
+    },
+    {
+      "at": 14.8,
+      "until": 17.4,
+      "text": "Nope. I'm not naming the spicy mountain."
+    },
+    {
+      "at": 18,
+      "until": 19,
+      "text": "Okay what is that noise"
+    },
+    {
+      "at": 19.3,
+      "until": 20.4,
+      "text": "THE VOLCANO IS GOING OFF!"
+    },
+    {
+      "at": 21.2,
+      "until": 23.4,
+      "text": "I have to confirm it myself? Fine."
+    }
+  ],
+  "confirmation": {
+    "candidateAt": 19.6,
+    "confirmedAt": 23.3,
+    "elapsedSeconds": 19,
+    "lastActiveClock": "01:42",
+    "winsBefore": 3,
+    "winsAfter": 4,
+    "streakBefore": 1,
+    "streakAfter": 2
+  }
+}

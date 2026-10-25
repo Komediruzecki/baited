@@ -14,6 +14,14 @@ Checked 25 October 2026 against the game source and current official Twitch docu
 | Evidence | Synthetic speech and OBS-load checks exist. A physical-microphone round with real Twitch chat, the actual OBS overlay and a remote viewer still needs to pass. |
 | Native Extension | Not implemented or submitted. The deployed landing and OBS browser source are not an Extension. |
 
+## V2 design review
+
+Opus completed the **Dealt In** direction on 25 October 2026: a violet broadcast stage, charcoal cards, a staged 32-second round called **The Spicy Mountain**, and a local hint-writing interaction. The [v2 review index](v2/README.md) links the detailed [landing plan](v2/landing-plan.md), [hero storyboard](v2/hero-storyboard.md) and [gameplay/card expansion plan](v2/gameplay-plan.md).
+
+The mockup is isolated from the released landing and game. Review its layout, motion and phone behavior before choosing integration or release. Opus calls for this work use the `irch` account, request Max effort and allow 45 minutes per pass. The plans do not authorize deployment or gameplay expansion.
+
+The content proposal targets 100 complete cards (50 illustrated and 50 type-led), then roughly 1,000 reviewed words. The existing 18 illustrations stay intact. Authored openers, moment stamps and card reactions come before the larger game modes; Six-word showdown is the first proposed gameplay experiment. All remain behind the real-round acceptance milestone below.
+
 ## The next working milestone
 
 Record one complete round: Paolo sees the secret, posts a real hint in Twitch chat, the streamer says the target, Moonshine proposes the catch, the streamer confirms it, and the OBS recording shows one result without exposing the secret early.
