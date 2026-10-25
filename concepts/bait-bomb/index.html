@@ -1,0 +1,98 @@
+<!doctype html>
+<!--
+THESIS: The spoken word tears open a censor strip. A game title sequence, never a boxed dashboard.
+OWN-WORLD: Full-width violet, yellow card stock, near-black print, Russo One lettering and the supplied orange pixel bomb. Hard cuts and physical edges carry the page.
+STORY: Chat sees a secret, asks a plausible question, and catches the streamer's answer. Play the staged example, choose another trap, then open the local game.
+FIRST VIEWPORT: Oversized semantic headline above a diagonal censor strip. The bomb overlaps its right edge; a dealt card and dialogue occupy the left. The play invitation is directly beneath the offer.
+FORM: Hook Line, grounded candidate 4, seed e3785e96. Composition C's opening censor strip continues into composition B's physical cards. Manual beats and reduced motion preserve the story.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#5426ed">
+  <meta name="description" content="A local BAIT motion study. Chat gets a secret word and tries to make the streamer say it.">
+  <title>BAIT · Make the streamer say it.</title>
+  <link rel="preload" href="/assets/russo-one.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/scene.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#example">Skip to the example</a>
+  <main id="top">
+    <section class="violet-stage" aria-labelledby="page-title">
+      <header class="masthead">
+        <a class="wordmark" href="#top" aria-label="BAIT home">bait<span aria-hidden="true">!</span></a>
+        <span class="study-label">Local motion study</span>
+        <nav aria-label="Main navigation"><a href="#how-to-play">How to play</a><a class="game-link" href="http://127.0.0.1:3318/">Open local game <span aria-hidden="true">↗</span></a></nav>
+      </header>
+      <div class="intro">
+        <h1 id="page-title"><span>Make the</span><span>streamer say it.</span></h1>
+        <p class="promise">Chat gets the word. You get suspicious.</p>
+        <div class="invitation">
+          <button class="play-button" id="play-example" type="button" hidden aria-controls="example">
+            <span id="play-label">Play an example</span><svg class="play-symbol" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 3 14 9L7 21Z"/></svg><svg class="pause-symbol" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h5v18H5zm9 0h5v18h-5z"/></svg>
+          </button>
+          <p class="example-note">A staged round.<br>No microphone needed.</p>
+        </div>
+      </div>
+      <section class="example" id="example" aria-labelledby="example-heading">
+        <div class="scene-heading"><h2 id="example-heading">Example round</h2><span class="silent-note">No sound. Just the trap.</span></div>
+        <div class="stage-art" aria-hidden="true">
+          <div class="dealt-card" id="dealt-card"><span>Chat's secret</span><strong data-word>BANANA</strong><svg class="deal-picture" viewBox="0 0 120 100"><use href="#art-banana" data-art></use></svg><small>Keep it from the streamer.</small></div>
+          <div class="censor-strip">
+            <span class="censor-noise">&amp;$!</span>
+            <div class="word-window"><strong data-word>BANANA</strong><span class="censor-cover cover-left" id="cover-left">&amp;$</span><span class="censor-cover cover-right" id="cover-right">!#%</span></div>
+            <span class="censor-noise">!#%</span>
+          </div>
+          <div class="bomb-place"><img id="bomb" class="bomb" src="/assets/bait-bomb-logo.png" alt="" width="1267" height="1241"><span class="bomb-fallback">bait!</span><span class="caught-stamp" id="caught-stamp">You took<br>the bait.</span></div>
+          <div class="dialogue">
+            <div class="speech-slip chat-slip" id="chat-slip"><span class="speaker">Chat</span><p data-prompt>What goes in your smoothie?</p></div>
+            <div class="speech-slip answer-slip" id="answer-slip"><span class="speaker">Streamer</span><p><mark data-spoken>Banana.</mark> <span data-tail>Wait.</span></p></div>
+          </div>
+        </div>
+        <div class="playback" id="playback" hidden>
+          <div class="playback-top"><p id="beat-caption" role="status" aria-live="polite">Chat's card is BANANA. The streamer can't see it.</p><button class="replay-button" id="replay-example" type="button" aria-label="Replay the example from the start"><span aria-hidden="true">↻</span> Replay</button></div>
+          <div class="timeline" aria-hidden="true"><span id="timeline-fill"></span></div>
+          <ol class="beat-controls" aria-label="Example beats">
+            <li><button type="button" data-beat="0" aria-current="step"><span>1</span>Deal the card</button></li>
+            <li><button type="button" data-beat="1"><span>2</span>Chat asks</button></li>
+            <li><button type="button" data-beat="2"><span>3</span>You say it</button></li>
+            <li><button type="button" data-beat="3"><span>4</span>Word caught</button></li>
+            <li><button type="button" data-beat="4"><span>5</span>Chat wins</button></li>
+          </ol>
+          <p class="motion-note" id="motion-note" hidden>Reduced motion is on. Play moves through still scenes; each beat is also a button.</p>
+        </div>
+        <details class="transcript"><summary>Read the example</summary><ol><li>Chat's secret word: <strong data-word>BANANA</strong>.</li><li>Chat asks: “<span data-prompt>What goes in your smoothie?</span>”</li><li>The streamer answers: “<span data-spoken>Banana.</span> <span data-tail>Wait.</span>”</li><li>The word is caught. Chat wins the round.</li></ol></details>
+        <noscript><p class="no-script">This is a still example. Chat gets BANANA, asks about a smoothie, and catches the streamer's answer. Enable JavaScript to play or choose a different word.</p></noscript>
+      </section>
+    </section>
+    <section class="deck-section" aria-labelledby="deck-heading">
+      <div class="deck-intro"><h2 id="deck-heading">Pick your<br>next trap.</h2><p>Same rules. A different conversation.<br><span id="card-instruction">Three example words from the deck.</span></p></div>
+      <div class="card-hand" role="group" aria-label="Choose an example word">
+        <button class="word-card selected" data-card="banana" type="button" aria-pressed="true" disabled>
+          <span class="card-edition">Chat's secret <span aria-hidden="true">↗</span></span><strong>BANANA</strong><svg class="card-art" viewBox="0 0 120 100" aria-hidden="true"><use href="#art-banana"></use></svg><span class="card-question">“What goes in your smoothie?”</span><span class="card-answer">“Banana. Wait.”</span><span class="card-action">Current example <span aria-hidden="true">✓</span></span>
+        </button>
+        <button class="word-card" data-card="penguin" type="button" aria-pressed="false" disabled>
+          <span class="card-edition">Chat's secret <span aria-hidden="true">↗</span></span><strong>PENGUIN</strong><svg class="card-art" viewBox="0 0 120 100" aria-hidden="true"><use href="#art-penguin"></use></svg><span class="card-question">“Which animal always looks overdressed?”</span><span class="card-answer">“A penguin? Oh, come on.”</span><span class="card-action">Try this trap <span aria-hidden="true">↗</span></span>
+        </button>
+        <button class="word-card" data-card="microwave" type="button" aria-pressed="false" disabled>
+          <span class="card-edition">Chat's secret <span aria-hidden="true">↗</span></span><strong>MICROWAVE</strong><svg class="card-art" viewBox="0 0 120 100" aria-hidden="true"><use href="#art-microwave"></use></svg><span class="card-question">“How do you reheat leftover pizza?”</span><span class="card-answer">“The microwave. You got me.”</span><span class="card-action">Try this trap <span aria-hidden="true">↗</span></span>
+        </button>
+      </div>
+      <p class="selection-note" id="selection-note" role="status" aria-live="polite">BANANA is on the table.</p>
+    </section>
+    <section class="how-section" id="how-to-play" aria-labelledby="how-heading">
+      <h2 id="how-heading">You're in the dark.<br>Chat is in on it.</h2>
+      <ol class="rules"><li><h3>Chat sees the card.</h3><p>Viewers get a secret word. The streamer and the stream overlay keep it hidden.</p></li><li><h3>The hints come in.</h3><p>Chat steers the conversation toward the word. The streamer tries to spot the trap.</p></li><li><h3>One word gives it away.</h3><p>Say the target before time runs out, and chat wins. Make it to the end, and you escape.</p></li></ol>
+      <div class="closing"><div><h2>Your chat has<br>ideas.</h2><p>Try a practice round in the local game.</p></div><a class="launch-button" href="http://127.0.0.1:3318/">Open local game <span aria-hidden="true">↗</span></a></div>
+      <footer><a class="footer-brand" href="#top">bait!</a><p>Local design study · Staged examples<br>The working game opens separately.</p><a href="#example">Back to the example ↑</a></footer>
+    </section>
+  </main>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="art-banana" viewBox="0 0 120 100"><path d="M82 15c8 30-9 58-43 65C21 82 12 73 13 65c26 9 54-11 57-42l-2-10Z" fill="#fff0a1" stroke="#35260b" stroke-width="3" stroke-linejoin="round"/><path d="M75 31c11 27 1 43-15 48 10-15 10-26 8-37M71 38c-9 13-20 17-32 17 15-8 20-17 21-28" fill="#f6af20" stroke="#35260b" stroke-width="3" stroke-linejoin="round"/><path d="m72 16 9-3M25 71c17 1 31-7 39-19" fill="none" stroke="#35260b" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="art-penguin" viewBox="0 0 120 100"><path d="M39 42 20 67l20-7m41-18 19 25-20-7" fill="#322147" stroke="#281043" stroke-width="3" stroke-linejoin="round"/><path d="M34 77V37c0-33 52-33 52 0v40Z" fill="#322147" stroke="#281043" stroke-width="3"/><path d="M43 75V47c0-21 34-21 34 0v28Z" fill="#fffdf0"/><path d="m43 79-9 8h23v-8m20 0 9 8H63v-8" fill="#ffbd39" stroke="#281043" stroke-width="3" stroke-linejoin="round"/><path d="m54 42 6 8 6-8Z" fill="#ffbd39" stroke="#281043" stroke-width="2"/><circle cx="49" cy="34" r="3" fill="#fffdf0"/><circle cx="71" cy="34" r="3" fill="#fffdf0"/></symbol>
+    <symbol id="art-microwave" viewBox="0 0 120 100"><rect x="9" y="24" width="102" height="58" rx="3" fill="#c9ecff" stroke="#082a3c" stroke-width="3"/><rect x="17" y="33" width="65" height="40" fill="#18465e"/><path d="M26 62h43l-5 6H31ZM38 54c-8-8 7-10 0-18m15 18c-8-8 7-10 0-18" fill="none" stroke="#8cd8ff" stroke-width="3" stroke-linecap="round"/><path d="M89 35h13M89 42h13m-8 13v9M21 84v5m78-5v5" stroke="#082a3c" stroke-width="4" stroke-linecap="round"/><circle cx="95" cy="59" r="8" fill="none" stroke="#082a3c" stroke-width="3"/></symbol>
+  </defs></svg>
+</body>
+</html>

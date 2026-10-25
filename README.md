@@ -24,7 +24,9 @@ Open **http://127.0.0.1:3318** and choose **Try the local demo**. The preview he
 
 Start a round, open the viewer room in a separate tab, and expand **Demo controls** to send test chat and a simulated final transcript. The demo needs no credentials and tests the game server with simulated inputs.
 
-The landing page also has an illustrated example. Select a different word or replay the exchange to see how a round works. Open `/about` to view it while signed in; the studio’s BAIT logo links there.
+A separate [bomb-led motion study](concepts/bait-bomb/README.md) is available on port 3319 for design review. It uses a scripted example and does not connect to providers.
+
+The current landing page also has an illustrated example. Select a different word or replay the exchange to see how a round works. Open `/about` to view it while signed in; the studio’s BAIT logo links there.
 
 The preview uses the compiled application; rebuild after source changes. For interactive source development, `rtk pnpm dev` uses `http://localhost:3000` and is separate from this isolated preview. Use the Proton Pass setup below when intentionally testing live providers.
 
@@ -69,6 +71,8 @@ rtk proxy pass-cli run --env-file docs/bait.local.env.tmpl -- pnpm dev
 Tokens never enter browser storage. An HttpOnly session cookie controls the studio. Twitch credentials are encrypted with AES-256-GCM in `data/bait.json`. Preserve the encryption key across restarts. If you lose it, reconnect affected accounts using a fresh data directory. Never upload `.env` or `data/` to a repository.
 
 ## Enable real microphone recognition
+
+For the current Linux rehearsal, use the [Twitch, speech and OBS setup guide](docs/twitch-deepgram-obs-setup.md). Deepgram is the existing adapter, not a Twitch or hackathon requirement. The saved ElevenLabs key has opened a Scribe v2 Realtime session without sending audio; its allowance and billing remain unverified. The steps below apply only if Deepgram is selected. ElevenLabs still needs an adapter and recognition tests before use.
 
 1. Create a [Deepgram](https://console.deepgram.com/) project and a key allowed to transcribe streaming audio. Provider usage can incur charges to the operator; BAIT does not charge viewers or judges.
 2. Store the key in Proton Pass and update the `DEEPGRAM_API_KEY` reference in the template. Restart through `pass-cli run`. See [deployment and secret handling](docs/deployment-runbook.md).
