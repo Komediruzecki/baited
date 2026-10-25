@@ -1,6 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Eye, MessageSquare, Mic, ShieldCheck, X } from './icons';
 
+export const productBrand = (
+  <span className="product-brand" role="img" aria-label="baited">
+    <img
+      className="product-brand__bomb"
+      src="/brand/bait-bomb.png"
+      alt=""
+      width="160"
+      height="160"
+    />
+    <span className="product-brand__name" aria-hidden="true">
+      baited
+    </span>
+  </span>
+);
+
 export const brand = (
   <>
     <span className="logo-lockup" role="img" aria-label="BAIT">
@@ -120,17 +135,27 @@ export function HowTo() {
       <details className="how-options">
         <summary>Optional rules</summary>
         <ul>
-          <li><strong>Forbidden clues:</strong> Easy: none. Medium: two. Hard: four. A flagged hint can’t win an award. The round continues.</li>
-          <li><strong>Three-word mission:</strong> Land three targets on one clock. Gaps count. Pause freezes it; a skip replaces the word.</li>
-          <li><strong>Call the bait:</strong> One private typed guess per word. Correct: escape the round and mission. Wrong: chat gets +15 seconds.</li>
-          <li><strong>You baited me:</strong> After a win, the streamer can award one eligible hint. The community keeps the shared win.</li>
+          <li>
+            <strong>Forbidden clues:</strong> Easy: none. Medium: two. Hard: four. A flagged hint
+            can’t win an award. The round continues.
+          </li>
+          <li>
+            <strong>Three-word mission:</strong> Land three targets on one clock. Gaps count. Pause
+            freezes it; a skip replaces the word.
+          </li>
+          <li>
+            <strong>Call the bait:</strong> One private typed guess per word. Correct: escape the
+            round and mission. Wrong: chat gets +15 seconds.
+          </li>
+          <li>
+            <strong>You baited me:</strong> After a win, the streamer can award one eligible hint.
+            The community keeps the shared win.
+          </li>
         </ul>
       </details>
       <div className="notice">
         <ShieldCheck size={20} />
-        <p>
-          Play along: no peeking, no spoilers. Wrong detection? Reverse the win in your studio.
-        </p>
+        <p>Play along: no peeking, no spoilers. Wrong detection? Reverse the win in your studio.</p>
       </div>
     </div>
   );

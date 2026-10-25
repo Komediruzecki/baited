@@ -10,11 +10,13 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-surface="viewer">
-    <!-- THESIS: A secret card on the stream's side table. OWN-WORLD: Charcoal,
-    violet, Russo lettering and the approved hooked bomb. TYPE: Display face only
-    for the target and product name; Inter for the task. BEHAVIOR: Reveal one card,
-    then hold still while chat plays. STATUS: The clock and connection never pretend
-    to be live after a failed request. This extends the approved world, not the logo. -->
+    <!-- THESIS: One dealt card beside the stream. OWN-WORLD: The landing's
+    charcoal card stock, violet edge, yellow word and joined bait them. signature.
+    STORY: Read the word, avoid the forbidden clues, then steer the conversation.
+    FIRST VIEWPORT: Compact brand rail above one card. The word owns the middle;
+    clues and clock sit immediately below. Instructions stay outside the card.
+    FORM: The approved playing-card composition, fitted to Twitch's 320 px panel.
+    State changes carry meaning; the card holds still while chat plays. -->
     <main class="panel" aria-label="baited viewer panel">
       <header class="masthead">
         <h1 class="wordmark">baited<span class="brand-stop" aria-hidden="true">.</span></h1>
@@ -32,10 +34,12 @@
         <div class="card-center">
           <img class="bomb" id="bomb" src="./assets/bait-bomb.png" alt="" width="80" height="80" />
           <h2 class="target" id="card-title">The word is coming.</h2>
-          <p class="card-detail" id="card-detail">It appears here when the streamer starts a round.</p>
+          <p class="card-detail" id="card-detail">
+            It appears here when the streamer starts a round.
+          </p>
         </div>
         <section class="forbidden" id="forbidden" aria-labelledby="forbidden-heading" hidden>
-          <h3 id="forbidden-heading">Don't use these clues</h3>
+          <h3 id="forbidden-heading">Off limits</h3>
           <ul id="forbidden-list"></ul>
         </section>
         <div class="clock" id="clock" hidden>
@@ -43,9 +47,17 @@
             <span id="clock-caption">Time left</span>
             <span id="clock-value" class="clock-value" aria-label="Time left">0:00</span>
           </div>
-          <progress id="clock-progress" max="100" value="100" aria-label="Round time remaining"></progress>
+          <progress
+            id="clock-progress"
+            max="100"
+            value="100"
+            aria-label="Round time remaining"
+          ></progress>
         </div>
-        <div class="card-baseline"><span>Bait them.</span><span class="card-stamp" id="card-stamp">Keep it in chat</span></div>
+        <div class="card-baseline">
+          <span class="card-tagline"><b>bait</b> them.</span
+          ><span class="card-stamp" id="card-stamp">Keep it in chat</span>
+        </div>
       </section>
       <footer class="panel-footer">
         <p id="play-instruction">Write a hint in chat. Keep the secret word to yourself.</p>

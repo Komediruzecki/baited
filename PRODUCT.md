@@ -1,4 +1,4 @@
-# BAIT
+# baited
 
 <!-- impeccable:product-schema 1 -->
 
@@ -12,7 +12,7 @@ Twitch streamers hosting a round and viewers working together in chat. The landi
 
 ## Product Purpose
 
-Chat gets a secret word and tries to make the streamer say it before the round ends. The streamer cannot see the word. Speech recognition detects the spoken target; the game resolves the round and shows the result.
+Chat gets a secret word and tries to make the streamer say it before the round ends. The streamer cannot see the word during live play. Local Moonshine proposes a catch for the streamer to confirm; the game then resolves the round and shows the result.
 
 ## Positioning
 
@@ -20,22 +20,22 @@ Viewers steer an ordinary conversation toward a hidden word. The entertainment i
 
 ## Operating Context
 
-The current build is a standalone browser game connected to Twitch chat through EventSub, with an OBS browser overlay. It is not yet a native Twitch Extension. The first real rehearsal will use OBS on the owner's Linux computer.
+The current build has an external streamer studio connected to Twitch chat through EventSub, a standalone viewer room, an OBS browser overlay, and native Twitch Extension viewer/configuration surfaces. The native Extension is in local testing, not publicly released. OBS testing uses the owner's Linux computer.
 
 ## Capabilities and Constraints
 
 - Keep Paolo's original source safe and the GitHub repository private.
-- The owner-authorized static landing is released at bait.maff.app and dev.bait.maff.app from disjoint-colliders/packages/bait, tag bait-v1.0.0. The live game remains undeployed. Both repositories stay private. See docs/master-plan.md for the current setup and Extension plan.
+- The owner-authorized static landing is released at bait.maff.app and dev.bait.maff.app from disjoint-colliders/packages/bait. Landing releases and game releases are separate. The live game remains undeployed. Both repositories stay private. See docs/master-plan.md for the setup and Extension plan.
 - Simulated previews must identify themselves. A staged landing example must never be represented as a live Twitch session.
-- Current speech integration defaults to local English Moonshine in a browser worker. Its proposed catches require broadcaster confirmation because the SDK confidence field is a constant placeholder. Deepgram remains optional for automatic scoring; ElevenLabs has no adapter. The landing needs no speech provider. Human microphone and real OBS-scene acceptance remain outstanding. See docs/moonshine.md and docs/moonshine-rehearsal.md.
-- Real provider, microphone and OBS acceptance testing remains pending credentials and channel confirmation.
-- Never show the active secret word on the streamer's studio or OBS overlay. The landing may explain it through a clearly labeled example.
+- Current speech integration defaults to local English Moonshine in a browser worker. Its proposed catches require broadcaster confirmation because the SDK confidence field is a constant placeholder. Deepgram remains optional for automatic scoring; ElevenLabs has no adapter. The landing needs no speech provider. See docs/moonshine.md and docs/moonshine-rehearsal.md.
+- The owner reported a successful local microphone round on 2026-10-25. The opt-in transcript display still needs a refreshed real microphone check. Native Twitch installation, remote-player and actual OBS-scene acceptance remain separate checks; simulated fixtures do not establish those outcomes.
+- Never show the active secret word in the live streamer's studio or OBS overlay. A labelled local/demo-only reveal exists for solo testing. The landing may explain the word through a clearly labelled example. Transcript preview is opt-in local/test diagnostics and must not reach viewer or overlay payloads.
 
 ## Brand Commitments
 
-Working product name: BAIT. The owner supplied an orange pixel-art bomb with hooked fuse, angular bait lettering, and a censored-symbol band. Use that supplied direction in the new local mockup. Purple, yellow and charcoal remain accepted colors.
+Product name: baited. The landing retains its approved BAIT identity. Reuse the approved bomb asset and a provisional Russo One baited wordmark for product screens. The supplied bomb direction is an orange pixel-art bomb with hooked fuse, angular bait lettering, and a censored-symbol band. Violet #9146FF, restrained yellow #FFFC79 and charcoal remain accepted colors.
 
-The owner rejected the current landing's generic composition and requested a new motion-led mockup informed by design.maff.app and the disjoint-colliders reference work. Use product-voice for visible language.
+The approved landing in disjoint-colliders/packages/bait is the current visual reference. Extend its typography, charcoal playing cards and violet accents into useful product controls. Keep each surface's information boundary: secret card for viewers, round and microphone controls for the streamer, compact transparent broadcast graphics for OBS. Opus will critique the implemented product screens before further polish. Use product-voice for visible language.
 
 ## Evidence on Hand
 

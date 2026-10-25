@@ -1,0 +1,30 @@
+.product-brand {
+  --product-mark-size: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+  color: #fffdf7;
+  font:
+    400 24px/1 'Russo One',
+    sans-serif;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+
+.product-brand__bomb {
+  display: block;
+  width: var(--product-mark-size);
+  height: var(--product-mark-size);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.product-brand__name {
+  transform: translateY(1px);
+}
+
+.small-brand .product-brand {
+  --product-mark-size: 30px;
+  font-size: 21px;
+}
