@@ -1,10 +1,13 @@
 import { clockValue, connectToTwitch, connectionView, readState } from './client.js';
+import { cardArtFile, wordSize } from './presentation.js';
 
 const byId = (id) => document.getElementById(id);
 let current = null;
 let receivedAt = 0;
 let connected = false;
 let announcementKey = '';
+let dealtRound = '';
+let dealAnimation;
 
 function announce(key, text) {
   if (key === announcementKey) return;
@@ -12,13 +15,38 @@ function announce(key, text) {
   byId('announcement').textContent = text;
 }
 
-function setTitle(value) {
+function setTitle(value, secret = false) {
   byId('card-title').textContent = value;
-  byId('card-title').dataset.long = String(value.length > 18);
+  byId('card-title').dataset.wordSize = secret ? wordSize(value) : 'message';
+}
+
+function setArt(word) {
+  const file = cardArtFile(word);
+  const art = byId('word-art');
+  art.hidden = !file;
+  // A filename can reveal the word too. Remove it when authorization or role changes.
+  if (file) art.setAttribute('src', `./assets/${file}`);
+  else art.removeAttribute('src');
+  byId('bomb').hidden = typeof word === 'string';
+}
+
+function deal(roundId) {
+  if (dealtRound === roundId) return;
+  dealtRound = roundId;
+  dealAnimation?.cancel();
+  const card = byId('card');
+  if (card.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    dealAnimation = card.animate(
+      [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'translateY(0)' }],
+      { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' },
+    );
+  }
 }
 
 function clearCard(title, detail, label = 'Waiting', resetAnnouncement = true) {
   current = null;
+  dealAnimation?.cancel();
+  setArt(null);
   if (resetAnnouncement) {
     announcementKey = '';
     byId('announcement').textContent = '';
@@ -54,11 +82,12 @@ function render({ configured, room }) {
     byId('card').dataset.state = room.phase === 'active' ? 'active' : 'paused';
     byId('card-kicker').textContent = visible ? "Chat's secret word" : 'Broadcaster view';
     byId('phase-label').textContent = phase;
-    setTitle(visible ? room.round.target : 'Your viewers have the word.');
+    setTitle(visible ? room.round.target : 'Your viewers have the word.', visible);
+    setArt(visible ? room.round.target : null);
     byId('card-detail').hidden = room.phase === 'active' && visible;
     byId('card-detail').textContent = !visible ? 'Keep talking. Chat is setting the trap.' : room.phase === 'paused' ? 'Hold that thought. The round will resume here.' : 'Waiting for the last words to reach the game.';
     byId('forbidden').hidden = !visible || room.round.forbiddenClues.length === 0;
-    byId('forbidden-list').replaceChildren(...room.round.forbiddenClues.map((clue) => {
+    byId('forbidden-list').replaceChildren(...(visible ? room.round.forbiddenClues : []).map((clue) => {
       const item = document.createElement('li'); item.textContent = clue; return item;
     }));
     byId('clock').hidden = false;
@@ -67,6 +96,7 @@ function render({ configured, room }) {
     byId('play-instruction').textContent = visible ? 'Nudge the conversation. Don’t type the secret word.' : 'Run the round and confirm catches in your broadcaster studio.';
     byId('skip-note').hidden = !visible;
     announce(`round:${room.round.id}:${room.phase}`, visible ? `Round ${room.round.number}. Your word is ${room.round.target}. ${phase}.` : `Round ${room.round.number}. Your viewers have the word. ${phase}.`);
+    deal(room.round.id);
     renderClock();
     return;
   }
@@ -83,7 +113,8 @@ function render({ configured, room }) {
     byId('card').dataset.state = result.outcome === 'review' ? 'review' : 'result';
     byId('card-kicker').textContent = copy[0];
     byId('phase-label').textContent = result.outcome === 'review' ? 'Awaiting confirmation' : 'Round complete';
-    setTitle(result.word);
+    setTitle(result.word, true);
+    setArt(result.word);
     byId('card-detail').textContent = copy[1];
     byId('card-detail').hidden = false;
     byId('forbidden').hidden = true;
@@ -105,7 +136,7 @@ function renderClock() {
   byId('clock-value').textContent = connected ? clock.label : '--';
   byId('clock-value').setAttribute('aria-label', connected ? `${clock.label} remaining` : 'Clock unavailable while reconnecting');
   byId('clock-progress').value = clock.fraction * 100;
-  byId('clock').dataset.urgent = String(connected && current.phase === 'active' && clock.milliseconds <= 10000);
+  byId('clock').dataset.urgent = String(connected && current.phase === 'active' && clock.milliseconds <= 15000);
 }
 
 const client = connectToTwitch({
@@ -115,9 +146,11 @@ const client = connectToTwitch({
     connectionView(status);
     if (['invalid', 'authorization', 'forbidden', 'connecting'].includes(status.kind)) {
       clearCard('Waiting for the word.', status.kind === 'connecting' ? 'Connecting this panel to the round.' : 'The panel needs a current Twitch connection to show a secret.', 'Connecting');
+      byId('card-kicker').textContent = 'Twitch connection';
     }
     if (status.kind === 'reconnecting') {
       byId('phase-label').textContent = 'Reconnecting';
+      byId('card-kicker').textContent = 'Twitch connection';
       byId('card').dataset.state = 'reconnecting';
     }
     renderClock();

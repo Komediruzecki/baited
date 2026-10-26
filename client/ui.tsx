@@ -2,17 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Eye, MessageSquare, Mic, ShieldCheck, X } from './icons';
 
 export const productBrand = (
-  <span className="product-brand" role="img" aria-label="baited">
-    <img
-      className="product-brand__bomb"
-      src="/brand/bait-bomb.png"
-      alt=""
-      width="160"
-      height="160"
-    />
-    <span className="product-brand__name" aria-hidden="true">
-      baited
-    </span>
+  <span className="product-brand" role="img" aria-label="BAITED">
+    <span className="baited-glyph" aria-hidden="true" />
   </span>
 );
 
@@ -74,7 +65,15 @@ export function Modal({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    ref.current?.showModal();
+    const dialog = ref.current;
+    const trigger = document.activeElement;
+    dialog?.showModal();
+    return () => {
+      if (dialog?.open) dialog.close();
+      if (trigger instanceof HTMLElement && trigger.isConnected) {
+        trigger.focus({ preventScroll: true });
+      }
+    };
   }, []);
   return (
     <dialog
@@ -110,7 +109,7 @@ export function HowTo() {
         [
           '02',
           'Chat drops hints.',
-          'Ask questions in Twitch chat. Don’t type the target or its forbidden clues.',
+          'Ask questions in Twitch chat. Keep the secret word and off-limits clues out of chat.',
           MessageSquare,
         ],
         [
@@ -140,7 +139,7 @@ export function HowTo() {
             can’t win an award. The round continues.
           </li>
           <li>
-            <strong>Three-word mission:</strong> Land three targets on one clock. Gaps count. Pause
+            <strong>Three-word mission:</strong> Land three words on one clock. Gaps count. Pause
             freezes it; a skip replaces the word.
           </li>
           <li>

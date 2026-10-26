@@ -19,7 +19,9 @@
     State changes carry meaning; the card holds still while chat plays. -->
     <main class="panel" aria-label="baited viewer panel">
       <header class="masthead">
-        <h1 class="wordmark">baited<span class="brand-stop" aria-hidden="true">.</span></h1>
+        <h1 class="wordmark" aria-label="BAITED">
+          <span class="baited-glyph" aria-hidden="true"></span>
+        </h1>
         <span class="round-index" id="round-index">Chat's secret</span>
       </header>
       <div class="connection" id="connection" role="status" aria-live="polite">
@@ -33,6 +35,7 @@
         </div>
         <div class="card-center">
           <img class="bomb" id="bomb" src="./assets/bait-bomb.png" alt="" width="80" height="80" />
+          <img class="word-art" id="word-art" alt="" width="160" height="126" hidden />
           <h2 class="target" id="card-title">The word is coming.</h2>
           <p class="card-detail" id="card-detail">
             It appears here when the streamer starts a round.

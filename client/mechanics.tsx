@@ -28,7 +28,12 @@ export function MissionStatus({
   const remaining =
     mission.endsAt !== null ? Math.max(0, mission.endsAt - now - offset) : mission.remaining;
   const label = {
-    active: game.phase === 'settling' ? 'CHECKING FINAL WORDS' : game.phase === 'paused' ? 'MISSION PAUSED' : 'THREE-WORD MISSION',
+    active:
+      game.phase === 'settling'
+        ? 'CHECKING FINAL WORDS'
+        : game.phase === 'paused'
+          ? 'MISSION PAUSED'
+          : 'THREE-WORD MISSION',
     complete: 'MISSION COMPLETE',
     failed: 'MISSION TIME UP',
     escaped: 'BAIT CALLED',
@@ -105,7 +110,7 @@ export function GuessForm({
       }}
     >
       <p>
-        Guess the target without saying it aloud. Get it right and you escape
+        Guess the secret word without saying it aloud. Get it right and you escape
         {game.mission ? ' the mission' : ''}. Get it wrong and chat gets 15 extra seconds.
       </p>
       <label>
@@ -273,7 +278,7 @@ export function ForbiddenClueCard({ game }: { game: GameView }) {
     <section className="clue-card" aria-label="Clue rules">
       <div>
         <Eye size={19} />
-        <h3>{clues.length ? 'Don’t type these clues.' : 'No forbidden clues on Easy.'}</h3>
+        <h3>{clues.length ? 'Off limits' : 'Only the word is off limits.'}</h3>
         <span>{game.round.difficulty}</span>
       </div>
       {clues.length > 0 && (
@@ -285,8 +290,8 @@ export function ForbiddenClueCard({ game }: { game: GameView }) {
       )}
       <p>
         {clues.length
-          ? 'Use one (including common plurals or possessives), and that hint can’t win an award.'
-          : 'Use any clue, but keep the target word out of chat.'}{' '}
+          ? 'A hint with one of these, plurals included, can’t win the streamer’s pick.'
+          : 'Use any clue, but keep the secret word out of chat.'}{' '}
         The round carries on for everyone.
       </p>
       {game.violations > 0 && (

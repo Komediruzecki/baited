@@ -1,0 +1,181 @@
+/* One authored payoff: the same charcoal card turns over in Studio and OBS. */
+.result-deal {
+  width: 190px;
+  perspective: 1200px;
+  flex: none;
+}
+.result-card {
+  position: relative;
+  width: 100%;
+  min-height: 266px;
+  transform-style: preserve-3d;
+  animation: result-turn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.result-card__back,
+.result-card__face {
+  border: 1px solid #756383;
+  border-radius: 8px;
+  background: #242426;
+  backface-visibility: hidden;
+  box-shadow: 4px 7px 0 #100d16;
+}
+.result-card__back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  display: grid;
+  place-items: center;
+  color: #c9a8ff;
+  padding: 24px;
+}
+.result-card__back::after {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border: 1px solid #51405e;
+  border-radius: 4px;
+}
+.result-card__back .baited-glyph {
+  width: 100%;
+}
+.result-card__face {
+  min-height: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 20px 16px 14px;
+}
+.result-card__verdict {
+  font:
+    650 10px/1.5 Inter,
+    sans-serif;
+  color: #dedce3;
+}
+.result-card__face .bait-card-art {
+  width: 100%;
+  height: 128px;
+  object-fit: contain;
+  margin: 4px 0 8px;
+  image-rendering: pixelated;
+}
+.result-card__word {
+  max-width: 100%;
+  margin: auto 0 8px;
+  font:
+    400 22px/1.12 'Russo One',
+    sans-serif;
+  letter-spacing: -0.02em;
+  color: #fffc79;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+.result-card__word[data-word-size='medium'] {
+  font-size: 18px;
+}
+.result-card__word[data-word-size='long'] {
+  font-size: 16px;
+}
+.result-card__word[data-word-size='extended'] {
+  font-size: 14px;
+}
+.result-card__outcome {
+  font:
+    600 10px/1.5 Inter,
+    sans-serif;
+  color: #c9a8ff;
+}
+.result-card__signature {
+  width: 100%;
+  border-top: 1px solid #514b59;
+  margin-top: 18px;
+  padding-top: 12px;
+  color: #c9a8ff;
+}
+.result-card__signature .baited-glyph {
+  width: 65px;
+}
+.result-card[data-outcome='caught'] .result-card__face {
+  border-color: #a6a261;
+}
+.result-card[data-outcome='caught'] .result-card__outcome {
+  color: #fffc79;
+}
+.result-card[data-outcome='escaped'] .result-card__word {
+  color: #fffdf7;
+}
+.result-deal--broadcast {
+  position: absolute;
+  top: 200px;
+  left: 40px;
+  width: 300px;
+  animation: broadcast-deal 5500ms linear var(--result-age) both;
+}
+.result-deal--broadcast .result-card {
+  min-height: 420px;
+  animation: result-turn 520ms cubic-bezier(0.22, 1, 0.36, 1) calc(360ms + var(--result-age)) both;
+}
+.result-deal--broadcast .result-card__face {
+  padding: 24px;
+}
+.result-deal--broadcast .bait-card-art {
+  height: 216px;
+}
+.result-deal--broadcast .result-card__verdict {
+  font-size: 13px;
+}
+.result-deal--broadcast .result-card__word {
+  font-size: 38px;
+}
+.result-deal--broadcast .result-card__word[data-word-size='medium'] {
+  font-size: 30px;
+}
+.result-deal--broadcast .result-card__word[data-word-size='long'] {
+  font-size: 23px;
+}
+.result-deal--broadcast .result-card__word[data-word-size='extended'] {
+  font-size: 20px;
+}
+.result-deal--broadcast .result-card__outcome {
+  font-size: 13px;
+}
+@keyframes result-turn {
+  from {
+    transform: rotateY(-180deg);
+  }
+  to {
+    transform: rotateY(0);
+  }
+}
+@keyframes broadcast-deal {
+  0% {
+    opacity: 0;
+    transform: translateY(-110px) scale(0.65) rotate(-7deg);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  6.55% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0);
+  }
+  94.9% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    animation-timing-function: ease-in;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-70px) scale(0.75);
+  }
+}
+@media (max-width: 600px) {
+  .result-deal--broadcast {
+    left: 18px;
+    top: 220px;
+    width: min(260px, calc(100vw - 36px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-deal,
+  .result-card {
+    animation: none !important;
+  }
+}

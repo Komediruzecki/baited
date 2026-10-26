@@ -194,7 +194,8 @@
   font-weight: 550;
   text-decoration: line-through;
   text-decoration-color: #bf96ff;
-  text-decoration-thickness: 1px;
+  text-decoration-thickness: 2px;
+  text-transform: uppercase;
 }
 .viewer-room .target-card > .clue-card p {
   color: #b5afbf;
@@ -505,17 +506,8 @@
   margin: 0;
 }
 .obs-hud .product-brand {
-  --product-mark-size: 35px;
-  display: inline-flex;
-  gap: 7px;
+  width: 90px;
   margin: 0;
-  font-family: var(--bait-display);
-  font-size: 24px;
-}
-.obs-hud .product-brand__bomb {
-  display: none;
-}
-.obs-hud .product-brand__name {
   color: #fffc79;
 }
 .obs-hud .obs-message {
@@ -642,74 +634,6 @@
 }
 .obs-root > .public-award small {
   color: #c7c2cf;
-}
-.obs-celebration {
-  top: 28vh;
-  left: 50%;
-  right: auto;
-  width: min(760px, calc(100vw - 80px));
-  padding: 32px 36px;
-  transform: translateX(-50%);
-  border: 1px solid #c9a8ff;
-  border-radius: 16px;
-  background: #6022ae;
-  color: #fffdf7;
-  box-shadow: 0 18px 36px -16px #0009;
-  animation: public-result-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.obs-celebration > span {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: #e3d0ff;
-}
-.obs-celebration h1 {
-  font-family: var(--bait-display);
-  font-size: 80px;
-  font-weight: 400;
-  line-height: 1.08;
-  letter-spacing: -0.025em;
-  margin: 14px 0 20px;
-  color: #fffdf7;
-}
-.obs-celebration h1 > span {
-  color: #fffc79;
-}
-.obs-celebration > p {
-  color: #fffc79;
-  font-size: 14px;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-}
-.obs-escape {
-  bottom: 12vh;
-  max-width: calc(100vw - 80px);
-  padding: 20px 26px;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px 20px;
-  transform: translateX(-50%);
-  border: 1px solid #82778e;
-  border-radius: 10px;
-  background: #242426;
-  box-shadow: 0 12px 28px -12px #0009;
-  animation: public-result-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.obs-escape > strong {
-  max-width: 100%;
-  font-family: var(--bait-display);
-  font-size: 36px;
-  font-weight: 400;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: #fffdf7;
-  overflow-wrap: anywhere;
-}
-.obs-escape > span,
-.obs-escape > small {
-  color: #c9a8ff;
-  font-size: 11px;
-  letter-spacing: 0.04em;
 }
 .overlay-error {
   flex-wrap: wrap;
@@ -951,5 +875,31 @@
   .viewer-room .confetti,
   .obs-root .confetti {
     display: none;
+  }
+}
+
+.viewer-room .target-display:not(:has(.bait-card-art)):not(:has(.waiting-eyes)),
+.viewer-room .target-card:has(> .clue-card) .target-display:not(:has(.bait-card-art)) {
+  min-height: 0;
+  justify-content: flex-start;
+}
+.viewer-room .target-display h2[data-word-size='medium'] {
+  font-size: 38px;
+}
+.viewer-room .target-display h2[data-word-size='long'] {
+  font-size: 30px;
+}
+.viewer-room .target-display h2[data-word-size='extended'] {
+  font-size: 24px;
+}
+@media (max-width: 560px) {
+  .viewer-room .target-display h2[data-word-size='medium'] {
+    font-size: 28px;
+  }
+  .viewer-room .target-display h2[data-word-size='long'] {
+    font-size: 22px;
+  }
+  .viewer-room .target-display h2[data-word-size='extended'] {
+    font-size: 18px;
   }
 }

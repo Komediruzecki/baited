@@ -4,12 +4,15 @@ import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { proofWords } from '../extension/presentation.js';
 
 export const EXTENSION_FILES = Object.freeze([
   'viewer.html', 'config.html', 'styles.css', 'runtime-config.js',
-  'client.js', 'viewer.js', 'config.js',
+  'client.js', 'viewer.js', 'config.js', 'presentation.js',
   'assets/bait-bomb.png', 'assets/inter-latin.woff2', 'assets/russo-one.ttf',
   'assets/Inter-OFL.txt', 'assets/RussoOne-OFL.txt',
+  'assets/baited-wordmark-b.png',
+  ...proofWords.map((word) => `assets/card-${word}.png`),
 ]);
 export const HELPER_URL = 'https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js';
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');

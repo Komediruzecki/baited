@@ -2,7 +2,26 @@
 
 The owner approved the landing release and asked us to extend its taste into the game while Opus usage is unavailable. This pass implements the actual product surfaces for local review. It does not deploy the game or release the Twitch Extension.
 
-## Direction
+## Current status: 2026-10-26
+
+Opus completed the requested inspect-only review on 2026-10-25. Its product critique is Part 2 of `/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/60103fe0ce074c16ab35de66e1dc26b2/deliverables/opus-motion-and-product-review.md`. It inspected the actual product code and screenshots, not only the landing. The initial product redesign was implemented by Codex; Opus supplied the subsequent critique and concrete polish direction.
+
+Commit `882359a` addressed the live solo-reveal gate and pending-catch overlay redaction first. The separately opted-in local transcript diagnostic remains available for microphone testing, as requested by the owner.
+
+The next polish was implemented by Codex while Opus usage was unavailable, following that completed critique and the owner-approved BAITED logo B:
+
+- Studio timer and primary round controls precede the card; the 320 × 640 layout keeps start/pause within the first viewport. Local speech tools sit beside the microphone.
+- Catch review uses a charcoal card and two explicit decisions. Settings return focus to their opener after closing.
+- Native viewers use the word's approved artwork, struck capital off-limits clues, length-based word sizing and a short deal animation. Hidden/broadcaster states remove the artwork URL.
+- OBS retains the compact transparent HUD and reveals a result card only for confirmed wins or escapes. Singular/plural wins are corrected.
+- Generic standalone cards collapse the absent illustration area. Setup privacy text and actions remain readable on narrow screens; the native connection refresh sits beside its status and activation is step 4.
+- BAITED B replaces the provisional product wordmark. Existing artwork is copied without alteration.
+
+Local evidence and the installable, unuploaded ZIP are in `/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-26/18e81898621d49429a0b37f38d44ba6b`. Read `evidence/product-polish-verification.md` for the exact checks and limitations. The bundle contains 32 frontend files, 12,177,521 bytes, and no fixture Helper, backend, secrets or Moonshine models. It targets the existing local HTTPS rehearsal. No game deployment or production tag is part of this pass.
+
+The local suite passes 188 tests, including OBS result privacy, native artwork cleanup and pluralization. The build passes. Local browser checks cover demo start/pause/resume, simulated catch confirmation, 320 px layouts, generic and long words, keyboard settings and reduced motion. They do not establish real Twitch installation, microphone accuracy, actual OBS capture or remote participation. A new Opus acceptance critique remains optional when quota returns; do not describe this implementation as newly reviewed by Opus.
+
+## Original direction and review brief
 
 The visual authority is the approved landing in `/home/maff/foss/worktrees/disjoint-colliders/bait-dev-landing/packages/bait/site`, released as `bait-v1.1.0`. Carry forward charcoal playing cards, violet `#9146FF`, restrained pale yellow `#FFFC79`, Russo One for the brand and card words, and Inter for controls. Use the existing approved bomb. The textual `baited` lockup is provisional; this work does not replace the approved mascot or commission a new identity.
 

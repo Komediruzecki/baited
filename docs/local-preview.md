@@ -1,37 +1,44 @@
-# Local preview handoff
+# Local product preview
 
-This preview runs the compiled application with local Moonshine speech and optional simulated Twitch/chat/speech input. It is not a deployment or a real Twitch acceptance test.
+Use the private checkout at `/home/maff/foss/worktrees/twigame/baited-v0.0.1`, branch `feat/baited-v0.0.1`. The original imported source remains separate. Checkpoints go to [Komediruzecki/bait](https://github.com/Komediruzecki/bait); pushing this branch does not deploy the game.
 
-Working checkout: `/home/maff/foss/worktrees/twigame/bait-preview` on `feat/bait-preview`. The original imported source remains separate. The owner-authorized private remote is [Komediruzecki/bait](https://github.com/Komediruzecki/bait); remote checkpoints do not deploy the application.
-
-Build from any directory:
+Build from any directory after source or asset changes:
 
 ```sh
-rtk pnpm --dir /home/maff/foss/worktrees/twigame/bait-preview build
+rtk proxy pnpm --dir /home/maff/foss/worktrees/twigame/baited-v0.0.1 build
 ```
 
-Start or restart from any directory after the previous instance has stopped:
+## Streamer Studio and standalone room
+
+Start in its own terminal, after the previous instance has stopped:
 
 ```sh
-rtk proxy timeout 10810 env PREVIEW_PORT=3318 PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/twigame/bait-preview preview:local
+rtk proxy timeout --foreground 10810s env PREVIEW_PORT=3330 PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/twigame/baited-v0.0.1 preview:local
 ```
 
-Open `http://127.0.0.1:3318`. The script uses a strict loopback port, clears Twitch/Deepgram credentials, the encryption key and proxy trust for the child process, and refuses a checkout containing `.env`. It stops after three hours; Ctrl+C stops it earlier. An occupied port is an error, not a request to kill another process. Restart only this preview through its own terminal. `PREVIEW_SECONDS` must be between 60 and 18,000; values outside that range are rejected, so five hours is the longest allowed run.
+Open [the local app](http://127.0.0.1:3330/) and choose **Try the local demo** if prompted. Start, pause and resume a round. The viewer-room and OBS links are available in **Stream setup**. Both are scoped to this demo room. **Local speech test** beside the microphone contains the explicit demo word reveal and optional transcript display.
 
-The process must actually respond before its URL is reported ready. Its launch and browser results are recorded in `validation.md`; the presence of this command alone does not prove it is running.
+This helper uses local Moonshine and clears Twitch/Deepgram credentials, the encryption key and proxy trust from the child environment. It refuses a checkout containing `.env`. Simulated hints and speech are available in Demo controls. Actual microphone recognition requires the owner's microphone consent; a simulated catch does not prove transcription accuracy.
 
-Use Try the local demo, open the viewer page separately, send a simulated hint and transcript, then inspect the reveal, award, pause/resume and reversal. The OBS view can be inspected in a browser, but actual OBS capture remains a separate gate.
+Additional review surfaces:
 
-## Card and sound review
+- [18 card proofs and opt-in Sound Lab](http://127.0.0.1:3330/card-proofs)
+- [Repeatable speech benchmark](http://127.0.0.1:3330/speech-lab)
 
-Open **http://127.0.0.1:3318/card-proofs** for all eighteen illustrations, staged reveals and opt-in Sound Lab cues. Open **http://127.0.0.1:3318/speech-lab** for the repeatable WAV benchmark. The studio supports real local microphone recognition after consent, with broadcaster confirmation before a Moonshine catch scores.
+## Native Twitch viewer and configuration
 
-The separate landing study runs from source on a strict loopback port:
+Start in a second terminal:
 
 ```sh
-rtk proxy timeout 10810 env CONCEPT_PORT=3319 CONCEPT_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/twigame/bait-preview preview:concept
+rtk proxy timeout --foreground 10810s env EXTENSION_PREVIEW_PORT=3322 EXTENSION_PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/twigame/baited-v0.0.1 preview:extension
 ```
 
-Open **http://127.0.0.1:3319/**. This helper also stops after three hours or Ctrl+C. The landing links to the card review on port 3318, so run both for the complete local preview. Rebuilding the app is required after code or card-asset changes; the landing helper reads its source files directly.
+Open [the Extension workbench](http://127.0.0.1:3322/). Choose viewer/configuration, panel width and the fixture state. This serves the actual Extension HTML, CSS, JavaScript and artwork, with a local fixture replacing Twitch authorization and game responses. It does not sign into Twitch, capture a microphone or change the real channel. The fixture Helper and workbench are excluded from the installable ZIP.
 
-See [the measured Moonshine rehearsal](moonshine-rehearsal.md) and [OBS workload scope](obs-load-probe.md). Existing public landing content was not updated in this pass.
+## Lifecycle and acceptance boundary
+
+Both commands bind only to `127.0.0.1`, use a strict port and stop after three hours. **Ctrl+C** stops the corresponding process sooner. An occupied port is an error: stop this preview through its own terminal before restarting; do not kill unrelated services. These previews are not reachable from Paolo's computer. A command in this document is not proof of a running process; verify the URL responds after launch.
+
+The separate real Twitch rehearsal uses the authenticated local Studio at port 3000 and HTTPS gateway at 3443. The local installable bundle targets those addresses, not this visual preview. Follow [the local Twitch test guide](baited-local-test.md) when ready to resume that session. Creating the ZIP does not upload it or start the gateway.
+
+Real Twitch installation, Paolo joining remotely, physical phone behavior, actual microphone accuracy and the OBS scene remain separate acceptance checks. The landing is maintained in `disjoint-colliders/packages/bait`; these commands preview the game and Extension.

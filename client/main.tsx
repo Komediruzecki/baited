@@ -37,6 +37,8 @@ import { Microphone } from './microphone';
 import { SpeechLab } from './SpeechLab';
 import CardProofs from './CardProofs';
 import { CardArt } from './CardArt';
+import { ResultCard } from './ResultCard';
+import { wordSize, winLabel } from '../extension/presentation.js';
 import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
@@ -57,6 +59,7 @@ import {
 } from './transcript-preview';
 import './transcript-preview.css';
 import './product-brand.css';
+import './result-card.css';
 import './studio-refresh.css';
 import './public-refresh.css';
 
@@ -413,8 +416,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               {demo ? 'D' : session.user?.name.slice(0, 1).toUpperCase()}
             </div>
             <div>
-              <strong>{demo ? 'Demo studio' : session.user?.name}</strong>
-              <span>{demo ? 'LOCAL DEMO' : 'TWITCH CONNECTED'}</span>
+              <strong>{demo ? 'Your studio' : session.user?.name}</strong>
+              {!demo && <span>TWITCH CONNECTED</span>}
             </div>
             <button className="icon-button" aria-label="Sign out" onClick={() => void logOut()}>
               <LogOut size={16} />
@@ -465,23 +468,27 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     : 'Connect your channel, check your mic, then bring chat in.'}
               </p>
             </div>
-            <Button className="secondary" disabled={settling} onClick={() => setModal('settings')}>
-              <Settings2 size={16} /> Game settings
+            <Button
+              className="secondary game-settings-button"
+              aria-label="Game settings"
+              disabled={settling}
+              onClick={() => setModal('settings')}
+            >
+              <Settings2 size={16} /> <span>Game settings</span>
             </Button>
           </div>
           {demo && (
             <div className="rehearsal-banner">
               <span>
                 <Terminal size={15} />
-                <strong>Demo mode</strong> Twitch is not connected. Chat is simulated; microphone
-                recognition can be tested locally.
+                <strong>Local demo.</strong> Simulated chat. Test your mic here.
               </span>
               <button
                 onClick={() =>
                   session.twitchReady ? location.assign('/auth/twitch') : setModal('twitch')
                 }
               >
-                Set up Twitch <ArrowUpRight size={14} />
+                Connect Twitch <ArrowUpRight size={14} />
               </button>
             </div>
           )}
@@ -530,145 +537,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                   : 'SETUP NEEDED'}
                     </Tag>
                   </div>
-                  <div className="mission-center">
-                    {!active && !paused && !settling && g.result ? (
-                      <>
-                        <span className="small-label">
-                          {pendingCatch
-                            ? 'CHECK THIS CATCH'
-                            : g.result.outcome === 'caught'
-                              ? g.mission?.status === 'complete'
-                                ? 'MISSION COMPLETE'
-                                : 'CHAT WINS'
-                              : g.result.outcome === 'escaped'
-                                ? g.result.reason === 'guess'
-                                  ? 'YOU CALLED THE BAIT'
-                                  : 'TIME UP'
-                                : g.result.outcome === 'overturned'
-                                  ? 'CATCH REJECTED'
-                                  : 'ROUND ENDED'}
-                        </span>
-                        <h2 className="revealed-word">
-                          {g.result.word}
-                          <span>{g.result.outcome === 'caught' ? '.' : '?'}</span>
-                        </h2>
-                        <p>
-                          {pendingCatch
-                            ? 'Moonshine heard this word. Did you say it? The round is stopped; the score has not changed.'
-                            : g.result.outcome === 'caught'
-                              ? `Detected after ${g.result.elapsed} seconds.`
-                              : g.result.outcome === 'overturned'
-                                ? 'That catch does not count. The next round gets a new word.'
-                                : g.result.reason === 'guess'
-                                  ? 'Correct guess. You escaped.'
-                                  : 'Start a new round when you’re ready.'}
-                        </p>
-                        {pendingCatch && (
-                          <div className="round-actions" aria-label="Confirm speech result">
-                            <Button
-                              className="primary"
-                              disabled={busy || offline}
-                              onClick={() => void decideCatch('confirm')}
-                            >
-                              Confirm catch
-                            </Button>
-                            <Button
-                              className="secondary"
-                              disabled={busy || offline}
-                              onClick={() => void decideCatch('reject')}
-                            >
-                              Not said
-                            </Button>
-                          </div>
-                        )}
-                        {g.result.outcome === 'caught' && (
-                          <button
-                            className="undo-button"
-                            disabled={busy}
-                            onClick={() => void action('reverse')}
-                          >
-                            <RotateCcw size={13} /> Wrong detection? Reverse win
-                          </button>
-                        )}
-                        {g.result.outcome === 'caught' && studio.awardBoard && (
-                          <a href="#award-review" className="text-button">
-                            {g.result.award ? 'Change the award' : 'Choose “You baited me” award'}
-                            <ChevronDown size={16} />
-                          </a>
-                        )}
-                        <PublicAward award={g.result.award} />
-                      </>
-                    ) : (
-                      <>
-                        <div
-                          className={cx('secret-card-back', active && 'in-play')}
-                          aria-hidden="true"
-                        >
-                          <img src="/brand/bait-bomb.png" alt="" width="88" height="102" />
-                          <span className="card-back-wordmark">baited</span>
-                        </div>
-                        <h2>
-                          {settling
-                            ? 'Checking final words'
-                            : active
-                              ? 'Chat has the word.'
-                              : paused
-                                ? 'Round paused'
-                                : 'Ready when chat is.'}
-                        </h2>
-                        <p>
-                          {settling
-                            ? 'The clock has stopped. Checking speech from before the buzzer.'
-                            : active
-                              ? 'Keep streaming. Viewers will try to steer the conversation.'
-                              : paused
-                                ? 'The timer and speech detection are paused.'
-                                : demo
-                                  ? 'Share the viewer link and try a round with simulated chat and speech.'
-                                  : 'Share the viewer link, enable your microphone, and start a round.'}
-                        </p>
-                        {!offline &&
-                        (active || paused || settling) &&
-                        g.round &&
-                        canRevealSoloTarget(window.location.hostname, g.mode) ? (
-                          <SoloTarget
-                            key={`${g.id}:${g.round.id}`}
-                            roomId={g.id}
-                            roundId={g.round.id}
-                            phase={g.phase}
-                          />
-                        ) : (
-                          <div className="secret-capsule">
-                            <ShieldCheck size={15} />
-                            <span>The target stays hidden in your studio.</span>
-                          </div>
-                        )}
-                        {(active || paused) && g.round?.guessEnabled && (
-                          <div className="guess-control">
-                            {g.round.guessUsed ? (
-                              <p className="guess-used">
-                                Guess used. Chat got {g.round.wrongGuessBonus} extra seconds.
-                              </p>
-                            ) : (
-                              <Button
-                                className="secondary"
-                                disabled={!active || busy || offline}
-                                onClick={() => setModal('guess')}
-                              >
-                                <Target size={16} />
-                                Call the bait
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
                   <div className="round-console">
                     <div className="timer-block">
                       <span className="small-label">
                         {pendingCatch
-                          ? 'ROUND STOPPED'
+                          ? 'ROUND'
                           : cool
                             ? g.mission?.status === 'active'
                               ? 'NEXT WORD'
@@ -681,9 +554,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                 ? 'SESSION TIMER'
                                 : 'ROUND TIMER'}
                       </span>
-                      <div className={cx('timer', active && ms < 15000 && 'urgent')}>
+                      <div
+                        className={cx(
+                          'timer',
+                          active && ms < 15000 && 'urgent',
+                          pendingCatch && 'timer-stopped',
+                        )}
+                      >
                         {pendingCatch
-                          ? '—:—'
+                          ? 'Stopped'
                           : cool
                             ? fmt(next)
                             : active || paused || settling
@@ -695,7 +574,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                 )}
                         <span>
                           {pendingCatch
-                            ? 'CONFIRM CATCH ABOVE'
+                            ? 'CHECK THE CARD BELOW'
                             : cool
                               ? g.settings.auto
                                 ? 'AUTO START'
@@ -704,18 +583,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         </span>
                       </div>
                     </div>
-                    <div className="round-actions">
-                      {pendingCatch ? (
-                        <Button className="primary" disabled>
-                          Waiting for your decision
-                        </Button>
-                      ) : settling ? (
-                        <Button className="primary" disabled>
+                    <div className="round-actions" hidden={pendingCatch}>
+                      {settling ? (
+                        <Button className={demo || consent ? 'primary' : 'secondary'} disabled>
                           <Timer size={16} /> Checking final words
                         </Button>
                       ) : active ? (
                         <Button
-                          className="primary"
+                          className={demo || consent ? 'primary' : 'secondary'}
                           disabled={busy || offline}
                           onClick={() => void action('pause')}
                         >
@@ -723,7 +598,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         </Button>
                       ) : paused ? (
                         <Button
-                          className="primary"
+                          className={demo || consent ? 'primary' : 'secondary'}
                           disabled={busy || offline || !readyToBegin}
                           onClick={() => void action('resume')}
                         >
@@ -731,7 +606,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         </Button>
                       ) : (
                         <Button
-                          className="primary"
+                          className={demo || consent ? 'primary' : 'secondary'}
                           disabled={busy || offline || !canStart || !readyToBegin}
                           onClick={() => void action('start')}
                         >
@@ -767,43 +642,159 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       )}
                     </div>
                   </div>
-                  <div className="round-readiness" role="status">
-                    {demo ? (
-                      <>
-                        <Terminal size={15} />
-                        <span>Demo round. No microphone or Twitch connection needed.</span>
-                      </>
+                  <div
+                    className={cx('mission-center', cool && !!g.result && 'mission-center--result')}
+                  >
+                    {!active && !paused && !settling && g.result ? (
+                      <div className="studio-result" key={`${g.result.id}:${g.result.outcome}`}>
+                        <ResultCard result={g.result} />
+                        <div className="studio-result__decision" role="status" aria-live="polite">
+                          <h2>
+                            {pendingCatch
+                              ? 'Did you say it?'
+                              : g.result.outcome === 'caught'
+                                ? 'Chat got you.'
+                                : g.result.outcome === 'escaped'
+                                  ? 'You got away.'
+                                  : g.result.outcome === 'overturned'
+                                    ? 'Catch reversed.'
+                                    : 'Round over.'}
+                          </h2>
+                          <p>
+                            {pendingCatch
+                              ? `${studio.speechProvider === 'moonshine' ? 'Moonshine' : 'Speech recognition'} heard this word. The clock is stopped until you answer.`
+                              : g.result.outcome === 'caught'
+                                ? `You said it after ${g.result.elapsed} ${g.result.elapsed === 1 ? 'second' : 'seconds'}.`
+                                : g.result.outcome === 'overturned'
+                                  ? 'That catch does not count. The next round gets a new word.'
+                                  : g.result.reason === 'guess'
+                                    ? 'Correct guess. You escaped.'
+                                    : 'A new word is ready when you are.'}
+                          </p>
+                          {pendingCatch && (
+                            <div className="round-actions" aria-label="Confirm speech result">
+                              <Button
+                                className="primary"
+                                disabled={busy || offline}
+                                onClick={() => void decideCatch('confirm')}
+                              >
+                                Yes, chat wins
+                              </Button>
+                              <Button
+                                className="secondary"
+                                disabled={busy || offline}
+                                onClick={() => void decideCatch('reject')}
+                              >
+                                No, I didn't
+                              </Button>
+                            </div>
+                          )}
+                          {g.result.outcome === 'caught' && (
+                            <button
+                              className="undo-button"
+                              disabled={busy || offline}
+                              onClick={() => void action('reverse')}
+                            >
+                              <RotateCcw size={13} /> Wrong detection? Reverse win
+                            </button>
+                          )}
+                          {g.result.outcome === 'caught' && studio.awardBoard && (
+                            <a href="#award-review" className="text-button">
+                              {g.result.award ? 'Change the award' : 'Choose “You baited me” award'}
+                              <ChevronDown size={16} />
+                            </a>
+                          )}
+                          <PublicAward award={g.result.award} />
+                        </div>
+                      </div>
                     ) : (
                       <>
-                        <span className={connected ? 'ready-check' : ''}>
-                          {connected ? <Check size={15} /> : <Wifi size={15} />} Twitch{' '}
-                          {connected ? 'connected' : 'disconnected'}
-                        </span>
-                        <span className={consent ? 'ready-check' : ''}>
-                          {consent ? <Mic size={15} /> : <MicOff size={15} />}
+                        <div
+                          className={cx('secret-card-back', active && 'in-play')}
+                          aria-hidden="true"
+                        >
+                          <img src="/brand/bait-bomb.png" alt="" width="88" height="102" />
+                          <span className="card-back-wordmark baited-glyph" />
+                        </div>
+                        <h2>
                           {settling
-                            ? 'Finishing speech check'
-                            : micStatus === 'listening'
-                              ? 'Speech live'
-                              : consent
-                                ? 'Microphone armed'
-                                : !studio.speechReady
-                                  ? 'Speech setup needed'
-                                  : 'Microphone off'}
-                        </span>
-                        {!consent && (
-                          <button
-                            type="button"
-                            disabled={offline || settling}
-                            onClick={() => void enableMic()}
-                          >
-                            {studio.speechReady ? 'Enable microphone' : 'Set up speech'}{' '}
-                            <ArrowUpRight size={14} />
-                          </button>
+                            ? 'Checking final words'
+                            : active
+                              ? 'Chat has the word.'
+                              : paused
+                                ? 'Round paused'
+                                : 'Ready when chat is.'}
+                        </h2>
+                        <p>
+                          {settling
+                            ? 'The clock has stopped. Checking speech from before the buzzer.'
+                            : active
+                              ? 'Keep streaming. Viewers will try to steer the conversation.'
+                              : paused
+                                ? 'The timer and speech detection are paused.'
+                                : demo
+                                  ? 'Open the viewer room and try a round. Local speech tests are beside your microphone.'
+                                  : 'Share the viewer link, enable your microphone, and start a round.'}
+                        </p>
+                        <div className="secret-capsule">
+                          <ShieldCheck size={15} />
+                          <span>Only chat sees the secret word.</span>
+                        </div>
+                        {(active || paused) && g.round?.guessEnabled && (
+                          <div className="guess-control">
+                            {g.round.guessUsed ? (
+                              <p className="guess-used">
+                                Guess used. Chat got {g.round.wrongGuessBonus} extra seconds.
+                              </p>
+                            ) : (
+                              <Button
+                                className="secondary"
+                                disabled={!active || busy || offline}
+                                onClick={() => setModal('guess')}
+                              >
+                                <Target size={16} />
+                                Call the bait
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </>
                     )}
                   </div>
+                  {!demo && (
+                    <div className="round-readiness" role="status">
+                      {
+                        <>
+                          <span className={connected ? 'ready-check' : ''}>
+                            {connected ? <Check size={15} /> : <Wifi size={15} />} Twitch{' '}
+                            {connected ? 'connected' : 'disconnected'}
+                          </span>
+                          <span className={consent ? 'ready-check' : ''}>
+                            {consent ? <Mic size={15} /> : <MicOff size={15} />}
+                            {settling
+                              ? 'Finishing speech check'
+                              : micStatus === 'listening'
+                                ? 'Speech live'
+                                : consent
+                                  ? 'Microphone armed'
+                                  : !studio.speechReady
+                                    ? 'Speech setup needed'
+                                    : 'Microphone off'}
+                          </span>
+                          {!consent && (
+                            <button
+                              type="button"
+                              disabled={offline || settling}
+                              onClick={() => void enableMic()}
+                            >
+                              {studio.speechReady ? 'Enable microphone' : 'Set up speech'}{' '}
+                              <ArrowUpRight size={14} />
+                            </button>
+                          )}
+                        </>
+                      }
+                    </div>
+                  )}
                   <div className="round-progress">
                     <div
                       style={{ width: `${active || paused ? progress * 100 : cool ? 0 : 100}%` }}
@@ -822,7 +813,6 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           : 'MANUAL ROUNDS'}
                     </span>
                   </div>
-                  {cool && g.result?.outcome === 'caught' && <Confetti />}
                 </section>
                 <section className="mic-card">
                   <div className="card-heading">
@@ -833,7 +823,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     <div className="mic-icon">
                       {consent ? <Mic size={28} /> : <MicOff size={28} />}
                     </div>
-                    <div className="waveform" aria-hidden="true">
+                    <div className="waveform" aria-hidden="true" hidden={!consent}>
                       {Array.from({ length: 23 }, (_, i) => (
                         <i
                           key={i}
@@ -870,7 +860,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                             : 'Listening for complete words. Audio is streamed to Deepgram.'
                           : consent
                             ? 'Mic enabled. Recognition starts with the next active round.'
-                            : 'Enable your microphone to check for the target word.'}
+                            : 'Enable your microphone to listen for the secret word.'}
                   </p>
                   {studio.speechProvider === 'moonshine' && (
                     <p className="mic-review-note">
@@ -878,7 +868,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     </p>
                   )}
                   <Button
-                    className={consent ? 'secondary' : 'light'}
+                    className={!demo && !consent ? 'primary' : 'secondary'}
                     disabled={offline || settling}
                     onClick={() =>
                       consent || micStatus.startsWith('Loading Moonshine')
@@ -899,6 +889,17 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       ? 'MIC INPUT ONLY · NO AUDIO STORAGE'
                       : 'SPEECH SETUP NEEDED'}
                   </div>
+                  {!offline &&
+                    (active || paused || settling) &&
+                    g.round &&
+                    canRevealSoloTarget(window.location.hostname, g.mode) && (
+                      <SoloTarget
+                        key={`${g.id}:${g.round.id}`}
+                        roomId={g.id}
+                        roundId={g.round.id}
+                        phase={g.phase}
+                      />
+                    )}
                   {studio.speechProvider === 'moonshine' &&
                     canPreviewTranscript(window.location.hostname, g.mode) && (
                       <TranscriptPreview
@@ -950,7 +951,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     </div>
                     <Link2 size={21} />
                   </div>
-                  <p>Post this link in Twitch chat. It reveals the target to viewers.</p>
+                  <p>Post this link in Twitch chat. It reveals the secret word to viewers.</p>
                   <div className="link-field">
                     <input aria-label="Viewer room link" readOnly value={studio.viewerUrl} />
                     <CopyButton value={studio.viewerUrl} />
@@ -1589,10 +1590,9 @@ function Setup({
             <div className="setup-step-body">
               <div className="setup-step-heading">
                 <h2>Add the OBS overlay</h2>
-                <span className="setup-size">1920 × 1080</span>
               </div>
               <p className="muted">
-                Add a Browser Source in OBS, paste this URL and use the dimensions above. The
+                Add a Browser Source in OBS, paste this URL and set it to 1920 × 1080. The
                 background is transparent. The active word stays hidden.
               </p>
               <div className="link-field">
@@ -1613,7 +1613,6 @@ function Setup({
             <div className="setup-step-body">
               <div className="setup-step-heading">
                 <h2>Bring chat into the game</h2>
-                <Tag tone="muted">Viewer room</Tag>
               </div>
               <p className="muted">
                 Share this standalone viewer-room link in Twitch chat or a channel panel. Viewers
@@ -1769,30 +1768,22 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
           <MissionStatus compact game={g} now={now} offset={offset.current} />
           <div className="obs-score">
             <Trophy size={15} />
-            {g.score.wins} WINS<span>·</span>
+            {winLabel(g.score.wins)}
+            <span>·</span>
             <Flame size={15} />
-            {g.score.streak} STREAK
+            STREAK {g.score.streak}
           </div>
         </div>
-        {won && now + offset.current - g.result!.at < 5500 && (
-          <div className="obs-celebration">
-            <Confetti />
-            <span>THEY SAID IT.</span>
-            <h1>
-              {g.result!.word}
-              <span>!</span>
-            </h1>
-            <p>CHAT WINS</p>
-          </div>
-        )}
         {finished &&
-          g.result?.outcome === 'escaped' &&
-          now + offset.current - g.result.at < 5000 && (
-            <div className="obs-escape">
-              <span>THE STREAMER ESCAPED.</span>
-              <strong>{g.result.word}</strong>
-              <small>{g.result.reason === 'guess' ? 'BAIT CALLED' : 'TIME’S UP'}</small>
-            </div>
+          g.result &&
+          ['caught', 'escaped'].includes(g.result.outcome) &&
+          now + offset.current - g.result.at < 5500 && (
+            <ResultCard
+              key={`${g.result.id}:${g.result.outcome}`}
+              result={g.result}
+              broadcast
+              age={now + offset.current - g.result.at}
+            />
           )}
       </div>
     );
@@ -1856,7 +1847,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
         <div className="viewer-game">
           <section className={cx('target-card', won && 'target-win')}>
             <div className="card-heading">
-              <span className="small-label">{finished ? 'THE REVEAL' : 'YOUR SECRET TARGET'}</span>
+              <span className="small-label">{finished ? 'THE REVEAL' : 'YOUR SECRET WORD'}</span>
               <Tag tone={active ? 'lime' : 'muted'}>
                 {active
                   ? 'LIVE'
@@ -1891,19 +1882,19 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
                   <span className="target-number">
                     ROUND {String(g.round?.number).padStart(2, '0')}
                   </span>
-                  <h2>
+                  <h2 data-word-size={wordSize(g.round?.target)}>
                     {g.round?.target}
                     <span>.</span>
                   </h2>
                   <p>
                     {settling
                       ? 'Only words spoken before the buzzer can count.'
-                      : 'Use hints in Twitch chat. Keep the target out of your messages.'}
+                      : 'Nudge the conversation. Keep the secret word out of chat.'}
                   </p>
                 </>
               ) : finished ? (
                 <>
-                  <h2>
+                  <h2 data-word-size={wordSize(g.result?.word)}>
                     {g.result?.word}
                     <span>{won ? '!' : '.'}</span>
                   </h2>
@@ -1915,7 +1906,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
                         : g.result?.outcome === 'overturned'
                           ? 'The detection was reversed. A fresh word is up next.'
                           : won
-                            ? `Target detected after ${g.result?.elapsed} seconds.`
+                            ? `They said it after ${g.result?.elapsed} ${g.result?.elapsed === 1 ? 'second' : 'seconds'}.`
                             : 'Round finished. Wait for the streamer to start the next one.'}
                   </p>
                 </>
@@ -1975,7 +1966,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             </div>
             <div>
               <span>02</span>
-              <p>Keep the target and any forbidden clues out of Twitch chat.</p>
+              <p>Keep the word and the off-limits clues out of chat.</p>
             </div>
             <div>
               <span>03</span>

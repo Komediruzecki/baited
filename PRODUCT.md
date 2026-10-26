@@ -33,9 +33,9 @@ The current build has an external streamer studio connected to Twitch chat throu
 
 ## Brand Commitments
 
-Product name: baited. The landing retains its approved BAIT identity. Reuse the approved bomb asset and a provisional Russo One baited wordmark for product screens. The supplied bomb direction is an orange pixel-art bomb with hooked fuse, angular bait lettering, and a censored-symbol band. Violet #9146FF, restrained yellow #FFFC79 and charcoal remain accepted colors.
+Product name: baited. Use the owner-approved BAITED wordmark B from the landing for product mastheads, card backs and result signatures. Reuse the approved bomb asset where a mascot is useful. The supplied bomb direction is an orange pixel-art bomb with hooked fuse, angular bait lettering, and a censored-symbol band. Violet #9146FF, restrained yellow #FFFC79 and charcoal remain accepted colors.
 
-The approved landing in disjoint-colliders/packages/bait is the current visual reference. Extend its typography, charcoal playing cards and violet accents into useful product controls. Keep each surface's information boundary: secret card for viewers, round and microphone controls for the streamer, compact transparent broadcast graphics for OBS. Opus will critique the implemented product screens before further polish. Use product-voice for visible language.
+The approved landing in disjoint-colliders/packages/bait is the current visual reference. Extend its typography, charcoal playing cards and violet accents into useful product controls. Keep each surface's information boundary: secret card for viewers, round and microphone controls for the streamer, compact transparent broadcast graphics for OBS. Opus completed an evidence-based product critique on 2026-10-25. Codex applied the next product polish on 2026-10-26 while Opus usage was unavailable; this is not a new Opus acceptance review. See docs/product-design-review.md. Use product-voice for visible language.
 
 ## Evidence on Hand
 

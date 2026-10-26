@@ -346,6 +346,25 @@
   line-height: 1.65;
   max-width: 49ch;
 }
+.studio-app .studio-result {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+  width: 100%;
+}
+.studio-app .studio-result__decision {
+  min-width: 0;
+}
+.studio-app .studio-result__decision > p {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #c2bacb;
+  margin: 12px 0 18px;
+}
+.studio-app .studio-result__decision .round-actions > .button {
+  flex: 1 1 150px;
+}
 .studio-app .secret-card-back {
   position: absolute;
   top: 32px;
@@ -373,6 +392,7 @@
   position: relative;
 }
 .studio-app .card-back-wordmark {
+  width: 72px;
   font-family: var(--bait-display);
   color: #d1b0ff;
   font-size: 20px;
@@ -440,7 +460,8 @@
 }
 .studio-app .round-console {
   padding: 22px 28px;
-  border-color: #46404e;
+  border: 0;
+  border-bottom: 1px solid #46404e;
   gap: 20px;
   flex-wrap: wrap;
   background: #1b171f;
@@ -460,7 +481,27 @@
   color: #fffdf7;
 }
 .studio-app .timer.urgent {
-  color: #ffce97;
+  color: #fffc79;
+}
+.studio-app .timer.timer-stopped {
+  font-size: 24px;
+  margin: 0;
+}
+.studio-app .timer-block:has(.timer-stopped) {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.studio-app .timer.timer-stopped > span {
+  display: none;
+}
+.studio-app .round-console:has(.timer-stopped) {
+  padding-block: 14px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.studio-app .round-actions[hidden],
+.studio-app .waveform[hidden] {
+  display: none;
 }
 .studio-app .timer > span {
   display: block;
@@ -927,6 +968,10 @@
   padding: 26px 0;
   margin-top: 28px;
 }
+.studio-app .main-content:has(.setup-grid) .studio-sound-section {
+  max-width: 1050px;
+  margin-inline: auto;
+}
 .studio-app .studio-sound-section h2 {
   font-family: Inter, Arial, sans-serif;
   font-size: 18px;
@@ -1152,6 +1197,7 @@
     margin-top: 6px;
   }
   .studio-app .mic-footnote,
+  .studio-app .solo-target,
   .studio-app .transcript-preview {
     grid-column: 1 / -1;
   }
@@ -1178,8 +1224,8 @@
 @media (max-width: 600px) {
   .studio-app .sidebar {
     grid-template-columns: 1fr auto;
-    padding: 12px 16px 0;
-    gap: 12px;
+    padding: 8px 16px 0;
+    gap: 6px;
   }
   .studio-app .sidebar > .brand {
     min-height: 44px;
@@ -1189,7 +1235,7 @@
     grid-row: 2;
     justify-content: stretch;
     gap: 5px;
-    padding-bottom: 12px;
+    padding-bottom: 6px;
   }
   .studio-app .nav-item {
     flex: 1;
@@ -1239,24 +1285,30 @@
     letter-spacing: 0;
   }
   .studio-app .main-content {
-    padding: 26px 16px 0;
+    padding: 16px 16px 0;
   }
   .studio-app .page-title {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 20px;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
   }
   .studio-app .page-title > div {
     flex: 1;
-    min-width: 190px;
+    min-width: 0;
   }
   .studio-app .page-title h1 {
     font-size: 28px;
   }
-  .studio-app .page-title p {
-    font-size: 13px;
-    max-width: 40ch;
+  .studio-app .page-title p,
+  .studio-app .game-settings-button > span {
+    display: none;
+  }
+  .studio-app .game-settings-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    flex: none;
   }
   .studio-app .page-title > .button {
     font-size: 12px;
@@ -1269,8 +1321,11 @@
     height: 16px;
   }
   .studio-app .rehearsal-banner {
-    padding: 12px 14px;
-    font-size: 12px;
+    padding: 7px 12px;
+    font-size: 11px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 4px 10px;
   }
   .studio-app .rehearsal-banner > span {
     align-items: baseline;
@@ -1280,8 +1335,8 @@
     align-self: center;
   }
   .studio-app .rehearsal-banner > button {
-    padding: 6px 0;
-    font-size: 12px;
+    padding: 4px 0;
+    font-size: 11px;
   }
   .studio-app .mission-card {
     border-radius: 8px;
@@ -1301,33 +1356,35 @@
     padding: 5px 7px;
   }
   .studio-app .mission-center {
-    min-height: 220px;
+    min-height: 180px;
     padding: 22px 18px;
   }
   .studio-app .mission-center:has(.secret-card-back) {
-    padding: 22px 18px;
+    padding: 20px 94px 20px 18px;
   }
   .studio-app .secret-card-back {
-    position: relative;
-    inset: auto;
-    width: 70px;
-    height: 92px;
+    position: absolute;
+    top: 24px;
+    right: 20px;
+    width: 58px;
+    height: 80px;
     padding: 8px;
-    margin: 0 0 22px 5px;
+    margin: 0;
     box-shadow: 4px 4px 0 #141116;
   }
   .studio-app .secret-card-back img {
-    width: 50px;
-    height: 57px;
+    width: 42px;
+    height: 50px;
   }
   .studio-app .card-back-wordmark {
+    width: 40px;
     font-size: 12px;
   }
   .studio-app .secret-card-back::before {
     inset: 4px;
   }
   .studio-app .mission-center h2 {
-    font-size: 25px;
+    font-size: 22px;
   }
   .studio-app .mission-center > p {
     font-size: 13px;
@@ -1342,17 +1399,37 @@
     font-size: 38px;
   }
   .studio-app .round-console {
-    padding: 20px 18px;
-    gap: 18px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    align-items: center;
+    padding: 16px;
+    gap: 12px;
   }
   .studio-app .timer {
-    font-size: 46px;
+    font-size: 34px;
   }
   .studio-app .round-console .round-actions {
     width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
   }
   .studio-app .round-console .round-actions > .button {
-    flex: 1;
+    flex: 1 1 100%;
+    padding: 10px 8px;
+    font-size: 12px;
+    white-space: normal;
+  }
+  .studio-app .round-icon {
+    min-width: 44px;
+    height: 44px;
+  }
+  .studio-app .studio-result {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 22px;
+  }
+  .studio-app .studio-result__decision {
+    width: 100%;
   }
   .studio-app .round-readiness {
     padding: 12px 18px;
@@ -1459,6 +1536,8 @@
     font-size: 12px;
   }
   .studio-app .privacy-panel {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
     gap: 13px;
   }
   .studio-app .privacy-panel > div {
@@ -1466,7 +1545,10 @@
     flex: 1;
   }
   .studio-app .privacy-panel > .button {
-    margin-left: 35px;
+    grid-column: 2;
+    margin-left: 0;
+    justify-self: start;
+    white-space: normal;
   }
   .studio-app .rehearsal-tools > button {
     padding: 12px 14px;

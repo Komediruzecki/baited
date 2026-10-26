@@ -17,7 +17,9 @@
     FORM: A setup sheet in the approved landing world, not a second dashboard. -->
     <main class="setup" aria-labelledby="setup-title">
       <header class="masthead">
-        <p class="wordmark">baited<span class="brand-stop" aria-hidden="true">.</span></p>
+        <p class="wordmark" role="img" aria-label="BAITED">
+          <span class="baited-glyph" aria-hidden="true"></span>
+        </p>
         <span class="round-index">Stream setup</span>
       </header>
       <div class="connection" id="connection" role="status" aria-live="polite">
@@ -32,7 +34,10 @@
         </p>
       </section>
       <section class="channel-state" aria-labelledby="channel-heading">
-        <p class="section-label" id="channel-heading">Your channel</p>
+        <div class="channel-state-heading">
+          <p class="section-label" id="channel-heading">Your channel</p>
+          <button class="secondary-action" id="check-connection" type="button">Check again</button>
+        </div>
         <p class="channel-name" id="channel-name">Checking connection…</p>
         <p id="channel-detail">
           Open this page from your Extension dashboard to connect the correct channel.
@@ -66,14 +71,15 @@
               panel.</span
             >
           </li>
+          <li>
+            <strong>Activate your viewer panel.</strong>
+            <span
+              >In Twitch’s My Extensions, activate baited in a free panel slot on your
+              channel.</span
+            >
+          </li>
         </ol>
       </section>
-      <button class="secondary-action" id="check-connection" type="button">
-        Check connection again
-      </button>
-      <p class="setup-footnote">
-        Once connected, activate baited in a free panel slot on your channel.
-      </p>
     </main>
     <script type="module" src="./config.js"></script>
   </body>
