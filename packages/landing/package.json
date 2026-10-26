@@ -1,0 +1,22 @@
+{
+  "name": "@baited/landing",
+  "private": true,
+  "type": "module",
+  "version": "1.2.0",
+  "scripts": {
+    "dev": "wrangler dev --env dev --ip 127.0.0.1 --port 4370",
+    "check": "tsc --noEmit",
+    "test:run": "node --experimental-strip-types --test test/*.test.mjs",
+    "deploy:dev": "wrangler deploy --env dev",
+    "deploy:prod": "wrangler deploy --env prod",
+    "deploy:dry-run": "wrangler deploy --env dev --dry-run",
+    "deploy:dry-run:prod": "wrangler deploy --env prod --dry-run"
+  },
+  "dependencies": {
+    "@irchiinnuss/review-host": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "wrangler": "^4.95.0"
+  }
+}

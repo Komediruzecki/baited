@@ -1,0 +1,105 @@
+name: Deploy Baited landing
+
+# Main updates dev.baited.maff.app. Production requires an annotated bait-vX.Y.Z
+# tag that matches the package version and points to a commit on main.
+on:
+  push:
+    branches: [main]
+    tags: ['bait-v*']
+    paths:
+      - 'packages/landing/**'
+      - 'packages/review-host/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/deploy-landing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bait-${{ startsWith(github.ref, 'refs/tags/bait-v') && 'prod' || 'dev' }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/bait-v') }}
+
+jobs:
+  deploy:
+    # Manual runs use main and deploy dev. Only a tag push can deploy production.
+    if: vars.LANDING_DEPLOY_ENABLED == 'true' && (github.ref == 'refs/heads/main' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/bait-v')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TARGET: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/bait-v')) && 'prod' || 'dev' }}
+      SITE_ORIGIN: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/bait-v')) && 'https://baited.maff.app' || 'https://dev.baited.maff.app' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate production release
+        if: env.TARGET == 'prod'
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          test "$(git cat-file -t "$RELEASE_REF")" = tag || {
+            echo 'Production requires an annotated BAIT release tag.' >&2
+            exit 1
+          }
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+          const { version } = JSON.parse(readFileSync('packages/landing/package.json', 'utf8'))
+          if (process.env.RELEASE_TAG !== `bait-v${version}`) {
+            console.error('BAIT release tag must match packages/landing/package.json version.')
+            process.exit(1)
+          }
+          NODE
+          git merge-base --is-ancestor "$RELEASE_REF^{commit}" origin/main || {
+            echo 'Production release commit must belong to origin/main.' >&2
+            exit 1
+          }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm install --global pnpm@10.34.3
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter '@baited/landing...'
+      - name: Check BAIT
+        run: pnpm --filter @baited/landing check
+      - name: Test BAIT
+        run: pnpm --filter @baited/landing test:run
+      - name: Validate development bundle
+        run: pnpm --filter @baited/landing deploy:dry-run
+      - name: Validate production bundle
+        run: pnpm --filter @baited/landing deploy:dry-run:prod
+      - name: Deploy development
+        if: env.TARGET == 'dev'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: packages/landing
+          command: deploy --env dev
+          packageManager: pnpm
+      - name: Deploy production
+        if: env.TARGET == 'prod'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: packages/landing
+          command: deploy --env prod
+          packageManager: pnpm
+      - name: Verify served landing
+        run: |
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if curl --fail --silent --show-error --max-time 20 \
+              "$SITE_ORIGIN/" -o "$RUNNER_TEMP/bait-index.html" \
+              && cmp --silent packages/landing/site/index.html "$RUNNER_TEMP/bait-index.html"; then
+              echo "The $TARGET domain serves this release."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'The domain did not return the expected landing.' >&2
+          exit 1

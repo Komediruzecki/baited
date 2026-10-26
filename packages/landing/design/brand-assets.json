@@ -1,0 +1,43 @@
+{
+  "generator": "A/B/C proofs: Built-in ChatGPT image generation; default: unchanged owner-supplied JPEG",
+  "reference": "Owner attachment 1000063284.jpg, angular black BAITED wordmark",
+  "reference_sha256": "994ca992fd8d9fc6dde8da8283d7898ba87d975a8c29518e2477d55c87f6f086",
+  "design_lead": "Claude Opus, claude-opus-5-5",
+  "prompts": "brand-prompts.md",
+  "default": "original",
+  "default_file": "site/assets/brand/baited-original-mask.svg",
+  "original_bytes_preserved": true,
+  "assets": [
+    {
+      "variant": "a",
+      "file": "site/lab/brand/baited-a.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "bytes": 439114,
+      "sha256": "785ae4b208f56f6a604bf9d651f1a2221297f416d646d290d8838ea5feb87e6c"
+    },
+    {
+      "variant": "b",
+      "file": "site/lab/brand/baited-b.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "bytes": 506370,
+      "sha256": "582e724d1a5d9b9b69e2b7105c3905ebf9cf6e71262afa4015be8ffbff79efd7"
+    },
+    {
+      "variant": "c",
+      "file": "site/lab/brand/baited-c.png",
+      "width": 1774,
+      "height": 887,
+      "mode": "RGBA",
+      "bytes": 259554,
+      "sha256": "c68169de4fb3134c900c599a7c52f144259b87a44f2d3b1d982bfdc47f17fd5d"
+    }
+  ],
+  "default_source": "site/assets/brand/baited-original.jpg",
+  "default_renderer": "scripts/build-original-wordmark.mjs",
+  "default_decision": "Owner requested supplied original, no added hook, 2026-10-26",
+  "default_source_sha256": "994ca992fd8d9fc6dde8da8283d7898ba87d975a8c29518e2477d55c87f6f086"
+}

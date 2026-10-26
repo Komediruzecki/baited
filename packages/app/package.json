@@ -1,0 +1,46 @@
+{
+  "name": "@baited/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "BAIT: chat gets a secret word and tries to make the streamer say it.",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "tsx watch server/index.ts",
+    "build": "tsc --noEmit && vite build && tsup server/index.ts --format esm --platform node --target node22 --out-dir dist/server --external vite",
+    "start": "node --env-file-if-exists=.env dist/server/index.js --static",
+    "preview:local": "node scripts/preview-local.mjs",
+    "preview:concept": "node scripts/preview-concept.mjs",
+    "rehearsal:local": "node scripts/rehearse-local.mjs",
+    "test": "tsx --test tests/*.test.ts extension/tests/*.test.js",
+    "check": "tsc --noEmit",
+    "licenses": "node scripts/licenses.mjs",
+    "build:extension": "node scripts/build-extension.mjs",
+    "preview:extension": "node scripts/preview-extension.mjs",
+    "extension:local": "node scripts/serve-extension-local.mjs"
+  },
+  "dependencies": {
+    "@moonshine-ai/moonshine-wasm": "0.1.5",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jose": "^6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "ws": "^8.18.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/ws": "^8.5.13",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.0"
+  }
+}

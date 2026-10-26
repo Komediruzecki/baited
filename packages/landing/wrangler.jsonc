@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "maff-bait-preview",
+  "compatibility_date": "2026-10-25",
+  "main": "src/worker.ts",
+  "workers_dev": false,
+  "preview_urls": false,
+  // The default environment stays closed; each host has an explicit environment.
+  "env": {
+    "dev": {
+      "name": "maff-bait-dev",
+      "workers_dev": false,
+      "preview_urls": false,
+      "vars": { "ENVIRONMENT": "dev" },
+      "assets": {
+        "directory": "site",
+        "binding": "ASSETS",
+        "run_worker_first": true,
+        "not_found_handling": "404-page",
+      },
+      "routes": [
+        { "pattern": "dev.baited.maff.app", "custom_domain": true },
+        { "pattern": "dev.bait.maff.app", "custom_domain": true },
+      ],
+    },
+    "prod": {
+      "name": "maff-bait",
+      "workers_dev": false,
+      "preview_urls": false,
+      "vars": { "ENVIRONMENT": "prod" },
+      "assets": {
+        "directory": "site",
+        "binding": "ASSETS",
+        "run_worker_first": true,
+        "not_found_handling": "404-page",
+      },
+      "routes": [
+        { "pattern": "baited.maff.app", "custom_domain": true },
+        { "pattern": "bait.maff.app", "custom_domain": true },
+      ],
+    },
+  },
+}

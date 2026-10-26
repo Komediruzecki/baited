@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "import_kind": "tracked-files snapshot; unrelated source repository history is not imported",
+  "source_repository": "https://github.com/Komediruzecki/disjoint-colliders",
+  "source_revision": "87bfc5d96bd63c39b30d39c8d7d245bd7252b578",
+  "source_directory": "packages/review-host",
+  "destination_directory": "packages/review-host",
+  "imported_on": "2026-10-26",
+  "source_file_count": 4,
+  "source_bytes": 7832,
+  "hash_scope": "source_sha256 records exact bytes imported before package-name and documentation integration changes. Approved site assets and runtime source remain unchanged.",
+  "upstream_license": {
+    "source_path": "LICENSE",
+    "destination_path": "LICENSE.disjoint-colliders",
+    "source_sha256": "1ae49cbaf00f18132c5c9c6ff5a2f0910496bfb2613f4ddec6dec5560b33ea26"
+  },
+  "files": [
+    {
+      "source_path": "packages/review-host/index.test.ts",
+      "destination_path": "index.test.ts",
+      "git_blob": "53409aad9bf6bd8c553bfcf358dd8e748175accf",
+      "git_mode": "100644",
+      "bytes": 3829,
+      "source_sha256": "1014ab761de2bad796009e77e84c74afc79732be469172ced4d23bcbd62debb0"
+    },
+    {
+      "source_path": "packages/review-host/index.ts",
+      "destination_path": "index.ts",
+      "git_blob": "7e35de455c13a6ee5be68ab5bf1669d83aa79943",
+      "git_mode": "100644",
+      "bytes": 3377,
+      "source_sha256": "3983abdf96758f1559e9891b13c92335fb1adf6c2987daa95ad229934f5b3944"
+    },
+    {
+      "source_path": "packages/review-host/package.json",
+      "destination_path": "package.json",
+      "git_blob": "543434de88c291bc14b2d3e3b7bf49bbadcb0020",
+      "git_mode": "100644",
+      "bytes": 327,
+      "source_sha256": "68a7c04967eb365a7ee58fa6e4a21ede55653bed82e2f026f2af56b794af7736"
+    },
+    {
+      "source_path": "packages/review-host/tsconfig.json",
+      "destination_path": "tsconfig.json",
+      "git_blob": "23c33543219f0d49f02db52fb236d729dd2fbcd8",
+      "git_mode": "100644",
+      "bytes": 299,
+      "source_sha256": "76bb862621f281d1f35c045aa4e7ecd3b81268e11300067e1ba8460e94e75313"
+    }
+  ],
+  "integration_changes": [],
+  "verification": {
+    "source_files_unchanged": 4,
+    "source_files_adapted": 0,
+    "site_files_byte_identical": 0,
+    "upstream_license_byte_identical": true
+  }
+}

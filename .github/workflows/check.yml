@@ -1,4 +1,4 @@
-name: Check BAIT
+name: Check Baited
 
 on:
   push:
@@ -14,13 +14,35 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [app, landing, review-host]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: npm install --global pnpm@10.7.1
+      - run: npm install --global pnpm@10.34.3
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm test
-      - run: pnpm build
+      - name: Check and package application
+        if: matrix.package == 'app'
+        env:
+          # Public fixture values only. CI never needs live Twitch credentials.
+          TWITCH_EXTENSION_CLIENT_ID: ciBaitedClient123
+          EXTENSION_API_BASE_URL: https://api.example.test
+        run: |
+          pnpm --filter @baited/app test
+          pnpm --filter @baited/app build
+          pnpm --filter @baited/app build:extension
+      - name: Check landing and both deployment bundles
+        if: matrix.package == 'landing'
+        run: pnpm check:landing
+      - name: Check review-host helper
+        if: matrix.package == 'review-host'
+        run: |
+          pnpm --filter @irchiinnuss/review-host check
+          pnpm --filter @irchiinnuss/review-host test:run

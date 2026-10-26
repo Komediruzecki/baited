@@ -1,0 +1,90 @@
+<!doctype html>
+<!-- THESIS: Explain what the test actually handles. OWN-WORLD: Existing violet, charcoal, Russo and Inter. STORY: Separate the landing from gameplay, then explain controls. FIRST VIEWPORT: Brand, policy title, date and scope. FORM: A single Read-mode column with ordinary links. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#121016" />
+    <meta name="description" content="How baited handles Twitch connections, game participation and optional microphone recognition." />
+    <link rel="canonical" href="https://baited.maff.app/privacy" />
+    <link rel="stylesheet" href="/legal.css" />
+    <title>Privacy · baited</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#policy">Skip to privacy policy</a>
+    <header class="legal-header">
+      <a class="legal-brand" href="/" aria-label="baited home">baited</a>
+      <nav aria-label="Legal pages"><a href="/privacy" aria-current="page">Privacy</a><a href="/terms">Terms</a></nav>
+    </header>
+    <main class="legal-main" id="policy">
+      <h1>Privacy</h1>
+      <p class="legal-date">Updated 25 October 2026</p>
+      <p>
+        baited, also shown as BAIT, is a personal hackathon project run by the developer behind Twitch account
+        <a href="https://www.twitch.tv/komediruzecki7">komediruzecki7</a>. This notice covers the landing page and the initial local game
+        and Extension test. For privacy requests, email <a href="mailto:hello@irchiinnuss.com">hello@irchiinnuss.com</a>.
+      </p>
+
+      <h2>Visiting the landing page</h2>
+      <p>
+        The examples are scripted. Visiting this page does not connect your Twitch account or access your microphone. The page adds no
+        cookies, advertising or analytics scripts. Cloudflare hosts it and processes technical request information, such as IP addresses, to
+        deliver and protect it. See <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare’s privacy policy</a>.
+      </p>
+
+      <h2>Connecting and playing</h2>
+      <p>
+        The broadcaster authorizes Twitch chat-read access. The game receives channel identity, chat messages, participant IDs and display
+        names. It uses these for hints, skip votes, participation scores and broadcaster-selected awards. The Extension also receives
+        Twitch-signed channel, role and opaque viewer identifiers to authorize its panel requests and limit abuse. It does not require
+        viewers to share their Twitch identity with the panel.
+      </p>
+      <p>
+        The local server stores channel identity, settings, up to 100 round results and up to 1,000 participant IDs, names and score totals
+        per room. Older results become aggregate totals. Leading scores and selected award names are visible to other participants and may
+        appear on stream. Stored room data has no automatic time-based expiry in this test.
+      </p>
+      <p>
+        For each round, up to 40 eligible and 20 flagged chat hints remain in server memory. The broadcaster sees them after the word is
+        revealed. They clear when the next round ends or ten minutes after their own round ends, whichever comes first. Raw hints are not
+        written to disk. Typed private guesses are checked without saving or broadcasting the guess text.
+      </p>
+
+      <h2>Optional microphone recognition</h2>
+      <p>
+        The current test uses Moonshine in the broadcaster’s browser. Audio stays on that computer; final recognized text, word timing and
+        audio progress reach the local game server to check a catch. The game does not save audio or transcript text. Model files download
+        from download.moonshine.ai and are cached in the browser. Disabling the microphone stops capture; pausing stops recognition.
+      </p>
+      <p>
+        Deepgram is an optional alternative in the code and is not enabled for this test. If enabled later, the consent screen will identify
+        it before audio is sent through the game server to Deepgram. Its <a href="https://deepgram.com/privacy">privacy policy</a> would
+        apply to that processing. Twitch broadcasts and OBS recordings are separate from baited’s microphone processing.
+      </p>
+
+      <h2>Storage, purposes and choices</h2>
+      <p>
+        The studio uses an essential session cookie lasting up to 12 hours and a Twitch sign-in cookie lasting up to ten minutes. Stored
+        Twitch access and refresh tokens are encrypted. The game uses request information in memory for abuse limits. It adds no advertising
+        or analytics cookies and does not sell personal data.
+      </p>
+      <p>
+        We use account data to provide the requested test, optional microphone processing with permission, and participation and connection
+        data for our legitimate interests in running and protecting the game. We use messages sent to our contact address to respond to
+        requests. Twitch and Cloudflare have their own privacy practices and may process data in other countries; see their notices.
+      </p>
+      <p>
+        In the studio, choose <strong>Stream setup → Delete my data</strong> to remove the room, stored scores and Twitch authorization.
+        Disconnecting or revoking access stops the connection but does not itself erase room records in this test. You can revoke
+        authorization in <a href="https://www.twitch.tv/settings/connections">Twitch’s connection settings</a>.
+      </p>
+      <p>
+        Email us to request access, correction, deletion, restriction or portability of your information, or to object to participation-data
+        processing. Include your Twitch username and the channel involved, never passwords or keys. You can withdraw microphone permission
+        at any time and, where applicable, complain to your local data protection authority. Requests are handled by the project developer.
+        <a href="https://legal.twitch.com/en/legal/privacy-notice/">Twitch’s privacy notice</a> covers Twitch itself.
+      </p>
+    </main>
+    <footer class="legal-footer"><a href="/">Back to baited</a></footer>
+  </body>
+</html>

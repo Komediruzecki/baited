@@ -1,0 +1,25 @@
+/* The default displays the supplied original. Generated proof files stay intact. */
+:root {
+  --brand-mask: url('/assets/brand/baited-original-mask.svg');
+  --brand-ar: 3.404255;
+  --brand-mask-size: 100% 100%;
+  --brand-mask-position: center;
+}
+[data-mark='a'] {
+  --brand-mask: url('/lab/brand/baited-a.png');
+  --brand-ar: 3.226293;
+  --brand-mask-size: 102.60521% 220.689655%;
+  --brand-mask-position: 64.102564% 45.357143%;
+}
+[data-mark='c'] {
+  --brand-mask: url('/lab/brand/baited-c.png');
+  --brand-ar: 3.260692;
+  --brand-mask-size: 110.805746% 180.651731%;
+  --brand-mask-position: 51.445087% 48.232323%;
+}
+[data-mark='b'] {
+  --brand-mask: url('/lab/brand/baited-b.png');
+  --brand-ar: 3.347126;
+  --brand-mask-size: 105.494505% 235.402299%;
+  --brand-mask-position: 52.5% 44.312394%;
+}

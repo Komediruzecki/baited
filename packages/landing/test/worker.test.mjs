@@ -1,0 +1,262 @@
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import test from 'node:test'
+import worker from '../src/worker.ts'
+
+const origin = 'https://dev.baited.maff.app'
+const productionOrigin = 'https://baited.maff.app'
+const environments = [
+  { ENVIRONMENT: 'dev', origin },
+  { ENVIRONMENT: 'prod', origin: productionOrigin },
+]
+const legacyEnvironments = [
+  { ENVIRONMENT: 'dev', origin: 'https://dev.bait.maff.app', canonical: origin },
+  { ENVIRONMENT: 'prod', origin: 'https://bait.maff.app', canonical: productionOrigin },
+]
+
+test('legacy hosts permanently redirect to their canonical host with the path and query intact', async () => {
+  for (const { ENVIRONMENT, origin, canonical } of legacyEnvironments) {
+    for (const method of ['GET', 'HEAD']) {
+      for (const path of ['/', '/terms?from=twitch&return=%2Fprivacy', '/lab/brand/?mark=b', '/robots.txt', '/sitemap.xml']) {
+        const response = await worker.fetch(new Request(`${origin}${path}`, { method }), {
+          ENVIRONMENT,
+          ASSETS: { fetch: async () => assert.fail('legacy hosts must not serve duplicate assets') },
+        })
+        assert.equal(response.status, 308)
+        assert.equal(response.headers.get('location'), `${canonical}${path}`)
+        assert.equal(await response.text(), '')
+        assertHeaders(response)
+      }
+    }
+  }
+})
+
+test('legacy redirect destinations cannot be changed by paths, query parameters or incoming ports', async () => {
+  for (const { ENVIRONMENT, origin, canonical } of legacyEnvironments) {
+    for (const path of ['//attacker.example/path?next=https%3A%2F%2Fattacker.example', '/%2F%2Fattacker.example/?host=attacker.example']) {
+      const response = await worker.fetch(new Request(`${origin}:8443${path}`), {
+        ENVIRONMENT,
+        ASSETS: { fetch: async () => assert.fail('redirects must bypass assets') },
+      })
+      assert.equal(response.status, 308)
+      const destination = new URL(response.headers.get('location'))
+      assert.equal(destination.origin, canonical)
+      assert.equal(destination.pathname + destination.search, path)
+    }
+  }
+})
+
+test('legacy aliases still reject writes and unknown environments before redirecting', async () => {
+  for (const { ENVIRONMENT, origin } of legacyEnvironments) {
+    for (const method of ['POST', 'PUT', 'DELETE', 'OPTIONS']) {
+      const response = await worker.fetch(new Request(origin, { method }), {
+        ENVIRONMENT,
+        ASSETS: { fetch: async () => assert.fail('writes must bypass assets') },
+      })
+      assert.equal(response.status, 405)
+      assert.equal(response.headers.get('location'), null)
+      assert.equal(response.headers.get('allow'), 'GET, HEAD')
+      assertHeaders(response)
+    }
+    for (const ENVIRONMENT of [undefined, 'preview']) {
+      const response = await worker.fetch(new Request(origin), {
+        ENVIRONMENT,
+        ASSETS: { fetch: async () => assert.fail('unknown environments must bypass assets') },
+      })
+      assert.equal(response.status, 404)
+      assert.equal(response.headers.get('location'), null)
+      assertHeaders(response)
+    }
+  }
+})
+
+test('document canonical links use the new production origin', async () => {
+  for (const [file, path] of [['index.html', '/'], ['terms/index.html', '/terms'], ['privacy/index.html', '/privacy']]) {
+    const html = await readFile(new URL(`../site/${file}`, import.meta.url), 'utf8')
+    assert.equal(html.match(/<link rel="canonical" href="([^"]+)"/)[1], productionOrigin + path)
+  }
+})
+
+test('the brand lab and its images are never served in production', async () => {
+  for (const path of ['/lab', '/lab/brand/', '/lab/brand/baited-a.png', '/l%61b/brand/', '/lab%2Fbrand%2Fbaited-c.png', '/%zz']) {
+    const response = await worker.fetch(new Request(`${productionOrigin}${path}`), {
+      ENVIRONMENT: 'prod',
+      ASSETS: { fetch: async () => assert.fail('brand proofs must bypass assets in production') },
+    })
+    assert.equal(response.status, 404)
+    assertHeaders(response)
+  }
+})
+
+test('the development brand lab keeps preview security and noindex headers', async () => {
+  const response = await worker.fetch(new Request(`${origin}/lab/brand/`), {
+    ENVIRONMENT: 'dev',
+    ASSETS: { fetch: async () => new Response('Logo proofs') },
+  })
+  assert.equal(response.status, 200)
+  assert.equal(await response.text(), 'Logo proofs')
+  assertHeaders(response)
+})
+
+function assertHeaders(response, indexable = false) {
+  assert.equal(response.headers.get('x-robots-tag'), indexable ? 'index, follow' : 'noindex, nofollow')
+  const policy = response.headers.get('content-security-policy')
+  assert.match(policy, /default-src 'none'/)
+  assert.match(policy, /script-src 'self'/)
+  assert.match(policy, /style-src 'self'/)
+  assert.match(policy, /media-src 'self'/)
+  assert.match(policy, /frame-ancestors 'none'/)
+  assert.doesNotMatch(policy, /unsafe-inline|unsafe-eval|https?:/)
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff')
+  assert.equal(response.headers.get('cache-control'), 'no-store')
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer')
+  assert.equal(response.headers.get('permissions-policy'), 'camera=(), microphone=(), geolocation=()')
+}
+
+test('successful assets keep their body, status and content type with preview headers', async () => {
+  const response = await worker.fetch(new Request(origin), {
+    ENVIRONMENT: 'dev',
+    ASSETS: { fetch: async () => new Response('<h1>BAIT</h1>', { headers: { 'Content-Type': 'text/html' } }) },
+  })
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('content-type'), 'text/html')
+  assert.equal(await response.text(), '<h1>BAIT</h1>')
+  assertHeaders(response)
+})
+
+test('asset errors retain their status and body without becoming indexable in either environment', async () => {
+  for (const { ENVIRONMENT, origin } of environments) {
+    for (const status of [404, 500]) {
+      const response = await worker.fetch(new Request(`${origin}/missing`), {
+        ENVIRONMENT,
+        ASSETS: { fetch: async () => new Response('Asset error', { status, headers: { 'Content-Type': 'text/plain' } }) },
+      })
+      assert.equal(response.status, status)
+      assert.equal(await response.text(), 'Asset error')
+      assertHeaders(response)
+    }
+  }
+})
+
+test('robots allows crawling to discover noindex and never advertises a sitemap', async () => {
+  const response = await worker.fetch(new Request(`${origin}/robots.txt`), {
+    ENVIRONMENT: 'dev',
+    ASSETS: { fetch: async () => assert.fail('robots must bypass assets') },
+  })
+  const body = await response.text()
+  assert.equal(response.status, 200)
+  assert.match(body, /^User-agent: \*$/m)
+  assert.match(body, /^Allow: \/$/m)
+  assert.doesNotMatch(body, /^Disallow:|^Sitemap:/im)
+  assertHeaders(response)
+})
+
+test('writes are rejected before assets or generated resources in either environment', async () => {
+  for (const { ENVIRONMENT, origin } of environments) {
+    for (const method of ['POST', 'PUT', 'DELETE', 'OPTIONS']) {
+      for (const path of ['/', '/robots.txt', '/sitemap.xml']) {
+        const response = await worker.fetch(new Request(`${origin}${path}`, { method }), {
+          ENVIRONMENT,
+          ASSETS: { fetch: async () => assert.fail('unsupported methods must bypass assets') },
+        })
+        assert.equal(response.status, 405)
+        assert.equal(response.headers.get('allow'), 'GET, HEAD')
+        assertHeaders(response)
+      }
+    }
+  }
+})
+
+test('absent and unknown environments fail closed even on the production hostname', async () => {
+  for (const ENVIRONMENT of [undefined, 'production', 'preview']) {
+    for (const host of [origin, productionOrigin]) {
+      for (const path of ['/', '/robots.txt', '/sitemap.xml']) {
+        const response = await worker.fetch(new Request(`${host}${path}`), {
+          ENVIRONMENT,
+          ASSETS: { fetch: async () => assert.fail('unsupported environments must bypass assets') },
+        })
+        assert.equal(response.status, 404)
+        assertHeaders(response)
+      }
+    }
+  }
+})
+
+test('production only serves its exact configured hostname and does not redirect lookalikes', async () => {
+  for (const host of [
+    'dev.baited.maff.app', 'baited.maff.app.', 'baited.maff.app.example.com',
+    'dev.bait.maff.app', 'bait.maff.app.', 'bait.maff.app.example.com', 'localhost',
+  ]) {
+    for (const path of ['/', '/robots.txt', '/sitemap.xml']) {
+      const response = await worker.fetch(new Request(`https://${host}${path}`), {
+        ENVIRONMENT: 'prod',
+        ASSETS: { fetch: async () => assert.fail('other hosts must bypass assets') },
+      })
+      assert.equal(response.status, 404)
+      assert.equal(response.headers.get('location'), null)
+      assertHeaders(response)
+    }
+  }
+})
+
+test('production assets are indexable and preserve content and security headers', async () => {
+  const response = await worker.fetch(new Request(productionOrigin), {
+    ENVIRONMENT: 'prod',
+    ASSETS: { fetch: async () => new Response('<h1>BAIT</h1>', { headers: { 'Content-Type': 'text/html' } }) },
+  })
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('content-type'), 'text/html')
+  assert.equal(await response.text(), '<h1>BAIT</h1>')
+  assertHeaders(response, true)
+})
+
+test('development remains noindex even if requested using the production hostname', async () => {
+  const response = await worker.fetch(new Request(productionOrigin), {
+    ENVIRONMENT: 'dev',
+    ASSETS: { fetch: async () => new Response('<h1>BAIT</h1>') },
+  })
+  assert.equal(response.status, 200)
+  assertHeaders(response)
+})
+
+test('production robots advertises the canonical sitemap', async () => {
+  const response = await worker.fetch(new Request(`${productionOrigin}/robots.txt`), {
+    ENVIRONMENT: 'prod',
+    ASSETS: { fetch: async () => assert.fail('robots must bypass assets') },
+  })
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('content-type'), 'text/plain; charset=utf-8')
+  assert.equal(await response.text(), `User-agent: *\nAllow: /\n\nSitemap: ${productionOrigin}/sitemap.xml\n`)
+  assertHeaders(response, true)
+})
+
+test('production sitemap includes only the canonical landing page', async () => {
+  const response = await worker.fetch(new Request(`${productionOrigin}/sitemap.xml`), {
+    ENVIRONMENT: 'prod',
+    ASSETS: { fetch: async () => assert.fail('sitemap must bypass assets') },
+  })
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('content-type'), 'application/xml; charset=utf-8')
+  const body = await response.text()
+  assert.match(body, /<urlset xmlns="http:\/\/www.sitemaps.org\/schemas\/sitemap\/0.9">/)
+  assert.deepEqual(
+    [...body.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]),
+    [`${productionOrigin}/`]
+  )
+  assertHeaders(response, true)
+})
+
+test('HEAD keeps status and environment headers without a body', async () => {
+  for (const { ENVIRONMENT, origin } of environments) {
+    for (const path of ['/', '/robots.txt', '/sitemap.xml', '/missing']) {
+      const status = path === '/missing' || (ENVIRONMENT === 'dev' && path === '/sitemap.xml') ? 404 : 200
+      const response = await worker.fetch(new Request(`${origin}${path}`, { method: 'HEAD' }), {
+        ENVIRONMENT,
+        ASSETS: { fetch: async () => new Response('body', { status }) },
+      })
+      assert.equal(response.status, status)
+      assert.equal(await response.text(), '')
+      assertHeaders(response, ENVIRONMENT === 'prod' && status === 200)
+    }
+  }
+})

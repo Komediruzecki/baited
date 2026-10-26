@@ -1,0 +1,137 @@
+/* Read surface: inherit the landing's violet, charcoal and type. Keep policy prose in one readable column. */
+@font-face {
+  font-family: Inter;
+  src: url('/assets/inter-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: Russo;
+  src: url('/assets/russo-one.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+:root {
+  color-scheme: dark;
+  font-family: Inter, Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
+  color: #dedce3;
+  background: #121016;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+a {
+  color: #c9a8ff;
+  text-underline-offset: 0.2em;
+}
+a:hover {
+  color: #fffdf7;
+}
+a:focus-visible {
+  outline: 3px solid #fffc79;
+  outline-offset: 5px;
+}
+.legal-header,
+.legal-main,
+.legal-footer {
+  width: min(70ch, calc(100% - 40px));
+  margin-inline: auto;
+}
+.legal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-block: 30px;
+}
+.legal-brand {
+  color: #fffc79;
+  font:
+    400 1.6rem/1 Russo,
+    Impact,
+    sans-serif;
+  letter-spacing: -0.035em;
+  text-decoration: none;
+}
+.legal-header nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 0.88rem;
+}
+.legal-header [aria-current='page'] {
+  color: #fffdf7;
+  text-decoration-thickness: 2px;
+}
+.legal-main {
+  padding-block: 45px 64px;
+}
+h1 {
+  margin: 0 0 12px;
+  color: #fffdf7;
+  font:
+    400 3rem/1.1 Russo,
+    Impact,
+    sans-serif;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+h2 {
+  margin: 2.2em 0 0.6em;
+  color: #fffdf7;
+  font-size: 1.2rem;
+  line-height: 1.35;
+  font-weight: 650;
+  text-wrap: balance;
+}
+p {
+  margin: 0 0 1.1em;
+}
+.legal-date {
+  margin-bottom: 2rem;
+  color: #bcb4c8;
+  font-size: 0.88rem;
+}
+.legal-main a {
+  overflow-wrap: anywhere;
+}
+.legal-footer {
+  padding-block: 28px 40px;
+  border-top: 1px solid #40364d;
+  font-size: 0.88rem;
+}
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 20px;
+  transform: translateY(-160%);
+  padding: 8px 12px;
+  background: #121016;
+}
+.skip-link:focus {
+  transform: none;
+}
+@media (max-width: 480px) {
+  :root {
+    font-size: 16px;
+  }
+  .legal-header {
+    padding-block: 24px;
+  }
+  .legal-header nav {
+    gap: 16px;
+  }
+  .legal-main {
+    padding-top: 32px;
+  }
+  h1 {
+    font-size: 2.5rem;
+  }
+}

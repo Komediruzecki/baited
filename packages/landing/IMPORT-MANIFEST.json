@@ -1,0 +1,811 @@
+{
+  "schema_version": 1,
+  "import_kind": "tracked-files snapshot; unrelated source repository history is not imported",
+  "source_repository": "https://github.com/Komediruzecki/disjoint-colliders",
+  "source_revision": "87bfc5d96bd63c39b30d39c8d7d245bd7252b578",
+  "source_directory": "packages/bait",
+  "destination_directory": "packages/landing",
+  "imported_on": "2026-10-26",
+  "source_file_count": 88,
+  "source_bytes": 26873372,
+  "hash_scope": "source_sha256 records exact bytes imported before integration changes. Approved artwork, fonts, captions and videos remain unchanged. Package metadata, current docs, hostname policy, canonical HTML URLs and relevant tests are adapted as listed in integration_changes.",
+  "upstream_license": {
+    "source_path": "LICENSE",
+    "destination_path": "LICENSE.disjoint-colliders",
+    "source_sha256": "1ae49cbaf00f18132c5c9c6ff5a2f0910496bfb2613f4ddec6dec5560b33ea26"
+  },
+  "files": [
+    {
+      "source_path": "packages/bait/ASSETS.md",
+      "destination_path": "ASSETS.md",
+      "git_blob": "b318b09874ca5defe236cd459a614a0c2296a466",
+      "git_mode": "100644",
+      "bytes": 4677,
+      "source_sha256": "a1a42e268ced56e16a93090df4aac140b021ef7417eea67ee75328bcc7f9e64c"
+    },
+    {
+      "source_path": "packages/bait/README.md",
+      "destination_path": "README.md",
+      "git_blob": "bf6d7a268cd0626d8a032229af893b8446df15bd",
+      "git_mode": "100644",
+      "bytes": 6776,
+      "source_sha256": "d6d960bc611c81c6daa60e77253d0bb3d0e83d2f9b156121550cfec2945a653c"
+    },
+    {
+      "source_path": "packages/bait/design/brand-assets.json",
+      "destination_path": "design/brand-assets.json",
+      "git_blob": "e30bd27f40325e0e3274cc531dc5cdf825537061",
+      "git_mode": "100644",
+      "bytes": 1560,
+      "source_sha256": "e79e7edb9d8f6effd6d1922fd39d2d2ef72cce071af78d3e2a6e331d986fb915"
+    },
+    {
+      "source_path": "packages/bait/design/brand-direction.md",
+      "destination_path": "design/brand-direction.md",
+      "git_blob": "ed3004595b5f3ed7bf9701081f3b8ba377f862fa",
+      "git_mode": "100644",
+      "bytes": 3359,
+      "source_sha256": "0d97c7ac9d7a4954381ca8db5b422752e4e1191a51f760ea844353c033d489b8"
+    },
+    {
+      "source_path": "packages/bait/design/brand-prompts.md",
+      "destination_path": "design/brand-prompts.md",
+      "git_blob": "720c245efcb87066d5642fccfa21e43879e49e21",
+      "git_mode": "100644",
+      "bytes": 4053,
+      "source_sha256": "50b14422feb9eb4c75eb3412666ac50beeb6966c00a797703d27b823ebc09cf6"
+    },
+    {
+      "source_path": "packages/bait/design/detail-polish-2026-10-26.md",
+      "destination_path": "design/detail-polish-2026-10-26.md",
+      "git_blob": "1e80667c593363bf938a6677452edf10001e1894",
+      "git_mode": "100644",
+      "bytes": 4092,
+      "source_sha256": "8e8652e11aa90814a77327127524a91b856b14cb57b0068945a0c86906a1f892"
+    },
+    {
+      "source_path": "packages/bait/package.json",
+      "destination_path": "package.json",
+      "git_blob": "994bbf10a81f73d4d43c339a6dcc6014775347b1",
+      "git_mode": "100644",
+      "bytes": 651,
+      "source_sha256": "e093b6a9d7e0f909617451449345d83e761f9a3ec6f027fd1afb2a61ab79a818"
+    },
+    {
+      "source_path": "packages/bait/scripts/build-original-wordmark.mjs",
+      "destination_path": "scripts/build-original-wordmark.mjs",
+      "git_blob": "a2d359f3d7de2554cf4d628478146aa3f6ad8907",
+      "git_mode": "100644",
+      "bytes": 1041,
+      "source_sha256": "b5e5c1a1f206d15b01b3821495e2bb878150c8457f8b564ceea053b817570c37"
+    },
+    {
+      "source_path": "packages/bait/site/app.js",
+      "destination_path": "site/app.js",
+      "git_blob": "7bc9d015e16f14af47c268ebe1dbe544bb039305",
+      "git_mode": "100644",
+      "bytes": 19419,
+      "source_sha256": "0628927ac22cc85ed815d698fab09f9e1ca4564d713a607eb893e5c3d8fcf1fc"
+    },
+    {
+      "source_path": "packages/bait/site/assets/bait-bomb-logo.png",
+      "destination_path": "site/assets/bait-bomb-logo.png",
+      "git_blob": "fedfa7024ada44c84895eca1be6b23a4b4ae4abe",
+      "git_mode": "100755",
+      "bytes": 785497,
+      "source_sha256": "793e336d5a5934c05f0bb13c8ad44e3880630de9d525450ae8104e966447759d"
+    },
+    {
+      "source_path": "packages/bait/site/assets/brand/baited-original-mask.svg",
+      "destination_path": "site/assets/brand/baited-original-mask.svg",
+      "git_blob": "4289d183a5830931fb87d2cb3a1f597cad87bd73",
+      "git_mode": "100644",
+      "bytes": 97058,
+      "source_sha256": "e70016436faba0f914daab1738a744cc6bf4e73c82a75836bdf6fb04b910b126"
+    },
+    {
+      "source_path": "packages/bait/site/assets/brand/baited-original.jpg",
+      "destination_path": "site/assets/brand/baited-original.jpg",
+      "git_blob": "fb6db7171113f03fad5569fd8ba1f9af0c90c6e6",
+      "git_mode": "100644",
+      "bytes": 72384,
+      "source_sha256": "994ca992fd8d9fc6dde8da8283d7898ba87d975a8c29518e2477d55c87f6f086"
+    },
+    {
+      "source_path": "packages/bait/site/assets/brand/baited-wordmark.png",
+      "destination_path": "site/assets/brand/baited-wordmark.png",
+      "git_blob": "504a7dcccaa29818482cf738bebe2aa62f27f072",
+      "git_mode": "100644",
+      "bytes": 506370,
+      "source_sha256": "582e724d1a5d9b9b69e2b7105c3905ebf9cf6e71262afa4015be8ffbff79efd7"
+    },
+    {
+      "source_path": "packages/bait/site/assets/inter-latin.woff2",
+      "destination_path": "site/assets/inter-latin.woff2",
+      "git_blob": "d15208de03cd1ad7c5199f0a0ce915fe841e4722",
+      "git_mode": "100644",
+      "bytes": 48256,
+      "source_sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62"
+    },
+    {
+      "source_path": "packages/bait/site/assets/irchiinnuss-mark.svg",
+      "destination_path": "site/assets/irchiinnuss-mark.svg",
+      "git_blob": "e6c893f05273d77145a16c3caa61e230a1683003",
+      "git_mode": "100644",
+      "bytes": 428,
+      "source_sha256": "53d21f3fe283c0fda6e0be9aacecdf94d86906032276eb9ee74421c59ffdd61a"
+    },
+    {
+      "source_path": "packages/bait/site/assets/irchiinnuss-wordmark.svg",
+      "destination_path": "site/assets/irchiinnuss-wordmark.svg",
+      "git_blob": "d3daaea99daec2825504d494b9d47c4f3ba631f5",
+      "git_mode": "100644",
+      "bytes": 11854,
+      "source_sha256": "8fe231a129c919635e78d36af7776395d3a7fe4b9bf0621e5feea9da65607fc8"
+    },
+    {
+      "source_path": "packages/bait/site/assets/russo-one.ttf",
+      "destination_path": "site/assets/russo-one.ttf",
+      "git_blob": "ba837270804167268bcd395a8a063ac26a77b72c",
+      "git_mode": "100644",
+      "bytes": 39124,
+      "source_sha256": "bc0abcc660bd8b7ad3000ecb2898a27c58a29a50f7ec81652fa12e75148d09df"
+    },
+    {
+      "source_path": "packages/bait/site/brand-masks.css",
+      "destination_path": "site/brand-masks.css",
+      "git_blob": "13298b23927978804bef618da5373e5a1cb3b79b",
+      "git_mode": "100644",
+      "bytes": 799,
+      "source_sha256": "43343825e39924e66cb0b02fbbc9a131bc2c5c543e45b5b514ca09cbe1e5456f"
+    },
+    {
+      "source_path": "packages/bait/site/brand.css",
+      "destination_path": "site/brand.css",
+      "git_blob": "30b1106a0d184428c5ad78fce806ece6cba53816",
+      "git_mode": "100644",
+      "bytes": 6070,
+      "source_sha256": "24235962eb95b9c2e7b7199a82baebe82943d82ea26d2dd25ce20d4ac78c4d81"
+    },
+    {
+      "source_path": "packages/bait/site/brand.js",
+      "destination_path": "site/brand.js",
+      "git_blob": "a52be67a85e887ffa678b3668506ee8d34ca87d9",
+      "git_mode": "100644",
+      "bytes": 1380,
+      "source_sha256": "1b42ed9d0bd3859ece49d48b1ac79486314557a8c9b1676629825f8b39e1ada4"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/banana.png",
+      "destination_path": "site/cards/proofs/banana.png",
+      "git_blob": "b7dd3e4d5405a1b350871920de9b9a6a580c92d5",
+      "git_mode": "100644",
+      "bytes": 647693,
+      "source_sha256": "dc12b34a08b31eeaa4853dc0093c86ce27c4a005ea4f216e41d11069066afc97"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/boomerang.png",
+      "destination_path": "site/cards/proofs/boomerang.png",
+      "git_blob": "f40cb9ad506b9a672985c42125ea89266085b8ec",
+      "git_mode": "100644",
+      "bytes": 473824,
+      "source_sha256": "b25e7a3517759817cedc710baf6cbf479717fa36e8cc2a4c7b14e4fb2db65d6e"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/cactus.png",
+      "destination_path": "site/cards/proofs/cactus.png",
+      "git_blob": "d8f75ce737dcd3d445e9c9815e21f1225321fc67",
+      "git_mode": "100644",
+      "bytes": 736485,
+      "source_sha256": "7c31f8aaa2c7fd3e9495439c87574a4bb1e910dbcbe9750a47fed22ff2d86245"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/dragon.png",
+      "destination_path": "site/cards/proofs/dragon.png",
+      "git_blob": "808a4fdf981cd046a43e59e2ce2c444cba5d075b",
+      "git_mode": "100644",
+      "bytes": 908630,
+      "source_sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/jellyfish.png",
+      "destination_path": "site/cards/proofs/jellyfish.png",
+      "git_blob": "3faaee2145e940a874055ff87cd49c2c7e0f7946",
+      "git_mode": "100644",
+      "bytes": 864169,
+      "source_sha256": "5dfa42deeb1b80d44e80e93de0dbbea5d95bb86b54c89ddad48b7f3da2e84a6f"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/microwave.png",
+      "destination_path": "site/cards/proofs/microwave.png",
+      "git_blob": "d06e3225f3a3d4e4edf7b890f9660623fb19ba36",
+      "git_mode": "100644",
+      "bytes": 939245,
+      "source_sha256": "2e5e35d5778ba9e862a74dbbe8eeba6be830b3903e36846d3f5b04dcbac2ec4b"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/monocle.png",
+      "destination_path": "site/cards/proofs/monocle.png",
+      "git_blob": "c81b4c6b60bd27d222cb00320acbea843386f79c",
+      "git_mode": "100644",
+      "bytes": 804585,
+      "source_sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/narwhal.png",
+      "destination_path": "site/cards/proofs/narwhal.png",
+      "git_blob": "d1c9693bd3aef6e705b2b04c52de89b0216eb97b",
+      "git_mode": "100644",
+      "bytes": 632733,
+      "source_sha256": "5b0248f1e98f06b8888d56bc2f28ed7b9ffa23a130e3b5d6536e4a1f66c1760c"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/octopus.png",
+      "destination_path": "site/cards/proofs/octopus.png",
+      "git_blob": "0f08e024c97bbf2695496af6f8f129c3a2587818",
+      "git_mode": "100644",
+      "bytes": 1008328,
+      "source_sha256": "6e24d3ee04d8eb589da259e15e3018e059606e7bb28bfcdc4a769ff06aced294"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/parachute.png",
+      "destination_path": "site/cards/proofs/parachute.png",
+      "git_blob": "fe4830be9d12e334e53003f22794570756cd46cf",
+      "git_mode": "100644",
+      "bytes": 771735,
+      "source_sha256": "1360fb474ca3a425b1f7df674ed3b6211d3330821db5ce11ebb1a7fb5417ca8f"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/penguin.png",
+      "destination_path": "site/cards/proofs/penguin.png",
+      "git_blob": "e29706083e07a5d2581d113c7019c03b80b410f2",
+      "git_mode": "100644",
+      "bytes": 840028,
+      "source_sha256": "9ddce2680486024fca3bcb894cf635e177c1eea005f67e0831bd636e5b6f77cc"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/pirate.png",
+      "destination_path": "site/cards/proofs/pirate.png",
+      "git_blob": "5f7325bf6138f8736a86f9e7675730a6975e9af7",
+      "git_mode": "100644",
+      "bytes": 962317,
+      "source_sha256": "f172ad6f90c442b534400a779ac34dc979ca4d85d63c7cea2ccfa837e1ab0448"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/pizza.png",
+      "destination_path": "site/cards/proofs/pizza.png",
+      "git_blob": "39be884f0d6d674f3dd9c56e89c5d775f443e334",
+      "git_mode": "100644",
+      "bytes": 796823,
+      "source_sha256": "0cfd35a161387a2fe20d6efcb583b9b43e5705653c5162e2aca4c1d1db959d65"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/robot.png",
+      "destination_path": "site/cards/proofs/robot.png",
+      "git_blob": "7165be079b9bf41b6094f1ad734a9ec64f9477f1",
+      "git_mode": "100644",
+      "bytes": 830675,
+      "source_sha256": "a389d790bb407218a577eb80e62f95261d7ba293873c803ca0f1ffdd3196580a"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/rocket.png",
+      "destination_path": "site/cards/proofs/rocket.png",
+      "git_blob": "cc3430b20b6c9dd8378ffad5c95a934fc0d61990",
+      "git_mode": "100644",
+      "bytes": 667780,
+      "source_sha256": "0cfefd6c50d1fcf1eed89fdd12088add3710a50c0760312be5120398227bdf0d"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/saxophone.png",
+      "destination_path": "site/cards/proofs/saxophone.png",
+      "git_blob": "7b6af4a9bcbfd0eb1d212786e6dbd4d8a4091f6a",
+      "git_mode": "100644",
+      "bytes": 570994,
+      "source_sha256": "4891e98afff3d6cd46c03834bd84cc1e21411fd23362f18d8c1067f2d6fd5dbf"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/telescope.png",
+      "destination_path": "site/cards/proofs/telescope.png",
+      "git_blob": "43d75cbc0735f5dffc975d6ff497de6647d35013",
+      "git_mode": "100644",
+      "bytes": 682653,
+      "source_sha256": "778d2e72b285f0ff91522862851bf64aaf14eb2e183a956d14b39e6aa47840cd"
+    },
+    {
+      "source_path": "packages/bait/site/cards/proofs/volcano.png",
+      "destination_path": "site/cards/proofs/volcano.png",
+      "git_blob": "7adaaeb2ab63a1d18d829126b83975c70814e9ef",
+      "git_mode": "100644",
+      "bytes": 735807,
+      "source_sha256": "ba1d79a8dde4058a33085d9f76c0a680b0d911f65d6a4cd31fdc639f9b784798"
+    },
+    {
+      "source_path": "packages/bait/site/data.js",
+      "destination_path": "site/data.js",
+      "git_blob": "6b4415067c74dfd0a75c1a4d06053fc4860a7e8f",
+      "git_mode": "100644",
+      "bytes": 4389,
+      "source_sha256": "1b91088a2b75681e875ec9afd356fd609f734410436a0746d8f4da5f30340ba8"
+    },
+    {
+      "source_path": "packages/bait/site/deck.js",
+      "destination_path": "site/deck.js",
+      "git_blob": "c0c41d85bfac49458ffc6b61e9bcabb7538f8348",
+      "git_mode": "100644",
+      "bytes": 5307,
+      "source_sha256": "f4324d4c28a9a5b4ec94cb232e5f96b1fafcb3f83fa4a4c738a1de3ecb63e8ac"
+    },
+    {
+      "source_path": "packages/bait/site/film/art/little-isle.png",
+      "destination_path": "site/film/art/little-isle.png",
+      "git_blob": "e233f59e33a2932b4e2aabca9e897e4fb1b947cd",
+      "git_mode": "100644",
+      "bytes": 1987499,
+      "source_sha256": "3b2aed2d9dfb5980094f0136953fd768f7c515b8a52c59c23417e4f2050e695c"
+    },
+    {
+      "source_path": "packages/bait/site/index.html",
+      "destination_path": "site/index.html",
+      "git_blob": "cb760d168065b15514b8c7e78119c713028da0bb",
+      "git_mode": "100644",
+      "bytes": 19948,
+      "source_sha256": "5dcf87e1179fbb3c35edbdd2de30d4cef65bcbf612d715f9ee97d2eeac011bf9"
+    },
+    {
+      "source_path": "packages/bait/site/lab/brand/baited-a.png",
+      "destination_path": "site/lab/brand/baited-a.png",
+      "git_blob": "ec4073d0a9b987acfd5330e0a727a6317f57cf3e",
+      "git_mode": "100644",
+      "bytes": 439114,
+      "source_sha256": "785ae4b208f56f6a604bf9d651f1a2221297f416d646d290d8838ea5feb87e6c"
+    },
+    {
+      "source_path": "packages/bait/site/lab/brand/baited-b.png",
+      "destination_path": "site/lab/brand/baited-b.png",
+      "git_blob": "504a7dcccaa29818482cf738bebe2aa62f27f072",
+      "git_mode": "100644",
+      "bytes": 506370,
+      "source_sha256": "582e724d1a5d9b9b69e2b7105c3905ebf9cf6e71262afa4015be8ffbff79efd7"
+    },
+    {
+      "source_path": "packages/bait/site/lab/brand/baited-c.png",
+      "destination_path": "site/lab/brand/baited-c.png",
+      "git_blob": "427cf22d2ed3c92c8360388020009418a756ee3d",
+      "git_mode": "100644",
+      "bytes": 259554,
+      "source_sha256": "c68169de4fb3134c900c599a7c52f144259b87a44f2d3b1d982bfdc47f17fd5d"
+    },
+    {
+      "source_path": "packages/bait/site/lab/brand/index.html",
+      "destination_path": "site/lab/brand/index.html",
+      "git_blob": "7015728ab7004a18d909bc630cf2eeb65ebdfaa9",
+      "git_mode": "100644",
+      "bytes": 6403,
+      "source_sha256": "20ffbb7deef51eae7e592201f352e751f4fa16ac78082f1cc094559c52941325"
+    },
+    {
+      "source_path": "packages/bait/site/lab/brand/lab.css",
+      "destination_path": "site/lab/brand/lab.css",
+      "git_blob": "e0054294e8f4c606971723e702e02c477c1bbc8d",
+      "git_mode": "100644",
+      "bytes": 2748,
+      "source_sha256": "0b5120b2985869f454c2a227a6fdc3a758b6c0b7086ccbc0a53d951616afeced"
+    },
+    {
+      "source_path": "packages/bait/site/lab/brand/lab.js",
+      "destination_path": "site/lab/brand/lab.js",
+      "git_blob": "66ea22baf218237da3a10736e0839be0d0e4e65c",
+      "git_mode": "100644",
+      "bytes": 375,
+      "source_sha256": "27306752aae980fbaaaf030ec94002ae6dc69a135ba5e3f4eb69d2c45da77961"
+    },
+    {
+      "source_path": "packages/bait/site/legal.css",
+      "destination_path": "site/legal.css",
+      "git_blob": "58d26fc771c5479f43a143d1f0726d6877a2476d",
+      "git_mode": "100644",
+      "bytes": 2359,
+      "source_sha256": "7d52655eec04a1c9db4801aeed79c1199b2bbaba3790d69e0af7b7cce053da9d"
+    },
+    {
+      "source_path": "packages/bait/site/licenses/Inter-OFL.txt",
+      "destination_path": "site/licenses/Inter-OFL.txt",
+      "git_blob": "21f6aff961064c2e429f570995e446bcdd555422",
+      "git_mode": "100644",
+      "bytes": 4377,
+      "source_sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+    },
+    {
+      "source_path": "packages/bait/site/licenses/RussoOne-OFL.txt",
+      "destination_path": "site/licenses/RussoOne-OFL.txt",
+      "git_blob": "b086b9a69d936dd003d5f9d53361cfd0fe6c60d1",
+      "git_mode": "100644",
+      "bytes": 4389,
+      "source_sha256": "d391b94070ab7aee254ca62df17ac3718fe5709e0d8b3c9a947dbd234f510d4f"
+    },
+    {
+      "source_path": "packages/bait/site/media/captions.vtt",
+      "destination_path": "site/media/captions.vtt",
+      "git_blob": "ebae9e10b9718e14b07a594a27e2fcfe5bfa88ab",
+      "git_mode": "100644",
+      "bytes": 495,
+      "source_sha256": "6d8e99b8f75fe728b1d749cbf60f08dda0b306e4fef202ee99a067385223b3a1"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-01.avif",
+      "destination_path": "site/media/chapter-01.avif",
+      "git_blob": "71dd12462611a61841f3063d5055b15ca43bc04c",
+      "git_mode": "100644",
+      "bytes": 76110,
+      "source_sha256": "1f6f3eef38fb27593f8c492e589328446c67bf260911952b165c35c9668d9223"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-02.avif",
+      "destination_path": "site/media/chapter-02.avif",
+      "git_blob": "40e13cb83ef45500cbe6ff779c112f52d87c8ccd",
+      "git_mode": "100644",
+      "bytes": 24050,
+      "source_sha256": "8c211a54836a6413c74f1aaad8934e2e1ba291a56027f1efd19c4de36494638f"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-03.avif",
+      "destination_path": "site/media/chapter-03.avif",
+      "git_blob": "4a311787f3ed56978a0d8aa31e6ea411edbad018",
+      "git_mode": "100644",
+      "bytes": 91603,
+      "source_sha256": "65c1fe0b703a3233a5ce7da463c534170798b0cc5851f08029abb1fb86b1c6a2"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-04.avif",
+      "destination_path": "site/media/chapter-04.avif",
+      "git_blob": "9b4e7ea691d7b48b9f0bd5f747124dbeb24a76ca",
+      "git_mode": "100644",
+      "bytes": 92115,
+      "source_sha256": "0c765c5963d63062e791f48efaa4af2a4aa53bd6221eacc92b666e9ef6a8e269"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-05.avif",
+      "destination_path": "site/media/chapter-05.avif",
+      "git_blob": "6371e471173fcae3cf9f665d477f072154556c65",
+      "git_mode": "100644",
+      "bytes": 92976,
+      "source_sha256": "bb14c37816b1939d0ca848042b507bbf01a62a7b263ab04be5ddcb667f917790"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-06.avif",
+      "destination_path": "site/media/chapter-06.avif",
+      "git_blob": "ffa8c64db01bae2327c0b129bcf0fd7ee74e492e",
+      "git_mode": "100644",
+      "bytes": 28160,
+      "source_sha256": "0c9ac322f66903007272d43c8e0f9a7c5bc3e2e4c07b2d64ea2b68372628e382"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-07.avif",
+      "destination_path": "site/media/chapter-07.avif",
+      "git_blob": "047746ca170dbebd6a5f3d2f52adf76433fb793c",
+      "git_mode": "100644",
+      "bytes": 89080,
+      "source_sha256": "4a27af400f9b5e82be5756fa600b07b40144daa926212c6b69dce4dae8a87c1b"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-phone-01.avif",
+      "destination_path": "site/media/chapter-phone-01.avif",
+      "git_blob": "d8d6b6d318588e8b179a2dbf6654134fc185dcb4",
+      "git_mode": "100644",
+      "bytes": 61040,
+      "source_sha256": "26230e117fe655336e850ef3caf204159084be492525eafefa648103cbf0f328"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-phone-02.avif",
+      "destination_path": "site/media/chapter-phone-02.avif",
+      "git_blob": "d71090f1fe3c1ac483683e9f78124075caa3ebc2",
+      "git_mode": "100644",
+      "bytes": 21906,
+      "source_sha256": "ac031b51fa04c26d420f9313fe0d75d3d5950a7113dd782bf8b062bec7d49098"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-phone-03.avif",
+      "destination_path": "site/media/chapter-phone-03.avif",
+      "git_blob": "74574da764dd07e862ea0206560d9d86cd1eeccf",
+      "git_mode": "100644",
+      "bytes": 66405,
+      "source_sha256": "b457f526f904c9d119281414f4a17f77b7eda76232db2128c8d36039de053c60"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-phone-04.avif",
+      "destination_path": "site/media/chapter-phone-04.avif",
+      "git_blob": "781396c5ac18915f2b76752fc6ae0ac28bc2947c",
+      "git_mode": "100644",
+      "bytes": 63257,
+      "source_sha256": "f2bea7ad1d5fbdbc7bb646ede093d2b2a1104c6863e029495ab10525e709e6ec"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-phone-05.avif",
+      "destination_path": "site/media/chapter-phone-05.avif",
+      "git_blob": "24bd105750a586e58649912fcfb0576d70d45f7d",
+      "git_mode": "100644",
+      "bytes": 63168,
+      "source_sha256": "302fbc8aab968aade5eb87733a7f1ba255a4dafaad90c4a3960ab2daa7e9a343"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-phone-06.avif",
+      "destination_path": "site/media/chapter-phone-06.avif",
+      "git_blob": "c3fb17722a2bdf766d66a2c95dc3d05065faa943",
+      "git_mode": "100644",
+      "bytes": 24872,
+      "source_sha256": "43b209d5487a9b4e93f88b2927a2c90838c7d97608e379165cb7b8d93cb2d677"
+    },
+    {
+      "source_path": "packages/bait/site/media/chapter-phone-07.avif",
+      "destination_path": "site/media/chapter-phone-07.avif",
+      "git_blob": "665f2e16ddcb8e0f4c30e99343dcfa6421616b53",
+      "git_mode": "100644",
+      "bytes": 58760,
+      "source_sha256": "29a8b47ed8baf3f38259fccbffaf9e5d73cd85dbfe604c38a3447fce3429f8ac"
+    },
+    {
+      "source_path": "packages/bait/site/media/hero-desktop.mp4",
+      "destination_path": "site/media/hero-desktop.mp4",
+      "git_blob": "4a17bebd5ce2a1ccf736af15f17fdb96a77ff14f",
+      "git_mode": "100644",
+      "bytes": 2190094,
+      "source_sha256": "74cab518782b7e903521a322c2d10c7f306838a85eb86fcdfa6110de074dffb3"
+    },
+    {
+      "source_path": "packages/bait/site/media/hero-desktop.webm",
+      "destination_path": "site/media/hero-desktop.webm",
+      "git_blob": "5aabcd4407739b74dce5a7d5d205530914435bbd",
+      "git_mode": "100644",
+      "bytes": 1730033,
+      "source_sha256": "a40c0b888900e66b6f3da10c93cd26e1b2935212fade4ccb8cf012dc32dd556b"
+    },
+    {
+      "source_path": "packages/bait/site/media/hero-phone.mp4",
+      "destination_path": "site/media/hero-phone.mp4",
+      "git_blob": "35ec5c7977c5a29cc646f02f850e1365e54d6f2e",
+      "git_mode": "100644",
+      "bytes": 1690228,
+      "source_sha256": "f8f3333c0df19f8fe68147e19d8be6a59fe97b2559edd369d88670530b21988f"
+    },
+    {
+      "source_path": "packages/bait/site/media/hero-phone.webm",
+      "destination_path": "site/media/hero-phone.webm",
+      "git_blob": "2e22c020675c2260a2e7b81e798a29562e4906a9",
+      "git_mode": "100644",
+      "bytes": 1489098,
+      "source_sha256": "867657bbb94c82829cd683eedafd706cf25dedee4040840ab8de5f9885a8ddc6"
+    },
+    {
+      "source_path": "packages/bait/site/media/poster-desktop.avif",
+      "destination_path": "site/media/poster-desktop.avif",
+      "git_blob": "b8516cc8dbfa53afb7d8d19d8023914eecb365a4",
+      "git_mode": "100644",
+      "bytes": 39241,
+      "source_sha256": "a678427291db9bac89dc6e2662a12e2a61d7733ad5f5eb57f95853a949a9f1d3"
+    },
+    {
+      "source_path": "packages/bait/site/media/poster-phone.avif",
+      "destination_path": "site/media/poster-phone.avif",
+      "git_blob": "fb1f86da6af9dd363b30f8a4768e417e0d714625",
+      "git_mode": "100644",
+      "bytes": 31188,
+      "source_sha256": "48739d8c21f52659f420e88a50e0a0caf3f5064b51dc6399981f34833d4fb276"
+    },
+    {
+      "source_path": "packages/bait/site/motion.css",
+      "destination_path": "site/motion.css",
+      "git_blob": "4c0a98e05f9813ad7e0ecf1fddce7aae9c2e52ad",
+      "git_mode": "100644",
+      "bytes": 109,
+      "source_sha256": "5ca3b9f9a105f8a60ae355c314d97122fdc7a46895b6128977f8c2f1d954897b"
+    },
+    {
+      "source_path": "packages/bait/site/motion.js",
+      "destination_path": "site/motion.js",
+      "git_blob": "a026fcfb8a9cf1d35f826c1b2d03af4a1ec2b02b",
+      "git_mode": "100644",
+      "bytes": 289,
+      "source_sha256": "29b977095aa2030b58c569248be324460eb2249aba1f78523439bf549fc4bada"
+    },
+    {
+      "source_path": "packages/bait/site/player.js",
+      "destination_path": "site/player.js",
+      "git_blob": "09141300b31d6e06da73f35b10147d91835ad02c",
+      "git_mode": "100644",
+      "bytes": 10176,
+      "source_sha256": "3c70e70ecca209f11f7478d0e85abab9c4e9f53ab99350b6539433c8e9adec5b"
+    },
+    {
+      "source_path": "packages/bait/site/privacy/index.html",
+      "destination_path": "site/privacy/index.html",
+      "git_blob": "d87f5972a368480414424c8a3b6002fa17df2f03",
+      "git_mode": "100644",
+      "bytes": 6204,
+      "source_sha256": "a952935fee91533283f899eaeb718f97d8281a949b77b5db5a5a1bbc488409f2"
+    },
+    {
+      "source_path": "packages/bait/site/scene-seam.css",
+      "destination_path": "site/scene-seam.css",
+      "git_blob": "4cf41504b0aac6ffdfd30d7c686a3d507540cfa6",
+      "git_mode": "100644",
+      "bytes": 1111,
+      "source_sha256": "fbaa345ea01c8a864f463101bef19fb68133896e0165e0c9f83e29f977c0c3bf"
+    },
+    {
+      "source_path": "packages/bait/site/scene-seam.js",
+      "destination_path": "site/scene-seam.js",
+      "git_blob": "1226c1fe0117b990de07c5ab721c17799c32f39a",
+      "git_mode": "100644",
+      "bytes": 4798,
+      "source_sha256": "3b0ea757a2dc3d80286b01cb28bde37dbe4c05f6c3005012c963931dc898fc8a"
+    },
+    {
+      "source_path": "packages/bait/site/screen-stack.css",
+      "destination_path": "site/screen-stack.css",
+      "git_blob": "900e08c9ae20de05605411c46a5afec3a221f77f",
+      "git_mode": "100644",
+      "bytes": 7766,
+      "source_sha256": "f9f02d9f3965c9ccc47e8ca45583d5347af55992df616885b800c3866e635f63"
+    },
+    {
+      "source_path": "packages/bait/site/screen-stack.js",
+      "destination_path": "site/screen-stack.js",
+      "git_blob": "ceec9228f588b8409ed0a72a764a4fa04fd725a1",
+      "git_mode": "100644",
+      "bytes": 16149,
+      "source_sha256": "bbf43c515f41143f3392714af21d5dc755bca977e8421770df13dc302478b2b2"
+    },
+    {
+      "source_path": "packages/bait/site/styles.css",
+      "destination_path": "site/styles.css",
+      "git_blob": "a747fa9208a007d61db60d9e63c5fd6de5b66476",
+      "git_mode": "100644",
+      "bytes": 47934,
+      "source_sha256": "a9820d9dd885b5876a4cf2383e2bf7773cfcb99747d2d7c09068c9a217232323"
+    },
+    {
+      "source_path": "packages/bait/site/terms/index.html",
+      "destination_path": "site/terms/index.html",
+      "git_blob": "1f5961388487d7cd7629f574d5c712fc4534c575",
+      "git_mode": "100644",
+      "bytes": 3557,
+      "source_sha256": "57c8daccab76e41364ce2a031c08bac5e55de4b4d5650b2f9267ce0e4736f85f"
+    },
+    {
+      "source_path": "packages/bait/src/worker.ts",
+      "destination_path": "src/worker.ts",
+      "git_blob": "48ed3fb8c484ec99d4524e56a6ceff4519c444e3",
+      "git_mode": "100644",
+      "bytes": 2694,
+      "source_sha256": "680718e89768d6f87efb6a6877ee776f4b3c5e7514993ac249c5049dc407c094"
+    },
+    {
+      "source_path": "packages/bait/test/brand.test.mjs",
+      "destination_path": "test/brand.test.mjs",
+      "git_blob": "6503f71c2c88d8c756f6b19c4e9ae2fb621fc1f9",
+      "git_mode": "100644",
+      "bytes": 793,
+      "source_sha256": "4e2d110923059184c77d847f75e2cc068f3b9d8ca0e64123ce8a4d41bf154753"
+    },
+    {
+      "source_path": "packages/bait/test/deck.test.mjs",
+      "destination_path": "test/deck.test.mjs",
+      "git_blob": "093d4f32d1b054fef92543a90d2d59340f2ae9fa",
+      "git_mode": "100644",
+      "bytes": 6186,
+      "source_sha256": "ebe39a4eab0040f8dc17dc15a4ed41d8326102911411d2564151db0ed2d5536c"
+    },
+    {
+      "source_path": "packages/bait/test/worker.test.mjs",
+      "destination_path": "test/worker.test.mjs",
+      "git_blob": "713e4311838cfb81528a2b41c617ae1775e46cae",
+      "git_mode": "100644",
+      "bytes": 8170,
+      "source_sha256": "f43f8ccca109ec62af0e678ab0816300e22537761c2c784a8302e874b0025436"
+    },
+    {
+      "source_path": "packages/bait/tsconfig.json",
+      "destination_path": "tsconfig.json",
+      "git_blob": "96595cc9ba5e087ee3bfea0d0d48e7c77745bf78",
+      "git_mode": "100644",
+      "bytes": 303,
+      "source_sha256": "508e3209c137b41a01164321a91dee6dd93961f4d19cb64d7214d16a2407fa5a"
+    },
+    {
+      "source_path": "packages/bait/wrangler.jsonc",
+      "destination_path": "wrangler.jsonc",
+      "git_blob": "839047ad2012344ea48c5d8cb8cc52dfb46bb1e4",
+      "git_mode": "100644",
+      "bytes": 1070,
+      "source_sha256": "8923876570e925a096dd5f6b0d043ef290c9bebc91ec32214dce1ee32cde19bc"
+    }
+  ],
+  "integration_changes": [
+    {
+      "path": "ASSETS.md",
+      "imported_sha256": "a1a42e268ced56e16a93090df4aac140b021ef7417eea67ee75328bcc7f9e64c",
+      "integrated_sha256": "1efda602e3c0f0b36d58a05ca90347cabf6e8bebacfb37a03c7014250d1fc95a",
+      "reason": "Update canonical repository and local provenance paths; distinguish unchanged media from authorized hostname changes."
+    },
+    {
+      "path": "README.md",
+      "imported_sha256": "d6d960bc611c81c6daa60e77253d0bb3d0e83d2f9b156121550cfec2945a653c",
+      "integrated_sha256": "c2cabe4fe331b65a534c86f0da30d8415814f17562fba449c2c9c27f5d0bd25d",
+      "reason": "Update canonical repository, package commands and deployment/domain handover documentation."
+    },
+    {
+      "path": "design/brand-direction.md",
+      "imported_sha256": "0d97c7ac9d7a4954381ca8db5b422752e4e1191a51f760ea844353c033d489b8",
+      "integrated_sha256": "dbdeac1745921bba38b4a28bdc155246086a0327c17d0878ecd4ef990e87887a",
+      "reason": "Label historical source design evidence separately from the current migration."
+    },
+    {
+      "path": "design/detail-polish-2026-10-26.md",
+      "imported_sha256": "8e8652e11aa90814a77327127524a91b856b14cb57b0068945a0c86906a1f892",
+      "integrated_sha256": "f7cbe67d7c838e6486ca8f5a24f56e89f885799950ff40bbf65627aaaa1ff801",
+      "reason": "Label historical source verification separately from the current migration."
+    },
+    {
+      "path": "package.json",
+      "imported_sha256": "e093b6a9d7e0f909617451449345d83e761f9a3ec6f027fd1afb2a61ab79a818",
+      "integrated_sha256": "f2d828c164c796ceb79e459dd97be4e23dd975d4a191539dcf4f81a5f215875b",
+      "reason": "Rename package to @baited/landing and prepare authorized version 1.2.0."
+    },
+    {
+      "path": "site/brand.js",
+      "imported_sha256": "1b42ed9d0bd3859ece49d48b1ac79486314557a8c9b1676629825f8b39e1ada4",
+      "integrated_sha256": "6b877abf07e121cb9bcc1b00405207130743fc25aab0a61d7760d5fae854230e",
+      "reason": "Restrict development logo proof selection to the new development hostname and local loopback hosts."
+    },
+    {
+      "path": "site/index.html",
+      "imported_sha256": "5dcf87e1179fbb3c35edbdd2de30d4cef65bcbf612d715f9ee97d2eeac011bf9",
+      "integrated_sha256": "f66178898c526d78d2037a774a4c7d8e67d79f5f9ddabab26b9a520cbb90f69e",
+      "reason": "Update the HTML canonical URL to the authorized baited.maff.app domain."
+    },
+    {
+      "path": "site/privacy/index.html",
+      "imported_sha256": "a952935fee91533283f899eaeb718f97d8281a949b77b5db5a5a1bbc488409f2",
+      "integrated_sha256": "3d6ccee2ace1698251fdba72758d2e4f89abf41955c89de1a6b0a7e66fc2b908",
+      "reason": "Update the HTML canonical URL to the authorized baited.maff.app domain."
+    },
+    {
+      "path": "site/terms/index.html",
+      "imported_sha256": "57c8daccab76e41364ce2a031c08bac5e55de4b4d5650b2f9267ce0e4736f85f",
+      "integrated_sha256": "b7bc4fe7e3e1b39d93d87e3ffa89ff565669a8168dae7c70fc5b87a41d237b76",
+      "reason": "Update the HTML canonical URL to the authorized baited.maff.app domain."
+    },
+    {
+      "path": "src/worker.ts",
+      "imported_sha256": "680718e89768d6f87efb6a6877ee776f4b3c5e7514993ac249c5049dc407c094",
+      "integrated_sha256": "56fa2db37c3672ba9c6f58e9f58b9bb9f89ba3fc931152d3ae4d452b90ca879d",
+      "reason": "Serve the new canonical domain and safely redirect exact legacy aliases while retaining security and indexing policies."
+    },
+    {
+      "path": "test/brand.test.mjs",
+      "imported_sha256": "4e2d110923059184c77d847f75e2cc068f3b9d8ca0e64123ce8a4d41bf154753",
+      "integrated_sha256": "b8cdd4896267fe35c59aef888dafdb5194afa4a90f596788d7247dfcce900c80",
+      "reason": "Verify new development hostname allowlist and rejection of old or lookalike hosts."
+    },
+    {
+      "path": "test/worker.test.mjs",
+      "imported_sha256": "f43f8ccca109ec62af0e678ab0816300e22537761c2c784a8302e874b0025436",
+      "integrated_sha256": "2b1668c497f0f112532d1a601be148603c662a648254bda8b7859affe4f6f2d9",
+      "reason": "Verify legacy redirects, canonical resources, exact-host restrictions and unchanged security behavior."
+    },
+    {
+      "path": "wrangler.jsonc",
+      "imported_sha256": "8923876570e925a096dd5f6b0d043ef290c9bebc91ec32214dce1ee32cde19bc",
+      "integrated_sha256": "a7943d965c19ac92d9742a8b357dc640ab0b9b074bc5e2b17c8b6167ca07f64c",
+      "reason": "Attach new canonical custom domains and retain legacy redirect aliases on the existing Workers."
+    }
+  ],
+  "verification": {
+    "source_files_unchanged": 75,
+    "source_files_adapted": 13,
+    "site_files_byte_identical": 70,
+    "approved_media_files_byte_identical": 51,
+    "approved_media_files_total": 51,
+    "upstream_license_byte_identical": true
+  }
+}
