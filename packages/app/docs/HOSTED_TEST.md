@@ -10,7 +10,9 @@ The Cloudflare token in Proton `dev / cf-irchiinnuss-api-token` now has the tunn
 
 Twitch now has the 11.21 MB Extension ZIP, current logo/icon/discovery images, and an actual viewer UI screenshot. The saved name is Baited and the category is Games in Extensions. The broadcaster and Paolo are confirmed in the Testing Account Allowlist. The nonexistent fullscreen file was removed; the existing Mobile view now points to `viewer.html`.
 
-Version 0.0.1 is now in **Hosted Test**. Twitch confirms CDN hosting and no longer shows the missing listing information warning. No review was submitted. A real round with Paolo and the physical Twitch mobile app still need their own checks below.
+Version 0.0.1 is now in **Hosted Test**. Twitch confirms CDN hosting and no longer shows the missing listing information warning. The owner approved OAuth successfully, and the real Studio shows **Twitch connected · @komediruzecki7**. The native configuration view loads from Twitch's CDN with `hosted_test` state and reports **Studio connected**. The broadcaster dashboard shows Baited 0.0.1 activated in **Panel 1**.
+
+No review was submitted. Paolo joining, real chat delivery, the physical microphone with OBS, a complete round and the physical Twitch mobile app still need their own checks below.
 
 ## Addresses and test accounts
 
@@ -125,8 +127,12 @@ Check these only after observing them in the real hosted session:
 - [x] Public health responds over trusted HTTPS (26 October 2026).
 - [ ] Studio completes its full hosted interaction without browser errors.
 - [x] Existing Extension version 0.0.1 is in Hosted Test, with the uploaded ZIP processed.
+- [x] Owner-approved Twitch OAuth completes and Studio shows `komediruzecki7` connected.
+- [x] Native configuration loads from Twitch's CDN in `hosted_test` state and reports Studio connected.
+- [x] Broadcaster dashboard shows Baited 0.0.1 activated in Panel 1.
+- [x] Broadcaster's native viewer loads from Twitch's CDN, both inline on the channel and in the pop-out, and shows the waiting state.
 - [ ] Broadcaster and Paolo both see the panel from Twitch's CDN.
-- [ ] Studio completes Twitch OAuth and receives Paolo's real chat messages.
+- [ ] Studio receives Paolo's real chat messages.
 - [ ] Physical microphone and Moonshine work while the intended OBS scene is running.
 - [ ] Active target stays hidden in Studio and OBS; Paolo sees it.
 - [ ] Confirmed catch, rejected catch, pause/resume and escape show the intended results.
