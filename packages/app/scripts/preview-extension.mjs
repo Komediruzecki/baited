@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { constants } from 'node:fs';
+import { constants, readFileSync } from 'node:fs';
 import { open, realpath } from 'node:fs/promises';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -13,6 +13,7 @@ import {
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixtureClientId = 'baitedlocalpreview0001';
+const catalogue = JSON.parse(readFileSync(new URL('../shared/card-review-catalogue.json', import.meta.url), 'utf8'));
 const fixtures = new Set([
   'idle',
   'active',
@@ -27,6 +28,11 @@ const fixtures = new Set([
   'reconnect',
   'error',
   'longword',
+  'kaleidoscope',
+  'archipelago',
+  'dinosaur',
+  'marshmallow',
+  'alchemy',
 ]);
 const harness = new Map([
   ['/', 'index.html'],
@@ -105,7 +111,9 @@ export function fixtureState(mode, role, at, now = Date.now()) {
       : 'active';
   const duration = 90000;
   const remaining = phase === 'paused' ? 26000 : Math.max(0, duration - (now - at));
-  const target = mode === 'longword' ? 'ANTIDISESTABLISHMENTARIANISM' : 'VOLCANO';
+  const example = catalogue.find(entry => entry.word === mode) ?? catalogue.find(entry => entry.word === 'volcano');
+  const target = mode === 'longword' ? 'ANTIDISESTABLISHMENTARIANISM' : example.word.toUpperCase();
+  const difficulty = mode === 'hard' ? 'hard' : mode === example.word ? example.difficulty : 'medium';
   const round = ['active', 'paused', 'settling'].includes(phase)
     ? {
         id: 'fixture-round',
@@ -115,7 +123,7 @@ export function fixtureState(mode, role, at, now = Date.now()) {
         endsAt: phase === 'active' ? at + duration : null,
         settleUntil: phase === 'settling' ? at + 6000 : null,
         epoch: 1,
-        difficulty: mode === 'hard' ? 'hard' : 'medium',
+        difficulty,
         guessEnabled: false,
         guessUsed: false,
         wrongGuessBonus: 0,
@@ -125,9 +133,7 @@ export function fixtureState(mode, role, at, now = Date.now()) {
               forbiddenClues:
                 mode === 'longword'
                   ? ['establishment', 'constitutional', 'disestablishment']
-                  : mode === 'hard'
-                    ? ['lava', 'eruption', 'mountain', 'magma']
-                    : ['lava', 'eruption', 'mountain'],
+                  : example.clues.slice(0, { easy: 0, medium: 2, hard: 4 }[difficulty]),
             }
           : {}),
       }
@@ -139,7 +145,7 @@ export function fixtureState(mode, role, at, now = Date.now()) {
           number: 7,
           word: target,
           outcome: mode,
-          elapsed: 32000,
+          elapsed: 32,
           participants: 12,
           at: now - 1000,
         }
@@ -157,7 +163,7 @@ export function fixtureState(mode, role, at, now = Date.now()) {
       result,
       history: [],
       settings: {
-        difficulty: 'medium',
+        difficulty,
         duration,
         cooldown: 8000,
         auto: false,

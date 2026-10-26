@@ -1,0 +1,938 @@
+[
+  {
+    "word": "banana",
+    "difficulty": "easy",
+    "clues": [
+      "fruit",
+      "yellow",
+      "peel",
+      "smoothie"
+    ],
+    "example": "What do cartoon characters slip on?",
+    "ink": "#f3d40b"
+  },
+  {
+    "word": "penguin",
+    "difficulty": "medium",
+    "clues": [
+      "bird",
+      "ice",
+      "antarctica",
+      "waddle"
+    ],
+    "example": "Who would win a belly-slide race?",
+    "ink": "#d9e3f2"
+  },
+  {
+    "word": "microwave",
+    "difficulty": "medium",
+    "clues": [
+      "heat",
+      "oven",
+      "reheat",
+      "cooking"
+    ],
+    "example": "How do you rescue cold leftovers?",
+    "ink": "#bf94fe"
+  },
+  {
+    "word": "dragon",
+    "difficulty": "easy",
+    "clues": [
+      "fire",
+      "wings",
+      "scales",
+      "fantasy"
+    ],
+    "example": "What would you put in charge of a castle?",
+    "ink": "#dd6fff"
+  },
+  {
+    "word": "volcano",
+    "difficulty": "medium",
+    "clues": [
+      "lava",
+      "eruption",
+      "magma",
+      "mountain"
+    ],
+    "example": "Where would you definitely not build a house?",
+    "ink": "#ff743c"
+  },
+  {
+    "word": "monocle",
+    "difficulty": "hard",
+    "clues": [
+      "eye",
+      "lens",
+      "glasses",
+      "single"
+    ],
+    "example": "What does a fancy villain squint through?",
+    "ink": "#fcd80e"
+  },
+  {
+    "word": "pizza",
+    "difficulty": "easy",
+    "clues": [
+      "cheese",
+      "slice",
+      "dough",
+      "pepperoni"
+    ],
+    "example": "What would you order for the whole chat?",
+    "ink": "#feaa24"
+  },
+  {
+    "word": "robot",
+    "difficulty": "easy",
+    "clues": [
+      "machine",
+      "metal",
+      "android",
+      "automation"
+    ],
+    "example": "Who should do the chores while you stream?",
+    "ink": "#c180ff"
+  },
+  {
+    "word": "rocket",
+    "difficulty": "easy",
+    "clues": [
+      "space",
+      "launch",
+      "astronaut",
+      "moon"
+    ],
+    "example": "What carries a crew beyond the atmosphere?",
+    "ink": "#ff7349"
+  },
+  {
+    "word": "pirate",
+    "difficulty": "easy",
+    "clues": [
+      "ship",
+      "treasure",
+      "sword",
+      "eyepatch"
+    ],
+    "example": "Who says arr and wears a tricorn?",
+    "ink": "#ff7254"
+  },
+  {
+    "word": "cactus",
+    "difficulty": "medium",
+    "clues": [
+      "desert",
+      "plant",
+      "spines",
+      "succulent"
+    ],
+    "example": "What's the worst thing to hug?",
+    "ink": "#a2fa45"
+  },
+  {
+    "word": "jellyfish",
+    "difficulty": "medium",
+    "clues": [
+      "ocean",
+      "sting",
+      "tentacles",
+      "sea"
+    ],
+    "example": "What looks like a swimming lava lamp?",
+    "ink": "#2dc6ff"
+  },
+  {
+    "word": "telescope",
+    "difficulty": "medium",
+    "clues": [
+      "stars",
+      "space",
+      "lens",
+      "astronomy"
+    ],
+    "example": "How would you get a closer look at Saturn?",
+    "ink": "#fe843d"
+  },
+  {
+    "word": "saxophone",
+    "difficulty": "medium",
+    "clues": [
+      "jazz",
+      "instrument",
+      "brass",
+      "reed"
+    ],
+    "example": "What would you play in a smoky club at 2 a.m.?",
+    "ink": "#fdc725"
+  },
+  {
+    "word": "octopus",
+    "difficulty": "medium",
+    "clues": [
+      "tentacles",
+      "eight",
+      "ocean",
+      "ink"
+    ],
+    "example": "Who could hold every controller at once?",
+    "ink": "#f487fe"
+  },
+  {
+    "word": "boomerang",
+    "difficulty": "hard",
+    "clues": [
+      "throw",
+      "return",
+      "australia",
+      "curved"
+    ],
+    "example": "What's the worst thing to toss away?",
+    "ink": "#fd8526"
+  },
+  {
+    "word": "narwhal",
+    "difficulty": "hard",
+    "clues": [
+      "whale",
+      "tusk",
+      "arctic",
+      "unicorn"
+    ],
+    "example": "Which sea creature has a horn on its face?",
+    "ink": "#a5ccfd"
+  },
+  {
+    "word": "parachute",
+    "difficulty": "hard",
+    "clues": [
+      "jump",
+      "skydiving",
+      "canopy",
+      "fall"
+    ],
+    "example": "What would you double-check before leaving the plane?",
+    "ink": "#fe9d1b"
+  },
+  {
+    "word": "coffee",
+    "difficulty": "easy",
+    "clues": [
+      "caffeine",
+      "beans",
+      "espresso",
+      "latte"
+    ],
+    "example": "What gets you through the early shift?",
+    "ink": "#cfacff"
+  },
+  {
+    "word": "chicken",
+    "difficulty": "easy",
+    "clues": [
+      "bird",
+      "poultry",
+      "egg",
+      "rooster"
+    ],
+    "example": "Who keeps waking the farm at sunrise?",
+    "ink": "#ffe19b"
+  },
+  {
+    "word": "potato",
+    "difficulty": "easy",
+    "clues": [
+      "fries",
+      "chips",
+      "mash",
+      "vegetable"
+    ],
+    "example": "What deserves its own section on the dinner plate?",
+    "ink": "#eeb56b"
+  },
+  {
+    "word": "cookie",
+    "difficulty": "easy",
+    "clues": [
+      "biscuit",
+      "bake",
+      "chocolate",
+      "dough"
+    ],
+    "example": "What disappears fastest from the kitchen jar?",
+    "ink": "#f2ba79"
+  },
+  {
+    "word": "rainbow",
+    "difficulty": "easy",
+    "clues": [
+      "colors",
+      "colours",
+      "rain",
+      "sky"
+    ],
+    "example": "What would make you stop and take a photo after a storm?",
+    "ink": "#ff9fcf"
+  },
+  {
+    "word": "football",
+    "difficulty": "easy",
+    "clues": [
+      "ball",
+      "goal",
+      "sport",
+      "touchdown"
+    ],
+    "example": "What gets the whole neighbourhood shouting at the TV?",
+    "ink": "#e2dbec"
+  },
+  {
+    "word": "cheese",
+    "difficulty": "easy",
+    "clues": [
+      "milk",
+      "dairy",
+      "cheddar",
+      "mozzarella"
+    ],
+    "example": "What makes a toastie worth the burnt fingers?",
+    "ink": "#ffd65c"
+  },
+  {
+    "word": "sandwich",
+    "difficulty": "easy",
+    "clues": [
+      "bread",
+      "lunch",
+      "filling",
+      "sub"
+    ],
+    "example": "What would you pack for a long train ride?",
+    "ink": "#edb978"
+  },
+  {
+    "word": "birthday",
+    "difficulty": "easy",
+    "clues": [
+      "cake",
+      "candles",
+      "party",
+      "age"
+    ],
+    "example": "When do people suddenly remember to call you?",
+    "ink": "#f8a7d4"
+  },
+  {
+    "word": "pancake",
+    "difficulty": "easy",
+    "clues": [
+      "breakfast",
+      "syrup",
+      "batter",
+      "flip"
+    ],
+    "example": "What would you try to toss with a frying pan?",
+    "ink": "#fdc264"
+  },
+  {
+    "word": "dinosaur",
+    "difficulty": "easy",
+    "clues": [
+      "extinct",
+      "prehistoric",
+      "fossil",
+      "jurassic"
+    ],
+    "example": "What would make the worst surprise in your back garden?",
+    "ink": "#a7de91"
+  },
+  {
+    "word": "popcorn",
+    "difficulty": "easy",
+    "clues": [
+      "corn",
+      "movie",
+      "butter",
+      "snack"
+    ],
+    "example": "What snack announces itself while you make it?",
+    "ink": "#ffdf8a"
+  },
+  {
+    "word": "turtle",
+    "difficulty": "easy",
+    "clues": [
+      "shell",
+      "reptile",
+      "slow",
+      "tortoise"
+    ],
+    "example": "Who brings their own roof everywhere?",
+    "ink": "#acdc8d"
+  },
+  {
+    "word": "bubble",
+    "difficulty": "easy",
+    "clues": [
+      "soap",
+      "pop",
+      "float",
+      "round"
+    ],
+    "example": "What can you make with a wand but never hold?",
+    "ink": "#a9e1f4"
+  },
+  {
+    "word": "snowman",
+    "difficulty": "easy",
+    "clues": [
+      "snow",
+      "carrot",
+      "winter",
+      "frosty"
+    ],
+    "example": "Who needs a scarf but should never come inside?",
+    "ink": "#e2e9f6"
+  },
+  {
+    "word": "pillow",
+    "difficulty": "easy",
+    "clues": [
+      "bed",
+      "sleep",
+      "cushion",
+      "head"
+    ],
+    "example": "What do you flip to find the cold side?",
+    "ink": "#d4b3ff"
+  },
+  {
+    "word": "monkey",
+    "difficulty": "easy",
+    "clues": [
+      "primate",
+      "banana",
+      "tree",
+      "ape"
+    ],
+    "example": "Who would steal your sunglasses at the zoo?",
+    "ink": "#f2b27b"
+  },
+  {
+    "word": "bicycle",
+    "difficulty": "easy",
+    "clues": [
+      "bike",
+      "pedal",
+      "wheels",
+      "cycling"
+    ],
+    "example": "What did you learn to ride after a few scraped knees?",
+    "ink": "#c7a2ff"
+  },
+  {
+    "word": "avocado",
+    "difficulty": "medium",
+    "clues": [
+      "guacamole",
+      "toast",
+      "fruit",
+      "green"
+    ],
+    "example": "What stays rock hard all week, then goes bad overnight?",
+    "ink": "#b4d989"
+  },
+  {
+    "word": "tornado",
+    "difficulty": "medium",
+    "clues": [
+      "storm",
+      "twister",
+      "wind",
+      "funnel"
+    ],
+    "example": "What could move a barn without asking?",
+    "ink": "#c9b6e4"
+  },
+  {
+    "word": "waffle",
+    "difficulty": "medium",
+    "clues": [
+      "breakfast",
+      "syrup",
+      "batter",
+      "grid"
+    ],
+    "example": "Which food has tiny pockets for your toppings?",
+    "ink": "#f5bd71"
+  },
+  {
+    "word": "squirrel",
+    "difficulty": "medium",
+    "clues": [
+      "nuts",
+      "tree",
+      "rodent",
+      "tail"
+    ],
+    "example": "Who keeps burying snacks and forgetting where?",
+    "ink": "#f9ad6c"
+  },
+  {
+    "word": "disco",
+    "difficulty": "medium",
+    "clues": [
+      "dance",
+      "music",
+      "seventies",
+      "ball"
+    ],
+    "example": "Where would flared trousers and a mirrored ceiling fit right in?",
+    "ink": "#c4d9fa"
+  },
+  {
+    "word": "flamingo",
+    "difficulty": "medium",
+    "clues": [
+      "pink",
+      "bird",
+      "leg",
+      "feathers"
+    ],
+    "example": "Who stands around on one foot all day?",
+    "ink": "#ff9fc6"
+  },
+  {
+    "word": "igloo",
+    "difficulty": "medium",
+    "clues": [
+      "snow",
+      "house",
+      "ice",
+      "dome"
+    ],
+    "example": "Where would you sleep if every brick was frozen?",
+    "ink": "#bce7f6"
+  },
+  {
+    "word": "compass",
+    "difficulty": "medium",
+    "clues": [
+      "north",
+      "direction",
+      "needle",
+      "navigation"
+    ],
+    "example": "What would you pack for a hike with no phone signal?",
+    "ink": "#efcf82"
+  },
+  {
+    "word": "marshmallow",
+    "difficulty": "medium",
+    "clues": [
+      "sugar",
+      "campfire",
+      "smores",
+      "fluffy"
+    ],
+    "example": "What goes on a stick and always seems to catch fire?",
+    "ink": "#f5e4d4"
+  },
+  {
+    "word": "mermaid",
+    "difficulty": "medium",
+    "clues": [
+      "fish",
+      "tail",
+      "ocean",
+      "ariel"
+    ],
+    "example": "Who would struggle to buy a pair of shoes?",
+    "ink": "#cba4ff"
+  },
+  {
+    "word": "lighthouse",
+    "difficulty": "medium",
+    "clues": [
+      "coast",
+      "beacon",
+      "ships",
+      "tower"
+    ],
+    "example": "What flashes all night so sailors can get home?",
+    "ink": "#ffc59b"
+  },
+  {
+    "word": "mustache",
+    "difficulty": "medium",
+    "clues": [
+      "moustache",
+      "hair",
+      "lip",
+      "beard"
+    ],
+    "example": "What would a cartoon detective glue under their nose?",
+    "ink": "#dab3ee"
+  },
+  {
+    "word": "origami",
+    "difficulty": "medium",
+    "clues": [
+      "paper",
+      "fold",
+      "japan",
+      "crane"
+    ],
+    "example": "What could you turn an old receipt into?",
+    "ink": "#e5d7ff"
+  },
+  {
+    "word": "trampoline",
+    "difficulty": "medium",
+    "clues": [
+      "bounce",
+      "jump",
+      "springs",
+      "gymnastics"
+    ],
+    "example": "What makes the back garden feel like low gravity?",
+    "ink": "#c9a8ff"
+  },
+  {
+    "word": "yogurt",
+    "difficulty": "medium",
+    "clues": [
+      "yoghurt",
+      "milk",
+      "dairy",
+      "bacteria"
+    ],
+    "example": "What do you peel open and eat with a tiny spoon?",
+    "ink": "#e1c7ff"
+  },
+  {
+    "word": "glacier",
+    "difficulty": "medium",
+    "clues": [
+      "ice",
+      "mountain",
+      "frozen",
+      "melting"
+    ],
+    "example": "What moves so slowly you need years of photos to notice?",
+    "ink": "#a8e5f3"
+  },
+  {
+    "word": "platypus",
+    "difficulty": "hard",
+    "clues": [
+      "duck",
+      "bill",
+      "mammal",
+      "australia"
+    ],
+    "example": "Which creature looks like someone ignored the assembly instructions?",
+    "ink": "#e6ad7c"
+  },
+  {
+    "word": "accordion",
+    "difficulty": "hard",
+    "clues": [
+      "instrument",
+      "bellows",
+      "keys",
+      "squeeze"
+    ],
+    "example": "What makes a tune when you push and pull its middle?",
+    "ink": "#d4acff"
+  },
+  {
+    "word": "kaleidoscope",
+    "difficulty": "hard",
+    "clues": [
+      "patterns",
+      "mirrors",
+      "colors",
+      "colours"
+    ],
+    "example": "What changes the view every time you turn the tube?",
+    "ink": "#e6a6ed"
+  },
+  {
+    "word": "chandelier",
+    "difficulty": "hard",
+    "clues": [
+      "ceiling",
+      "lights",
+      "crystal",
+      "hanging"
+    ],
+    "example": "What would be a nightmare to dust in a ballroom?",
+    "ink": "#f3d190"
+  },
+  {
+    "word": "archipelago",
+    "difficulty": "hard",
+    "clues": [
+      "islands",
+      "ocean",
+      "chain",
+      "geography"
+    ],
+    "example": "What do you call a whole group of little holiday destinations?",
+    "ink": "#a7d8c0"
+  },
+  {
+    "word": "quicksand",
+    "difficulty": "hard",
+    "clues": [
+      "sand",
+      "sink",
+      "stuck",
+      "swamp"
+    ],
+    "example": "What did adventure films make you worry about stepping in?",
+    "ink": "#eac38b"
+  },
+  {
+    "word": "sundial",
+    "difficulty": "hard",
+    "clues": [
+      "time",
+      "shadow",
+      "sun",
+      "clock"
+    ],
+    "example": "What garden ornament becomes useless after dark?",
+    "ink": "#eec47e"
+  },
+  {
+    "word": "gargoyle",
+    "difficulty": "hard",
+    "clues": [
+      "stone",
+      "statue",
+      "roof",
+      "gothic"
+    ],
+    "example": "Who is the grumpy little monster on the cathedral?",
+    "ink": "#c9b9dc"
+  },
+  {
+    "word": "labyrinth",
+    "difficulty": "hard",
+    "clues": [
+      "maze",
+      "minotaur",
+      "lost",
+      "paths"
+    ],
+    "example": "Where would a very long piece of string come in handy?",
+    "ink": "#cebbef"
+  },
+  {
+    "word": "bagpipes",
+    "difficulty": "hard",
+    "clues": [
+      "scotland",
+      "instrument",
+      "air",
+      "tartan"
+    ],
+    "example": "What would be a terrible choice to practise in a library?",
+    "ink": "#f1ac87"
+  },
+  {
+    "word": "alchemy",
+    "difficulty": "hard",
+    "clues": [
+      "gold",
+      "transmutation",
+      "metal",
+      "elixir"
+    ],
+    "example": "What were those old experimenters trying to do with lead?",
+    "ink": "#c3e396"
+  },
+  {
+    "word": "tumbleweed",
+    "difficulty": "hard",
+    "clues": [
+      "desert",
+      "western",
+      "rolling",
+      "plant"
+    ],
+    "example": "What drifts through the scene when nobody answers your joke?",
+    "ink": "#eebc79"
+  },
+  {
+    "word": "zeppelin",
+    "difficulty": "hard",
+    "clues": [
+      "airship",
+      "blimp",
+      "hydrogen",
+      "flying"
+    ],
+    "example": "What looks like a huge cigar with passengers underneath?",
+    "ink": "#d3c4ed"
+  },
+  {
+    "word": "sphinx",
+    "difficulty": "hard",
+    "clues": [
+      "egypt",
+      "riddle",
+      "lion",
+      "pyramid"
+    ],
+    "example": "Which ancient giant has a human face and paws?",
+    "ink": "#edc281"
+  },
+  {
+    "word": "catapult",
+    "difficulty": "hard",
+    "clues": [
+      "launch",
+      "siege",
+      "throw",
+      "medieval"
+    ],
+    "example": "What would a castle really hate to see outside its gates?",
+    "ink": "#eec081"
+  },
+  {
+    "word": "obelisk",
+    "difficulty": "hard",
+    "clues": [
+      "stone",
+      "monument",
+      "egypt",
+      "pillar"
+    ],
+    "example": "What tall shape has four sides and a pointed top?",
+    "ink": "#e3c99e"
+  },
+  {
+    "word": "armadillo",
+    "difficulty": "hard",
+    "clues": [
+      "armor",
+      "armour",
+      "shell",
+      "mammal"
+    ],
+    "example": "Who looks dressed for a tiny jousting tournament?",
+    "ink": "#e6ba9c"
+  },
+  {
+    "word": "periscope",
+    "difficulty": "hard",
+    "clues": [
+      "submarine",
+      "mirrors",
+      "underwater",
+      "view"
+    ],
+    "example": "What lets you peek over something without lifting your head?",
+    "ink": "#d1c3eb"
+  },
+  {
+    "word": "tapestry",
+    "difficulty": "hard",
+    "clues": [
+      "woven",
+      "wall",
+      "fabric",
+      "hanging"
+    ],
+    "example": "What tells a whole story in coloured threads?",
+    "ink": "#e7a9d2"
+  },
+  {
+    "word": "wombat",
+    "difficulty": "hard",
+    "clues": [
+      "australia",
+      "marsupial",
+      "burrow",
+      "animal"
+    ],
+    "example": "Who famously leaves cube-shaped droppings?",
+    "ink": "#dcc0a3"
+  },
+  {
+    "word": "mushroom",
+    "difficulty": "easy",
+    "clues": [
+      "fungus",
+      "cap",
+      "toadstool",
+      "spores"
+    ],
+    "example": "What wears a cap but has no head?",
+    "ink": "#ffab9e"
+  },
+  {
+    "word": "ghost",
+    "difficulty": "easy",
+    "clues": [
+      "haunted",
+      "spirit",
+      "boo",
+      "phantom"
+    ],
+    "example": "Who could walk through the door without opening it?",
+    "ink": "#e8e4fa"
+  },
+  {
+    "word": "donut",
+    "difficulty": "easy",
+    "clues": [
+      "doughnut",
+      "glaze",
+      "hole",
+      "sprinkles"
+    ],
+    "example": "What do you buy by the dozen even though part of it is missing?",
+    "ink": "#ffb4d4"
+  },
+  {
+    "word": "hedgehog",
+    "difficulty": "medium",
+    "clues": [
+      "spines",
+      "quills",
+      "prickly",
+      "hedge"
+    ],
+    "example": "Who looks like a hairbrush with tiny feet?",
+    "ink": "#efc298"
+  },
+  {
+    "word": "gramophone",
+    "difficulty": "hard",
+    "clues": [
+      "record",
+      "needle",
+      "horn",
+      "phonograph"
+    ],
+    "example": "What would you wind up to play a song a century ago?",
+    "ink": "#f4d18a"
+  },
+  {
+    "word": "hourglass",
+    "difficulty": "medium",
+    "clues": [
+      "sand",
+      "timer",
+      "glass",
+      "minute"
+    ],
+    "example": "What do you turn over to give yourself another minute?",
+    "ink": "#b9e8ed"
+  }
+]

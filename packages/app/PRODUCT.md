@@ -20,26 +20,29 @@ Viewers steer an ordinary conversation toward a hidden word. The entertainment i
 
 ## Operating Context
 
-The current build has an external streamer studio connected to Twitch chat through EventSub, a standalone viewer room, an OBS browser overlay, and native Twitch Extension viewer/configuration surfaces. The native Extension is in local testing, not publicly released. OBS testing uses the owner's Linux computer.
+The current build has an external streamer studio connected to Twitch chat through EventSub, a standalone viewer room, an OBS browser overlay, and native Twitch Extension viewer/configuration surfaces. Extension version 0.0.1 is in Twitch Hosted Test, not publicly released or submitted for review. The test backend at play-baited.maff.app runs through a named Cloudflare Tunnel on the owner's Linux computer; its availability depends on that computer and the bounded backend/tunnel processes. OBS testing uses the same Linux computer.
 
 ## Capabilities and Constraints
 
 - Keep Paolo's original source safe and the GitHub repository private.
-- The owner-authorized static landing is released at bait.maff.app and dev.bait.maff.app from disjoint-colliders/packages/bait. Landing releases and game releases are separate. The live game remains undeployed. Both repositories stay private. See docs/master-plan.md for the setup and Extension plan.
+- The canonical private repository is Komediruzecki/baited. It contains the app and Extension in packages/app and the landing in packages/landing. The landing domains are baited.maff.app and dev.baited.maff.app; disjoint-colliders is the preserved migration source, not the active landing package. Landing releases, Hosted Test updates and public Extension releases are separate. See docs/master-plan.md and docs/HOSTED_TEST.md for the setup and Extension plan.
+- The current playable catalogue has 78 illustrated targets. Artwork stays separate from titles, clue restrictions and example questions. Off-limits clues remain readable without a strike-through.
 - Simulated previews must identify themselves. A staged landing example must never be represented as a live Twitch session.
 - Current speech integration defaults to local English Moonshine in a browser worker. Its proposed catches require broadcaster confirmation because the SDK confidence field is a constant placeholder. Deepgram remains optional for automatic scoring; ElevenLabs has no adapter. The landing needs no speech provider. See docs/moonshine.md and docs/moonshine-rehearsal.md.
-- The owner reported a successful local microphone round on 2026-10-25. The opt-in transcript display still needs a refreshed real microphone check. Native Twitch installation, remote-player and actual OBS-scene acceptance remain separate checks; simulated fixtures do not establish those outcomes.
+- The owner reported successful Hosted Test rounds with Paolo, live Twitch chat and accurate Moonshine recognition. The owner also confirmed that refreshing the OBS browser source restored the displayed wins and streak. These are reports from that test session, not a substitute for repeatable connection checks, recorded evidence or physical-device acceptance. Simulated fixtures establish none of those live outcomes.
 - Never show the active secret word in the live streamer's studio or OBS overlay. A labelled local/demo-only reveal exists for solo testing. The landing may explain the word through a clearly labelled example. Transcript preview is opt-in local/test diagnostics and must not reach viewer or overlay payloads.
 
 ## Brand Commitments
 
-Product name: baited. Use the owner-approved BAITED wordmark B from the landing for product mastheads, card backs and result signatures. Reuse the approved bomb asset where a mascot is useful. The supplied bomb direction is an orange pixel-art bomb with hooked fuse, angular bait lettering, and a censored-symbol band. Violet #9146FF, restrained yellow #FFFC79 and charcoal remain accepted colors.
+Product name: Baited. The latest owner decision is to use the supplied plain original BAITED wordmark for product mastheads, card backs and result signatures. Earlier hook variants and bomb artwork are preserved references, not authority for the current branding. Existing product screens use violet, charcoal and limited yellow; the in-progress redesign must follow the owner's latest direction rather than treating the older palette or mascot choices as new approval.
 
-The approved landing in disjoint-colliders/packages/bait is the current visual reference. Extend its typography, charcoal playing cards and violet accents into useful product controls. Keep each surface's information boundary: secret card for viewers, round and microphone controls for the streamer, compact transparent broadcast graphics for OBS. Opus completed an evidence-based product critique on 2026-10-25. Codex applied the next product polish on 2026-10-26 while Opus usage was unavailable; this is not a new Opus acceptance review. See docs/product-design-review.md. Use product-voice for visible language.
+The approved landing in packages/landing is the current visual reference. Extend its typography, playing cards and violet accents into useful product controls. Keep each surface's information boundary: secret card for viewers, round and microphone controls for the streamer, compact transparent broadcast graphics for OBS. Earlier Opus critiques and subsequent Codex polish are recorded in docs/product-design-review.md; they do not constitute final acceptance of the current redesign. Use product-voice for visible language.
+
+The card and product-surface redesign is in progress with Opus leading the specification. The owner will choose the card edition. Preserve the current behavior and readable-clue baseline while that decision is pending; do not invent or present an unapproved visual direction as settled.
 
 ## Evidence on Hand
 
-The current app, automated tests and simulated preview are available. The supplied bomb screenshot and regenerated transparent candidate are preserved in the registered output run. There is no captured real Twitch/OBS round yet; no customer count, endorsement or performance claim should be invented.
+The current app, automated tests, simulated previews and the owner's reports of successful Twitch/Paolo/Moonshine rounds are available. Original and alternative artwork remains preserved. A reported live test is distinct from a captured demo or a device-specific acceptance check; do not infer a recording, customer count, endorsement or performance claim from it.
 
 ## Product Principles
 

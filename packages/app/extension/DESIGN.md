@@ -2,14 +2,19 @@
 
 Scope: viewer and broadcaster configuration surfaces, Operate mode. This extends the approved landing's charcoal playing cards into the actual Twitch panel. Streamers and viewers often keep Twitch in a dark window beside the broadcast, so a dark ground lets the live video retain attention.
 
+The canonical private repository is Komediruzecki/baited. The landing reference is packages/landing, served at baited.maff.app and dev.baited.maff.app. Extension version 0.0.1 is in Twitch Hosted Test, with the test backend at play-baited.maff.app; this is not a review submission or public Extension release. The owner reported successful rounds with Paolo, live Twitch chat and Moonshine. Simulated previews remain separate from those live reports and do not establish device acceptance.
+
+The card and product-surface redesign is in progress with Opus leading the specification. The owner will choose the card edition. The current layout and behavior below are the baseline, not a new approved visual direction or final Opus acceptance. The latest branding decision is the supplied plain original BAITED wordmark, with no bomb or hook branding.
+
 The viewer reads a single secret word, its off-limits clues, and the clock while following a Twitch stream. One left-aligned charcoal card carries all three. The asymmetric card corner, small outlined clue tags and joined `bait them.` signature follow the approved landing cards. Violet identifies actions and state; pale yellow is reserved for the active word, final seconds and the small signature. The essential rule sits inside the active card: “Make them say it. Don't type it.” The footer says “Nudge the conversation.” Waiting cards say “Only chat will know.”
 
 - Ground `#121016`, card `#242426`, card edge `#515057`, copy `#fffdf7` / `#dedce3`, secondary `#b5afbf`.
 - Violet `#9146FF`, readable violet text `#c9a8ff`, pale yellow `#FFFC79`. The main studio link uses `#7330cf` so normal-size white button text has sufficient contrast.
-- Inter for controls, explanations and timing. Russo One for the word and provisional textual `baited` name. No new logo or mascot was designed.
-- Existing approved bomb, reduced to a 160 px display derivative with the installed ImageMagick tool. The master is unchanged. No new illustration, repainting or generation.
+- Inter for controls, explanations and timing. Russo One for the word. Use the plain original BAITED artwork for branding rather than the older provisional text or hook variants.
+- Earlier bomb masters, display derivatives and hook variants remain preserved references. They are not the source of authority for the new product branding.
+- All 78 current playable targets have approved illustrations. Clue restrictions are interface text, separate from the artwork, and remain readable without strike-throughs.
 - Static defaults; reconnect and authorization states are explicit. No automatic sound, ongoing mascot motion or hidden content that depends on animation.
-- Responsive within Twitch's 318 px content width, with a 240 px defensive floor. At 318 × 500, the word, rule, four hard-mode clues, clock and skip action remain visible. All 72 current words were measured at that width with the loaded font and fit on one line. Time uses tabular numerals. The local harness defaults to the actual 318 × 500 viewport and offers a hard-mode fixture.
+- Responsive within Twitch's 318 px content width, with a 240 px defensive floor. At 318 × 500, the word, rule, four hard-mode clues, clock and skip action must remain visible. The earlier width check covered the then-current 72 words; it is not proof that the expanded 78-target catalogue or the new card edition fits. Recheck every target and hard-mode clue set in the selected design. Time uses tabular numerals. The local harness defaults to the actual 318 × 500 viewport and offers a hard-mode fixture.
 - Configuration is a handoff sheet: channel status, one studio action, then numbered microphone/OBS preparation. The first step changes to “Twitch channel connected” after authorization. It has no duplicate game controls. The setup action is still hidden until authorization gives a validated destination.
 - Error and reconnect messages remain above the card. Broadcaster and renewed-authorization states keep secrets cleared. No redesign changes request handling, game state, retry behavior or announcements.
 

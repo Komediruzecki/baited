@@ -7,11 +7,12 @@
     <title>baited · Stream setup</title>
     <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
     <script src="./runtime-config.js"></script>
+    <link rel="stylesheet" href="./tokens.css" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-surface="config">
     <!-- THESIS: A handoff into the studio, with the first-round requirements
-    beside it. OWN-WORLD: Charcoal, precise violet actions and the approved bomb.
+    beside it. OWN-WORLD: Charcoal, precise violet actions and the original BAITED wordmark.
     STORY: Check the channel, open its studio, prepare mic and overlay.
     FIRST VIEWPORT: Brand rail, compact introduction, channel and studio action.
     FORM: A setup sheet in the approved landing world, not a second dashboard. -->
@@ -27,11 +28,14 @@
         <button class="retry" id="retry" type="button" hidden>Try again</button>
       </div>
       <section class="setup-intro">
-        <img class="setup-bomb" src="./assets/bait-bomb.png" alt="" width="80" height="80" />
-        <h1 id="setup-title">Set the trap.</h1>
-        <p>
-          Your viewers get the secret word. Run the round in your studio and let chat do the rest.
-        </p>
+        <div class="setup-intro-copy">
+          <h1 id="setup-title">Set the trap.</h1>
+          <p>Your viewers get the secret word. Run the round in your studio.</p>
+        </div>
+        <figure class="setup-card-well">
+          <div class="setup-card-back" aria-hidden="true"><span></span></div>
+          <figcaption>You see the back.<br />Viewers see the word.</figcaption>
+        </figure>
       </section>
       <section class="channel-state" aria-labelledby="channel-heading">
         <div class="channel-state-heading">
@@ -45,7 +49,7 @@
       </section>
       <a class="primary-action" id="open-studio" target="_blank" rel="noopener noreferrer" hidden>
         Open your studio
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg>
+        <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1h4v4H8V3L3 8 2 7l5-5H5zM1 3h3v1H2v4h4V6h1v3H1z" /></svg>
         <span class="sr-only">(opens an external site in a new tab)</span>
       </a>
       <p class="external-note" id="external-note" hidden>
@@ -72,7 +76,7 @@
           <li>
             <strong>Activate your viewer panel.</strong>
             <span
-              >In Twitch’s My Extensions, activate baited in a free panel slot on your
+              >In Twitch’s My Extensions, activate Baited in a free panel slot on your
               channel.</span
             >
           </li>

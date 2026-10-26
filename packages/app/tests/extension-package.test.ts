@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { request } from 'node:http';
 import { spawnSync } from 'node:child_process';
 import type { AddressInfo } from 'node:net';
+import { runInNewContext } from 'node:vm';
 
 const { EXTENSION_FILES, HELPER_URL, buildExtension, publicConfig, readFrontendFile, runtimeConfigSource } =
   await import(new URL('../scripts/build-extension.mjs', import.meta.url).href);
@@ -63,6 +64,8 @@ test('build creates deterministic ZIPs containing only explicit frontend files a
     assert.match(data.runtime, /http:\/\/localhost:3000/);
     assert.doesNotMatch(data.runtime, /clientId:\s*''|apiBaseUrl:\s*''|pass:\/\//);
     assert.ok(data.viewer.includes(HELPER_URL));
+    assert.ok(data.names.includes('tokens.css'));
+    assert.equal(data.names.includes('assets/bait-bomb.png'), false);
     assert.doesNotMatch(data.viewer, /__preview|fixture-only/);
     assert.equal(data.names.some((name: string) => /preview|fixture|node_modules|server|moonshine|\.env|DESIGN|PROVENANCE/.test(name)), false);
   } finally { await rm(root, { recursive: true, force: true }); }
@@ -162,4 +165,46 @@ test('fixture projections cover inactive, result, paused and unconfigured states
   }
   assert.equal(fixtureState('paused', 'viewer', 0, 10000).room.round.remaining, 26000);
   assert.equal(fixtureState('settling', 'viewer', 0, 10000).room.round.remaining, 0);
+});
+
+test('card review fixtures use real clues and preserve broadcaster secrecy', () => {
+  assert.deepEqual(fixtureState('active', 'viewer', 0, 1000).room.round.forbiddenClues, ['lava', 'eruption']);
+  const words = {
+    kaleidoscope: ['patterns', 'mirrors', 'colors', 'colours'],
+    archipelago: ['islands', 'ocean', 'chain', 'geography'],
+    dinosaur: [],
+    marshmallow: ['sugar', 'campfire'],
+    alchemy: ['gold', 'transmutation', 'metal', 'elixir'],
+  };
+  for (const [word, clues] of Object.entries(words)) {
+    const viewer = fixtureState(word, 'viewer', 0, 1000).room.round;
+    assert.equal(viewer.target, word.toUpperCase());
+    assert.deepEqual(viewer.forbiddenClues, clues);
+    assert.equal(viewer.difficulty, word === 'dinosaur' ? 'easy' : word === 'marshmallow' ? 'medium' : 'hard');
+    const broadcaster = fixtureState(word, 'broadcaster', 0, 1000).room.round;
+    assert.equal('target' in broadcaster, false);
+    assert.equal('forbiddenClues' in broadcaster, false);
+  }
+  assert.equal(fixtureState('caught', 'viewer', 0, 1000).room.result.elapsed, 32);
+});
+
+test('preview helper preserves every selected fixture instead of silently showing volcano', async () => {
+  const source = await readFile(new URL('../scripts/extension-preview/helper.js', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../scripts/extension-preview/index.html', import.meta.url), 'utf8');
+  const choices = [...html.matchAll(/<option value="([a-z]+)">/g)].map(match => match[1]);
+  for (const fixture of choices) {
+    const target: any = {};
+    runInNewContext(source, {
+      window: target,
+      location: { search: `?fixture=${fixture}`, pathname: '/viewer.html' },
+      URLSearchParams,
+      btoa: (value: string) => Buffer.from(value).toString('base64'),
+      queueMicrotask: (callback: () => void) => callback(),
+    });
+    let selected = '';
+    target.Twitch.ext.onAuthorized(({ token }: { token: string }) => {
+      selected = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).fixture;
+    });
+    assert.equal(selected, fixture, `The helper must preserve the selected ${fixture} scenario`);
+  }
 });

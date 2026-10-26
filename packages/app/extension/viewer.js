@@ -27,7 +27,23 @@ function setArt(word) {
   // A filename can reveal the word too. Remove it when authorization or role changes.
   if (file) art.setAttribute('src', `./assets/${file}`);
   else art.removeAttribute('src');
-  byId('bomb').hidden = typeof word === 'string';
+  byId('card-back').hidden = typeof word === 'string';
+}
+
+function setDifficulty(value) {
+  const level = { easy: 1, medium: 2, hard: 3 }[value];
+  const element = byId('difficulty');
+  element.hidden = !level;
+  element.replaceChildren();
+  element.removeAttribute('aria-label');
+  if (!level) return;
+  element.setAttribute('aria-label', `${value[0].toUpperCase()}${value.slice(1)} difficulty`);
+  element.replaceChildren(...Array.from({ length: 3 }, (_, index) => {
+    const pip = document.createElement('i');
+    pip.dataset.filled = String(index < level);
+    pip.setAttribute('aria-hidden', 'true');
+    return pip;
+  }));
 }
 
 function deal(roundId) {
@@ -50,6 +66,7 @@ function clearCard(title, detail, label = 'Waiting', resetAnnouncement = true) {
   current = null;
   dealAnimation?.cancel();
   setArt(null);
+  setDifficulty(null);
   if (resetAnnouncement) {
     announcementKey = '';
     byId('announcement').textContent = '';
@@ -65,7 +82,7 @@ function clearCard(title, detail, label = 'Waiting', resetAnnouncement = true) {
   byId('clock').hidden = true;
   byId('round-index').textContent = "Chat's secret";
   byId('card-stamp').textContent = 'Only chat will know';
-  byId('play-instruction').textContent = 'Write a hint in chat. Keep the secret word to yourself.';
+  byId('play-instruction').textContent = 'Nudge the conversation.';
   byId('skip-note').hidden = false;
 }
 
@@ -79,22 +96,23 @@ function render({ configured, room }) {
       'Waiting',
       false,
     );
-    announce('unconfigured', 'Waiting for the streamer to connect baited.');
+    announce('unconfigured', 'Waiting for the streamer to connect Baited.');
     return;
   }
   byId('round-index').textContent = room.round ? `Round ${room.round.number}` : "Chat's secret";
   const playing = ['active', 'paused', 'settling'].includes(room.phase) && room.round;
   if (playing) {
     const visible = typeof room.round.target === 'string';
-    const phase = { active: 'In play', paused: 'Paused', settling: 'Checking speech' }[room.phase];
+    const phase = { active: 'Live', paused: 'Paused', settling: 'Checking' }[room.phase];
     byId('card').dataset.state = room.phase === 'active' ? 'active' : 'paused';
-    byId('card-kicker').textContent = visible ? "Chat's secret word" : 'Broadcaster view';
+    byId('card-kicker').textContent = visible ? 'Secret word' : 'Broadcaster';
     byId('phase-label').textContent = phase;
     setTitle(visible ? room.round.target : 'Your viewers have the word.', visible);
     setArt(visible ? room.round.target : null);
-    byId('card-detail').hidden = false;
+    setDifficulty(visible ? room.round.difficulty : null);
+    byId('card-detail').hidden = visible;
     byId('card-detail').textContent = !visible
-      ? 'Keep talking. Chat is setting the trap.'
+      ? 'Run the round and confirm catches in your studio.'
       : room.phase === 'active'
         ? "Make them say it. Don't type it."
         : room.phase === 'paused'
@@ -108,6 +126,7 @@ function render({ configured, room }) {
         return item;
       }),
     );
+    byId('forbidden-list').dataset.count = String(visible ? room.round.forbiddenClues.length : 0);
     byId('clock').hidden = false;
     byId('clock-caption').textContent =
       room.phase === 'paused'
@@ -116,9 +135,13 @@ function render({ configured, room }) {
           ? 'Round closing'
           : 'Time left';
     byId('card-stamp').textContent = visible ? 'Only chat knows' : 'Secret kept';
-    byId('play-instruction').textContent = visible
-      ? 'Nudge the conversation.'
-      : 'Run the round and confirm catches in your broadcaster studio.';
+    byId('play-instruction').textContent = !visible
+      ? 'Keep talking. Chat is setting the trap.'
+      : room.phase === 'paused'
+        ? 'The clock is paused.'
+        : room.phase === 'settling'
+          ? 'Checking the final words.'
+          : 'Hint at it. Don’t type the word.';
     byId('skip-note').hidden = !visible;
     announce(
       `round:${room.round.id}:${room.phase}`,
@@ -143,9 +166,10 @@ function render({ configured, room }) {
     byId('card').dataset.state = result.outcome === 'review' ? 'review' : 'result';
     byId('card-kicker').textContent = copy[0];
     byId('phase-label').textContent =
-      result.outcome === 'review' ? 'Awaiting confirmation' : 'Round complete';
+      result.outcome === 'review' ? 'Streamer’s call' : 'Complete';
     setTitle(result.word, true);
     setArt(result.word);
+    setDifficulty(null);
     byId('card-detail').textContent = copy[1];
     byId('card-detail').hidden = false;
     byId('forbidden').hidden = true;
@@ -176,7 +200,7 @@ function render({ configured, room }) {
 function renderClock() {
   if (!current?.round || byId('clock').hidden) return;
   const clock = clockValue(current, receivedAt);
-  byId('clock-value').textContent = connected ? clock.label : '--';
+  byId('clock-value').textContent = connected ? clock.label : '--:--';
   byId('clock-value').setAttribute(
     'aria-label',
     connected ? `${clock.label} remaining` : 'Clock unavailable while reconnecting',

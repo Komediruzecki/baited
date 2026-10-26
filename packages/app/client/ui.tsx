@@ -8,14 +8,11 @@ export const productBrand = (
 );
 
 export const brand = (
-  <>
-    <span className="logo-lockup" role="img" aria-label="BAIT">
-      <img src="/brand/baitlogo-transparent.png" alt="" width="1254" height="1254" />
-    </span>
-    <span className="logo-glyph" role="img" aria-label="BAIT">
-      <img src="/brand/baitlogo-transparent.png" alt="" width="1254" height="1254" />
-    </span>
-  </>
+  // Legacy example layouts set --logo-width on this wrapper. Keep their measured
+  // footprint while sharing the same original wordmark as the product surfaces.
+  <span className="logo-lockup" role="img" aria-label="BAITED">
+    <span className="baited-glyph" aria-hidden="true" style={{ height: '100%' }} />
+  </span>
 );
 export function Button({
   children,

@@ -8,9 +8,7 @@ import {
   Pause,
   SkipForward,
   Square,
-  Flame,
   Users,
-  Trophy,
   Settings2,
   LayoutDashboard,
   Check,
@@ -30,12 +28,13 @@ import {
   Target,
   Trash2,
   ChevronDown,
+  MessageSquare,
+  NoChat,
 } from './icons';
 import type { GameView, Studio, SessionInfo, Settings, Result } from '../shared/types';
 import { request } from './api';
 import { Microphone } from './microphone';
 import { SpeechLab } from './SpeechLab';
-import CardProofs from './CardProofs';
 import { CardArt } from './CardArt';
 import { ResultCard } from './ResultCard';
 import { CardBack } from './CardBack';
@@ -64,8 +63,12 @@ import {
 import './transcript-preview.css';
 import './product-brand.css';
 import './result-card.css';
+import '../extension/tokens.css';
 import './studio-refresh.css';
 import './public-refresh.css';
+
+const ProductReview = React.lazy(() => import('./ProductReview'));
+const CardDesignLab = React.lazy(() => import('./CardDesignLab'));
 
 const fmt = (ms: number) => {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -80,12 +83,12 @@ const spokenTime = (ms: number, paused: boolean) => {
   return `${minutes ? `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ` : ''}${seconds} ${seconds === 1 ? 'second' : 'seconds'} ${paused ? 'paused' : 'left'}`;
 };
 const outcomeLabel: Record<Result['outcome'], string> = {
-  caught: 'CHAT WINS',
-  escaped: 'TIME UP',
-  skipped: 'SKIPPED',
-  ended: 'ENDED',
-  overturned: 'CATCH REJECTED',
-  review: 'CATCH PENDING',
+  caught: 'Chat wins',
+  escaped: 'Time’s up',
+  skipped: 'Skipped',
+  ended: 'Ended',
+  overturned: 'Catch rejected',
+  review: 'Catch pending',
 };
 const cx = (...values: (string | false | undefined)[]) => values.filter(Boolean).join(' ');
 function useNow() {
@@ -118,48 +121,6 @@ function useLive<T>(url: string, onState: (s: T) => void, onError: (s: boolean) 
     return () => source.close();
   }, [url]);
 }
-function Stat({
-  label,
-  value,
-  icon,
-  detail,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  detail: string;
-}) {
-  return (
-    <div className="stat">
-      <div className="stat-top">
-        <span>{label}</span>
-        {icon}
-      </div>
-      <strong>{value}</strong>
-      <span className="stat-detail">{detail}</span>
-    </div>
-  );
-}
-function Confetti() {
-  return (
-    <div className="confetti" aria-hidden="true">
-      {Array.from({ length: 24 }, (_, i) => (
-        <i
-          key={i}
-          style={
-            {
-              '--x': `${(i * 37) % 100}%`,
-              '--delay': `${(i % 7) * 0.08}s`,
-              '--turn': `${i * 51}deg`,
-              '--color': ['#9146ff', '#c9a8ff', '#fffc79'][i % 3],
-            } as React.CSSProperties
-          }
-        />
-      ))}
-    </div>
-  );
-}
-
 type Capture = { microphone: Microphone; lease: MicrophoneLease };
 
 function Dashboard({ session, reload }: { session: SessionInfo; reload: () => void }) {
@@ -389,11 +350,13 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const canStart = !pendingCatch && !active && !paused && !settling && (!cool || next <= 0),
     connected = g.connection.status === 'connected',
     demo = g.mode === 'demo',
-    readyToBegin = demo || (connected && microphoneReady(studio.speechReady, consent, micStatus));
+    modelLoading = micStatus.startsWith('Loading Moonshine'),
+    modelProgress = /^Loading Moonshine (\d+)%$/.exec(micStatus),
+    readyToBegin = !modelLoading && (demo || (connected && microphoneReady(studio.speechReady, consent, micStatus)));
   return (
-    <div className="app-shell studio-app">
+    <div className="app-shell studio-app studio-shell">
       <aside className="sidebar">
-        <a href="/about" className="brand" aria-label="About baited">
+        <a href="https://baited.maff.app" className="brand" aria-label="Baited website">
           {brand}
         </a>
         <nav aria-label="Studio sections">
@@ -443,7 +406,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </div>
             <div>
               <strong>{demo ? 'Your studio' : session.user?.name}</strong>
-              {!demo && <span>TWITCH CONNECTED</span>}
+              {!demo && <span>Signed in to Twitch</span>}
             </div>
             <button className="icon-button" aria-label="Sign out" onClick={() => void logOut()}>
               <LogOut size={16} />
@@ -453,38 +416,17 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       </aside>
       <div className="workspace">
         <main className="main-content">
-          <div className="page-title">
-            <div>
-              <h1>
-                {tab === 'studio'
-                  ? 'Your round.'
-                  : tab === 'community'
-                    ? 'Community'
-                    : 'Stream setup'}
-              </h1>
-              <p>
-                {tab === 'studio'
-                  ? 'Chat has the word. You have the microphone.'
-                  : tab === 'community'
-                    ? 'Round participation and shared wins.'
-                    : 'Connect your channel, check your mic, then bring chat in.'}
-              </p>
+          <div className={cx('page-title', tab === 'studio' && 'page-title--studio')}>
+            <div><h1>{tab === 'studio' ? 'Studio' : tab === 'community' ? 'Community' : 'Stream setup'}</h1>
+              {tab !== 'studio' && <p>{tab === 'community' ? 'Round participation and shared wins.' : 'Connect chat, check your mic, then bring viewers in.'}</p>}
             </div>
-            <Button
-              className="secondary game-settings-button"
-              aria-label="Game settings"
-              disabled={settling}
-              onClick={() => setModal('settings')}
-            >
-              <Settings2 size={16} /> <span>Game settings</span>
-            </Button>
+            {tab !== 'studio' && <Button className="secondary game-settings-button" disabled={settling || offline} onClick={() => setModal('settings')}><Settings2 size={16} />Game settings</Button>}
           </div>
           {demo && (
             <div className="rehearsal-banner">
               <span>
                 <Terminal size={15} />
                 <strong>Local demo.</strong> Simulated chat.{' '}
-                <span className="demo-detail">Test your mic here.</span>
               </span>
               <button
                 onClick={() =>
@@ -497,7 +439,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           )}
           {offline && (
             <div className="error-banner" role="status">
-              <Wifi size={17} /> Connection lost. Controls will return when the studio reconnects.
+              <Wifi size={17} /> Connection lost. Controls come back when the studio reconnects.
             </div>
           )}
           {error && (
@@ -511,11 +453,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           )}
           {tab === 'studio' && (
             <>
-              <MissionStatus game={g} now={now} offset={offset.current} />
+              {!offline && <MissionStatus game={g} now={now} offset={offset.current} />}
               <div className="studio-grid">
                 <section
                   className={cx(
                     'mission-card',
+                    offline && 'is-offline',
+                    active && ms <= 15000 && 'is-urgent',
+                    pendingCatch && 'is-review',
                     active && 'is-active',
                     g.result?.outcome === 'caught' && cool && 'is-caught',
                     g.result?.outcome === 'escaped' && cool && 'is-escaped',
@@ -529,22 +474,24 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           ? `Round ${String(g.round.number).padStart(2, '0')}`
                           : 'Next round'}
                     </span>
+                    <span className="desk-difficulty">{g.round?.difficulty ?? g.settings.difficulty}</span>
                     <Tag tone={active ? 'lime' : paused || pendingCatch ? 'amber' : 'muted'}>
                       <span className="dot" />
                       {active
-                        ? 'ROUND LIVE'
+                        ? 'Live'
                         : paused
-                          ? 'PAUSED'
+                          ? 'Paused'
                           : pendingCatch
-                            ? 'YOUR CALL'
+                            ? 'Your call'
                             : cool
-                              ? 'ROUND COMPLETE'
+                              ? 'Round complete'
                               : settling
-                                ? 'CHECKING'
+                                ? 'Checking'
                                 : readyToBegin
-                                  ? 'READY'
-                                  : 'SETUP NEEDED'}
+                                  ? 'Ready'
+                                  : 'Setup needed'}
                     </Tag>
+                    <button className="desk-settings" aria-label="Game settings" disabled={settling || offline} onClick={() => setModal('settings')}><Settings2 size={16} /><span>Game settings</span></button>
                   </div>
                   <div className="round-console">
                     <div className="timer-block">
@@ -554,12 +501,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           active && ms < 15000 && 'urgent',
                           pendingCatch && 'timer-stopped',
                         )}
-                        role={active || paused || settling ? 'timer' : undefined}
+                        role={!offline && (active || paused || settling) ? 'timer' : undefined}
                         aria-label={
-                          active || paused || settling ? spokenTime(ms, paused) : undefined
+                          offline ? 'Timer unavailable while reconnecting' : active || paused || settling ? spokenTime(ms, paused) : undefined
                         }
                       >
-                        {pendingCatch
+                        {offline
+                          ? '—:—'
+                          : pendingCatch
                           ? `Round ${String(g.result?.number).padStart(2, '0')} · Clock stopped`
                           : cool
                             ? fmt(next)
@@ -612,7 +561,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         >
                           <Play size={16} fill="currentColor" />
                           {cool && next > 0
-                            ? 'Next round soon'
+                            ? `Next round in ${fmt(next)}`
                             : g.settings.mission === 'three'
                               ? 'Start mission'
                               : 'Start round'}
@@ -621,26 +570,27 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       {(active || paused) && (
                         <>
                           <button
-                            className="round-icon"
+                            className="round-icon round-secondary"
                             aria-label="Skip current round"
                             title="Skip round"
                             disabled={busy || offline}
                             onClick={() => void action('skip')}
                           >
-                            <SkipForward size={18} />
+                            <SkipForward size={18} /><span>Skip word</span>
                           </button>
                           <button
-                            className="round-icon"
+                            className="round-icon round-secondary"
                             aria-label="End current round"
                             title="End round"
                             disabled={busy || offline}
                             onClick={() => setModal('end')}
                           >
-                            <Square size={16} />
+                            <Square size={16} /><span>End round</span>
                           </button>
                         </>
                       )}
                     </div>
+                    {!active && !paused && !pendingCatch && !readyToBegin && <p className="start-reason" role="status">{modelLoading ? 'Waiting for the speech model.' : 'Connect chat and turn on your microphone to start.'}</p>}
                   </div>
                   <div
                     className={cx(
@@ -670,7 +620,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       ) : (
                         <>
                           <h2>
-                            {settling
+                            {offline
+                              ? 'Waiting for updates.'
+                              : !demo && !connected && !active && !paused
+                                ? "Chat isn’t connected."
+                                : settling
                               ? 'Checking final words.'
                               : active
                                 ? 'Chat has the word.'
@@ -679,15 +633,19 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                   : 'Ready when chat is.'}
                           </h2>
                           <p>
-                            {settling
-                              ? 'The clock has stopped. Checking speech from before the buzzer.'
+                            {offline
+                              ? 'The round controls are unavailable until the connection returns.'
+                              : !demo && !connected && !active && !paused
+                                ? g.connection.detail
+                                : settling
+                              ? 'Only words spoken before the buzzer count.'
                               : active
-                                ? 'Keep streaming. Viewers will try to steer the conversation.'
+                                ? 'Keep talking. Any answer could be the slip.'
                                 : paused
-                                  ? 'The timer and speech detection are paused.'
+                                  ? 'The clock and listening are stopped.'
                                   : demo
-                                    ? 'Open the viewer room and try a round. Local speech tests are beside your microphone.'
-                                    : 'Share the viewer link, enable your microphone, and start a round.'}
+                                    ? 'Open the viewer room in another tab, then start.'
+                                    : 'Viewers get the word when you start.'}
                           </p>
                           <div className="secret-capsule">
                             <ShieldCheck size={15} />
@@ -720,12 +678,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       {
                         <>
                           <span className={connected ? 'ready-check' : ''}>
-                            {connected ? <Check size={15} /> : <Wifi size={15} />} Twitch{' '}
+                            {connected ? <Check size={15} /> : <Wifi size={15} />} Chat{' '}
                             {connected ? 'connected' : 'disconnected'}
                           </span>
                           <span className={consent ? 'ready-check' : ''}>
                             {consent ? <Mic size={15} /> : <MicOff size={15} />}
-                            {settling
+                            {modelLoading
+                              ? micStatus
+                              : settling
                               ? 'Finishing speech check'
                               : micStatus === 'listening'
                                 ? 'Speech live'
@@ -735,7 +695,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                     ? 'Speech setup needed'
                                     : 'Microphone off'}
                           </span>
-                          {!consent && (
+                          {!connected && <button type="button" disabled={offline || busy} onClick={() => void action('connect')}>Reconnect chat</button>}
+                          {!consent && !modelLoading && (
                             <button
                               type="button"
                               disabled={offline || settling}
@@ -795,34 +756,29 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     <div className="mic-icon">
                       {consent ? <Mic size={28} /> : <MicOff size={28} />}
                     </div>
-                    <div className="waveform" aria-hidden="true" hidden={!consent}>
-                      {Array.from({ length: 23 }, (_, i) => (
-                        <i
-                          key={i}
-                          style={{
-                            height: consent
-                              ? `${8 + Math.sin(i * 1.7) ** 2 * level * 48}px`
-                              : '3px',
-                          }}
-                        />
-                      ))}
+                    <div className="waveform mic-level" role="meter" aria-label="Microphone input level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.min(1, Math.max(0, level)) * 100)} hidden={!consent}>
+                      {Array.from({ length: 5 }, (_, i) => <i key={i} className={level > i / 5 ? 'is-lit' : ''} style={{ height: `${12 + i * 8}px` }} />)}
                     </div>
                   </div>
                   <h3>
                     {settling
                       ? 'Checking final words'
                       : micStatus.startsWith('Loading Moonshine')
-                        ? micStatus
+                        ? 'Loading the speech model'
                         : micStatus === 'connecting'
                           ? 'Connecting speech'
                           : micStatus === 'listening'
                             ? 'Listening'
+                            : paused && consent
+                              ? 'Paused'
                             : consent
                               ? 'Microphone ready'
                               : 'Microphone off'}
                   </h3>
                   <p>
-                    {settling
+                    {modelLoading
+                      ? 'The model is cached in this browser after it downloads.'
+                      : settling
                       ? 'Listening has stopped. Waiting for the final word check.'
                       : micStatus === 'connecting'
                         ? 'Opening the speech connection. The round pauses if it cannot connect.'
@@ -834,13 +790,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                             ? 'Mic enabled. Recognition starts with the next active round.'
                             : 'Enable your microphone to listen for the secret word.'}
                   </p>
+                  {modelLoading && modelProgress && <div className="model-progress"><progress aria-label="Speech model download" max={100} value={Math.min(100, Number(modelProgress[1]))} /><span>{modelProgress[1]}%</span></div>}
                   {studio.speechProvider === 'moonshine' && (
                     <p className="mic-review-note">
                       <strong>You make the call.</strong> Confirm each catch before chat gets a win.
                     </p>
                   )}
                   <Button
-                    className={!demo && !consent ? 'primary' : 'secondary'}
+                    className={!demo && !consent && !modelLoading && !pendingCatch ? 'primary' : 'secondary'}
                     disabled={offline || settling}
                     onClick={() =>
                       consent || micStatus.startsWith('Loading Moonshine')
@@ -893,12 +850,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   <section className="panel viewer-share">
                     <div className="section-heading">
                       <div>
-                        <span className="small-label">VIEWER ROOM</span>
-                        <h3>Share the viewer link</h3>
+                        <h3>Viewer link</h3>
                       </div>
                       <Link2 size={21} />
                     </div>
-                    <p>Post this link in Twitch chat. It reveals the secret word to viewers.</p>
+                    <p>Viewers see the secret word here.</p>
                     <div className="link-field">
                       <input aria-label="Viewer room link" readOnly value={studio.viewerUrl} />
                       <CopyButton value={studio.viewerUrl} />
@@ -963,8 +919,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           >
             <h2 id="studio-sound-title">Round sounds</h2>
             <SoundControls roomId={g.id} game={g} offline={offline} />
-            <a href="/card-proofs">
-              Browse the cards and Sound Lab <ArrowUpRight size={14} />
+            <a href="/card-design-lab">
+              Browse card editions <ArrowUpRight size={14} />
             </a>
           </section>
           <footer className="studio-footer">
@@ -1108,16 +1064,16 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
   return (
     <div className="result-row">
       <span className={cx('result-icon', r.outcome === 'caught' && 'win')}>
-        {r.outcome === 'caught' ? <Check size={14} /> : <ArrowUpRight size={14} />}
+        <CardArt word={r.word} />
       </span>
       <strong>{r.word}</strong>
       <span className="result-time">{r.outcome === 'caught' ? `${r.elapsed}s` : '—'}</span>
       <Tag tone={r.outcome === 'caught' ? 'lime' : 'muted'}>
-        {r.reason === 'guess' ? 'BAIT CALLED' : outcomeLabel[r.outcome]}
+        {r.reason === 'guess' ? 'Bait called' : outcomeLabel[r.outcome]}
       </Tag>
       {r.award && (
         <span className="result-award">
-          <Trophy size={12} />
+          <Check size={12} />
           <span>Streamer’s pick: @{r.award.name}</span>
         </span>
       )}
@@ -1379,32 +1335,12 @@ function Rehearsal({
 function Community({ game: g }: { game: GameView }) {
   return (
     <>
-      <div className="stats-grid">
-        <Stat
-          label="SHARED WINS"
-          value={g.score.wins}
-          icon={<Trophy size={18} />}
-          detail="The whole community wins"
-        />
-        <Stat
-          label="BEST STREAK"
-          value={g.score.best}
-          icon={<Flame size={18} />}
-          detail="Consecutive community wins"
-        />
-        <Stat
-          label="ROUNDS PLAYED"
-          value={g.score.played}
-          icon={<Target size={18} />}
-          detail="Completed rounds"
-        />
-        <Stat
-          label="THIS ROUND"
-          value={g.participants}
-          icon={<Users size={18} />}
-          detail="Unique participating chatters"
-        />
-      </div>
+      <dl className="community-scoreline">
+        <div><dt>Chat wins</dt><dd>{g.score.wins}</dd></div>
+        <div><dt>Best streak</dt><dd>{g.score.best}</dd></div>
+        <div><dt>Rounds played</dt><dd>{g.score.played}</dd></div>
+        <div><dt>Chatting now</dt><dd>{g.participants}</dd></div>
+      </dl>
       <div className="bottom-grid">
         <section className="panel">
           <div className="section-heading">
@@ -1653,255 +1589,77 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     won = g.result?.outcome === 'caught' && finished,
     pendingCatch = g.result?.outcome === 'review' && finished;
   const stale = offline;
+  const showCard = !stale && finished && !!g.result && ['caught', 'escaped'].includes(g.result.outcome) && now + offset.current - g.result.at < 5500;
   if (overlay)
-    return (
-      <div className="obs-root">
-        <PublicAward award={g.history[0]?.award} />
-        <ObsHud game={g} timeLeft={fmt(ms)} now={now} offset={offset.current} offline={stale} />
-        {finished &&
-          g.result &&
-          ['caught', 'escaped'].includes(g.result.outcome) &&
-          now + offset.current - g.result.at < 5500 && (
-            <ResultCard
-              key={`${g.result.id}:${g.result.outcome}`}
-              result={g.result}
-              broadcast
-              age={now + offset.current - g.result.at}
-            />
-          )}
-      </div>
-    );
-  return (
-    <div
-      className={cx(
-        'viewer-page',
-        'viewer-room',
-        (active || paused || settling) && 'viewer-playing',
-      )}
-    >
-      <header className="viewer-header">
-        <a className="brand" href="/">
-          {brand}
-        </a>
-        <Tag tone={active ? 'lime' : 'muted'}>
-          <span className="dot" />
-          {g.mode === 'demo' ? 'LOCAL DEMO' : `@${g.channel}`}
-        </Tag>
-      </header>
-      <main className="viewer-main">
-        <div className="eyebrow">
-          <Eye size={15} /> VIEWER ROOM
-        </div>
-        <h1>
-          {pendingCatch
-            ? 'Catch pending.'
-            : settling
-              ? 'Checking final words.'
-              : g.mission?.status === 'complete'
-                ? 'Chat cleared the mission.'
-                : g.mission?.status === 'failed'
-                  ? 'Time ran out.'
-                  : g.result?.reason === 'guess' && !active && !paused
-                    ? 'The streamer called it.'
-                    : won
-                      ? 'The streamer said it.'
-                      : 'You have one job.'}
-        </h1>
-        <p className="viewer-intro">
-          {pendingCatch
-            ? 'The round has stopped. The streamer is checking this catch.'
-            : settling
-              ? 'The clock has stopped. Waiting for the final speech result.'
-              : g.mission?.status === 'complete'
-                ? 'All three words landed before the timer.'
-                : g.mission?.status === 'failed'
-                  ? `${g.mission.completed} of 3 words landed. Those word wins still count.`
-                  : g.result?.reason === 'guess' && !active && !paused
-                    ? 'The private guess was right. The streamer escaped.'
-                    : won
-                      ? 'One word. One win for the whole chat.'
-                      : 'Make the streamer say this word. Keep it subtle.'}
-        </p>
-        {stale && (
-          <div className="error-banner">
-            <Wifi size={16} /> Connection lost. Waiting for a fresh game update.
-          </div>
-        )}
-        <MissionStatus game={g} now={now} offset={offset.current} />
-        <div className="viewer-game">
-          <section className={cx('target-card', won && 'target-win')}>
-            <div className="card-heading">
-              <span className="small-label">{finished ? 'THE REVEAL' : 'YOUR SECRET WORD'}</span>
-              <Tag tone={active ? 'lime' : 'muted'}>
-                {active
-                  ? 'LIVE'
-                  : settling
-                    ? 'CHECKING'
-                    : paused
-                      ? 'PAUSED'
-                      : finished
-                        ? g.result &&
-                          (g.result.reason === 'guess'
-                            ? 'BAIT CALLED'
-                            : outcomeLabel[g.result.outcome])
-                        : 'WAITING'}
-              </Tag>
-            </div>
-            <div className="target-display">
-              {!stale && (
-                <CardArt
-                  word={
-                    active || paused || settling
-                      ? g.round?.target
-                      : finished
-                        ? g.result?.word
-                        : undefined
-                  }
-                />
-              )}
-              {stale ? (
-                <h2>Hold tight.</h2>
-              ) : active || paused || settling ? (
-                <>
-                  <span className="target-number">
-                    ROUND {String(g.round?.number).padStart(2, '0')}
-                  </span>
-                  <h2 data-word-size={wordSize(g.round?.target)}>
-                    {g.round?.target}
-                    <span>.</span>
-                  </h2>
-                  <p>
-                    {settling
-                      ? 'Only words spoken before the buzzer can count.'
-                      : 'Nudge the conversation. Keep the secret word out of chat.'}
-                  </p>
-                </>
-              ) : finished ? (
-                <>
-                  <h2 data-word-size={wordSize(g.result?.word)}>
-                    {g.result?.word}
-                    <span>{won ? '!' : '.'}</span>
-                  </h2>
-                  <p>
-                    {pendingCatch
-                      ? 'No win has been awarded. Waiting for the streamer to confirm.'
-                      : g.result?.reason === 'guess'
-                        ? 'The streamer guessed the word without saying it.'
-                        : g.result?.outcome === 'overturned'
-                          ? 'The detection was reversed. A fresh word is up next.'
-                          : won
-                            ? `They said it after ${g.result?.elapsed} ${g.result?.elapsed === 1 ? 'second' : 'seconds'}.`
-                            : 'Round finished. Wait for the streamer to start the next one.'}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="waiting-eyes">
-                    <img src="/brand/bait-bomb.png" alt="" width="116" height="136" />
-                  </div>
-                  <h2>Waiting for a round.</h2>
-                  <p>The word will appear when the streamer starts.</p>
-                </>
-              )}
-            </div>
-            <ForbiddenClueCard game={g} />
+    return <div className="obs-root">
+      {!stale && <PublicAward award={g.history[0]?.award} />}
+      <ObsHud game={g} timeLeft={fmt(ms)} now={now} offset={offset.current} offline={stale} showCard={showCard} />
+      {showCard && g.result && <ResultCard key={`${g.result.id}:${g.result.outcome}`} result={g.result} broadcast age={now + offset.current - g.result.at} />}
+    </div>;
+  const playing = active || paused || settling;
+  const visibleWord = stale ? undefined : playing ? g.round?.target : finished ? g.result?.word : undefined;
+  const heading = stale ? 'Reconnecting.'
+    : pendingCatch ? 'Catch pending.'
+    : settling ? 'Checking final words.'
+    : paused ? 'Round paused.'
+    : active ? 'Make them say it.'
+    : g.mission?.status === 'complete' ? 'Chat cleared the mission.'
+    : g.mission?.status === 'failed' ? 'Time ran out.'
+    : g.result?.reason === 'guess' && finished ? 'The streamer called it.'
+    : won ? 'The streamer said it.'
+    : finished ? 'A new word is next.' : 'The word is coming.';
+  const detail = stale ? 'Waiting for a fresh game update.'
+    : pendingCatch ? 'The streamer is checking what they heard.'
+    : settling ? 'Only words spoken before the buzzer count.'
+    : paused ? 'The clock and listening are stopped.'
+    : active ? 'Don’t type it.'
+    : g.mission?.status === 'complete' ? 'All three words landed before the timer.'
+    : g.mission?.status === 'failed' ? `${g.mission.completed} of 3 words landed. Those wins still count.`
+    : g.result?.reason === 'guess' && finished ? 'The private guess was right. The streamer escaped.'
+    : won ? '+1 for chat.'
+    : finished ? 'Wait for the streamer to start the next round.' : 'It appears here when the streamer starts a round.';
+  const stateLabel = stale ? 'Reconnecting' : active ? 'Live' : paused ? 'Paused' : settling ? 'Checking' : pendingCatch ? 'Heard' : won ? 'Chat wins' : finished ? 'Round complete' : 'Waiting';
+  return <div className={cx('viewer-page', 'viewer-room', playing && 'viewer-playing', stale && 'viewer-stale', active && ms <= 15000 && 'viewer-urgent')}>
+    <header className="viewer-header">
+      <a className="brand" href="https://baited.maff.app" aria-label="Baited website">{brand}</a>
+      <Tag tone={active && !stale ? 'lime' : 'muted'}><span className="dot" />{g.mode === 'demo' ? 'Local demo' : `@${g.channel}`}</Tag>
+    </header>
+    <main className="viewer-main">
+      {stale && <div className="error-banner" role="status"><Wifi size={16} />Connection lost. Waiting for a fresh game update.</div>}
+      {!stale && <MissionStatus game={g} now={now} offset={offset.current} />}
+      <div className="viewer-game">
+        <div className="viewer-table">
+          {visibleWord ? <section className={cx('target-card', won && 'target-win')} aria-label="Secret card">
+            <div className="card-heading"><span className="small-label">{playing ? `Round ${g.round?.number}` : 'The reveal'}</span><Tag tone={active ? 'lime' : 'muted'}>{stateLabel}</Tag></div>
+            <div className="target-display"><CardArt word={visibleWord} /><h2 data-word-size={wordSize(visibleWord)}>{visibleWord}</h2></div>
+            {!stale && <ForbiddenClueCard game={g} />}
             <div className="viewer-timer">
-              <div>
-                <Timer size={16} />
-                <span>
-                  {active || paused || settling
-                    ? fmt(ms)
-                    : pendingCatch
-                      ? '—:—'
-                      : finished
-                        ? fmt(Math.max(0, (g.nextAt ?? 0) - (now + offset.current)))
-                        : '—:—'}
-                </span>
-                <small>
-                  {settling
-                    ? 'CHECKING'
-                    : paused
-                      ? 'PAUSED'
-                      : finished
-                        ? g.nextAt !== null
-                          ? 'COOLDOWN'
-                          : 'NEXT ROUND READY'
-                        : 'ON THE CLOCK'}
-                </small>
-              </div>
-              <span>
-                <Users size={15} />
-                {g.participants} participating
-              </span>
+              <span className="baited-glyph" aria-hidden="true" />
+              <div><Timer size={16} /><span role={playing && !stale ? 'timer' : undefined} aria-label={playing && !stale ? spokenTime(ms, paused) : undefined}>{playing ? fmt(ms) : pendingCatch ? '—:—' : g.nextAt !== null ? fmt(Math.max(0, g.nextAt - (now + offset.current))) : '—:—'}</span><small>{settling ? 'Checking' : paused ? 'Paused' : pendingCatch ? 'Not scored yet' : finished ? g.nextAt !== null ? 'Next round' : 'Waiting' : 'Left'}</small></div>
             </div>
-            <div className="viewer-progress">
-              <i style={{ width: `${g.round ? (ms / g.round.duration) * 100 : 0}%` }} />
-            </div>
-            {won && <Confetti />}
-          </section>
-          <PublicAward award={g.history[0]?.award} />
+            <div className="viewer-progress"><i style={{ width: `${g.round ? Math.min(1, Math.max(0, ms / g.round.duration)) * 100 : 0}%` }} /></div>
+          </section> : <div className="viewer-card-waiting"><div className="viewer-back"><CardBack /></div><p>{stale ? 'Waiting for updates.' : 'The word is coming.'}</p>{stale && <span className="viewer-stale-clock" aria-label="Timer unavailable while reconnecting">—:—</span>}</div>}
         </div>
-        <aside className="viewer-support" aria-label="How to play and scores">
-          <div className="viewer-playbook">
-            <h3>How to play</h3>
-            <div>
-              <span>01</span>
-              <p>Ask a question or start a conversation that could lead to the word.</p>
-            </div>
-            <div>
-              <span>02</span>
-              <p>Keep the word and the off-limits clues out of chat.</p>
-            </div>
-            <div>
-              <span>03</span>
-              <p>
-                Talk in chat to participate. Type <code>!skip</code> if you’re stuck.
-              </p>
-            </div>
-          </div>
-          <div className="viewer-bottom">
-            <div>
-              <Trophy size={19} />
-              <strong>{g.score.wins}</strong>
-              <span>COMMUNITY WINS</span>
-            </div>
-            <div>
-              <Flame size={19} />
-              <strong>{g.score.streak}</strong>
-              <span>WIN STREAK</span>
-            </div>
-          </div>
-          <div className="viewer-skip">
-            <span>
-              Skip votes{' '}
-              <strong>
-                {g.voters} / {g.voteThreshold}
-              </strong>
-            </span>
-            <span>Vote once in Twitch chat.</span>
-          </div>
-          {g.mode === 'twitch' && (
-            <a
-              className="button primary twitch-chat-link"
-              href={`https://www.twitch.tv/${encodeURIComponent(g.channel)}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Back to Twitch chat <ArrowUpRight size={17} />
-            </a>
-          )}
-        </aside>
-      </main>
-      <footer className="viewer-footer">
-        baited · Bait them.
-        <a href="/privacy" target="_blank" rel="noreferrer">
-          Privacy
-        </a>
-        <span>baited / 2026</span>
-      </footer>
-    </div>
-  );
+        {!stale && <PublicAward award={g.history[0]?.award} />}
+      </div>
+      <aside className="viewer-support" aria-label="Round status and how to play">
+        <div className="viewer-state"><h1>{heading}</h1><p>{detail}</p>
+          {won && !stale && <p className="viewer-next">{g.nextAt !== null && g.nextAt > now + offset.current ? `Next round in ${fmt(g.nextAt - (now + offset.current))}` : 'Waiting for the streamer.'}</p>}
+        </div>
+        <ul className="viewer-playbook">
+          <li><MessageSquare size={20} /><span>Steer the conversation.</span></li>
+          <li><NoChat size={20} /><span>Keep the word and clues out of chat.</span></li>
+          <li><Mic size={20} /><span>Only the streamer’s voice counts.</span></li>
+        </ul>
+        <p className="viewer-scoreline">{stale && <span>Last known: </span>}<strong>{g.score.wins}</strong> {g.score.wins === 1 ? 'chat win' : 'chat wins'} <span aria-hidden="true">·</span> streak <strong>{g.score.streak}</strong></p>
+        <p className="viewer-skip">Skip <strong>{g.voters}/{g.voteThreshold}</strong><span>Type <code>!skip</code> in Twitch chat.</span></p>
+        {g.mode === 'twitch' && <a className="button primary twitch-chat-link" href={`https://www.twitch.tv/${encodeURIComponent(g.channel)}`} target="_blank" rel="noreferrer"><MessageSquare size={18} />Back to Twitch chat<ArrowUpRight size={16} /></a>}
+      </aside>
+    </main>
+    <footer className="viewer-footer"><span>baited</span><a href="/privacy" target="_blank" rel="noreferrer">Privacy</a></footer>
+  </div>;
 }
+
 function Privacy() {
   return (
     <div className="viewer-page">
@@ -1995,11 +1753,10 @@ function App() {
         .catch((e) => setError(e.message));
     }, []);
   useEffect(() => {
-    if (!['play', 'overlay', 'privacy', 'speech-lab', 'card-proofs'].includes(path[0])) reload();
+    if (!['play', 'overlay', 'privacy', 'speech-lab'].includes(path[0])) reload();
   }, [reload]);
   if (path[0] === 'privacy') return <Privacy />;
   if (path[0] === 'speech-lab') return <SpeechLab />;
-  if (path[0] === 'card-proofs') return <CardProofs />;
   if (path[0] === 'about' && session) return <Landing session={session} reload={reload} />;
   if (['play', 'overlay'].includes(path[0]) && path[1])
     return <PublicRoom id={path[1]} overlay={path[0] === 'overlay'} />;
@@ -2016,6 +1773,14 @@ function App() {
         <span className="brand">{brand}</span>
         <p>Loading baited…</p>
       </div>
+    );
+  if (['card-design-lab', 'card-lab', 'card-proofs'].includes(path[0]))
+    return <React.Suspense fallback={<div className="loading" role="status">Opening the card lab…</div>}><CardDesignLab session={session} /></React.Suspense>;
+  if (path[0] === 'product-review')
+    return (
+      <React.Suspense fallback={<div className="loading" role="status">Opening design review…</div>}>
+        <ProductReview session={session} />
+      </React.Suspense>
     );
   return session.authenticated ? (
     <Dashboard key={session.csrf} session={session} reload={reload} />

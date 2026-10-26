@@ -76,6 +76,20 @@ test('state parser rejects malformed payloads instead of rendering partial state
   assert.throws(() => readState({ version: '0.0.1', configured: true, room: { phase: 'idle' } }));
 });
 
+test('difficulty is copied only from the validated server field, never inferred from clues', () => {
+  const value = state();
+  for (const difficulty of ['easy', 'medium', 'hard']) {
+    value.room.round.difficulty = difficulty;
+    assert.equal(readState(value).room.round.difficulty, difficulty);
+  }
+  for (const difficulty of ['expert', '', null, 3, {}, ['hard']]) {
+    value.room.round.difficulty = difficulty;
+    assert.throws(() => readState(value), /Invalid difficulty/);
+  }
+  delete value.room.round.difficulty;
+  assert.equal(readState(value).room.round.difficulty, undefined);
+});
+
 test('studio URL is restricted to the configured service and exact path', () => {
   const value = { version: '0.0.1', connected: true, channelId: '12345', channelName: 'streamer', studioUrl: 'https://game.example/studio' };
   assert.equal(readConfiguration(value, config.apiBaseUrl).studioUrl, value.studioUrl);

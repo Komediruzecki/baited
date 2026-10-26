@@ -27,7 +27,8 @@
   ],
   "existingApprovedAssets": [
     "volcano.png",
-    "bait-bomb.png"
+    "bait-bomb.png",
+    "baited-logo-white.webp"
   ],
   "approvedOriginalsModified": false,
   "nonDestructiveDerivatives": {
@@ -36,7 +37,7 @@
     "hammer": "Down cell mirrored, translated2 master px; boots retain baseline",
     "smoke": "SVG alpha threshold plus cloud-shadow color matrix",
     "eruption": "Original inline SVG jet frames, lava tongue and GSAP blob arcs; no source image modification",
-    "bookends": "Approved bomb logo displayed unchanged"
+    "bookends": "Original approved BAITED wordmark displayed unchanged; reused on both card backs and chat emotes"
   },
   "sourceMeasurements": {
     "mossbyte-poses.png": {
@@ -112,5 +113,16 @@
     },
     "desktopScale": 1.22,
     "phoneScale": 1.38
+  },
+  "brandRefresh": {
+    "date": "2026-10-26",
+    "file": "baited-logo-white.webp",
+    "source": "packages/landing/site/assets/brand/baited-logo-white.webp",
+    "sha256": "3c14aa7b4ae9bca90614b6a29793c459668d8ea01f64f264c49ab4a017f80ffe",
+    "modified": false,
+    "archivedNotDisplayed": [
+      "bait-bomb.png",
+      "effects-sheet.png upper-row hook-bomb emotes"
+    ]
   }
 }

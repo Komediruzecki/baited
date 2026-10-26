@@ -1,7 +1,7 @@
 import React from 'react';
 import type { GameView } from '../shared/types';
 import { productBrand } from './ui';
-import { Flame, Trophy } from './icons';
+import { Card, Pause } from './pixel-icons';
 import { MissionStatus } from './mechanics';
 import { winLabel } from '../extension/presentation.js';
 
@@ -11,82 +11,102 @@ export function ObsHud({
   now,
   offset,
   offline,
+  showCard = false,
 }: {
   game: GameView;
   timeLeft: string;
   now: number;
   offset: number;
   offline: boolean;
+  showCard?: boolean;
 }) {
   const playing = ['active', 'paused', 'settling'].includes(g.phase);
-  const result = !playing ? g.result : null;
+  const result = !offline && !playing ? g.result : null;
   const pending = result?.outcome === 'review';
   const won = result?.outcome === 'caught';
   const reveal = result && ['caught', 'escaped'].includes(result.outcome);
   const label = offline
-    ? 'RECONNECTING'
+    ? 'Reconnecting'
     : g.phase === 'settling'
-      ? 'CHECKING FINAL WORDS'
+      ? 'Checking final words'
       : pending
-        ? 'CATCH PENDING'
+        ? 'Catch pending'
         : won
-          ? 'CHAT WINS'
+          ? 'Chat wins'
           : g.phase === 'active'
-            ? 'CHAT HAS A WORD'
+            ? 'Chat has a word'
             : g.phase === 'paused'
-              ? 'ROUND PAUSED'
+              ? 'Round paused'
               : result?.reason === 'guess'
-                ? 'BAIT CALLED'
+                ? 'Bait called'
                 : result?.outcome === 'escaped'
-                  ? 'TIME UP'
+                  ? 'Time’s up'
                   : result?.outcome === 'overturned'
-                    ? 'CATCH REJECTED'
+                    ? 'Catch rejected'
                     : result?.outcome === 'skipped'
-                      ? 'SKIPPED'
+                      ? 'Skipped'
                       : result
-                        ? 'ROUND ENDED'
-                        : 'WAITING FOR A ROUND';
-  const headline = pending
-    ? 'Did they say it?'
+                        ? 'Round ended'
+                        : 'Next round';
+  const headline = offline
+    ? 'Waiting for updates'
+    : pending
+      ? 'Did they say it?'
+      : playing
+        ? g.mission
+          ? `Word ${Math.min(3, g.mission.completed + 1)} of 3`
+          : `Round ${g.round?.number}`
+        : reveal
+          ? showCard ? won ? '+1 for chat' : 'Time ran out' : result.word
+          : result
+            ? 'New word next'
+            : 'Waiting for the streamer';
+  const clock = offline
+    ? '—:—'
     : playing
-      ? g.mission
-        ? `WORD ${Math.min(3, g.mission.completed + 1)} OF 3`
-        : `ROUND ${g.round?.number}`
-      : reveal
-        ? result.word
-        : result
-          ? 'NEW WORD NEXT'
-          : 'BAIT THEM.';
-  const clock = playing ? timeLeft : won ? '+1' : result?.reason === 'timer' ? '00:00' : null;
-  const fraction =
-    g.round && g.phase === 'active' && g.round.endsAt
+      ? timeLeft
+      : won
+        ? '+1'
+        : result?.reason === 'timer'
+          ? '00:00'
+          : null;
+  const fraction = offline
+    ? 0
+    : g.round && g.phase === 'active' && g.round.endsAt
       ? Math.max(0, g.round.endsAt - (now + offset)) / g.round.duration
       : g.phase === 'paused' && g.round
         ? g.round.remaining / g.round.duration
         : 0;
+  const urgent = !offline && g.phase === 'active' && !!g.round?.endsAt && g.round.endsAt - (now + offset) <= 15000;
   return (
     <div
-      className={`obs-hud${won ? ' obs-hud-win' : ''}${g.phase === 'paused' ? ' obs-hud-paused' : ''}${offline ? ' obs-hud-stale' : ''}`}
+      className={`obs-hud${won ? ' obs-hud-win' : ''}${!offline && g.phase === 'paused' ? ' obs-hud-paused' : ''}${offline ? ' obs-hud-stale' : ''}${urgent ? ' obs-hud-urgent' : ''}`}
     >
       <div className={`obs-widget${won ? ' obs-win' : ''}`}>
         <div className="obs-logo">{productBrand}</div>
         <div className="obs-message">
-          <span>{label}</span>
+          <span>{!offline && g.phase === 'active' && <Card size={16} />}{label}</span>
           <strong>{headline}</strong>
         </div>
-        {clock !== null && <div className="obs-time">{clock}</div>}
+        {clock !== null && (
+          <div
+            className="obs-time"
+            aria-label={offline ? 'Timer unavailable while reconnecting' : undefined}
+          >
+            {!offline && g.phase === 'paused' && <Pause size={16} />}{clock}
+          </div>
+        )}
         <div className="obs-progress">
           <i style={{ width: `${Math.min(1, fraction) * 100}%` }} />
         </div>
       </div>
-      <MissionStatus compact game={g} now={now} offset={offset} />
+      {!offline && <MissionStatus compact game={g} now={now} offset={offset} />}
       <div className="obs-score">
-        <Trophy size={15} />
-        {winLabel(g.score.wins)}
+        {offline && <span className="obs-score-status">Last known:</span>}
+        {winLabel(g.score.wins).toLowerCase()}
         <span>·</span>
-        <Flame size={15} />
-        STREAK {g.score.streak}
-        {g.mode === 'demo' && <span className="obs-mode">LOCAL DEMO</span>}
+        streak {g.score.streak}
+        {g.mode === 'demo' && <span className="obs-mode">Local demo</span>}
       </div>
     </div>
   );

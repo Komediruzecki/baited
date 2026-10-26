@@ -37,7 +37,7 @@ if (gsap && ScrollTrigger && !reduced.matches) {
 // Leave the tab and its title asks you to keep the secret; come back and it is the page again.
 const pageTitle = document.title
 document.addEventListener('visibilitychange', () => {
-  document.title = document.hidden ? '🤐 Don’t say it…' : pageTitle
+  document.title = document.hidden ? 'Don’t say it. · baited' : pageTitle
 })
 console.log(
   '%c baited %c Chat holds the cards. Streamer takes the bait. Made by irchiinnuss.',
@@ -84,7 +84,14 @@ function cardFace(card) {
   if (!card.clues.length) clues.append(node('span', 'no-clues', 'Only the word itself'))
   forbidden.append(node('span', 'card-forbidden__label', 'Keep out of chat'), clues)
   const footer = node('span', 'card-footer')
-  footer.append(node('b', '', 'bait'), document.createTextNode(' them.'))
+  const signature = document.createElement('img')
+  signature.src = '/assets/brand/baited-logo-white.webp'
+  signature.alt = 'BAITED'
+  signature.width = 764
+  signature.height = 225
+  signature.draggable = false
+  signature.decoding = 'async'
+  footer.append(signature)
   const shade = node('span', 'card-shade')
   shade.setAttribute('aria-hidden', 'true')
   face.append(top, art, word, forbidden, node('span', 'card-question', card.question), footer, shade)

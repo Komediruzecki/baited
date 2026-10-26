@@ -30,7 +30,7 @@
   "posterTime": 2.8,
   "checks": {
     "desktop": {
-      "tool": "HyperFrames0.8.198",
+      "tool": "HyperFrames 0.8.198",
       "ok": true,
       "lintWarnings": 1,
       "runtimeErrors": 0,
@@ -40,7 +40,7 @@
       "motionAnalysisEnabled": false
     },
     "phone": {
-      "tool": "HyperFrames0.8.198",
+      "tool": "HyperFrames 0.8.198",
       "ok": true,
       "lintWarnings": 1,
       "runtimeErrors": 0,
@@ -69,26 +69,26 @@
     }
   },
   "sizes": {
-    "chapter-01.avif": 76110,
-    "chapter-02.avif": 24050,
-    "chapter-03.avif": 91603,
-    "chapter-04.avif": 92115,
-    "chapter-05.avif": 92976,
-    "chapter-06.avif": 28160,
-    "chapter-07.avif": 89080,
-    "chapter-phone-01.avif": 61040,
-    "chapter-phone-02.avif": 21906,
-    "chapter-phone-03.avif": 66405,
-    "chapter-phone-04.avif": 63257,
-    "chapter-phone-05.avif": 63168,
-    "chapter-phone-06.avif": 24872,
-    "chapter-phone-07.avif": 58760,
-    "hero-desktop.mp4": 2190094,
-    "hero-desktop.webm": 1730033,
-    "hero-phone.mp4": 1690228,
-    "hero-phone.webm": 1489098,
-    "poster-desktop.avif": 39241,
-    "poster-phone.avif": 31188
+    "chapter-01.avif": 135312,
+    "chapter-02.avif": 28439,
+    "chapter-03.avif": 152405,
+    "chapter-04.avif": 165617,
+    "chapter-05.avif": 160668,
+    "chapter-06.avif": 33810,
+    "chapter-07.avif": 151896,
+    "chapter-phone-01.avif": 112173,
+    "chapter-phone-02.avif": 26809,
+    "chapter-phone-03.avif": 118590,
+    "chapter-phone-04.avif": 101547,
+    "chapter-phone-05.avif": 101831,
+    "chapter-phone-06.avif": 30267,
+    "chapter-phone-07.avif": 104245,
+    "hero-desktop.mp4": 2139296,
+    "hero-desktop.webm": 1766906,
+    "hero-phone.mp4": 1695783,
+    "hero-phone.webm": 1458905,
+    "poster-desktop.avif": 113448,
+    "poster-phone.avif": 94030
   },
   "limitations": [
     "This is a staged Extension concept, not a live Twitch or OBS recording.",
@@ -98,13 +98,13 @@
     "The renderer silent-source advisory is expected because the optional existing Sound Lab soundtrack is muxed afterward.",
     "One duplicate-image discovery lint warning remains; rendered frames and full media decode passed."
   ],
-  "finalRender": "Both aspect ratios re-rendered after Opus mockup corrections; all four delivery files decode completely with no errors.",
+  "finalRender": "Both aspect ratios re-rendered from editable source with the approved original BAITED wordmark replacing all hook-bomb and earlier bait! marks. Four delivery videos decode fully; all audio packet hashes match the previous exports.",
   "artFixes": [
     "Alpha-only sprite cleanup, source PNG hashes unchanged",
     "Facecam per-pose registration, stepped violet backdrop, tighter phone crop",
     "Mirrored hammer-down frame aligned at the porch",
     "Code-built orange eruption and lava tongue anchored to the crater",
-    "Approved bomb logo bookends; emotes remain chat-only",
+    "Original BAITED wordmark bookends, card backs and chat emotes; older hook-bomb source art archived unchanged",
     "Short camera pushes into holds; crater minimum73 master pixels including rumble",
     "Reduced-motion stills moved to settled16.5s and30.3s frames"
   ],
@@ -114,13 +114,12 @@
     "Phone pick panel preserves the game, facecam and award",
     "Confirmation cursor appears only when movement starts at22.4s"
   ],
-  "renderedAt": "2026-10-25T18:43:42.792987+00:00",
+  "renderedAt": "2026-10-26T21:19:55.991540+00:00",
   "exports": [
     {
       "file": "hero-desktop.mp4",
-      "bytes": 2190094,
-      "sha256": "74cab518782b7e903521a322c2d10c7f306838a85eb86fcdfa6110de074dffb3",
-      "codecParameter": "H.264 High/yuv420p and AAC-LC",
+      "bytes": 2139296,
+      "sha256": "413514013693cb300b6c176b9ef9eb33eb807b363409233490fcfe8bb8cbabb3",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -148,16 +147,17 @@
         ],
         "format": {
           "duration": "32.000000",
-          "size": "2190094"
+          "size": "2139296"
         }
       },
-      "fullDecode": "passed"
+      "fullDecode": "passed",
+      "audioPacketSha256": "SHA256=a06b8cee950b765363e6979b8fa758b891d64628efbe6ba3eee5cef1e9572483",
+      "audioPacketsUnchanged": true
     },
     {
       "file": "hero-desktop.webm",
-      "bytes": 1730033,
-      "sha256": "a40c0b888900e66b6f3da10c93cd26e1b2935212fade4ccb8cf012dc32dd556b",
-      "codecParameter": "av01.0.05M.08,opus",
+      "bytes": 1766906,
+      "sha256": "595312a6d2ce63eae72f3bb4fafa457870e883f661a274c58c7ba1c556dab723",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -181,17 +181,18 @@
           }
         ],
         "format": {
-          "duration": "32.008000",
-          "size": "1730033"
+          "duration": "32.028000",
+          "size": "1766906"
         }
       },
-      "fullDecode": "passed"
+      "fullDecode": "passed",
+      "audioPacketSha256": "SHA256=d0b643efde1aff32a6b9b2e5dd2c56138f66508e14ee09db97f4e34882c9b3b2",
+      "audioPacketsUnchanged": true
     },
     {
       "file": "hero-phone.mp4",
-      "bytes": 1690228,
-      "sha256": "f8f3333c0df19f8fe68147e19d8be6a59fe97b2559edd369d88670530b21988f",
-      "codecParameter": "H.264 High/yuv420p and AAC-LC",
+      "bytes": 1695783,
+      "sha256": "7c08a8c818bac34bec96a99d09e2ad1b681d0f79fe22e97ab49751eb7a3f0032",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -219,16 +220,17 @@
         ],
         "format": {
           "duration": "32.000000",
-          "size": "1690228"
+          "size": "1695783"
         }
       },
-      "fullDecode": "passed"
+      "fullDecode": "passed",
+      "audioPacketSha256": "SHA256=a06b8cee950b765363e6979b8fa758b891d64628efbe6ba3eee5cef1e9572483",
+      "audioPacketsUnchanged": true
     },
     {
       "file": "hero-phone.webm",
-      "bytes": 1489098,
-      "sha256": "867657bbb94c82829cd683eedafd706cf25dedee4040840ab8de5f9885a8ddc6",
-      "codecParameter": "av01.0.04M.08,opus",
+      "bytes": 1458905,
+      "sha256": "165c83c0cc9cc23a18689e9f819dcd2c0c7a8086e2eeac6e5eae26d1bcb8308f",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -252,11 +254,13 @@
           }
         ],
         "format": {
-          "duration": "32.008000",
-          "size": "1489098"
+          "duration": "32.028000",
+          "size": "1458905"
         }
       },
-      "fullDecode": "passed"
+      "fullDecode": "passed",
+      "audioPacketSha256": "SHA256=d0b643efde1aff32a6b9b2e5dd2c56138f66508e14ee09db97f4e34882c9b3b2",
+      "audioPacketsUnchanged": true
     }
   ],
   "visualChecks": {
@@ -283,5 +287,286 @@
     "phonePassed": true,
     "posterMaxBytes": 180000,
     "postersPassed": true
+  },
+  "brandRefresh": {
+    "date": "2026-10-26",
+    "sourceLogo": "packages/landing/site/assets/brand/baited-logo-white.webp",
+    "logoSha256": "3c14aa7b4ae9bca90614b6a29793c459668d8ea01f64f264c49ab4a017f80ffe",
+    "placements": [
+      "opening bookend",
+      "closing bookend",
+      "viewer card back",
+      "streamer card back",
+      "chat emotes"
+    ],
+    "method": "Source HTML/CSS replacement and full HyperFrames re-render; no overlays or masking of baked video",
+    "sourceArtUnchanged": true,
+    "originalsPreserved": true,
+    "timelineUnchanged": true,
+    "captionsUnchanged": true,
+    "audioPacketsUnchanged": true,
+    "ffmpegVersion": "ffmpeg version n9.0.2 Copyright (c) 2000-2026 the FFmpeg developers",
+    "stillEncoding": "libaom-av1 still-picture, yuv420p; poster CRF 28, chapter CRF 24",
+    "evidenceRun": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc",
+    "deliveredVideoFramesInspected": [
+      "desktop 0s",
+      "desktop 5.8s",
+      "desktop 26s",
+      "desktop 31.9s",
+      "desktop WebM 26s",
+      "phone 0s",
+      "phone 5.8s",
+      "phone 26s"
+    ],
+    "sourceLayoutFramesInspected": {
+      "desktop": [
+        0,
+        1.5,
+        5.8,
+        12,
+        26,
+        31.9
+      ],
+      "phone": [
+        0,
+        1.5,
+        5.8,
+        12,
+        26,
+        31.9
+      ]
+    },
+    "assets": [
+      {
+        "file": "chapter-01.avif",
+        "bytes": 135312,
+        "sha256": "644345db888918bee4fb374d6a22b8c113b4e24e35d46d064ed879d3131b5cbd"
+      },
+      {
+        "file": "chapter-02.avif",
+        "bytes": 28439,
+        "sha256": "81a2710eab0a9aba6b1f764b6987a551c35bc56c6ae410cfac00a257d846d8eb"
+      },
+      {
+        "file": "chapter-03.avif",
+        "bytes": 152405,
+        "sha256": "02d66ae461a5db3343cf9465c7d45f9c494c0ba4a4009b1f153aa7ce4fabd666"
+      },
+      {
+        "file": "chapter-04.avif",
+        "bytes": 165617,
+        "sha256": "3862ff4f9708ba1a92dddfa71033375299ef91997dc333dff806d52c8642a165"
+      },
+      {
+        "file": "chapter-05.avif",
+        "bytes": 160668,
+        "sha256": "9b7e35a9c7fbf78118dec4a5d09074871c11d9b715937a5e069c2c4acafbac68"
+      },
+      {
+        "file": "chapter-06.avif",
+        "bytes": 33810,
+        "sha256": "30f29ad6e3ea1e1be4b1b3fe6889a1313204c6c6653d8633ff1912aa0963adae"
+      },
+      {
+        "file": "chapter-07.avif",
+        "bytes": 151896,
+        "sha256": "0c37da0d6f60580aff235843f60435f31e29c83badf0032357e40e84b1dd6131"
+      },
+      {
+        "file": "chapter-phone-01.avif",
+        "bytes": 112173,
+        "sha256": "df8356796e352267fb43be54c5d90e34bf61b5a1090909226e16cd47279d85ac"
+      },
+      {
+        "file": "chapter-phone-02.avif",
+        "bytes": 26809,
+        "sha256": "f0e5440e1025a61e97a7ba3ab30d60be281a1b266eceb04e05ca929a4ddd86a0"
+      },
+      {
+        "file": "chapter-phone-03.avif",
+        "bytes": 118590,
+        "sha256": "829f42efc212009fc827bb87cd0eadafcfc5aad5b7615075a6945c857fb02882"
+      },
+      {
+        "file": "chapter-phone-04.avif",
+        "bytes": 101547,
+        "sha256": "cce684b410708a8cef35ce75e7d7cec8472cfde0f95e20636315d06b5348a676"
+      },
+      {
+        "file": "chapter-phone-05.avif",
+        "bytes": 101831,
+        "sha256": "18874273d84fbc3a0172a5524ed237fc2cab8b3f9f4c1fcfc4aff666fe022cc1"
+      },
+      {
+        "file": "chapter-phone-06.avif",
+        "bytes": 30267,
+        "sha256": "c0c88d4689d2eef96725dc53a03de2da93d22348056a8b4cde29f23e564863cc"
+      },
+      {
+        "file": "chapter-phone-07.avif",
+        "bytes": 104245,
+        "sha256": "eb64ac5f3ad5b2841ba6339da901f58579c1af5d7bd32356f244a8849c8d646a"
+      },
+      {
+        "file": "hero-desktop.mp4",
+        "bytes": 2139296,
+        "sha256": "413514013693cb300b6c176b9ef9eb33eb807b363409233490fcfe8bb8cbabb3",
+        "probe": {
+          "programs": [],
+          "stream_groups": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "profile": "High",
+              "codec_type": "video",
+              "width": 1280,
+              "height": 720,
+              "pix_fmt": "yuv420p",
+              "level": 31,
+              "r_frame_rate": "30/1",
+              "duration": "32.000000",
+              "nb_read_frames": "960"
+            },
+            {
+              "codec_name": "aac",
+              "profile": "LC",
+              "codec_type": "audio",
+              "r_frame_rate": "0/0",
+              "duration": "32.000000",
+              "nb_read_frames": "1500"
+            }
+          ],
+          "format": {
+            "duration": "32.000000",
+            "size": "2139296"
+          }
+        },
+        "fullDecode": "passed",
+        "audioPacketSha256": "SHA256=a06b8cee950b765363e6979b8fa758b891d64628efbe6ba3eee5cef1e9572483",
+        "audioPacketsUnchanged": true
+      },
+      {
+        "file": "hero-desktop.webm",
+        "bytes": 1766906,
+        "sha256": "595312a6d2ce63eae72f3bb4fafa457870e883f661a274c58c7ba1c556dab723",
+        "probe": {
+          "programs": [],
+          "stream_groups": [],
+          "streams": [
+            {
+              "codec_name": "av1",
+              "profile": "Main",
+              "codec_type": "video",
+              "width": 1280,
+              "height": 720,
+              "pix_fmt": "yuv420p",
+              "level": 5,
+              "r_frame_rate": "30/1",
+              "nb_read_frames": "960"
+            },
+            {
+              "codec_name": "opus",
+              "codec_type": "audio",
+              "r_frame_rate": "0/0",
+              "nb_read_frames": "1601"
+            }
+          ],
+          "format": {
+            "duration": "32.028000",
+            "size": "1766906"
+          }
+        },
+        "fullDecode": "passed",
+        "audioPacketSha256": "SHA256=d0b643efde1aff32a6b9b2e5dd2c56138f66508e14ee09db97f4e34882c9b3b2",
+        "audioPacketsUnchanged": true
+      },
+      {
+        "file": "hero-phone.mp4",
+        "bytes": 1695783,
+        "sha256": "7c08a8c818bac34bec96a99d09e2ad1b681d0f79fe22e97ab49751eb7a3f0032",
+        "probe": {
+          "programs": [],
+          "stream_groups": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "profile": "High",
+              "codec_type": "video",
+              "width": 720,
+              "height": 800,
+              "pix_fmt": "yuv420p",
+              "level": 31,
+              "r_frame_rate": "30/1",
+              "duration": "32.000000",
+              "nb_read_frames": "960"
+            },
+            {
+              "codec_name": "aac",
+              "profile": "LC",
+              "codec_type": "audio",
+              "r_frame_rate": "0/0",
+              "duration": "32.000000",
+              "nb_read_frames": "1500"
+            }
+          ],
+          "format": {
+            "duration": "32.000000",
+            "size": "1695783"
+          }
+        },
+        "fullDecode": "passed",
+        "audioPacketSha256": "SHA256=a06b8cee950b765363e6979b8fa758b891d64628efbe6ba3eee5cef1e9572483",
+        "audioPacketsUnchanged": true
+      },
+      {
+        "file": "hero-phone.webm",
+        "bytes": 1458905,
+        "sha256": "165c83c0cc9cc23a18689e9f819dcd2c0c7a8086e2eeac6e5eae26d1bcb8308f",
+        "probe": {
+          "programs": [],
+          "stream_groups": [],
+          "streams": [
+            {
+              "codec_name": "av1",
+              "profile": "Main",
+              "codec_type": "video",
+              "width": 720,
+              "height": 800,
+              "pix_fmt": "yuv420p",
+              "level": 4,
+              "r_frame_rate": "30/1",
+              "nb_read_frames": "960"
+            },
+            {
+              "codec_name": "opus",
+              "codec_type": "audio",
+              "r_frame_rate": "0/0",
+              "nb_read_frames": "1601"
+            }
+          ],
+          "format": {
+            "duration": "32.028000",
+            "size": "1458905"
+          }
+        },
+        "fullDecode": "passed",
+        "audioPacketSha256": "SHA256=d0b643efde1aff32a6b9b2e5dd2c56138f66508e14ee09db97f4e34882c9b3b2",
+        "audioPacketsUnchanged": true
+      },
+      {
+        "file": "poster-desktop.avif",
+        "bytes": 113448,
+        "sha256": "aeee14a50d5eef5707c6ade7dff26afa74752224da7578fc09c558685f38005e"
+      },
+      {
+        "file": "poster-phone.avif",
+        "bytes": 94030,
+        "sha256": "94e644441d5431f4627fc7ebc31847ce1bf10b0939f8df0a7c7ffbf6bda4df8c"
+      }
+    ],
+    "videoEncoding": "H.264 libx264 veryfast CRF23; AV1 libsvtav1 preset8 CRF47 desktop / CRF46 phone",
+    "webmContainerDurationSeconds": 32.028,
+    "webmDurationNote": "960 video frames cover exactly 32 seconds; FFmpeg9 container metadata includes Opus padding. Original audio packet payloads and final discard-padding metadata are retained.",
+    "audioPacketTimestampsAndPaddingUnchanged": true
   }
 }

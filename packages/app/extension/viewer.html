@@ -7,11 +7,12 @@
     <title>baited · Chat's secret</title>
     <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
     <script src="./runtime-config.js"></script>
+    <link rel="stylesheet" href="./tokens.css" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-surface="viewer">
     <!-- THESIS: One dealt card beside the stream. OWN-WORLD: The landing's
-    charcoal card stock, violet edge, yellow word and joined bait them. signature.
+    charcoal card stock, violet table and original BAITED signature.
     STORY: Read the word, avoid the forbidden clues, then steer the conversation.
     FIRST VIEWPORT: Compact brand rail above one card. The word owns the middle;
     clues, the short rule and clock sit immediately below.
@@ -32,10 +33,13 @@
         <div class="card-topline">
           <p class="card-kicker" id="card-kicker">Next round</p>
           <span class="phase-label" id="phase-label">Waiting</span>
+          <span class="difficulty" id="difficulty" role="img" hidden></span>
         </div>
         <div class="card-center">
-          <img class="bomb" id="bomb" src="./assets/bait-bomb.png" alt="" width="80" height="80" />
-          <img class="word-art" id="word-art" alt="" width="160" height="126" hidden />
+          <div class="waiting-card" id="card-back" aria-hidden="true">
+            <span class="waiting-mark baited-glyph"></span>
+          </div>
+          <img class="word-art" id="word-art" alt="" width="132" height="132" hidden />
           <h2 class="target" id="card-title">The word is coming.</h2>
           <p class="card-detail" id="card-detail">
             It appears here when the streamer starts a round.
@@ -48,7 +52,7 @@
         <div class="clock" id="clock" hidden>
           <div class="clock-labels">
             <span id="clock-caption">Time left</span>
-            <span id="clock-value" class="clock-value" aria-label="Time left">0:00</span>
+            <span id="clock-value" class="clock-value" role="timer" aria-live="off" aria-label="Time left">0:00</span>
           </div>
           <progress
             id="clock-progress"
@@ -58,13 +62,12 @@
           ></progress>
         </div>
         <div class="card-baseline">
-          <span class="card-tagline"><b>bait</b> them.</span
-          ><span class="card-stamp" id="card-stamp">Only chat will know</span>
+          <span class="card-stamp" id="card-stamp">Only chat will know</span>
         </div>
       </section>
       <footer class="panel-footer">
-        <p id="play-instruction">Write a hint in chat. Keep the secret word to yourself.</p>
-        <p class="skip-note" id="skip-note"><code>!skip</code> votes for another word.</p>
+        <p id="play-instruction">Nudge the conversation.</p>
+        <p class="skip-note" id="skip-note"><code>!skip</code> votes for a new word.</p>
       </footer>
       <p id="announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
     </main>

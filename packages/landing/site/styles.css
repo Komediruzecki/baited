@@ -1034,20 +1034,16 @@ input {
 }
 .card-footer {
   display: flex;
-  justify-content: center;
-  align-items: baseline;
-  gap: 0.3em;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1;
+  justify-content: flex-start;
+  align-items: center;
   border-top: 1px solid #5b515f;
   padding-top: 11px;
   flex-shrink: 0;
 }
-.card-footer b {
-  font: 18px Russo;
-  color: var(--rim);
-  letter-spacing: -0.05em;
+.card-footer img {
+  display: block;
+  width: 64px;
+  height: auto;
 }
 /* Secret-word colors: each item's own color in its Material 3 tonal palette, at the most vivid
    tone from 65 to 90 that keeps 4.5:1 on the card face. Seeds come from the artwork's palette. */
@@ -1486,11 +1482,7 @@ input {
     margin: 8px 0 10px;
   }
   .card-footer {
-    font-size: 12px;
     padding-top: 10px;
-  }
-  .card-footer b {
-    font-size: 16px;
   }
 }
 @media (max-width: 350px) {
@@ -1526,9 +1518,6 @@ input {
 }
 @media (max-width: 700px) {
   .deck-card-item .card-question {
-    font-size: 14px;
-  }
-  .deck-card-item .card-footer {
     font-size: 14px;
   }
 }

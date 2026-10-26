@@ -2,7 +2,9 @@
 
 ## Scope and mode
 
-The standalone streamer studio and setup flow are Operate surfaces. Streamers use them beside Twitch and OBS, often on a dim second monitor. Preserve the approved landing's charcoal card stock, violet, restrained yellow, BAITED wordmark B, Russo One headings and supplied bomb, while making the next action readable at a glance.
+The standalone streamer studio and setup flow are Operate surfaces. Streamers use them beside Twitch and OBS, often on a dim second monitor. The current landing reference is packages/landing in the private Komediruzecki/baited repository. Its production and development domains are baited.maff.app and dev.baited.maff.app. The latest branding direction uses the owner's plain original BAITED wordmark; earlier hook variants and bomb artwork remain preserved but are not the current design authority.
+
+The card and product-surface redesign is in progress with Opus leading the specification. The owner will choose the card edition. The rules below record the existing functional and layout baseline, not an approved replacement design or final Opus acceptance.
 
 ## Direction contract
 
@@ -14,7 +16,7 @@ The standalone streamer studio and setup flow are Operate surfaces. Streamers us
 
 ## Type and controls
 
-Inter carries labels, inputs, navigation and explanatory text. The approved B asset supplies the wordmark; Russo One is reserved for round headings, revealed words and the timer. Buttons use consistent 44px minimum targets, visible focus, clear disabled states and a modest 160ms state transition. Settings use a native dialog and return keyboard focus to the opener when closed. No idle decorative animation or sound autoplay.
+Inter carries labels, inputs, navigation and explanatory text. The plain original BAITED artwork is the wordmark source; Russo One is reserved for round headings, revealed words and the timer. Buttons use consistent 44px minimum targets, visible focus, clear disabled states and a modest 160ms state transition. Settings use a native dialog and return keyboard focus to the opener when closed. No idle decorative animation or sound autoplay.
 
 ## State and privacy rules
 
@@ -31,10 +33,10 @@ The masthead becomes two rows on phones; a live connection status gets its own l
 
 ## Card behavior
 
-Studio review uses a 190 × 266 px charcoal result card beside the confirm/reject decision on desktop. One result ID retains one card through confirmation; the verdict stamps in without a second flip. Reject ends the round, with a new word on the next round. Reverse win stays available through idle until the next round starts. Review takes focus only from the page or a disappearing round control, never from an input or dialog. The active secret stays hidden. Native viewers get the word's approved illustration when one exists; generic result words get a deliberate typographic face. Off-limits clues use struck capitals. A native card deals once per new round over 280 ms, with no urgency pulse.
+Studio review uses a 190 × 266 px charcoal result card beside the confirm/reject decision on desktop. One result ID retains one card through confirmation; the verdict stamps in without a second flip. Reject ends the round, with a new word on the next round. Reverse win stays available through idle until the next round starts. Review takes focus only from the page or a disappearing round control, never from an input or dialog. The active secret stays hidden. All 78 current playable targets have approved illustrations; generic words retain a typographic fallback. Off-limits clues use readable text without a strike-through. A native card deals once per new round over 280 ms, with no urgency pulse.
 
 OBS uses a 540 px HUD on a transparent canvas, about 140 px tall without a mission. Only confirmed catches and escapes receive a large result card below it. It deals in, turns, holds and leaves within 5.5 seconds. Reconnecting does not restart the whole reveal. Pending, rejected, skipped and ended results expose neither the word nor its illustration URL; the server also strips every historical word from the overlay response. Reduced-motion shows a stationary card for the same bounded interval.
 
 ## Validation boundary
 
-Browser screenshots and simulated game states prove layout and controls only. Real Twitch authorization, physical microphone behavior, actual OBS capture and device acceptance need their corresponding live checks. The 26 October Opus critique inspected the pre-fix implementation and curated evidence. Post-fix source review, local checks and the owner's visual acceptance are separate evidence.
+Browser screenshots and simulated game states prove layout and controls only. Version 0.0.1 is in Twitch Hosted Test with the test backend at play-baited.maff.app. The owner reported successful rounds with Paolo, live chat and Moonshine, and confirmed the OBS score display after a source refresh. These reports describe that session; availability, actual capture and device acceptance still need their corresponding checks. Earlier Opus critiques inspected their then-current implementation and evidence. The new specification, source review, local checks and the owner's visual acceptance remain separate steps.

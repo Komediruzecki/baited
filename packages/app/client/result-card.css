@@ -30,9 +30,7 @@
   position: absolute;
   inset: 0;
   display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 10px;
+  place-items: center;
   background: repeating-linear-gradient(
     45deg,
     #242426 0 var(--stripe),
@@ -45,12 +43,6 @@
   inset: 7%;
   border: 1px solid #c9a8ff2e;
   border-radius: inherit;
-}
-.card-back img {
-  position: relative;
-  width: 62%;
-  height: auto;
-  image-rendering: pixelated;
 }
 .card-back .baited-glyph {
   position: relative;
@@ -94,7 +86,7 @@
     400 22px/1.12 'Russo One',
     sans-serif;
   letter-spacing: -0.02em;
-  color: #fffc79;
+  color: #fffdf7;
   overflow-wrap: anywhere;
   text-transform: uppercase;
 }
@@ -134,13 +126,13 @@
   width: 65px;
 }
 .result-card[data-outcome='caught'] .result-card__face {
-  border-color: #fffc79;
+  border-color: #fffdf7;
 }
 .result-card[data-outcome='caught'] .result-card__verdict {
-  animation: verdict-stamp 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: verdict-stamp 220ms cubic-bezier(0.16, 1, 0.3, 1) 520ms both;
 }
 .result-card[data-outcome='caught'] .result-card__outcome {
-  color: #fffc79;
+  color: #fffdf7;
 }
 .result-card[data-outcome='escaped'] .result-card__word {
   color: #fffdf7;
@@ -149,7 +141,7 @@
   --card-r: 14px 24px 14px 14px;
   --stripe: 12px;
   position: absolute;
-  top: 200px;
+  top: 196px;
   left: 40px;
   width: 300px;
   animation: broadcast-deal 5500ms linear var(--result-age) both;
@@ -166,6 +158,7 @@
 }
 .result-deal--broadcast .result-card__verdict {
   font-size: 18px;
+  animation-delay: calc(900ms + var(--result-age));
 }
 .result-deal--broadcast .result-card__face[data-art='word'] .result-card__word {
   min-height: 216px;

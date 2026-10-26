@@ -1,122 +1,139 @@
-# BAIT
+# Baited: Devpost submission draft
 
-### ⏳ Not submitted yet
+Updated 26 October 2026. This is the current draft; archived BAIT/Deepgram documents are historical.
 
-Nothing has been sent to Devpost.
+**Save status:** preparation files updated; no online fields saved. The Devpost connector returned `UNAUTHORIZED` and requires reconnection. A browser check of the existing edit URL also reached `secure.devpost.com/users/login`. The sign-in tab is ready, but the saved project text and submission state could not be inspected. No online fields, media, submission state or visibility were changed by this pass. Do not interpret this document as a submission receipt.
 
-Local working draft, 25 October 2026. This file is prepared for owner review. It has not been entered into a Devpost form. Account registration and exact custom field IDs could not be read because the connector needs reauthentication. The public event pages were checked separately; see the source links below.
+**Verified source snapshot:** `d93edb9780f0607112e83debcbab154758f0a3a1` in the private [Komediruzecki/baited repository](https://github.com/Komediruzecki/baited). Current design work may be ahead of this snapshot. Recheck screenshots and the final revision after the redesign lands.
 
-Use the [requirements checklist](docs/hackathon-requirements.md) for eligibility, team setup and the conflicting published dates.
+**Existing entry:** [Edit Baited project details](https://devpost.com/submit-to/31742-codex-x-twitchcon-hackathon/manage/submissions/1266473-baited/project_details/edit). This is the owner's edit URL, not a public Try it out link.
 
-## One-line Summary
+## Project name
 
-Chat gets a secret word and tries to make the streamer say it. BAIT turns the slip into a shared win.
+Baited
 
-## Problem
+## Tagline
 
-Chat can react to a stream, but joining a game often means interrupting it. BAIT gives viewers a shared objective that works through ordinary conversation while the streamer keeps playing or talking.
+Bait them. Chat gets a secret word and tries to make the streamer say it.
 
-## Solution
+## About the project: copy the following sections
 
-Viewers open a companion page to see the secret word. They drop hints in Twitch chat while the streamer tries to avoid the trap. The studio and OBS overlay keep the word hidden. When the microphone recognizes the whole word, the server ends the round and reveals a win for chat. If the timer runs out, the streamer escapes.
+## Inspiration
 
-The target might be banana. A viewer asks about smoothie ingredients. The streamer answers naturally, then realizes why everyone was asking about fruit. That example illustrates the intended play; the final video must show a real Twitch exchange.
+A good Twitch conversation already has the ingredients of a party game: a streamer, a chat full of ideas, and someone waiting for the right moment to slip in a joke. Baited turns that exchange into a secret-word challenge.
 
-## Why This Matters
+We took the hidden target of conversation games and the off-limits clues of word games, then built around the split between what chat knows and what the streamer sees. Chat has a plan. The streamer has to keep talking.
 
-The audience has a common objective, and the streamer can keep their usual content going. Everyone can understand the reveal. Viewers need no BAIT account or installed Extension. The streamer can pause the game or reverse an incorrect detection.
+## What it does
 
-## How We Used AI
+Chat gets a secret card in a native Twitch Extension panel. Viewers send clues through ordinary Twitch chat, trying to make the streamer say the target before time runs out. The target stays hidden from the streamer's active game view and the OBS overlay. Harder cards rule out obvious clues.
 
-The implemented speech adapter forwards consented microphone audio to Deepgram for streaming speech recognition. Only eligible final results can trigger a win. No language model invents winners or decides which chatter caused a response. After a win, the streamer can manually choose a clean hint for a separate award.
+The streamer runs the round from Baited Studio. Moonshine listens through an explicitly enabled microphone and transcribes speech on the streamer's computer. A target-word match pauses the round for confirmation. The streamer decides whether it was a catch before chat gets a win.
 
-Physical microphone recognition through the real provider remains an acceptance gate. Local simulated transcripts and provider fixtures must not be presented as successful live recognition.
+The current build includes 78 illustrated targets across three difficulty levels, skip voting through `!skip`, a three-word mission mode, and a private guess for the streamer. After a confirmed catch, the streamer can credit an eligible chat clue. The OBS overlay shows the clock, wins, streak and settled result without giving away the active word.
 
-## How We Used Codex
+Baited is currently in Twitch Hosted Test. We have tested real rounds with a remote viewer, live Twitch chat, a microphone and OBS. Public installation is a next step.
 
-The supplied package records Codex work on the game engine, Twitch OAuth/EventSub connection, speech bridge, role-specific views, interface and fixture tests. Its original session evidence is retained in `docs/codex-session.json`.
+## How we built it
 
-The October 25 improvement pass uses Codex to audit the archive, reproduce defects, implement local fixes, improve the preview and prepare this packet. Final check results are recorded in `docs/validation.md`, rather than inferred from an implementation request. The original main-build candidate and the later improvement chat are listed separately in [build provenance](docs/build-provenance.md).
+The app uses TypeScript, React, Node.js and Express. Twitch OAuth connects the broadcaster, and an EventSub WebSocket receives chat messages. The native Extension uses Twitch's Extension Helper and signed authorization tokens to read the state for its channel.
 
-## Key Features
+One server-side game state machine controls rounds, deadlines, votes and scores. It returns different views to chat, Studio and OBS. Studio, the standalone viewer and the overlay receive updates through server-sent events; the native Twitch panel polls an authenticated endpoint.
 
-- A studio for round controls, microphone consent, difficulty, timing and score correction.
-- A mobile viewer page with the active word, clock and shared result.
-- A transparent OBS browser-source page with no active target in its server response.
-- Chat participation and distinct-user skip voting.
-- Optional forbidden clues, three-word missions on one clock, and one private typed guess per word. A missed guess gives chat 15 seconds.
-- A streamer-selected clean-hint award, with reassignment and reversal.
-- A clearly labeled local demonstration using simulated chat and speech.
+Moonshine runs in a browser worker using WebAssembly. The microphone audio stays on the streamer's computer in this mode. Finalized transcript text and timing metadata go to the authenticated game server for matching. No hosted speech API key is needed for this path.
 
-These features exist in source and have fixture/local evidence as recorded. Real Twitch, physical microphone, actual OBS capture and hosted judge access require separate proof. Six-word showdown, risk/reward mission bonuses and guest microphone relay are future proposals, not current capabilities.
+We used OpenAI Codex throughout implementation, debugging, testing and integration. ChatGPT image generation supplied separate card illustrations; the app renders the word, clue text and controls as interface elements. This lets us improve readability without regenerating the artwork. Procedural sound effects use Web Audio. The landing runs on Cloudflare Workers, and our Hosted Test backend currently runs on a Linux computer behind a named Cloudflare Tunnel.
 
-## Architecture
+## Challenges we ran into
 
-React renders three role-specific views. One persistent Node/TypeScript process owns words, deadlines, scores and transitions, then broadcasts server-sent events. Twitch OAuth authorizes the broadcaster's own chat feed. EventSub supplies messages. An AudioWorklet captures consented PCM and a server-side WebSocket bridge sends it to the speech provider. Encrypted OAuth tokens and bounded game records use one persistent data directory.
+The same round has three audiences with different information. A useful viewer card would spoil the game if its target reached the broadcast. We made that distinction in the server's responses.
 
-Built with: TypeScript, React, Node.js, Express, Vite, Twitch API, Twitch EventSub, WebSockets, Server-Sent Events, Web Audio API, Deepgram, OpenAI Codex.
+Speech recognition also needed a decision step. A model can mishear a word, and a late transcript can belong to an earlier round. We added streamer confirmation, round-bound transcript checks and duplicate protection instead of letting a tentative match change the score.
 
-## Testing Instructions
+Browser security and streaming tools introduced their own problems. Moonshine's runtime initially failed under the worker's Content Security Policy. We fixed that worker configuration and tested it again in the hosted Studio. An OBS Browser source also fell behind the browser preview during testing; refreshing it restored the scores. Automatic recovery still needs a controlled test.
 
-Use [the judge walkthrough](docs/judge-walkthrough.md). It distinguishes a two-minute local simulated test from real Twitch acceptance. The repository needs all source, assets and run instructions. The operator must supply hosted access and provider usage free to judges; judges should not need to purchase a transcription plan or handle secrets.
+## Accomplishments that we're proud of
 
-## Public Demo Link
+The core interaction works across Twitch chat, the viewer panel, local speech recognition and the streamer's controls. In our first remote sessions, a viewer saw the secret card and sent clues through Twitch while the streamer spoke. The streamer reported several successful Moonshine tests, and the OBS score display matched after refreshing its Browser source.
 
-`TODO_LIVE_HTTPS_URL`; not created or verified.
+The card collection now has 78 illustrated targets with separate, editable text. We also kept the original source package intact while bringing the app, Extension and landing into one private repository.
 
-Twitch demonstration channel: `TODO_TWITCH_CHANNEL_URL`.
+## What we learned
 
-Judge access instructions and scheduled operator availability: `TODO_JUDGE_ACCESS_AND_AVAILABILITY`.
+Recognizing a word and deciding a win are different jobs. The model proposes a catch; the streamer makes the call.
 
-## Public Repository Link
+We also learned to test each surface in its actual setting. A page working in a desktop browser does not establish that the Twitch iframe, another browser or OBS will behave the same way. Those checks changed both our implementation and our test plan.
 
-[Komediruzecki/bait](https://github.com/Komediruzecki/bait), a private GitHub repository created with the owner's authorization. `origin` is configured, and the working branch is `feat/bait-preview`. Record the final reviewed revision in the entry. Judge access is still pending: the official private-repository option requires sharing with `testing@devpost.com`; no collaborator invitation has been sent by preparing this packet. Confirm source and logo rights before granting external access.
+## What's next for Baited
 
-The imported source is preserved on `main` and tag `paolo-original-2026-10-24`. Use the [feat/bait-preview candidate branch](https://github.com/Komediruzecki/bait/tree/feat/bait-preview) for the improved build and identify its final reviewed revision in the entry so judges do not unknowingly test the original baseline. Private repository access is required for either link.
+We are refining card readability and bringing the viewer panel and Studio closer to the landing's visual identity. Next come broader browser and microphone tests, reliable OBS reconnection, and a complete recorded Twitch round.
 
-## Demo Video
+After those checks, we plan to prepare the Extension for Twitch review and make it easier for other streamers to host their own game. More illustrated and picture-led cards are planned; they are not required to understand or play the current round.
 
-`TODO_YOUTUBE_URL`; no final video exists.
+## End of About the project
 
-Target length: 2:45, including actual Twitch play and actual Codex build footage. See [the shotlist](docs/demo-script.md). The FAQ allows unlisted YouTube videos; private videos are unsuitable. Check playback in a signed-out browser. Do not show simulated inputs as real speech/Twitch proof.
+The sections below are field values and preparation notes, not part of the public story.
 
-## Screenshot Shot List
+## Built with
 
-1. A connected studio before play, with the active target absent.
-2. A narrow viewer card showing the word and rules; label this role clearly.
-3. A real Twitch hint and the matching live spoken-word result.
-4. The OBS reveal over the stream and a streamer-selected award.
-5. A relevant Codex implementation/test result, cropped to remove private material.
+Suggested 20 tags, within the user-supplied limit of 25. Match Devpost's available tag spelling when saving:
 
-Screenshots from the source ZIP are historical local demonstrations. New preview captures are local evidence unless a live setup is explicitly recorded. Do not label either as a published service.
+`TypeScript`, `JavaScript`, `React`, `Node.js`, `Express`, `Vite`, `Twitch`, `Twitch Extensions`, `Twitch EventSub`, `Moonshine`, `WebAssembly`, `Web Audio API`, `Web Workers`, `WebSockets`, `Server-Sent Events`, `Cloudflare Workers`, `Cloudflare Tunnel`, `OBS Studio`, `OpenAI Codex`, `ChatGPT`.
 
-## Submission Readiness Notes
+Deepgram, Whisper and ElevenLabs are not tags for the chosen speech path. An explicit legacy Deepgram adapter remains in the source; the current default is Moonshine.
 
-- Deadline: **2 November 2026, 23:00 Europe/Zagreb** (14:00 PST / 22:00 UTC). Target an internal review on 1 November.
-- Both team members must confirm eligibility and source/asset rights. One representative invites the other through Manage Team; the invite must be accepted.
-- The event permits multiple substantially different projects. This draft covers BAIT only.
-- Formal rules and the schedule disagree on judging dates. Keep the submitted version and free judge access available through the later formal endpoint, **16 November 2026, 02:00 Zagreb**. Ask the organizer if clarification is needed.
-- Keep English materials, runnable source, verified links, actual Twitch/Codex footage and the main build session ID ready. After the owner authorizes final entry, click Submit and verify the event shows Submitted; saving a draft is insufficient.
-- The owner separately authorized creation of the private repository and checkpoint pushes. No terms acknowledgment, registration, judge invitation, deployment or final entry has been performed by preparing this file.
+## Try it out links
 
-Sources checked 25 October: [official rules](https://twitchcon-codex.devpost.com/rules), [requirements](https://twitchcon-codex.devpost.com/), [FAQ](https://twitchcon-codex.devpost.com/resources), [schedule](https://twitchcon-codex.devpost.com/details/dates). The FAQ's 21:00 UTC deadline conversion conflicts with the stated Pacific deadline; 22:00 UTC is the correct conversion on 2 November.
+| Link | Use and current limit |
+| --- | --- |
+| [Baited landing](https://baited.maff.app/) | Primary public product link. Shows the concept and cards; it is not an Extension installation flow. |
+| [Twitch test channel](https://www.twitch.tv/komediruzecki7) | Coordinated Hosted Test only. The tester must be signed into an allowlisted Twitch account, and the backend must be running. Do not describe this as open public play. |
+| [Baited source](https://github.com/Komediruzecki/baited) | Canonical private repository. Include where code is requested once the intended reviewers have access; the URL alone does not grant access. Keep the repository private unless the owner chooses otherwise. |
+| [Development landing](https://dev.baited.maff.app/) | Team review link for the latest design. Prefer the production landing in the public submission once the selected design has shipped. |
 
-## Known Limitations
+There is no verified public Extension install/listing URL in this packet. Add Twitch's real listing/install link when it exists and access has been checked. Do not invent one from an Extension client ID.
 
-- The viewer URL exposes the word by design. Secrecy relies on the streamer not opening it and chat avoiding spoilers.
-- Speech recognition depends on the microphone, accent, noise, provider latency and literal English target matching. Live accuracy and latency are not yet measured.
-- The app requires one persistent process and disk. It is not a static site or a released Twitch Extension.
-- Local browser screenshots of the overlay do not prove an actual OBS recording.
-- Current test status and remaining defects belong in [validation](docs/validation.md); only verified results should be copied into the final description.
+[Studio](https://play-baited.maff.app/studio) is an operator interface behind the current PC-hosted tunnel. It is not an always-available public demo. Coordinate a test session instead of promising permanent access or publishing a room/overlay URL containing a read key.
 
-## TODO Official Form Fields
+**Recommended link set now:** the public landing, plus the private repository if the form requests code and reviewer access is arranged. Add the Twitch channel only with its Hosted Test instructions. Do not add a localhost link, this edit URL, a secret-bearing overlay URL or a non-working placeholder.
 
-The exact authenticated form and field IDs remain unverified. Do not invent form-specific answers or mark these completed:
+## Project media
 
-- Project title: BAIT, owner approval pending.
-- Tagline: the one-line summary above, owner approval pending.
-- Main Codex session candidate: `01a16ee8-4685-73a1-8477-a738186e6ffc`; owners confirm against the original build session.
-- Additional implementation provenance: `01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7`, current local improvement chat.
-- Team representative and accepted teammate: `TODO_REPRESENTATIVE`, `TODO_TEAMMATE_ACCEPTED`.
-- Repository: verify the final pushed revision and judge access at the private URL above. YouTube, live demo and judge access instructions: replace the labeled placeholders after verification.
-- Any further required questions: inspect the real form before final entry.
+The following limits come from the owner's pasted Devpost form on 26 October 2026. They were not independently refreshed through the unavailable connector.
+
+- Gallery: up to 15 JPG, PNG or GIF files, each no larger than 5 MB; 3:2 preferred.
+- Demo: a YouTube URL, public or unlisted without a password. Only the first three minutes will be reviewed.
+- Show the project working on Twitch and how OpenAI Codex was used.
+
+Six [format-ready review images](submission/media-review/README.md) are prepared from the actual local Studio, native fixture/standalone viewer, Card Lab, landing deck and browser HUD captures, plus an 18-illustration artwork sheet. All are 1500 × 1000 PNGs below 5 MB. They are private feature-branch review material; no replacement card edition has been chosen. A seventh staged-hero image is marked review-only and excluded from upload candidates because its film retains historical crossed-out clue styling. Re-render it after the edition is selected.
+
+Real Twitch round screenshots, actual OBS/Codex evidence and the approved YouTube demo are still needed. Review and refresh product captures after the chosen design is applied. The personal media plan retains the 2:50 storyboard. No gallery files or video were uploaded by this pass.
+
+## Codex-use field, if requested
+
+OpenAI Codex was used to inspect the supplied project, implement and debug the Twitch connection and Extension, integrate browser-local Moonshine speech, build game-state and security checks, prepare assets, and maintain the unified app/landing workspace. Supporting footage should show actual code changes or tests from those sessions.
+
+Recorded session candidates from the source provenance:
+
+- Original package build: `01a16ee8-4685-73a1-8477-a738186e6ffc`.
+- Later audit, integration, design and implementation thread: `01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7`.
+
+Confirm the field's exact wording and which thread contains most of the submitted work before selecting one. Do not claim this choice has been confirmed by the owners. Keep a truthful credit record for other tools used, including Claude's design guidance and ChatGPT-generated illustrations.
+
+## Before saving online and submitting
+
+1. Reconnect the existing Devpost app and read the existing project, form and current rules. Preserve the existing entry; do not create a duplicate. Check team membership, required fields, deadline and reviewer-access requirements from that live source.
+2. Review and save the title, tagline, About text, tags and appropriate links. Read back the saved values. This draft is preparation, not authorization to final-submit.
+3. Finish the card/product redesign and capture the approved state. Replace all planned media with real, checked files.
+4. Record and upload the working Twitch + Codex demo to YouTube. Verify that the video opens signed out and the required proof appears before 3:00.
+5. Arrange a judge-accessible test and source-access route. Hosted Test remains allowlisted, and the Linux backend is not permanent hosting. Keep private source access separate from making the repository public.
+6. Record the final source revision, Extension version/ZIP identity and actual verification receipts. Resolve or disclose the deferred Firefox blank-panel and OBS reconnection issues. Do not claim cross-browser or physical mobile acceptance without those tests.
+7. Confirm submission-specific declarations with both entrants, including contribution and asset rights. This pass has not changed team membership, granted access, submitted to Devpost or submitted the Extension for Twitch review.
+
+## Evidence and maintenance
+
+See [technology and architecture](docs/devpost-stack.md). The personal project home also holds the media plan and an About-only copy for pasting.
+
+The stack note records implementation details and the boundary between code inspection, historical automated checks and user-reported live tests. The current personal project home is `/home/maff/.dotfiles/personal/games/baited`; this app-side draft is the shareable counterpart.
+
+Preserve old documents under the personal archive. Update this active draft when a new capability is actually verified. In particular, do not change the current 78-card count into a 100-card or 1,000-word claim based on a plan.

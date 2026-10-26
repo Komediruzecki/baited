@@ -283,13 +283,10 @@
   background: repeating-linear-gradient(-45deg, #3e1d93 0 16px, #34177f 16px 32px);
   transform: rotateY(180deg);
 }
-.why-deal__back b {
-  color: #c7b1ff;
-  font:
-    68px Russo,
-    Impact,
-    sans-serif;
-  letter-spacing: -0.02em;
+.why-deal__back img {
+  display: block;
+  width: 72%;
+  height: auto;
   rotate: -12deg;
 }
 
@@ -385,10 +382,10 @@
 }
 .why-chat__emote {
   display: inline-block;
-  width: 1.7em;
-  height: 1.7em;
-  margin: -0.35em 0 -0.3em;
-  vertical-align: middle;
+  width: 3.6em;
+  height: auto;
+  margin: 0 0.1em;
+  vertical-align: -0.12em;
 }
 .why-chat__input {
   display: flex;
@@ -533,12 +530,11 @@
   border-radius: 4px 7px 4px 4px;
   background: repeating-linear-gradient(-45deg, #3e1d93 0 5px, #34177f 5px 10px);
 }
-.why-stream__back b {
-  color: #c7b1ff;
-  font:
-    9px Russo,
-    Impact,
-    sans-serif;
+.why-stream__back img {
+  display: block;
+  width: 28px;
+  max-width: none;
+  height: auto;
   rotate: -90deg;
 }
 .why-stream__hidden {
