@@ -1,6 +1,6 @@
 import express from 'express';
 import helmet from 'helmet';
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage } from 'node:http';
 import { z, ZodError } from 'zod';
 import { WebSocketServer } from 'ws';
 import { Game, defaults } from './game.js';
@@ -182,7 +182,21 @@ export async function createBait(config: Config, developmentHmr = false) {
         ? {
             directives: {
               defaultSrc: ["'self'"],
-              scriptSrc: ["'self'", ...(config.speechProvider === 'moonshine' ? ["'wasm-unsafe-eval'"] : [])],
+              scriptSrc: [
+                "'self'",
+                ...(config.speechProvider === 'moonshine'
+                  ? [
+                      // Moonshine 0.1.5's Embind glue generates JS invokers in both
+                      // worker entrypoints. Documents and all other scripts stay strict.
+                      (req: IncomingMessage) =>
+                        ['/moonshine-worker.js', '/moonshine/runtime-0.1.5-csp1/moonshine.mjs'].includes(
+                          req.url?.split('?')[0] ?? '',
+                        )
+                          ? "'unsafe-eval'"
+                          : "'wasm-unsafe-eval'",
+                    ]
+                  : []),
+              ],
               styleSrc: ["'self'", "'unsafe-inline'"],
               imgSrc: ["'self'", 'data:'],
               connectSrc: ["'self'", ...(config.speechProvider === 'moonshine' ? ['https://download.moonshine.ai'] : [])],
@@ -200,7 +214,18 @@ export async function createBait(config: Config, developmentHmr = false) {
   );
   if (config.speechProvider === 'moonshine') {
     const runtime = dirname(createRequire(import.meta.url).resolve('@moonshine-ai/moonshine-wasm/moonshine.mjs'));
-    app.use('/moonshine/runtime', express.static(runtime, { index: false, dotfiles: 'deny', maxAge: '1h' }));
+    // The versioned alias avoids reusing CDN/browser-cached worker CSP headers.
+    app.use(
+      ['/moonshine/runtime', '/moonshine/runtime-0.1.5-csp1'],
+      express.static(runtime, {
+        index: false,
+        dotfiles: 'deny',
+        maxAge: '1h',
+        setHeaders: (res, file) => {
+          if (file.endsWith('/moonshine.mjs')) res.setHeader('Cache-Control', 'no-store');
+        },
+      }),
+    );
   }
   app.use(express.json({ limit: '8kb' }));
   app.use('/api', (_req, res, next) => {

@@ -10,7 +10,12 @@ const config = loadConfig(),
 let closeVite = async () => {};
 if (!development) {
   const { default: express } = await import('express');
-  bait.app.use(express.static(resolve('dist/client'), { index: false, maxAge: '1h' }));
+  bait.app.use(express.static(resolve('dist/client'), {
+    index: false, maxAge: '1h',
+    setHeaders: (res, file) => {
+      if (file.endsWith('/moonshine-worker.js')) res.setHeader('Cache-Control', 'no-store');
+    },
+  }));
   bait.app.get('/{*path}', (_req, res) => res.sendFile(resolve('dist/client/index.html')));
 } else {
   const { createServer } = await import('vite');

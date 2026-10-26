@@ -1,5 +1,5 @@
 // Same-origin, dedicated inference worker. No microphone, game state, or target words here.
-import { Transcriber, ModelArch, AssetDownloader, loadMoonshineModule } from '/moonshine/runtime/index.js';
+import { Transcriber, ModelArch, AssetDownloader, loadMoonshineModule } from '/moonshine/runtime-0.1.5-csp1/index.js';
 
 let transcriber;
 let stream;
