@@ -19,3 +19,17 @@ test('a proof query cannot choose an arbitrary asset path', () => {
     assert.equal(reviewMark('localhost', query), null)
   }
 })
+
+test('the navigation shows the black logo and the white footer the violet one', async () => {
+  const { readFile, stat } = await import('node:fs/promises')
+  const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8')
+  const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'))
+  const footer = html.slice(html.indexOf('<footer'), html.indexOf('</footer>'))
+  assert.match(header, /<nav class="site-nav"[^]*src="\/assets\/brand\/baited-logo-black\.webp"/)
+  assert.doesNotMatch(header, /class="brand"|brand-hand/, 'the header brand and its card hand are gone')
+  assert.match(footer, /src="\/assets\/brand\/baited-logo-violet-large\.webp"/)
+  assert.doesNotMatch(header + footer, /baited-logo\.webp|bait-bomb-logo/)
+  for (const name of ['baited-logo-black.webp', 'baited-logo-white.webp', 'baited-logo-violet-large.webp']) {
+    assert.ok((await stat(new URL(`../site/assets/brand/${name}`, import.meta.url))).size > 0)
+  }
+})

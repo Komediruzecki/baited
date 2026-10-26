@@ -4,9 +4,11 @@
 :root {
   --bh: clamp(72px, 6.1vw, 104px);
   --brand-top: 22px;
+  --logo-white: #e2dbec; /* the owner's white BAITED logo */
 }
 .brand {
-  --bw: calc(var(--bh) * var(--brand-ar));
+  /* The owner's white logo is 764 x 225. */
+  --bw: calc(var(--bh) * 3.3956);
   --cw: calc(var(--bh) * 0.72);
   display: block;
   position: relative;
@@ -16,7 +18,7 @@
   width: calc(var(--bw) + 0.72 * var(--bh));
   height: var(--bh);
   margin-top: var(--brand-top);
-  color: var(--yellow);
+  color: var(--logo-white);
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
@@ -39,6 +41,32 @@
   z-index: 2;
   inset: 0 auto 0 0;
   width: var(--bw);
+}
+.brand-logo {
+  display: block;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  object-position: left center;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.brand.is-logo-missing .brand-logo {
+  visibility: hidden;
+}
+.brand.is-logo-missing::before {
+  content: 'BAITED';
+  position: absolute;
+  z-index: 2;
+  inset: 0 auto 0 0;
+  display: flex;
+  align-items: center;
+  color: var(--logo-white);
+  font:
+    400 calc(var(--bh) * 0.77) / 1 Russo,
+    sans-serif;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
 }
 .brand-hand {
   position: absolute;
@@ -133,7 +161,7 @@
   font:
     calc(var(--cw) * 0.17) / 1 Russo,
     sans-serif;
-  color: var(--yellow);
+  color: #ff743c; /* VOLCANO's own color, as on the deck */
 }
 .brand:is(:focus-visible, .is-open) {
   --c1: translateX(calc(0.04 * var(--bh))) rotate(-6deg);
@@ -168,7 +196,7 @@
   width: 100px;
   height: calc(100px / var(--brand-ar));
   vertical-align: middle;
-  color: var(--yellow);
+  color: var(--logo-white);
 }
 .studio-back > .brand-glyph {
   width: 72%;

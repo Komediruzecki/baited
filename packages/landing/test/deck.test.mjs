@@ -1,207 +1,133 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createFan } from '../site/deck.js'
+import {
+  FAN,
+  FAN_MARGIN,
+  HIDDEN_FROM,
+  along,
+  fanPose,
+  fanSpread,
+  liftAt,
+  releaseTarget,
+  springEase,
+  wrapIndex,
+  wrapOffset,
+} from '../site/deck.js'
 
-// Exercise the controller's public interaction contract without a browser or
-// real-time sleeps. Browser acceptance still covers pointer events and paint.
-function harness(t) {
-  let now = 0
-  let nextId = 1
-  const pending = new Map()
-  const original = new Map()
-  const replace = (name, value) => {
-    original.set(name, Object.getOwnPropertyDescriptor(globalThis, name))
-    Object.defineProperty(globalThis, name, { configurable: true, writable: true, value })
-  }
-  replace('performance', { now: () => now })
-  replace('requestAnimationFrame', (callback) => {
-    const id = nextId++
-    pending.set(id, callback)
-    return id
-  })
-  replace('cancelAnimationFrame', (id) => pending.delete(id))
-  t.after(() => {
-    for (const [name, descriptor] of original) {
-      if (descriptor) Object.defineProperty(globalThis, name, descriptor)
-      else delete globalThis[name]
-    }
-  })
+// The fan's pure geometry and release rules. Pointer handling and paint are covered in a browser.
+const near = (actual, expected, tolerance = 1e-6) =>
+  assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} is not within ${tolerance} of ${expected}`)
 
-  const items = Array.from({ length: 18 }, () => {
-    const classes = new Set()
-    const attributes = new Map()
-    const buttonAttributes = new Map()
-    const image = { dataset: { ready: 'true' } }
-    const shade = { style: {} }
-    return {
-      style: {},
-      classList: {
-        toggle(name, force) {
-          if (force) classes.add(name)
-          else classes.delete(name)
-        },
-        contains: (name) => classes.has(name),
-      },
-      setAttribute: (name, value) => attributes.set(name, value),
-      getAttribute: (name) => attributes.get(name),
-      firstElementChild: {
-        tabIndex: -1,
-        setAttribute: (name, value) => buttonAttributes.set(name, value),
-        getAttribute: (name) => buttonAttributes.get(name),
-      },
-      querySelector(selector) {
-        if (selector === 'img') return image
-        if (selector === '.card-shade') return shade
-        assert.fail(`Unexpected selector ${selector}`)
-      },
-    }
-  })
-  const reduced = { matches: false }
-  const frontChanges = []
-  const settlements = []
-  const fan = createFan({
-    items,
-    reduced,
-    phone: { matches: false },
-    onFront: (index) => frontChanges.push(index),
-    onSettle: (index, details) => settlements.push({ index, ...details }),
-  })
-  fan.refresh()
+test('the front card is upright, full size and unshaded', () => {
+  const pose = fanPose(0, 300, 420)
+  assert.deepEqual(
+    { x: pose.x, y: pose.y, rotate: pose.rotate, scale: pose.scale, dim: pose.dim, opacity: pose.opacity },
+    { x: 0, y: 0, rotate: 0, scale: 1, dim: 0, opacity: 1 }
+  )
+})
 
-  function frame(elapsed = 16) {
-    now += elapsed
-    const callbacks = [...pending.values()]
-    pending.clear()
-    for (const callback of callbacks) callback(now)
+test('neighbours and outer cards match the measured reference slots, mirrored left and right', () => {
+  for (const [distance, angle, scale] of [
+    [1, 9.76, 0.905],
+    [2, 14.97, 0.801],
+  ]) {
+    const right = fanPose(distance, 300, 420)
+    const left = fanPose(-distance, 300, 420)
+    near(right.rotate, angle)
+    near(left.rotate, -angle)
+    near(right.scale, scale)
+    near(right.x, -left.x)
+    near(right.y, left.y)
+    assert.ok(right.x > 0 && right.y > 0)
   }
-  function flush() {
-    let frames = 0
-    while (pending.size && frames++ < 1000) frame()
-    assert.equal(pending.size, 0, 'animation must stop scheduling after settling')
+})
+
+test('cards fade out toward the third slot and are not drawn beyond it', () => {
+  assert.equal(fanPose(2, 300, 420).opacity, 1)
+  near(fanPose(2.5, 300, 420).opacity, 0.5)
+  assert.equal(fanPose(HIDDEN_FROM, 300, 420).visible, false)
+  assert.equal(fanPose(-2.99, 300, 420).visible, true)
+  assert.equal(along(FAN.dim, 10), FAN.dim.at(-1))
+})
+
+test('poses change continuously between slots, so a drag moves the whole fan smoothly', () => {
+  let previous = fanPose(0, 300, 420)
+  for (let d = 0.05; d <= 2.95; d += 0.05) {
+    const pose = fanPose(d, 300, 420)
+    assert.ok(pose.rotate >= previous.rotate && pose.scale <= previous.scale && pose.dim >= previous.dim)
+    assert.ok(Math.abs(pose.x - previous.x) < 6, 'no jumps in x')
+    previous = pose
   }
-  function assertFront(index, inspected = false) {
-    assert.deepEqual(
-      items.flatMap((item, i) => (item.firstElementChild.tabIndex === 0 ? [i] : [])),
-      [index]
-    )
-    assert.deepEqual(
-      items.flatMap((item, i) => (item.getAttribute('aria-hidden') === 'false' ? [i] : [])),
-      [index]
-    )
-    assert.equal(items[index].classList.contains('is-out'), false)
-    assert.equal(items[index].classList.contains('is-pending'), false)
-    assert.equal(items[index].firstElementChild.getAttribute('aria-pressed'), String(inspected))
-    assert.equal(frontChanges.at(-1), index)
-  }
-  return { fan, items, reduced, frame, flush, assertFront, settlements, pending }
+})
+
+test('offsets wrap around the deck in both directions', () => {
+  assert.equal(wrapOffset(0, 0, 18), 0)
+  assert.equal(wrapOffset(17, 0, 18), -1)
+  assert.equal(wrapOffset(1, 17, 18), 2)
+  near(wrapOffset(0, 17.6, 18), 0.4)
+  assert.equal(wrapIndex(-1, 18), 17)
+  assert.equal(wrapIndex(18, 18), 0)
+  assert.equal(wrapIndex(37, 18), 1)
+})
+
+test('a released drag springs back, flicks one card, or keeps the nearest card', () => {
+  assert.equal(releaseTarget({ from: 0, position: 0.02 }), 0, 'a tiny drag springs back')
+  assert.equal(releaseTarget({ from: 0, position: 0.15 }), 1, 'a short drag left takes the next card')
+  assert.equal(releaseTarget({ from: 0, position: -0.15 }), -1, 'a short drag right takes the previous card')
+  assert.equal(releaseTarget({ from: 0, position: 0.01, velocity: 2 }), 1, 'a quick flick is enough')
+  assert.equal(releaseTarget({ from: 0, position: 0.01, velocity: -2 }), -1)
+  assert.equal(releaseTarget({ from: 0, position: 1.7 }), 2, 'past halfway keeps the nearest card')
+  assert.equal(releaseTarget({ from: 4.6, position: 4.6 }), 5, 'a press mid-flight continues to that card')
+})
+
+test('the release spring overshoots slightly and lands exactly on the card', () => {
+  let peak = 0
+  for (let p = 0; p <= 1; p += 0.001) peak = Math.max(peak, springEase(p))
+  assert.ok(peak > 1.1 && peak < 1.2, `peak ${peak}`)
+  assert.equal(springEase(0), 0)
+  assert.equal(springEase(1), 1)
+  near(springEase(0.999), 1, 0.005)
+})
+
+test('the arriving card lifts once and comes back to rest', () => {
+  assert.equal(liftAt(0), 0)
+  near(liftAt(0.36), 1)
+  assert.equal(liftAt(1), 0)
+  near(liftAt(0.99), 0, 0.001)
+})
+
+// The horizontal reach of a card's rotated and scaled box, from the centre of the fan.
+function reach(offset, width, height, spread) {
+  const pose = fanPose(offset, width, height, spread)
+  const angle = (Math.abs(pose.rotate) * Math.PI) / 180
+  const half = ((pose.scale * width) / 2) * Math.cos(angle) + ((pose.scale * height) / 2) * Math.sin(angle)
+  return Math.abs(pose.x) + half
 }
 
-test('deck wraps in both directions with only the settled front card focusable', (t) => {
-  const h = harness(t)
-  h.assertFront(0)
-  h.fan.to(-1)
-  h.flush()
-  h.assertFront(17)
-  h.fan.to(0)
-  h.flush()
-  h.assertFront(0)
-  h.fan.to(18)
-  h.flush()
-  h.assertFront(0)
-  assert.deepEqual(
-    h.settlements.map(({ index }) => index),
-    [17, 0, 0]
-  )
+test('the fan keeps its reference spread on wide screens', () => {
+  assert.equal(fanSpread(1440, 300, 420), 1)
+  assert.equal(fanSpread(1024, 300, 420), 1)
+  assert.equal(fanPose(1, 300, 420).x, fanPose(1, 300, 420, 1).x)
 })
 
-test('rapid retargeting settles only the latest choice, without stale callbacks', (t) => {
-  const h = harness(t)
-  h.fan.to(1, 420, true)
-  h.frame(80)
-  h.fan.to(2, 420, true)
-  h.frame(60)
-  h.fan.to(3, 420, true)
-  h.fan.to(2, 420, true)
-  h.flush()
-  h.assertFront(2)
-  assert.deepEqual(h.settlements, [{ index: 2, deliberate: true, repeated: true }])
-  h.frame(2000)
-  assert.equal(h.settlements.length, 1)
+test('on a phone the fan closes up so the outer cards stay on the screen', () => {
+  for (const [room, width, height] of [
+    [390, 260, 364],
+    [375, 260, 364],
+    [360, 260, 364],
+    [320, 248, 350],
+  ]) {
+    const spread = fanSpread(room, width, height)
+    assert.ok(spread > 0.1 && spread < 1, `${room}: ${spread}`)
+    for (const offset of [-2, -1, 1, 2]) {
+      assert.ok(reach(offset, width, height, spread) <= room / 2 - FAN_MARGIN + 1e-9, `${room} px, card ${offset}`)
+    }
+    assert.ok(Math.abs(reach(2, width, height, spread) - (room / 2 - FAN_MARGIN)) < 1e-9, 'the outer cards reach the margin')
+    assert.ok(fanPose(1, width, height, spread).x < fanPose(2, width, height, spread).x, 'the fan keeps its order')
+  }
 })
 
-test('pressing during motion freezes the hand and a tap can resume then inspect', (t) => {
-  const h = harness(t)
-  h.fan.to(1)
-  h.frame(70)
-  const held = h.fan.freeze()
-  assert.ok(held.position > 0 && held.position < 1)
-  assert.equal(held.target, 1)
-  h.flush()
-  assert.equal(h.fan.position, held.position)
-  assert.equal(h.settlements.length, 0)
-
-  h.fan.to(held.target)
-  h.fan.inspect(true)
-  h.flush()
-  h.assertFront(1, true)
-  assert.equal(h.settlements.length, 1)
-  const inspectedTransform = h.items[1].style.transform
-  h.fan.inspect(false)
-  h.flush()
-  h.assertFront(1)
-  assert.notEqual(h.items[1].style.transform, inspectedTransform)
-})
-
-test('turning reduced motion on mid-flight finishes and cancels every animation frame', (t) => {
-  const h = harness(t)
-  h.fan.to(2, 420, true)
-  h.frame(80)
-  h.fan.inspect(true)
-  h.reduced.matches = true
-  // The app's media-query listener calls finish() before refreshing semantics.
-  h.fan.finish()
-  assert.equal(h.fan.moving, false)
-  assert.equal(h.pending.size, 0)
-  h.assertFront(2, true)
-  assert.deepEqual(
-    h.settlements.map(({ index }) => index),
-    [2]
-  )
-  h.frame(2000)
-  assert.equal(h.settlements.length, 1)
-
-  h.fan.to(3)
-  h.assertFront(3)
-  assert.equal(h.pending.size, 0)
-})
-
-test('inspection requested during movement waits for the chosen card to settle', (t) => {
-  const h = harness(t)
-  h.fan.to(1)
-  h.fan.inspect(true)
-  assert.equal(h.fan.inspected, true, 'queued inspection must already suspend autoplay')
-  assert.equal(
-    h.items.some((item) => item.firstElementChild.getAttribute('aria-pressed') === 'true'),
-    false
-  )
-  h.frame(80)
-  assert.equal(h.settlements.length, 0)
-  h.flush()
-  h.assertFront(1, true)
-  assert.deepEqual(
-    h.settlements.map(({ index }) => index),
-    [1]
-  )
-})
-
-test('putting a queued inspection back prevents it reopening at settle', (t) => {
-  const h = harness(t)
-  h.fan.to(1)
-  h.fan.inspect(true)
-  h.frame(80)
-  h.fan.inspect(false)
-  h.flush()
-  h.assertFront(1)
-  assert.equal(h.fan.inspected, false)
-  assert.equal(h.settlements.length, 1)
+test('a screen narrower than one closed fan stacks the cards', () => {
+  assert.equal(fanSpread(200, 260, 364), 0)
+  assert.equal(fanPose(2, 260, 364, 0).x, 0)
 })

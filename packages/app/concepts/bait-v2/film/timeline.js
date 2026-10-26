@@ -109,9 +109,9 @@ export function buildTimeline(gsap, root, layout) {
     tl.to(el, { opacity: 0, duration: .1 }, 20.25 + index * .01);
   });
   tl.set('.crater-glow,.lava-tongue,.lava-core', { opacity: 0 }, 31.6);
-  tl.set('.spoken-target', { color: '#fffc79', borderColor: '#fffc79' }, 19.6);
+  tl.set('.spoken-target', { color: '#ff743c', borderColor: '#ff743c' }, 19.6);
   tl.set('.widget-title', { textContent: 'CHECK THIS CATCH' }, 19.6);
-  tl.set('.round-tag', { textContent: 'VOLCANO', color: '#fffc79' }, 19.6);
+  tl.set('.round-tag', { textContent: 'VOLCANO', color: '#ff743c' }, 19.6);
   tl.set('.round-clock', { textContent: '—' }, 19.6);
   tl.to('.panel-result.pending-result', { opacity: 1, duration: .2 }, 20.4);
   // Detection is a candidate. The score changes only after the host's confirmation.
@@ -126,7 +126,7 @@ export function buildTimeline(gsap, root, layout) {
   tl.to('.confirm-button', { scale: .97, duration: .08 }, 23.3);
   tl.to('.confirm-button', { scale: 1, duration: .14 }, 23.38);
   tl.set('.studio-status', { textContent: 'CHAT WINS' }, 23.3);
-  tl.set('.studio-word', { textContent: 'VOLCANO.', color: '#fffc79' }, 23.3);
+  tl.set('.studio-word', { textContent: 'VOLCANO.', color: '#ff743c' }, 23.3);
   tl.set('.studio-copy', { textContent: 'Detected after 19 seconds.' }, 23.3);
   tl.to('.studio-actions,.studio-timer,.studio-caption,.studio .cursor', { opacity: 0, duration: .14 }, 23.4);
   tl.set('.studio', { opacity: 0 }, 24.4);

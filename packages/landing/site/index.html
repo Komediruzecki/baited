@@ -5,75 +5,192 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Chat gets a secret word. The streamer has to keep talking. Try a hint, browse the cards and watch a staged round of baited."
+      content="A Twitch game where chat gets a secret word and the streamer doesn't. Watch a staged round, see how it plays and browse the cards."
     />
-    <title>baited · Make the streamer say it.</title>
+    <title>baited · Chat holds the cards. Streamer takes the bait.</title>
+    <script src="/pixel-boot.js"></script>
     <link rel="canonical" href="https://baited.maff.app/" />
     <link rel="icon" href="/assets/bait-bomb-logo.png" />
     <link rel="preload" href="/assets/russo-one.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="/assets/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="stylesheet" href="/brand.css" />
-    <link rel="preload" href="/assets/brand/baited-original-mask.svg" as="image" />
-    <link rel="stylesheet" href="/motion.css" />
+    <link rel="preload" href="/assets/brand/baited-logo-black.webp" as="image" fetchpriority="high" />
+    <link rel="stylesheet" href="/why-stack.css" />
+    <link rel="stylesheet" href="/footer.css" />
+    <link rel="stylesheet" href="/pixels.css" />
+    <script type="module" src="/pixels.js"></script>
+    <script defer src="/vendor/gsap/gsap.min.js"></script>
+    <script defer src="/vendor/gsap/ScrollTrigger.min.js"></script>
     <script type="module" src="/app.js"></script>
     <script type="module" src="/player.js"></script>
   </head>
   <body>
-    <a class="skip-link" href="#your-turn">Try a hint</a>
+    <a class="skip-link" href="#how">Skip to how to play</a>
     <header class="site-header" id="top">
-      <a class="brand" href="#top" aria-label="BAITED home">
-        <span class="brand-mark brand-glyph" aria-hidden="true"></span>
-        <span class="brand-hand" aria-hidden="true">
-          <span class="brand-card"
-            ><span class="brand-turn"
-              ><span class="brand-back"><i class="brand-ink brand-glyph"></i></span></span
-          ></span>
-          <span class="brand-card"
-            ><span class="brand-turn"
-              ><span class="brand-back"><i class="brand-ink brand-glyph"></i></span></span
-          ></span>
-          <span class="brand-card"
-            ><span class="brand-turn">
-              <span class="brand-back"><i class="brand-ink brand-glyph"></i></span>
-              <span class="brand-face"
-                ><img
-                  src="/cards/proofs/volcano.png"
-                  alt=""
-                  width="1254"
-                  height="1254"
-                  decoding="async"
-                  fetchpriority="low"
-                  draggable="false"
-                /><b>VOLCANO</b></span
-              >
-            </span></span
-          >
-        </span>
-      </a>
-      <nav aria-label="Main navigation">
-        <a class="wide-link" href="#how">How it plays</a><a class="wide-link" href="#cards">Cards</a
-        ><a href="#your-turn"
-          >Your turn <svg class="icon" aria-hidden="true"><use href="#i-down" /></svg
+      <nav class="site-nav" aria-label="Main navigation">
+        <a class="nav-logo" href="#top" aria-label="baited, back to the top"
+          ><span class="nav-logo__pixels" aria-hidden="true"></span
+          ><img
+            src="/assets/brand/baited-logo-black.webp"
+            alt=""
+            width="764"
+            height="225"
+            decoding="async"
+            fetchpriority="high"
+            draggable="false"
+        /></a>
+        <a class="nav-link wide-link" href="#how"
+          ><span class="nav-link__text">How to play</span
+          ><span class="nav-link__icon" aria-hidden="true"
+            ><svg class="px-icon px-icon--pad" viewBox="0 0 13 8" aria-hidden="true" focusable="false">
+              <rect x="2" y="0" width="1" height="1" />
+              <rect x="3" y="0" width="1" height="1" />
+              <rect x="4" y="0" width="1" height="1" />
+              <rect x="5" y="0" width="1" height="1" />
+              <rect x="6" y="0" width="1" height="1" />
+              <rect x="7" y="0" width="1" height="1" />
+              <rect x="8" y="0" width="1" height="1" />
+              <rect x="9" y="0" width="1" height="1" />
+              <rect x="10" y="0" width="1" height="1" />
+              <rect x="1" y="1" width="1" height="1" />
+              <rect x="2" y="1" width="1" height="1" />
+              <rect x="3" y="1" width="1" height="1" />
+              <rect x="4" y="1" width="1" height="1" />
+              <rect x="5" y="1" width="1" height="1" />
+              <rect x="6" y="1" width="1" height="1" />
+              <rect x="7" y="1" width="1" height="1" />
+              <rect x="8" y="1" width="1" height="1" />
+              <rect x="9" y="1" width="1" height="1" />
+              <rect x="10" y="1" width="1" height="1" />
+              <rect x="11" y="1" width="1" height="1" />
+              <rect x="0" y="2" width="1" height="1" />
+              <rect x="1" y="2" width="1" height="1" />
+              <rect x="2" y="2" width="1" height="1" />
+              <rect x="4" y="2" width="1" height="1" />
+              <rect x="5" y="2" width="1" height="1" />
+              <rect x="6" y="2" width="1" height="1" />
+              <rect x="7" y="2" width="1" height="1" />
+              <rect x="8" y="2" width="1" height="1" />
+              <rect x="10" y="2" width="1" height="1" />
+              <rect x="11" y="2" width="1" height="1" />
+              <rect x="12" y="2" width="1" height="1" />
+              <rect x="0" y="3" width="1" height="1" />
+              <rect x="1" y="3" width="1" height="1" />
+              <rect x="5" y="3" width="1" height="1" />
+              <rect x="6" y="3" width="1" height="1" />
+              <rect x="7" y="3" width="1" height="1" />
+              <rect x="9" y="3" width="1" height="1" />
+              <rect x="11" y="3" width="1" height="1" />
+              <rect x="12" y="3" width="1" height="1" />
+              <rect x="0" y="4" width="1" height="1" />
+              <rect x="1" y="4" width="1" height="1" />
+              <rect x="2" y="4" width="1" height="1" />
+              <rect x="4" y="4" width="1" height="1" />
+              <rect x="5" y="4" width="1" height="1" />
+              <rect x="6" y="4" width="1" height="1" />
+              <rect x="7" y="4" width="1" height="1" />
+              <rect x="8" y="4" width="1" height="1" />
+              <rect x="10" y="4" width="1" height="1" />
+              <rect x="11" y="4" width="1" height="1" />
+              <rect x="12" y="4" width="1" height="1" />
+              <rect x="0" y="5" width="1" height="1" />
+              <rect x="1" y="5" width="1" height="1" />
+              <rect x="2" y="5" width="1" height="1" />
+              <rect x="3" y="5" width="1" height="1" />
+              <rect x="4" y="5" width="1" height="1" />
+              <rect x="5" y="5" width="1" height="1" />
+              <rect x="6" y="5" width="1" height="1" />
+              <rect x="7" y="5" width="1" height="1" />
+              <rect x="8" y="5" width="1" height="1" />
+              <rect x="9" y="5" width="1" height="1" />
+              <rect x="10" y="5" width="1" height="1" />
+              <rect x="11" y="5" width="1" height="1" />
+              <rect x="12" y="5" width="1" height="1" />
+              <rect x="0" y="6" width="1" height="1" />
+              <rect x="1" y="6" width="1" height="1" />
+              <rect x="2" y="6" width="1" height="1" />
+              <rect x="3" y="6" width="1" height="1" />
+              <rect x="9" y="6" width="1" height="1" />
+              <rect x="10" y="6" width="1" height="1" />
+              <rect x="11" y="6" width="1" height="1" />
+              <rect x="12" y="6" width="1" height="1" />
+              <rect x="1" y="7" width="1" height="1" />
+              <rect x="2" y="7" width="1" height="1" />
+              <rect x="10" y="7" width="1" height="1" />
+              <rect x="11" y="7" width="1" height="1" /></svg></span></a
+        ><a class="nav-link wide-link" href="#cards"
+          ><span class="nav-link__text">Cards</span
+          ><span class="nav-link__icon" aria-hidden="true"
+            ><svg class="px-icon px-icon--cards" viewBox="0 0 10 9" aria-hidden="true" focusable="false">
+              <rect x="3" y="0" width="1" height="1" />
+              <rect x="4" y="0" width="1" height="1" />
+              <rect x="5" y="0" width="1" height="1" />
+              <rect x="6" y="0" width="1" height="1" />
+              <rect x="7" y="0" width="1" height="1" />
+              <rect x="8" y="0" width="1" height="1" />
+              <rect x="3" y="1" width="1" height="1" />
+              <rect x="8" y="1" width="1" height="1" />
+              <rect x="0" y="2" width="1" height="1" />
+              <rect x="1" y="2" width="1" height="1" />
+              <rect x="2" y="2" width="1" height="1" />
+              <rect x="3" y="2" width="1" height="1" />
+              <rect x="4" y="2" width="1" height="1" />
+              <rect x="5" y="2" width="1" height="1" />
+              <rect x="8" y="2" width="1" height="1" />
+              <rect x="0" y="3" width="1" height="1" />
+              <rect x="5" y="3" width="1" height="1" />
+              <rect x="8" y="3" width="1" height="1" />
+              <rect x="0" y="4" width="1" height="1" />
+              <rect x="2" y="4" width="1" height="1" />
+              <rect x="3" y="4" width="1" height="1" />
+              <rect x="5" y="4" width="1" height="1" />
+              <rect x="8" y="4" width="1" height="1" />
+              <rect x="0" y="5" width="1" height="1" />
+              <rect x="2" y="5" width="1" height="1" />
+              <rect x="3" y="5" width="1" height="1" />
+              <rect x="5" y="5" width="1" height="1" />
+              <rect x="8" y="5" width="1" height="1" />
+              <rect x="0" y="6" width="1" height="1" />
+              <rect x="5" y="6" width="1" height="1" />
+              <rect x="6" y="6" width="1" height="1" />
+              <rect x="7" y="6" width="1" height="1" />
+              <rect x="8" y="6" width="1" height="1" />
+              <rect x="0" y="7" width="1" height="1" />
+              <rect x="5" y="7" width="1" height="1" />
+              <rect x="0" y="8" width="1" height="1" />
+              <rect x="1" y="8" width="1" height="1" />
+              <rect x="2" y="8" width="1" height="1" />
+              <rect x="3" y="8" width="1" height="1" />
+              <rect x="4" y="8" width="1" height="1" />
+              <rect x="5" y="8" width="1" height="1" /></svg></span
         ></a>
+        <a class="nav-cta px-live" href="#contact"
+          ><svg class="px-icon px-icon--chat" viewBox="0 0 9 9" aria-hidden="true" focusable="false">
+            <path d="M1 0h7v1H1zM0 1h1v5H0zM8 1h1v5H8zM1 6h7v1H1zM1 7h2v1H1zM1 8h1v1H1z" />
+            <rect class="px-dot" x="2" y="3" width="1" height="1" />
+            <rect class="px-dot" x="4" y="3" width="1" height="1" />
+            <rect class="px-dot" x="6" y="3" width="1" height="1" /></svg
+          ><span class="nav-cta__label">Get in touch</span></a
+        >
       </nav>
     </header>
     <main>
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <h1 id="hero-title">
-            Make the<br class="desktop-break" />
-            streamer<br class="desktop-break" />
-            say&nbsp;it.
-          </h1>
-          <p class="hero-sub">Chat gets a secret word. The streamer doesn't know it and has to keep talking anyway.</p>
+          <h1 id="hero-title">Chat holds<br />the cards.<br />Streamer takes<br />the bait.</h1>
+          <p class="hero-sub">
+            Chat gets a secret word and tries to make the streamer say it. The streamer doesn't know the word and has to keep talking
+            anyway.
+          </p>
         </div>
         <div class="hero-action">
-          <a class="stock-button deal-button" id="deal-first" href="#your-turn"
-            ><svg class="icon" aria-hidden="true"><use href="#i-card" /></svg>Deal me a card<svg class="icon" aria-hidden="true">
-              <use href="#i-arrow" /></svg
-          ></a>
-          <p class="microline">Then write a hint without the off-limits words.</p>
+          <a class="px-btn hero-cta" href="#how"
+            ><span class="px-btn__box" aria-hidden="true"
+              ><svg class="px-icon px-icon--down" viewBox="0 0 7 9" aria-hidden="true" focusable="false">
+                <path d="M3 0h1v7H3zM0 5h1v1H0zM6 5h1v1H6zM1 6h1v1H1zM5 6h1v1H5zM2 7h1v1H2zM4 7h1v1H4zM3 8h1v1H3z" /></svg></span
+            ><span class="px-btn__label">How to play</span></a
+          >
+          <p class="microline">A round lasts two minutes.</p>
         </div>
         <div class="hero-stage">
           <div class="film-wrap">
@@ -84,7 +201,7 @@
               class="film-frame"
               id="film-frame"
               tabindex="0"
-              aria-label="Example round film. Space or K to play or pause. Arrow keys move between chapters."
+              aria-label="Example round film. Click, Space or K to play or pause. Arrow keys skip between moments."
             >
               <video
                 id="hero-film"
@@ -94,14 +211,9 @@
                 loop
                 preload="metadata"
                 poster="/media/poster-desktop.avif"
-                data-desktop-src="/media/hero-desktop.mp4"
-                data-phone-src="/media/hero-phone.mp4"
-                data-desktop-webm="/media/hero-desktop.webm"
-                data-phone-webm="/media/hero-phone.webm"
-                data-desktop-webm-type='video/webm; codecs="av01.0.05M.08,opus"'
-                data-phone-webm-type='video/webm; codecs="av01.0.04M.08,opus"'
-                data-desktop-poster="/media/poster-desktop.avif"
-                data-phone-poster="/media/poster-phone.avif"
+                data-src="/media/hero-desktop.mp4"
+                data-webm="/media/hero-desktop.webm"
+                data-webm-type='video/webm; codecs="av01.0.05M.08,opus"'
                 aria-label="The Spicy Mountain. A staged baited round with fictional streamer mossbyte."
               >
                 <source src="/media/hero-desktop.mp4" type="video/mp4" />
@@ -111,37 +223,29 @@
               <button class="film-big-play" id="film-big-play" type="button" aria-label="Play the example" hidden>
                 <svg class="icon" aria-hidden="true"><use href="#i-play" /></svg>
               </button>
+              <div class="film-hud">
+                <button id="film-toggle" type="button" aria-label="Pause the example" aria-controls="hero-film">
+                  <svg class="icon" aria-hidden="true"><use id="film-toggle-icon" href="#i-pause" /></svg>
+                </button>
+                <button id="film-sound" type="button" aria-label="Turn sound on" aria-pressed="false" aria-controls="hero-film">
+                  <svg class="icon" aria-hidden="true"><use id="film-sound-icon" href="#i-muted" /></svg>
+                </button>
+              </div>
             </div>
           </div>
-          <div class="film-chapters" id="film-chapters" aria-label="Film chapters"></div>
-          <div class="film-rail">
-            <p id="film-state" role="status" aria-live="polite">Sound off.</p>
-            <div class="film-buttons">
-              <button id="film-toggle" type="button" aria-label="Pause the example" aria-controls="hero-film">
-                <svg class="icon" aria-hidden="true">
-                  <use id="film-toggle-icon" href="#i-pause" /></svg
-                ><span class="sr-only" data-film-label>Pause</span>
-              </button>
-              <button id="film-replay" type="button" aria-label="Watch from the start" aria-controls="hero-film">
-                <svg class="icon" aria-hidden="true"><use href="#i-replay" /></svg>
-              </button>
-              <button id="film-sound" type="button" aria-label="Turn sound on" aria-pressed="false" aria-controls="hero-film">
-                <svg class="icon" aria-hidden="true">
-                  <use id="film-sound-icon" href="#i-muted" />
-                </svg>
-              </button>
-              <button
-                class="text-button transcript-button"
-                id="read-round"
-                type="button"
-                aria-controls="round-transcript"
-                aria-expanded="false"
-              >
-                Read the round
-              </button>
-            </div>
-          </div>
-          <p class="film-note">A staged round with made-up names. The card panel is a concept for a Twitch Extension.</p>
+          <p class="sr-only" id="film-state" role="status" aria-live="polite">Sound off.</p>
+          <p class="film-note">
+            A staged round with made-up names. The card panel is a concept for a Twitch Extension.
+            <button
+              class="text-button transcript-button"
+              id="read-round"
+              type="button"
+              aria-controls="round-transcript"
+              aria-expanded="false"
+            >
+              Read the round
+            </button>
+          </p>
           <div class="film-stills" id="film-stills" hidden aria-label="The round in seven frames"></div>
           <section class="round-transcript" id="round-transcript" aria-labelledby="round-title" hidden>
             <div class="transcript-heading">
@@ -154,252 +258,361 @@
         </div>
       </section>
 
-      <section class="how-section" id="how" aria-labelledby="how-title">
-        <div class="how-sticky">
-          <div class="section-intro">
-            <h2 id="how-title">One word.<br />Three screens.</h2>
-            <p>Everyone watches the same stream.<br />Only chat sees the card while the round is live.</p>
+      <section class="how-section why-vtg" id="how" aria-labelledby="how-title">
+        <div class="why-vtg__stage">
+          <div class="why-vtg__intro">
+            <div class="why-vtg__intro-sticky">
+              <h2 id="how-title"><span>Chat knows the word.</span> <em>The streamer doesn't.</em></h2>
+              <div class="why-vtg__copy">
+                <p class="why-vtg__lead">
+                  baited is a game for Twitch streams. Every round, chat gets a secret word, and the streamer has no idea what it is.
+                </p>
+                <p class="why-vtg__payoff">
+                  Chat has two minutes to get the streamer to say it out loud. If the clock runs out first, the streamer wins the round.
+                </p>
+              </div>
+            </div>
           </div>
-          <div class="role-screens" id="role-screens">
-            <svg class="role-line" viewBox="0 0 1000 36" preserveAspectRatio="none" aria-hidden="true">
-              <path d="M0 18H980q16 0 16 12v3q0 9-9 9" />
-            </svg>
-            <article class="role-step is-active" data-step="0">
-              <div class="role-label"><span>01</span> CHAT'S CARD</div>
-              <div class="role-window viewer-window">
-                <div class="window-top"><span>Only chat sees this card</span><span class="concept-label">Concept</span></div>
-                <div class="mini-secret">
-                  <img src="/cards/proofs/volcano.png" alt="" width="1254" height="1254" loading="lazy" />
-                  <div>
-                    <span class="word">VOLCANO</span><span class="off-label">OFF LIMITS</span>
-                    <div class="clues"><span>LAVA</span><span>ERUPTION</span></div>
+          <div class="why-stack-shell">
+            <ol class="why-stack" aria-label="How a round works">
+              <li class="why-card why-card--word">
+                <article class="why-card__surface">
+                  <p class="why-card__topline">Chat's screen</p>
+                  <div class="why-card__copy">
+                    <h3>Chat gets a secret word</h3>
+                    <p class="why-card__note">
+                      Viewers see the word and its off-limits clues. The streamer only sees the back of the card.
+                    </p>
                   </div>
-                </div>
-                <div class="window-bottom">Make the streamer say this word.</div>
-              </div>
-              <div class="step-copy">
-                <h3>Chat gets the word.</h3>
-                <p>
-                  Viewers see the secret word and the clues they can't type. The streamer sees the back of the card until the round stops.
-                </p>
-              </div>
-            </article>
-            <article class="role-step" data-step="1">
-              <div class="role-label"><span>02</span> THE STREAM</div>
-              <div class="role-window stream-window">
-                <div class="overlay-widget">
-                  <span>CHAT HAS A WORD</span><strong>01:52</strong>
-                  <div>ROUND 07 <b>3 WINS</b><b>1 STREAK</b></div>
-                </div>
-                <div class="stream-hint"><span class="chat-name">fernbrake</span> build your hut RIGHT next to it, best view</div>
-                <img
-                  class="stream-world"
-                  src="/film/art/little-isle.png"
-                  alt=""
-                  width="1672"
-                  height="941"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-              <div class="step-copy">
-                <h3>Chat sets the trap.</h3>
-                <p>
-                  Hints are ordinary questions in Twitch chat. The overlay shows the clock and score, keeping the word hidden while play
-                  continues.
-                </p>
-              </div>
-            </article>
-            <article class="role-step" data-step="2">
-              <div class="role-label"><span>03</span> STREAMER'S SCREEN</div>
-              <div class="role-window studio-window">
-                <div class="studio-status"><span class="small-square"></span>ROUND LIVE</div>
-                <div class="studio-back" aria-hidden="true"><span class="brand-glyph"></span></div>
-                <p>The target stays hidden<br />in your studio.</p>
-                <div class="window-bottom">Keep streaming. Viewers will try to steer the conversation.</div>
-              </div>
-              <div class="step-copy">
-                <h3>The streamer says it.</h3>
-                <p>
-                  baited listens on the streamer's computer. When it hears the word, the round stops. The streamer confirms it before chat
-                  gets a win.
-                </p>
-              </div>
-            </article>
+                  <div class="why-card__scene why-deal" aria-hidden="true">
+                    <div class="why-deal__tilt">
+                      <div class="why-deal__card">
+                        <div class="why-deal__back"><b>bait!</b></div>
+                        <div class="bait-card why-deal__face">
+                          <span class="card-top"
+                            ><span>01<small>/ 18</small></span
+                            ><span class="card-pips"><i class="is-filled"></i><i class="is-filled"></i><i></i></span
+                          ></span>
+                          <span class="card-art"
+                            ><img
+                              src="/cards/proofs/volcano.png"
+                              alt=""
+                              width="1254"
+                              height="1254"
+                              loading="lazy"
+                              decoding="async"
+                              draggable="false"
+                          /></span>
+                          <span class="card-word card-word--volcano">VOLCANO</span>
+                          <span class="card-forbidden"
+                            ><span class="card-forbidden__label">Forbidden words</span
+                            ><span class="card-clues"><span>LAVA</span><span>ERUPTION</span></span></span
+                          >
+                          <span class="card-question">Where would you definitely not build a house?</span>
+                          <span class="card-footer"><b>bait</b> them.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </li>
+              <li class="why-card why-card--hints">
+                <article class="why-card__surface">
+                  <p class="why-card__topline">Twitch chat</p>
+                  <div class="why-card__copy">
+                    <h3>Chat drops hints</h3>
+                    <p class="why-card__note">
+                      Ask questions that steer the talk toward the word. Just don't type the word or its off-limits clues.
+                    </p>
+                  </div>
+                  <div class="why-card__scene why-chat" aria-hidden="true">
+                    <div class="why-chat__window">
+                      <p class="why-chat__head"><span>Stream chat</span><small>made-up names</small></p>
+                      <div class="why-chat__lines">
+                        <ol class="why-chat__feed">
+                          <li><b class="u-owl">owlbear_ok</b>: that hut is crooked</li>
+                          <li><b class="u-snacks">sir_snacks</b>: gm moss</li>
+                          <li><b class="u-fern">fernbrake</b>: build your hut RIGHT next to it, best view</li>
+                          <li><b class="u-owl">owlbear_ok</b>: is it supposed to smoke like that</li>
+                          <li>
+                            <b class="u-snacks">sir_snacks</b>:
+                            <img
+                              class="why-chat__emote"
+                              src="/assets/why/emote-grin.webp"
+                              alt=""
+                              width="64"
+                              height="64"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          </li>
+                          <li><b class="u-crumb">crumbqueen</b>: moss what's that big thing behind your house</li>
+                          <li><b class="u-kettle">kettle_kid</b>: totally normal mountain</li>
+                          <li><b class="u-night">nightbus</b>: name the mountain, coward</li>
+                          <li><b class="u-dog">deadlinedog</b>: the LAVA view tho</li>
+                          <li><b class="u-kettle">kettle_kid</b>: dog that word is off limits</li>
+                          <li><b class="u-owl">owlbear_ok</b>: SPICY MOUNTAIN</li>
+                          <li>
+                            <b class="u-snacks">sir_snacks</b>:
+                            <img
+                              class="why-chat__emote"
+                              src="/assets/why/emote-smirk.webp"
+                              alt=""
+                              width="64"
+                              height="64"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                            <img
+                              class="why-chat__emote"
+                              src="/assets/why/emote-smirk.webp"
+                              alt=""
+                              width="64"
+                              height="64"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                            <img
+                              class="why-chat__emote"
+                              src="/assets/why/emote-laugh.webp"
+                              alt=""
+                              width="64"
+                              height="64"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          </li>
+                          <li><b class="u-crumb">crumbqueen</b>: why is the ground warm</li>
+                          <li><b class="u-fern">fernbrake</b>: moss look behind you</li>
+                        </ol>
+                      </div>
+                      <p class="why-chat__input"><span>Send a message</span><b>Chat</b></p>
+                    </div>
+                  </div>
+                </article>
+              </li>
+              <li class="why-card why-card--streamer">
+                <article class="why-card__surface">
+                  <p class="why-card__topline">Streamer's screen</p>
+                  <div class="why-card__copy">
+                    <h3>The streamer keeps talking</h3>
+                    <p class="why-card__note">They can't see the word, so any answer could be the slip.</p>
+                  </div>
+                  <div class="why-card__scene why-stream" aria-hidden="true">
+                    <div class="why-stream__window">
+                      <div class="why-stream__game">
+                        <img
+                          class="why-stream__isle"
+                          src="/assets/why/little-isle.webp"
+                          alt=""
+                          width="880"
+                          height="495"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <img
+                          class="why-stream__smoke"
+                          src="/assets/why/smoke.webp"
+                          alt=""
+                          width="128"
+                          height="128"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <p class="why-stream__live"><b>Live</b>1.2K watching</p>
+                        <span class="why-stream__cam">
+                          <img
+                            class="why-stream__pose is-rest"
+                            src="/assets/why/moss-smug.webp"
+                            alt=""
+                            width="208"
+                            height="208"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <img
+                            class="why-stream__pose is-talk"
+                            src="/assets/why/moss-talk.webp"
+                            alt=""
+                            width="208"
+                            height="208"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <span>mossbyte</span>
+                        </span>
+                      </div>
+                      <div class="why-stream__studio">
+                        <span class="why-stream__back"><b>bait!</b></span>
+                        <p class="why-stream__hidden"><b>Word hidden</b><span>Chat is trying to make you say it.</span></p>
+                        <p class="why-stream__clock"><span>Round live</span><b data-why-clock>01:42</b></p>
+                        <span class="why-stream__timer"><i data-why-timer></i></span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </li>
+              <li class="why-card why-card--catch">
+                <article class="why-card__surface">
+                  <p class="why-card__topline">Round over</p>
+                  <div class="why-card__copy">
+                    <h3>They say it. Chat wins.</h3>
+                    <p class="why-card__note">
+                      baited listens on the streamer's computer and stops the round when it hears the word. If the clock hits zero first,
+                      the streamer escapes.
+                    </p>
+                  </div>
+                  <div class="why-card__scene why-catch" aria-hidden="true">
+                    <div class="why-catch__window">
+                      <p class="why-catch__heard">
+                        <svg class="px-icon px-icon--mic" viewBox="0 0 7 9" aria-hidden="true" focusable="false">
+                          <path d="M2 0h3v5H2zM0 3h1v2H0zM6 3h1v2H6zM1 5h1v1H1zM5 5h1v1H5zM2 6h3v1H2zM3 7h1v1H3zM1 8h5v1H1z" />
+                        </svg>
+                        <span>Heard on stream</span>
+                        <span class="why-catch__level"><i></i><i></i><i></i><i></i><i></i></span>
+                      </p>
+                      <p class="why-catch__before">Nope. I'm not naming the spicy mountain.</p>
+                      <p class="why-catch__quote">
+                        The <span class="why-catch__word">volcano<span class="why-catch__tag">Detected</span></span> is going off!
+                      </p>
+                      <p class="why-catch__result"><span>Round stopped</span><b>Chat wins +1</b></p>
+                      <span class="why-catch__cam"
+                        ><img src="/assets/why/moss-shout.webp" alt="" width="208" height="208" loading="lazy" decoding="async"
+                      /></span>
+                    </div>
+                  </div>
+                </article>
+              </li>
+            </ol>
           </div>
-          <div class="rules-tail">
-            <p>Chat wins the round.<br /><span>Outlast the clock and the streamer escapes.</span></p>
-            <details>
-              <summary>
-                More ways to play <svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg>
-              </summary>
-              <ul>
-                <li>Medium cards ban two clues, Hard cards ban four.</li>
-                <li>Three-word mission: land three words on one clock.</li>
-                <li>Call the bait: the streamer gets one private guess. A wrong guess gives chat 15 more seconds.</li>
-                <li>Skip vote: chat types <b>!skip</b> to swap a word nobody can crack.</li>
-                <li>Streamer's pick: after a win, the streamer gives one clean hint the credit.</li>
-              </ul>
-            </details>
+        </div>
+        <div class="deck-section how-cards" id="cards" role="group" aria-labelledby="deck-title">
+          <div class="how-cards__intro">
+            <h3 class="how-cards__title" id="deck-title">The cards.</h3>
+            <p>
+              Every round is played with one card: the secret word, the clues chat isn't allowed to type, and a question to get chat
+              started.
+            </p>
           </div>
-        </div>
-      </section>
-
-      <section class="deck-section" id="cards" aria-labelledby="deck-title">
-        <div class="section-intro">
-          <h2 id="deck-title">Pick a card.</h2>
-          <p>
-            Eighteen cards with their own art,<br />
-            each with a question chat could open with.
-          </p>
-        </div>
-        <div class="deck-help" id="deck-help">
-          <span class="desktop-help">← → browse <span>·</span> Enter inspect <span>·</span> Esc put back</span
-          ><span class="touch-help">Swipe to browse · Tap a card to inspect.</span>
-        </div>
-        <div class="deck-hand" id="deck-hand" role="region" aria-label="The baited card deck" aria-describedby="deck-help" tabindex="0">
-          <ol id="deck-cards"></ol>
-        </div>
-        <div class="deck-controls">
-          <button id="deck-prev" type="button" aria-label="Previous card" aria-controls="deck-cards">
-            <svg class="icon" aria-hidden="true"><use href="#i-left" /></svg></button
-          ><span id="deck-count">01 / 18</span
-          ><button id="deck-next" type="button" aria-label="Next card" aria-controls="deck-cards">
-            <svg class="icon" aria-hidden="true"><use href="#i-arrow" /></svg></button
-          ><button id="deck-auto" class="text-button" type="button" aria-pressed="true">
-            <svg class="icon" aria-hidden="true"><use id="deck-auto-icon" href="#i-pause" /></svg><span>Pause gallery</span>
-          </button>
-        </div>
-        <p id="deck-status" class="sr-only" aria-live="polite" aria-atomic="true"></p>
-        <div class="deck-caption">
-          <div>
-            <h3 id="deck-word">VOLCANO</h3>
-            <p class="deck-difficulty" id="deck-difficulty">MEDIUM · OFF LIMITS: LAVA, ERUPTION</p>
-            <p id="deck-question">Try: “Where would you definitely not build a house?”</p>
+          <div class="deck-help" id="deck-help">
+            <span class="desktop-help">Drag or flick the cards <span>·</span> ← → to browse</span
+            ><span class="touch-help">Swipe to browse the cards.</span>
           </div>
-          <button id="bait-with-card" class="stock-button" type="button">
-            Bait with this card <svg class="icon" aria-hidden="true"><use href="#i-down" /></svg>
-          </button>
-        </div>
-        <noscript
-          ><p class="no-script">
-            Turn on JavaScript to handle the deck and try a hint. The film and rules still work without it.
-          </p></noscript
-        >
-      </section>
-
-      <section class="toy-section" id="your-turn" aria-labelledby="toy-title">
-        <div class="section-intro">
-          <h2 id="toy-title">Your turn.</h2>
-          <p>
-            Get the streamer to say it.<br />
-            Keep the off-limits words out of your hint.
-          </p>
-        </div>
-        <div class="toy-table">
-          <div class="toy-card-slot" id="toy-card"></div>
-          <div class="toy-chat">
-            <div class="toy-chat-heading"><span>CHAT</span><span class="toy-for" id="toy-for">VOLCANO · MEDIUM</span></div>
-            <div class="hint-log" id="hint-log" role="log" aria-label="Your practice hints" aria-live="polite">
-              <p class="log-empty" id="log-empty">
-                <span class="waiting-dots" aria-hidden="true"><i></i><i></i><i></i></span>Waiting for your first hint…
-              </p>
-            </div>
-            <form id="hint-form">
-              <label for="hint-input">Your hint</label>
-              <div class="hint-input-row">
-                <input
-                  id="hint-input"
-                  name="hint"
-                  type="text"
-                  autocomplete="off"
-                  placeholder="Ask the streamer something…"
-                  aria-describedby="hint-feedback hint-counter"
-                  maxlength="400"
-                /><button class="send-hint" type="submit" aria-label="Send hint">
-                  <span>Send hint</span><svg class="icon" aria-hidden="true"><use href="#i-send" /></svg>
-                </button>
-              </div>
-              <div class="input-meta">
-                <button class="text-button" id="borrow-question" type="button">Stuck? Borrow the card's question.</button
-                ><span id="hint-counter">0 / 200</span>
-              </div>
-              <p id="hint-feedback" aria-live="polite" aria-atomic="true"></p>
-            </form>
-            <div class="toy-chat-footer">
-              <button class="text-button" id="deal-another" type="button">
-                <svg class="icon" aria-hidden="true"><use href="#i-card" /></svg>Deal another card</button
-              ><span>This chat is just you.</span>
-            </div>
+          <div class="deck-hand" id="deck-hand" role="region" aria-label="The baited card deck" aria-describedby="deck-help" tabindex="0">
+            <ol id="deck-cards"></ol>
           </div>
-        </div>
-      </section>
-
-      <section class="closing" aria-labelledby="closing-title">
-        <h2 id="closing-title">
-          Bait them<span class="closing-stop"
-            >.<img src="/assets/bait-bomb-logo.png" alt="" width="630" height="787" loading="lazy"
-          /></span>
-        </h2>
-        <div class="closing-bottom">
-          <p>baited isn't open for streams yet.<br />Want to run it on yours? Tell us.</p>
-          <a class="stock-button" href="mailto:hello@irchiinnuss.com"
-            >Get in touch <svg class="icon" aria-hidden="true"><use href="#i-arrow" /></svg
-          ></a>
+          <p id="deck-status" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+          <ul class="card-levels" aria-label="Card difficulty">
+            <li>
+              <b
+                ><span class="card-levels__pips" aria-hidden="true"><i class="is-filled"></i><i></i><i></i></span>Easy</b
+              >
+              <span>Only the word itself is off limits.</span>
+            </li>
+            <li>
+              <b
+                ><span class="card-levels__pips" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i></i></span
+                >Medium</b
+              >
+              <span>Two clues are off limits too.</span>
+            </li>
+            <li>
+              <b
+                ><span class="card-levels__pips" aria-hidden="true"
+                  ><i class="is-filled"></i><i class="is-filled"></i><i class="is-filled"></i></span
+                >Hard</b
+              >
+              <span>Four clues are off limits.</span>
+            </li>
+          </ul>
+          <noscript><p class="no-script">Turn on JavaScript to browse the deck. The film and the rules still work without it.</p></noscript>
         </div>
       </section>
     </main>
-    <footer>
-      <div class="footer-top">
-        <p class="made-by">baited is made by <a href="https://irchiinnuss.com">irchiinnuss</a>.</p>
-        <nav aria-label="Footer navigation">
-          <a href="#how">How it plays</a><a href="#cards">Cards</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a
-          ><a href="mailto:hello@irchiinnuss.com">Contact</a>
-        </nav>
-        <a class="back-top" href="#top" aria-label="Back to top"
-          ><svg class="icon" aria-hidden="true"><use href="#i-up" /></svg
-        ></a>
+    <footer class="site-footer" id="contact" aria-labelledby="footer-title">
+      <div class="footer-edge" aria-hidden="true"></div>
+      <section class="footer-cta">
+        <h2 class="footer-title" id="footer-title">
+          <span class="footer-title__line"
+            ><span
+              ><span class="footer-avatar"
+                ><img src="/assets/why/moss-shout.webp" alt="" width="208" height="208" loading="lazy" decoding="async" /></span
+              >Let your chat</span
+            ></span
+          >
+          <span class="footer-title__line"><span>bait you.</span></span>
+        </h2>
+        <div class="footer-rule">
+          <div class="footer-circle-spot">
+            <a class="footer-circle" href="mailto:hello@irchiinnuss.com" data-magnetic="0.3"
+              ><span class="footer-circle__label">Get in touch</span
+              ><svg class="px-icon px-icon--chat footer-circle__icon" viewBox="0 0 9 9" aria-hidden="true" focusable="false">
+                <path d="M1 0h7v1H1zM0 1h1v5H0zM8 1h1v5H8zM1 6h7v1H1zM1 7h2v1H1zM1 8h1v1H1z" />
+                <rect class="px-dot" x="2" y="3" width="1" height="1" />
+                <rect class="px-dot" x="4" y="3" width="1" height="1" />
+                <rect class="px-dot" x="6" y="3" width="1" height="1" /></svg
+            ></a>
+          </div>
+          <div class="footer-bar">
+            <p class="footer-meta">
+              <span>Version 1.3 &copy; 2026</span><span>Made by <a href="https://irchiinnuss.com">irchiinnuss</a></span>
+            </p>
+            <nav class="footer-links" aria-label="Footer navigation">
+              <a href="#how"
+                ><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg>How to play</a
+              >
+              <a href="#cards"
+                ><svg class="icon" aria-hidden="true"><use href="#i-card" /></svg>Cards</a
+              >
+              <a href="/terms"
+                ><svg class="icon" aria-hidden="true"><use href="#i-doc" /></svg>Terms</a
+              >
+              <a href="/privacy"
+                ><svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg>Privacy</a
+              >
+            </nav>
+          </div>
+        </div>
+      </section>
+      <div class="footer-band">
+        <a class="px-btn px-btn--ghost footer-watch" href="#top" data-magnetic="0.18"
+          ><span class="px-btn__box" aria-hidden="true"
+            ><svg class="px-icon px-icon--up" viewBox="0 0 7 9" aria-hidden="true" focusable="false">
+              <path d="M3 2h1v7H3zM3 0h1v1H3zM2 1h1v1H2zM4 1h1v1H4zM1 2h1v1H1zM5 2h1v1H5zM0 3h1v1H0zM6 3h1v1H6z" /></svg></span
+          ><span class="px-btn__label">Watch the round</span></a
+        >
       </div>
       <p class="trademark">Twitch is a trademark of Twitch Interactive, Inc. baited isn't made or endorsed by Twitch.</p>
+      <div class="footer-mark" aria-hidden="true">
+        <img src="/assets/brand/baited-logo-violet-large.webp" alt="" width="1182" height="348" loading="lazy" decoding="async" />
+      </div>
     </footer>
     <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <symbol id="bait-hook" viewBox="0 0 32 40">
+      <symbol id="i-card" viewBox="0 0 10 10">
         <path
-          d="M22 3v22a9 9 0 0 1-18 0v-7l5 5M22 3h6v6h-6M4 18l7 3"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="3"
-          stroke-linejoin="miter"
+          d="M2 1h6v1h-6zM2 2h1v1h-1zM7 2h1v1h-1zM2 3h1v1h-1zM4 3h2v1h-2zM7 3h1v1h-1zM2 4h1v1h-1zM4 4h2v1h-2zM7 4h1v1h-1zM2 5h1v1h-1zM7 5h1v1h-1zM2 6h1v1h-1zM7 6h1v1h-1zM2 7h6v1h-6z"
         />
       </symbol>
-      <symbol id="i-card" viewBox="0 0 24 24">
-        <path d="M8 4h10l2 2v14H8zM4 6v12M12 8h4M12 16h4" />
+      <symbol id="i-doc" viewBox="0 0 10 10">
+        <path
+          d="M1 1h5v1h-5zM1 2h1v1h-1zM5 2h2v1h-2zM1 3h1v1h-1zM6 3h2v1h-2zM1 4h1v1h-1zM3 4h2v1h-2zM7 4h1v1h-1zM1 5h1v1h-1zM7 5h1v1h-1zM1 6h1v1h-1zM3 6h3v1h-3zM7 6h1v1h-1zM1 7h1v1h-1zM7 7h1v1h-1zM1 8h7v1h-7z"
+        />
       </symbol>
-      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6" /></symbol>
-      <symbol id="i-left" viewBox="0 0 24 24"><path d="M20 12H4m6-6-6 6 6 6" /></symbol>
-      <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v16m-6-6 6 6 6-6" /></symbol>
-      <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V4m-6 6 6-6 6 6" /></symbol>
-      <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8z" /></symbol>
-      <symbol id="i-pause" viewBox="0 0 24 24">
-        <path d="M8 4v16M16 4v16" stroke-width="4" />
+      <symbol id="i-lock" viewBox="0 0 10 10">
+        <path
+          d="M3 1h3v1h-3zM2 2h1v1h-1zM6 2h1v1h-1zM2 3h1v1h-1zM6 3h1v1h-1zM1 4h7v1h-7zM1 5h3v1h-3zM5 5h3v1h-3zM1 6h3v1h-3zM5 6h3v1h-3zM1 7h7v1h-7z"
+        />
       </symbol>
-      <symbol id="i-replay" viewBox="0 0 24 24"><path d="M6 8a8 8 0 1 1-2 6M4 3v6h6" /></symbol>
-      <symbol id="i-muted" viewBox="0 0 24 24">
-        <path d="M4 9h4l6-5v16l-6-5H4zM18 9l4 6m0-6-4 6" />
+      <symbol id="i-play" viewBox="0 0 10 10">
+        <path d="M1 1h2v1H1zM1 2h4v1H1zM1 3h6v1H1zM1 4h8v2H1zM1 6h6v1H1zM1 7h4v1H1zM1 8h2v1H1z" />
       </symbol>
-      <symbol id="i-sound" viewBox="0 0 24 24">
-        <path d="M2 9h4l6-5v16l-6-5H2zM16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+      <symbol id="i-pause" viewBox="0 0 10 10"><path d="M1 1h3v8H1zM6 1h3v8H6z" /></symbol>
+      <symbol id="i-muted" viewBox="0 0 10 10">
+        <path d="M4 1h1v1H4zM3 2h2v1H3zM0 3h5v4H0zM3 7h2v1H3zM4 8h1v1H4zM6 3h1v1H6zM9 3h1v1H9zM7 4h2v2H7zM6 6h1v1H6zM9 6h1v1H9z" />
       </symbol>
-      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M4 12h16M12 4v16" /></symbol>
-      <symbol id="i-send" viewBox="0 0 24 24"><path d="m4 4 16 8-16 8 3-8zm3 8h13" /></symbol>
-      <symbol id="i-lamp-full" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="8" fill="currentColor" />
+      <symbol id="i-sound" viewBox="0 0 10 10">
+        <path d="M4 1h1v1H4zM3 2h2v1H3zM0 3h5v4H0zM3 7h2v1H3zM4 8h1v1H4zM6 4h1v2H6zM8 2h1v1H8zM9 3h1v4H9zM8 7h1v1H8z" />
       </symbol>
-      <symbol id="i-lamp-half" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="8" />
-        <path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" />
-      </symbol>
-      <symbol id="i-lamp-ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /></symbol>
     </svg>
   </body>
 </html>

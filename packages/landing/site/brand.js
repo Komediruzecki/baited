@@ -15,6 +15,13 @@ export function initBrand(root = document) {
   source.onerror = () => document.documentElement.classList.add('brand-fallback')
   source.src = mark ? `/lab/brand/baited-${mark}.png` : '/assets/brand/baited-original-mask.svg'
 
+  // The header logo is an image; if it cannot load, the brand shows its name as text.
+  for (const logo of root.querySelectorAll('.brand-logo')) {
+    const missing = () => logo.closest('.brand')?.classList.add('is-logo-missing')
+    if (logo.complete && !logo.naturalWidth) missing()
+    else logo.addEventListener('error', missing, { once: true })
+  }
+
   for (const brand of root.querySelectorAll('.brand')) {
     let timer = 0
     const rest = () => {

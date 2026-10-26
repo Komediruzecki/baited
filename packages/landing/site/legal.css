@@ -35,7 +35,7 @@ a:hover {
   color: #fffdf7;
 }
 a:focus-visible {
-  outline: 3px solid #fffc79;
+  outline: 3px solid #c9a8ff;
   outline-offset: 5px;
 }
 .legal-header,
@@ -52,13 +52,12 @@ a:focus-visible {
   padding-block: 30px;
 }
 .legal-brand {
-  color: #fffc79;
-  font:
-    400 1.6rem/1 Russo,
-    Impact,
-    sans-serif;
-  letter-spacing: -0.035em;
-  text-decoration: none;
+  display: block;
+}
+.legal-brand img {
+  display: block;
+  width: auto;
+  height: 30px;
 }
 .legal-header nav {
   display: flex;

@@ -65,33 +65,3 @@ export const chapters = [
     text: 'The streamer gives fernbrake’s clean hint the credit. The hint containing LAVA stays ineligible.',
   },
 ]
-
-// Literal checker shared in behavior with server/game.ts. This is not speech recognition.
-export const tokens = (text) =>
-  text
-    .normalize('NFKC')
-    .toLocaleLowerCase('en-US')
-    .match(/[\p{L}\p{N}]+(?:['’][\p{L}]+)?/gu) ?? []
-export function clueMatches(text, clue) {
-  const variants = new Set([clue, `${clue}s`, `${clue}es`, ...(clue.endsWith('y') ? [`${clue.slice(0, -1)}ies`] : [])])
-  return tokens(text).some((token) => variants.has(token.replace(/['’]s$/, '')))
-}
-export function checkHint(text, card) {
-  if (text.length > 200) return { kind: 'long', message: 'Keep this practice hint under 200 characters.' }
-  if (tokens(text).includes(card.word))
-    return {
-      kind: 'target',
-      message: "That's the word itself. A hint that says it can't win the streamer's pick.",
-    }
-  const clue = card.clues.find((candidate) => clueMatches(text, candidate))
-  if (clue)
-    return {
-      kind: 'clue',
-      clue,
-      message: `“${clue[0].toUpperCase()}${clue.slice(1)}” is off limits on this card. Chat can still win, but this hint can't get the streamer's pick.`,
-    }
-  return {
-    kind: 'clean',
-    message: "Clean bait. If they say it, this one could win the streamer's pick.",
-  }
-}

@@ -70,4 +70,8 @@ The island remains a completed hut under repair, as accepted in the art review. 
 
 Source font license texts and GSAP's original copyright/terms notice are retained in `art/licenses/`. The soundtrack continues to use the existing project's Sound Lab implementation and its attribution.
 
-The mockup review moves the catch still to 22.3s so reduced-motion visitors see Confirm catch and Not said before scoring. Both face-down card labels use lilac, reserving yellow for the secret. The phone pick list now covers only the panel/chat area and leaves the game, facecam and pick award visible.
+The mockup review moves the catch still to 22.3s so reduced-motion visitors see Confirm catch and Not said before scoring. Both face-down card labels use lilac. The phone pick list now covers only the panel/chat area and leaves the game, facecam and pick award visible.
+
+## Without yellow (26 October 2026)
+
+At the owner's request the film no longer uses yellow. Only colors changed: the secret word VOLCANO uses its card's orange `#ff743c` wherever it appeared in `#fffc79` (chat card, split screen, catch tag and box, celebration, pick title), the face-down card labels are lilac `#c9a8ff`, the confetti is white and the bookend wordmark is `#e2dbec`. Both layouts were rendered again with HyperFrames 0.8.198, Playwright's headless Chromium 1243 and FFmpeg 6.1.1 using the commands above. The audio streams were copied unchanged from the previous delivery. `../media/` holds the new desktop and phone deliveries; the landing serves the desktop one on every screen.

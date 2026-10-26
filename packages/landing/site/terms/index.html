@@ -8,12 +8,17 @@
     <meta name="description" content="Terms for the baited landing page and initial game and Twitch Extension test." />
     <link rel="canonical" href="https://baited.maff.app/terms" />
     <link rel="stylesheet" href="/legal.css" />
+    <link rel="stylesheet" href="/pixels.css" />
+    <script type="module" src="/pixels.js"></script>
     <title>Terms · baited</title>
+    <script src="/pixel-boot.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#terms">Skip to terms</a>
     <header class="legal-header">
-      <a class="legal-brand" href="/" aria-label="baited home">baited</a>
+      <a class="legal-brand" href="/" aria-label="baited home"
+        ><img src="/assets/brand/baited-logo-white.webp" alt="" width="764" height="225"
+      /></a>
       <nav aria-label="Legal pages"><a href="/privacy">Privacy</a><a href="/terms" aria-current="page">Terms</a></nav>
     </header>
     <main class="legal-main" id="terms">
@@ -55,6 +60,13 @@
         pages with an updated date.
       </p>
     </main>
-    <footer class="legal-footer"><a href="/">Back to baited</a></footer>
+    <footer class="legal-footer">
+      <a class="px-btn px-btn--small" href="/"
+        ><span class="px-btn__box" aria-hidden="true"
+          ><svg class="px-icon px-icon--back" viewBox="0 0 7 9" aria-hidden="true" focusable="false">
+            <path d="M3 0h1v7H3zM0 5h1v1H0zM6 5h1v1H6zM1 6h1v1H1zM5 6h1v1H5zM2 7h1v1H2zM4 7h1v1H4zM3 8h1v1H3z" /></svg></span
+        ><span class="px-btn__label">Back to baited</span></a
+      >
+    </footer>
   </body>
 </html>

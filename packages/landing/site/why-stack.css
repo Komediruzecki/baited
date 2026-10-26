@@ -1,0 +1,889 @@
+/*
+ * How a round works. On desktop the cards rise one by one and build a stack while the
+ * visitor scrolls; on touch screens and phones they stack with position: sticky.
+ * The pattern is adapted from the voicetaggods.com "why stack". The stacking motion lives in
+ * why-stack.js and the little scenes inside the cards in why-scenes.js.
+ *
+ * Card colors are Material Design 3 color roles generated from the brand violet #9146FF with
+ * Google's material-color-utilities (SchemeContent, light). Every card uses one container role
+ * with its matching "on" role for all of its text. The screens inside the cards (chat, stream,
+ * speech) use the dark scheme's surfaces and on-surface roles from the same seed.
+ */
+.why-vtg {
+  --volcano: #ff743c; /* VOLCANO's own color, as on its card (styles.css .card-word--volcano) */
+  --md-primary-container: #9146ff;
+  --md-on-primary-container: #fffcff;
+  --md-secondary-container: #c39ffd;
+  --md-on-secondary-container: #523086;
+  --md-tertiary-container: #cc2fa6;
+  --md-on-tertiary-container: #fffcff;
+  --md-surface-container-high: #eee5f4;
+  --md-on-surface: #1e1a24;
+  --md-on-surface-variant: #4b4455;
+  --md-error: #ba1a1a;
+  --md-on-error: #ffffff;
+  --md-dark-surface: #16121c;
+  --md-dark-surface-container-low: #1e1a24;
+  --md-dark-surface-container: #221e28;
+  --md-dark-surface-container-high: #2d2833;
+  --md-dark-on-surface: #e8dfee;
+  --md-dark-on-surface-variant: #cdc2d8;
+  --md-dark-outline-variant: #4b4455;
+  --md-dark-primary: #d5baff;
+  --md-dark-on-primary: #42008a;
+
+  /* The stage is one screen: the stack and the intro sit centred in the viewport while they stick. */
+  --why-margin: clamp(1.25rem, 4svh, 2.5rem);
+  --why-card-step: clamp(0.9rem, 1.45vw, 1.35rem);
+  --why-stack-depth: 0px;
+  --why-card-size: min(27rem, 38vw, calc(100svh - var(--why-stack-depth) - 2 * var(--why-margin)));
+  --why-card-height: min(calc(var(--why-card-size) * 1.14), calc(100svh - var(--why-stack-depth) - 2 * var(--why-margin)));
+  --why-stack-height: calc(var(--why-card-height) + var(--why-stack-depth));
+  --why-stack-top: max(var(--why-margin), calc((100svh - var(--why-stack-height)) / 2));
+  --why-sequence-distance: 0px;
+  --why-stack-settle: clamp(2.5rem, 8svh, 5rem);
+  --why-shell-height: calc(var(--why-stack-height) + var(--why-sequence-distance) + var(--why-stack-settle));
+  --why-radius: 28px; /* Material 3 extra-large shape */
+  position: relative;
+  padding-top: var(--why-stack-top);
+}
+
+/* Intro: heading and two short paragraphs, sticky beside the stack. */
+/* The stage carries the page padding, so "The cards" after it can run edge to edge (and be pinned). */
+.why-vtg__stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--why-card-size));
+  column-gap: clamp(2rem, 6vw, 7rem);
+  align-items: start;
+  margin-bottom: clamp(40px, 6vw, 80px);
+  padding-inline: var(--pad);
+}
+.why-vtg h2 {
+  font-size: clamp(38px, 4.1vw, 70px);
+}
+.why-vtg__intro {
+  grid-column: 1;
+  align-self: stretch;
+  min-width: 0;
+}
+.why-vtg__intro-sticky {
+  position: sticky;
+  top: var(--why-stack-top);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.75rem;
+  height: var(--why-stack-height);
+  max-width: 34rem;
+}
+.why-vtg h2 > span,
+.why-vtg h2 > em {
+  display: block;
+}
+.why-vtg h2 > em {
+  font-style: normal;
+  color: var(--rim);
+}
+.why-vtg__copy {
+  display: grid;
+  gap: 1rem;
+  max-width: 30rem;
+}
+.why-vtg__lead {
+  font-size: 20px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+.why-vtg__payoff {
+  font-size: 17px;
+  line-height: 1.55;
+  color: #e6dcee;
+  text-wrap: pretty;
+}
+
+/* The stack: a sticky box whose cards are absolutely placed with a small vertical step. */
+.why-stack-shell {
+  position: relative;
+  grid-column: 2;
+  justify-self: end;
+  width: var(--why-card-size);
+  max-width: 100%;
+  min-width: 0;
+  min-height: var(--why-shell-height);
+}
+.why-stack {
+  position: sticky;
+  top: var(--why-stack-top);
+  display: block;
+  width: var(--why-card-size);
+  max-width: 100%;
+  height: var(--why-stack-height);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  row-gap: var(--why-card-step);
+}
+.why-card {
+  --why-card-bg: var(--md-surface-container-high);
+  --why-card-fg: var(--md-on-surface);
+  --why-card-muted: var(--md-on-surface-variant);
+  position: absolute;
+  top: var(--why-card-offset, 0px);
+  right: 0;
+  left: 0;
+  z-index: calc(20 + var(--why-card-index, 0));
+  width: 100%;
+  height: var(--why-card-height);
+  color: var(--why-card-fg);
+  container: why-card / inline-size;
+}
+/* Material 3 roles: primary, secondary and tertiary containers, and a surface container. */
+.why-card--word {
+  --why-card-bg: var(--md-primary-container);
+  --why-card-fg: var(--md-on-primary-container);
+  --why-card-muted: var(--md-on-primary-container);
+}
+.why-card--hints {
+  --why-card-bg: var(--md-secondary-container);
+  --why-card-fg: var(--md-on-secondary-container);
+  --why-card-muted: var(--md-on-secondary-container);
+}
+.why-card--catch {
+  --why-card-bg: var(--md-tertiary-container);
+  --why-card-fg: var(--md-on-tertiary-container);
+  --why-card-muted: var(--md-on-tertiary-container);
+}
+.why-card__surface {
+  --why-pad: clamp(1.15rem, 6.4cqi, 1.75rem);
+  isolation: isolate;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: var(--why-pad) var(--why-pad) 0;
+  overflow: hidden;
+  border-radius: var(--why-radius);
+  background: var(--why-card-bg);
+  box-shadow: 0 -14px 30px -16px rgb(18 5 42 / 60%);
+}
+.why-card__topline {
+  margin-bottom: clamp(0.55rem, 2.6cqi, 0.8rem);
+  color: var(--why-card-muted);
+  font:
+    500 clamp(0.68rem, 2.9cqi, 0.78rem) / 1.2 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  letter-spacing: 0.02em;
+}
+.why-card__copy {
+  display: grid;
+  gap: clamp(0.35rem, 1.8cqi, 0.5rem);
+}
+.why-card h3 {
+  margin: 0;
+  font-size: clamp(1.2rem, 6.4cqi, 1.6rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.why-card__note {
+  color: var(--why-card-muted);
+  font-size: clamp(0.8rem, 3.4cqi, 0.9rem);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+/* The picture of the step fills the rest of the card and runs off its bottom edge. */
+.why-card__scene {
+  container: why-scene / size;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: clamp(0.75rem, 4cqi, 1.15rem) calc(-1 * var(--why-pad)) 0;
+}
+.why-chat__window,
+.why-stream__window,
+.why-catch__window {
+  position: absolute;
+  inset: 0 var(--why-pad) 0;
+  overflow: hidden;
+  border-radius: 18px 18px 0 0;
+  color: var(--md-dark-on-surface);
+  box-shadow: 0 18px 40px rgb(39 10 92 / 26%);
+}
+
+/* 1. Chat's screen: the real VOLCANO card, dealt face up. */
+.why-deal__tilt {
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  width: 300px;
+  height: 420px;
+  transform-origin: 50% 0;
+  translate: -50% 0;
+  rotate: -4deg;
+  scale: 0.4;
+}
+@container why-scene (min-height: 200px) {
+  .why-deal__tilt {
+    scale: 0.44;
+  }
+}
+@container why-scene (min-height: 225px) {
+  .why-deal__tilt {
+    scale: 0.49;
+  }
+}
+@container why-scene (min-height: 250px) {
+  .why-deal__tilt {
+    scale: 0.55;
+  }
+}
+@container why-scene (min-height: 280px) {
+  .why-deal__tilt {
+    scale: 0.62;
+  }
+}
+@container why-scene (min-height: 310px) {
+  .why-deal__tilt {
+    scale: 0.68;
+  }
+}
+@container why-scene (min-height: 340px) {
+  .why-deal__tilt {
+    scale: 0.74;
+  }
+}
+.why-deal__card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.why-deal__back,
+.why-deal .why-deal__face {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  box-shadow:
+    0 8px 0 -3px #120d1a,
+    0 26px 44px rgb(33 4 84 / 42%);
+}
+.why-deal__back {
+  display: grid;
+  place-items: center;
+  border: 1px solid #9b84e0;
+  border-radius: 14px 24px 14px 14px;
+  background: repeating-linear-gradient(-45deg, #3e1d93 0 16px, #34177f 16px 32px);
+  transform: rotateY(180deg);
+}
+.why-deal__back b {
+  color: #c7b1ff;
+  font:
+    68px Russo,
+    Impact,
+    sans-serif;
+  letter-spacing: -0.02em;
+  rotate: -12deg;
+}
+
+/* 2. Twitch chat: a dark chat window where hints keep arriving. */
+.why-chat__window {
+  display: flex;
+  flex-direction: column;
+  background: var(--md-dark-surface-container-low);
+}
+.why-chat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px 9px;
+  border-bottom: 1px solid var(--md-dark-outline-variant);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.why-chat__head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.why-chat__head > span::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--md-dark-primary);
+}
+.why-chat__head small {
+  color: var(--md-dark-on-surface-variant);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+/* A fixed, bottom-anchored viewport; the feed inside it slides up as each message arrives. */
+.why-chat__lines {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+  padding: 8px 14px 6px;
+  overflow: hidden;
+  font-size: clamp(0.74rem, 3.3cqi, 0.86rem);
+  line-height: 1.35;
+  -webkit-mask-image: linear-gradient(transparent, #000 2.4rem);
+  mask-image: linear-gradient(transparent, #000 2.4rem);
+}
+.why-chat__feed {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.why-chat__feed li {
+  flex: none;
+  overflow-wrap: anywhere;
+}
+.why-chat__feed b {
+  font-weight: 700;
+}
+/* Chat names: Material 3 tone 80 at seven hues, each 10:1 on the chat surface. */
+.u-fern {
+  color: #84da7d;
+}
+.u-owl {
+  color: #c6c0ff;
+}
+.u-crumb {
+  color: #fface7;
+}
+.u-snacks {
+  color: #c5cf44;
+}
+.u-kettle {
+  color: #88ceff;
+}
+.u-night {
+  color: #ffb4ab;
+}
+.u-dog {
+  color: #ffb779;
+}
+.why-chat__emote {
+  display: inline-block;
+  width: 1.7em;
+  height: 1.7em;
+  margin: -0.35em 0 -0.3em;
+  vertical-align: middle;
+}
+.why-chat__input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 10px 10px;
+  padding: 5px 5px 5px 12px;
+  border: 1px solid var(--md-dark-outline-variant);
+  border-radius: 10px;
+  background: var(--md-dark-surface-container);
+  color: var(--md-dark-on-surface-variant);
+  font-size: 12px;
+}
+.why-chat__input b {
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* 3. Streamer's screen: the game, the facecam, and a studio bar that hides the word. */
+.why-stream__window {
+  display: flex;
+  flex-direction: column;
+  background: var(--md-dark-surface);
+}
+/* The game fills the window above the studio bar. The 16:9 island picture covers it, kept to
+   the top edge, so --rw and --rh are its drawn width and height in this box's units. */
+.why-stream__game {
+  --rw: max(100cqw, 177.78cqh);
+  --rh: max(100cqh, 56.25cqw);
+  container: why-game / size;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: #36a6d6;
+}
+.why-stream__isle {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 45% 0;
+}
+/* The puff sits on the crater, 68.75% across and 16% down the island picture, and drifts up. */
+.why-stream__smoke {
+  position: absolute;
+  top: calc(0.17 * var(--rh) - 0.11 * var(--rw));
+  left: calc(45cqw + 0.1825 * var(--rw));
+  width: calc(0.11 * var(--rw));
+  height: auto;
+  transform-origin: 50% 100%;
+  opacity: 0.9;
+}
+.why-stream__live {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 3px;
+  border-radius: 6px;
+  background: rgb(16 12 22 / 74%);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.why-stream__live b {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--md-error);
+  color: var(--md-on-error);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.why-stream__cam {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 27%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 2px solid #c9a8ff;
+  border-radius: 8px;
+  background: linear-gradient(#5c3aa6 0 34%, #4d2f93 34% 67%, #402680 67%);
+}
+.why-stream__pose {
+  position: absolute;
+  top: 8%;
+  left: 0;
+  width: 100%;
+  height: auto;
+  transition: translate 0.12s ease-out;
+}
+.why-stream__pose.is-talk,
+.why-stream__cam.is-talking .is-rest {
+  opacity: 0;
+}
+.why-stream__cam.is-talking .is-talk {
+  opacity: 1;
+}
+.why-stream__cam.is-talking .why-stream__pose {
+  translate: 0 -3%;
+}
+.why-stream__cam > span {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 1px 0 2px;
+  background: rgb(16 12 22 / 80%);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+}
+.why-stream__studio {
+  display: grid;
+  flex: none;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px 10px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--md-dark-outline-variant);
+  background: var(--md-dark-surface-container);
+}
+.why-stream__back {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  aspect-ratio: 5 / 7;
+  border: 1px solid #9b84e0;
+  border-radius: 4px 7px 4px 4px;
+  background: repeating-linear-gradient(-45deg, #3e1d93 0 5px, #34177f 5px 10px);
+}
+.why-stream__back b {
+  color: #c7b1ff;
+  font:
+    9px Russo,
+    Impact,
+    sans-serif;
+  rotate: -90deg;
+}
+.why-stream__hidden {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: var(--md-dark-on-surface-variant);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.why-stream__hidden b {
+  color: var(--md-dark-on-surface);
+  font-size: 12.5px;
+}
+.why-stream__clock {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  color: var(--md-dark-on-surface-variant);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.why-stream__clock b {
+  min-width: 3.1em;
+  color: var(--md-dark-on-surface);
+  font:
+    17px / 1 Russo,
+    Impact,
+    sans-serif;
+  letter-spacing: 0.02em;
+  text-align: right;
+}
+/* Time left in the two-minute round. */
+.why-stream__timer {
+  grid-column: 1 / -1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--md-dark-outline-variant);
+}
+.why-stream__timer i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--md-dark-primary);
+  transform: scaleX(0.85);
+  transform-origin: 0 50%;
+}
+
+/* 4. Round over: the speech check hears VOLCANO, boxes it and tags it as detected. */
+.why-catch__window {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.6rem, 3cqi, 0.85rem);
+  padding: 12px 14px;
+  background: var(--md-dark-surface-container-low);
+}
+.why-catch__heard {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--md-dark-on-surface-variant);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.why-catch__heard .icon {
+  width: 15px;
+  height: 15px;
+  color: var(--md-dark-primary);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.why-catch__level {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 12px;
+}
+.why-catch__level i {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--md-dark-primary);
+  scale: 1 0.35;
+}
+.why-catch.is-live .why-catch__level i {
+  animation: why-level 0.9s ease-in-out infinite;
+}
+.why-catch.is-live .why-catch__level i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.why-catch.is-live .why-catch__level i:nth-child(3) {
+  animation-delay: -0.55s;
+}
+.why-catch.is-live .why-catch__level i:nth-child(4) {
+  animation-delay: -0.15s;
+}
+.why-catch.is-live .why-catch__level i:nth-child(5) {
+  animation-delay: -0.7s;
+}
+@keyframes why-level {
+  0%,
+  100% {
+    scale: 1 0.3;
+  }
+  50% {
+    scale: 1 1;
+  }
+}
+.why-catch__before {
+  color: var(--md-dark-on-surface-variant);
+  font-size: clamp(0.74rem, 3.2cqi, 0.84rem);
+  line-height: 1.35;
+}
+.why-catch__quote {
+  margin-top: -0.35em;
+  padding-top: 1em;
+  font:
+    clamp(1.2rem, 7cqi, 1.8rem) / 1.25 Russo,
+    Impact,
+    sans-serif;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+.why-catch__word {
+  --draw: 1;
+  position: relative;
+  display: inline-block;
+  padding: 0 0.12em;
+  color: var(--volcano);
+  text-transform: uppercase;
+}
+.why-catch__word::after {
+  content: '';
+  position: absolute;
+  inset: -0.06em -0.04em -0.02em;
+  border: 2px solid var(--volcano);
+  border-radius: 4px;
+  clip-path: inset(0 calc((1 - var(--draw)) * 100%) 0 0);
+}
+.why-catch__tag {
+  position: absolute;
+  bottom: calc(100% + 0.06em - 2px);
+  left: -0.04em;
+  padding: 2px 6px 1px;
+  border-radius: 4px 4px 4px 0;
+  background: var(--volcano);
+  color: var(--ink);
+  font:
+    800 9.5px / 1.25 Inter,
+    Arial,
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform-origin: 0 100%;
+}
+.why-catch__result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.why-catch__result > * {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+.why-catch__result span {
+  border: 1px solid var(--md-dark-outline-variant);
+  color: var(--md-dark-on-surface-variant);
+}
+.why-catch__result span::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.why-catch__result b {
+  background: var(--md-dark-primary);
+  color: var(--md-dark-on-primary);
+  font-weight: 700;
+}
+.why-catch__cam {
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  width: 31%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 2px solid #c9a8ff;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(#5c3aa6 0 34%, #4d2f93 34% 67%, #402680 67%);
+}
+.why-catch__cam img {
+  width: 100%;
+  height: auto;
+  margin-top: 6%;
+}
+/* On small phones there is no room beside the result, so the facecam steps aside. */
+@container why-scene (max-width: 330px) or (max-height: 240px) {
+  .why-catch__cam {
+    display: none;
+  }
+}
+
+/* While motion runs the cards ignore the pointer; covered cards are trimmed by a pixel. */
+.why-vtg.why-motion-ready .why-card {
+  pointer-events: none;
+}
+.why-vtg.why-motion-ready .why-card:has(~ .why-card[data-why-active]) .why-card__surface {
+  clip-path: inset(0 1px round var(--why-radius));
+}
+
+/* Phones: one column; the cards stick and overlap as the page scrolls. */
+@media (max-width: 839.98px) {
+  .why-vtg {
+    --why-stack-top: 1.25rem;
+    --why-card-step: clamp(0.85rem, 4vw, 1.35rem);
+    --why-card-size: min(25rem, calc(100vw - 2 * var(--pad)), calc(100svh - var(--why-stack-top) - var(--why-stack-depth) - 1.5rem));
+    --why-card-height: min(calc(var(--why-card-size) * 1.18), calc(100svh - var(--why-stack-top) - var(--why-stack-depth) - 1.5rem));
+    padding-top: 64px;
+  }
+  .why-vtg__stage {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2.75rem;
+    margin-bottom: calc(24px + var(--why-stack-depth));
+  }
+  .why-vtg__intro-sticky {
+    position: relative;
+    top: auto;
+    height: auto;
+    gap: 1.25rem;
+  }
+  .why-vtg__lead {
+    font-size: 18px;
+  }
+  .why-stack-shell {
+    grid-column: 1;
+    justify-self: center;
+    width: min(100%, var(--why-card-size));
+    min-height: 0;
+  }
+}
+@media (max-width: 839.98px),
+  (min-width: 840px) and (min-height: 560.02px) and (hover: none),
+  (min-width: 840px) and (min-height: 560.02px) and (pointer: coarse),
+  (max-width: 1199.98px) and (max-height: 560px) and (orientation: landscape) {
+  .why-vtg {
+    --why-sequence-distance: 0px;
+  }
+  .why-stack-shell {
+    min-height: 0;
+  }
+  .why-stack {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+  }
+  .why-card {
+    position: sticky;
+    top: var(--why-stack-top);
+    right: auto;
+    left: auto;
+    flex: 0 0 auto;
+    transform: translateY(var(--why-card-offset, 0px));
+  }
+}
+@media (max-width: 1199.98px) and (max-height: 560px) and (orientation: landscape) {
+  .why-vtg {
+    --why-stack-top: 1rem;
+    --why-card-size: clamp(18rem, 35vw, 20rem);
+    --why-card-height: min(calc(var(--why-card-size) * 1.12), calc(100svh - var(--why-stack-top) - var(--why-stack-depth) - 1rem));
+  }
+  .why-vtg__intro-sticky {
+    height: var(--why-card-height);
+  }
+}
+
+/* No motion, or no GSAP: a plain list of cards. */
+.why-vtg:not(.why-motion-ready) {
+  --why-stack-depth: 0px;
+  --why-sequence-distance: 0px;
+  --why-stack-settle: 0px;
+}
+.why-vtg:not(.why-motion-ready) .why-vtg__intro-sticky {
+  position: relative;
+  top: auto;
+  height: auto;
+}
+.why-vtg:not(.why-motion-ready) .why-stack-shell {
+  min-height: 0;
+}
+.why-vtg:not(.why-motion-ready) .why-stack {
+  position: relative;
+  top: auto;
+  display: grid;
+  gap: 1rem;
+  height: auto;
+}
+.why-vtg:not(.why-motion-ready) .why-card {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  z-index: auto;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .why-vtg {
+    --why-stack-settle: 0px;
+  }
+  .why-vtg__intro-sticky {
+    position: relative;
+    top: auto;
+    height: auto;
+  }
+  .why-stack-shell {
+    min-height: 0;
+  }
+  .why-stack {
+    position: relative;
+    top: auto;
+    display: grid;
+    gap: 1rem;
+    height: auto;
+  }
+  .why-card {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    transform: none;
+  }
+}

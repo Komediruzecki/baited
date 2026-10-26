@@ -3,14 +3,12 @@ import { chapters } from './data.js'
 const video = document.getElementById('hero-film')
 const frame = document.getElementById('film-frame')
 const toggle = document.getElementById('film-toggle')
-const replay = document.getElementById('film-replay')
 const sound = document.getElementById('film-sound')
 const state = document.getElementById('film-state')
 const bigPlay = document.getElementById('film-big-play')
 const stills = document.getElementById('film-stills')
 const transcript = document.getElementById('round-transcript')
 const readRound = document.getElementById('read-round')
-const phone = matchMedia('(max-width: 700px)')
 const reduced = matchMedia('(prefers-reduced-motion: reduce)')
 let ratio = 0
 let inView = false
@@ -28,6 +26,7 @@ let entryTimer
 let soundOn = false
 let triedMp4 = false
 let stillsBuilt = false
+let hudTimer
 
 function make(tag, text, className) {
   const element = document.createElement(tag)
@@ -35,19 +34,11 @@ function make(tag, text, className) {
   if (className) element.className = className
   return element
 }
-const chapterButtons = chapters.map((chapter, index) => {
-  const button = make('button')
-  button.type = 'button'
-  button.setAttribute('aria-label', chapter.label)
-  button.setAttribute('aria-controls', video.id)
-  button.title = chapter.label
-  button.addEventListener('click', () => jumpChapter(index))
-  document.getElementById('film-chapters').append(button)
+for (const chapter of chapters) {
   const item = make('li')
   item.append(make('strong', `${String(Math.floor(chapter.time)).padStart(2, '0')}s · ${chapter.label}`), make('p', chapter.text))
   document.getElementById('transcript-beats').append(item)
-  return button
-})
+}
 
 function renderStills() {
   if (!stillsBuilt) {
@@ -64,10 +55,10 @@ function renderStills() {
     stillsBuilt = true
   }
   stills.querySelectorAll('img').forEach((image) => {
-    const path = `/media/chapter-${phone.matches ? 'phone-' : ''}${image.dataset.chapter}.avif`
+    const path = `/media/chapter-${image.dataset.chapter}.avif`
     if (image.getAttribute('src') !== path) image.src = path
-    image.width = phone.matches ? 720 : 1280
-    image.height = phone.matches ? 800 : 720
+    image.width = 1280
+    image.height = 720
   })
 }
 function showTranscript(open, restoreFocus = true) {
@@ -97,7 +88,7 @@ function shouldPlay() {
 function updateControls() {
   const active = !video.paused || pendingPlay !== null
   const label = active ? 'Pause' : 'Play'
-  toggle.querySelector('[data-film-label]').textContent = label
+  frame.classList.toggle('is-paused', !active)
   toggle.setAttribute('aria-label', `${label} the example`)
   toggle.setAttribute('aria-busy', String(pendingPlay !== null))
   document.getElementById('film-toggle-icon').setAttribute('href', active ? '#i-pause' : '#i-play')
@@ -174,15 +165,13 @@ function restorePosition() {
     /* Retry once media is seekable. */
   }
 }
+// Phones play the same 16:9 film as desktops, with the chat on the right, as the owner asked.
 function sourcePath(mp4 = false) {
-  const size = phone.matches ? 'phone' : 'desktop'
-  const webmType = video.dataset[`${size}WebmType`]
-  const format = !mp4 && webmType && video.canPlayType(webmType) ? 'Webm' : 'Src'
-  return video.dataset[`${size}${format}`]
+  const webmType = video.dataset.webmType
+  return !mp4 && webmType && video.canPlayType(webmType) ? video.dataset.webm : video.dataset.src
 }
 function selectSource(force = false, mp4 = false) {
   const source = sourcePath(mp4) || sourcePath(true)
-  video.poster = phone.matches ? video.dataset.phonePoster : video.dataset.desktopPoster
   if (stillsBuilt) renderStills()
   if (!source) return
   const absolute = new URL(source, document.baseURI).href
@@ -225,12 +214,24 @@ function jumpChapter(index) {
 }
 toggle.addEventListener('click', togglePlay)
 bigPlay.addEventListener('click', () => requestPlay())
-replay.addEventListener('click', () => requestPlay(true))
 sound.addEventListener('click', () => {
   soundOn = !soundOn
   video.muted = !soundOn
   updateControls()
 })
+// The pause and sound buttons sit in the corner of the film. A mouse click on the picture
+// plays or pauses it; a tap shows the buttons for a moment, like a phone video player.
+function showHud() {
+  frame.classList.add('is-hud')
+  clearTimeout(hudTimer)
+  hudTimer = setTimeout(() => frame.classList.remove('is-hud'), 2600)
+}
+video.addEventListener('pointerup', (event) => {
+  if (event.pointerType === 'mouse') {
+    if (event.button === 0) togglePlay()
+  } else showHud()
+})
+frame.addEventListener('focusin', () => clearTimeout(hudTimer))
 frame.addEventListener('keydown', (event) => {
   if (event.target !== frame && event.target !== video) return
   if (event.code === 'Space' || event.key.toLowerCase() === 'k') {
@@ -258,9 +259,6 @@ video.addEventListener('playing', () => {
   else updateControls()
 })
 video.addEventListener('pause', updateControls)
-video.addEventListener('timeupdate', () =>
-  chapterButtons.forEach((button, index) => button.classList.toggle('is-past', video.currentTime >= chapters[index].time))
-)
 video.addEventListener('error', () => {
   if (!triedMp4 && !expectedSource.endsWith('.mp4')) {
     triedMp4 = true
@@ -302,7 +300,6 @@ window.addEventListener('pageshow', () => {
   mute()
   reconcile()
 })
-phone.addEventListener('change', () => selectSource())
 reduced.addEventListener('change', () => {
   if (reduced.matches) explicitPlay = false
   reconcile()

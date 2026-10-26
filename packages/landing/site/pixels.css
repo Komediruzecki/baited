@@ -1,0 +1,244 @@
+/*
+ * Pixels, after monochrome-studio.com: the pixel curtain between pages, square-pixel icons, and
+ * buttons whose dark icon box spreads over the whole button on hover while the icon plays a small
+ * loop (an arrow hops, a chat bubble's dots bounce). Colors stay in the baited palette: the
+ * curtain is the Material 3 primary violet #7721e5 (the footer's color and its pixel edge); the
+ * buttons are white with ink and white pixels. Shared by the landing and the legal pages.
+ */
+:root {
+  --px-curtain: #7721e5;
+  --px-ink: #17131e;
+  --px-white: #fffdf7;
+}
+
+/* The curtain. pixel-boot.js covers the first paint; pixels.js swaps in squares and lets them go.
+   If the script never runs, the cover still fades away after 2.5 seconds. */
+html.pixel-boot::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--px-curtain);
+  pointer-events: none;
+  animation: pixel-boot-out 0.25s linear 2.5s forwards;
+}
+@keyframes pixel-boot-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.pixel-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: repeat(var(--pixel-cols, 8), minmax(0, 1fr));
+  grid-auto-rows: var(--pixel-cell, 12.5vw);
+  overflow: hidden;
+  pointer-events: none;
+}
+.pixel-curtain i {
+  background: var(--px-curtain);
+  box-shadow: 0 0 0 1px var(--px-curtain); /* no hairlines between neighbours */
+  transition: opacity 0.1s linear var(--pixel-delay, 0s);
+}
+.pixel-curtain.is-clearing i {
+  opacity: 0;
+}
+.pixel-curtain.is-covering i {
+  opacity: 0;
+  transition-duration: 0s;
+}
+.pixel-curtain.is-covering.is-full i {
+  opacity: 1;
+}
+
+/* Pixel icons: one unit is one square pixel of --px. Keep --px a whole number of CSS pixels. */
+.px-icon {
+  --px: 3px;
+  display: block;
+  flex: none;
+  width: calc(var(--px-w) * var(--px));
+  height: calc(var(--px-h) * var(--px));
+  fill: currentColor;
+  shape-rendering: crispEdges;
+  overflow: visible;
+}
+.px-icon--down,
+.px-icon--up,
+.px-icon--mic {
+  --px-w: 7;
+  --px-h: 9;
+}
+.px-icon--chat {
+  --px-w: 9;
+  --px-h: 9;
+}
+.px-icon--pad {
+  --px-w: 13;
+  --px-h: 8;
+}
+.px-icon--cards {
+  --px-w: 10;
+  --px-h: 9;
+}
+.px-icon--back {
+  --px-w: 7;
+  --px-h: 9;
+  transform: rotate(90deg); /* the down arrow, pointing back */
+}
+
+/* The bubble's dots bounce one after another, a pixel at a time, like someone typing. */
+.px-icon--chat .px-dot {
+  animation: px-dot-hop 0.9s steps(1, end) infinite paused;
+}
+.px-icon--chat .px-dot:nth-of-type(2) {
+  animation-delay: 0.15s;
+}
+.px-icon--chat .px-dot:nth-of-type(3) {
+  animation-delay: 0.3s;
+}
+.px-live .px-dot,
+.px-btn:hover .px-dot,
+.footer-circle:hover .px-dot {
+  animation-play-state: running;
+}
+@keyframes px-dot-hop {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: translateY(-1px); /* one pixel of the icon's grid */
+  }
+  60% {
+    transform: none;
+  }
+}
+/* Arrows hop a pixel in their direction. */
+@keyframes px-hop-down {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(var(--px));
+  }
+}
+@keyframes px-hop-back {
+  0%,
+  100% {
+    transform: rotate(90deg);
+  }
+  50% {
+    transform: rotate(90deg) translateY(var(--px));
+  }
+}
+@keyframes px-hop-up {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(calc(-1 * var(--px)));
+  }
+}
+
+/* Pixel button: the ink box with the icon sits at the start; on hover it spreads over the whole
+   button and the label steps aside. */
+.px-btn {
+  --btn-h: 60px;
+  --btn-pad: 5px;
+  --btn-box: calc(var(--btn-h) - 2 * var(--btn-pad));
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--btn-h);
+  padding: var(--btn-pad) 22px var(--btn-pad) calc(var(--btn-box) + var(--btn-pad) + 18px);
+  border-radius: 7px;
+  background: var(--px-bg, var(--px-white));
+  color: var(--px-fg, var(--px-ink));
+  font:
+    400 19px / 1.2 Russo,
+    Impact,
+    sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.px-btn__box {
+  position: absolute;
+  z-index: 1;
+  top: var(--btn-pad);
+  bottom: var(--btn-pad);
+  left: var(--btn-pad);
+  width: var(--btn-box);
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--px-box-bg, var(--px-ink));
+  color: var(--px-icon, var(--px-white));
+  transition: width 0.2s ease-out;
+}
+.px-btn__label {
+  transition: opacity 0.2s ease-out 0.1s;
+}
+@media (hover: hover) {
+  .px-btn:hover .px-btn__box {
+    width: calc(100% - 2 * var(--btn-pad));
+    transition: width 0.3s ease-in;
+  }
+  .px-btn:hover .px-btn__label {
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+  }
+  .px-btn:hover .px-icon--down {
+    animation: px-hop-down 0.7s steps(1, end) 0.25s infinite;
+  }
+  .px-btn:hover .px-icon--up {
+    animation: px-hop-up 0.7s steps(1, end) 0.25s infinite;
+  }
+  .px-btn:hover .px-icon--back {
+    animation: px-hop-back 0.7s steps(1, end) 0.25s infinite;
+  }
+}
+.px-btn:hover {
+  color: var(--px-fg, var(--px-ink)); /* pages may recolor links on hover */
+}
+.px-btn:active .px-btn__box {
+  filter: brightness(1.35);
+}
+/* On the violet footer: an outlined button whose white box spreads into a white button. */
+.px-btn--ghost {
+  --px-bg: transparent;
+  --px-fg: var(--px-white);
+  --px-box-bg: var(--px-white);
+  --px-icon: var(--px-curtain);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 60%);
+}
+.px-btn--small {
+  --btn-h: 44px;
+  --btn-pad: 4px;
+  padding-right: 16px;
+  padding-left: calc(var(--btn-box) + var(--btn-pad) + 12px);
+  font:
+    600 15px / 1.2 Inter,
+    Arial,
+    sans-serif;
+}
+.px-btn--small .px-icon {
+  --px: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .px-btn__box,
+  .px-btn__label {
+    transition: none !important;
+  }
+  .px-icon,
+  .px-icon .px-dot {
+    animation: none !important;
+  }
+}
