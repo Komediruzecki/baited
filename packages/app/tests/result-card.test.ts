@@ -60,11 +60,11 @@ test('native card artwork is restricted to the approved local assets', () => {
 test('words without an illustration get a deliberate word face without placeholder artwork', () => {
   const markup = renderToStaticMarkup(
     React.createElement(ResultCard, {
-      result: { ...result, word: 'MARSHMALLOW' },
+      result: { ...result, word: 'PINEAPPLE' },
     }),
   );
   assert.match(markup, /data-art="word"/);
-  assert.match(markup, /MARSHMALLOW/);
+  assert.match(markup, /PINEAPPLE/);
   assert.doesNotMatch(markup, /class="bait-card-art"/);
   assert.match(renderToStaticMarkup(React.createElement(ResultCard, { result })), /data-art="art"/);
 });

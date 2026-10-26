@@ -11,6 +11,28 @@ const layouts = [
   { width: 1440, height: 900, touch: false, reduced: true },
 ]
 
+test('keyboard browsing loads nearby art when the proximity observer is delayed', async ({ page }, testInfo) => {
+  await page.addInitScript(() => {
+    const Observer = window.IntersectionObserver
+    window.IntersectionObserver = class extends Observer {
+      constructor(callback, options) {
+        // Keep the other page observers intact and simulate a delayed artwork observer.
+        super(options?.rootMargin === '800px 0px' ? () => {} : callback, options)
+      }
+    }
+  })
+  await page.goto(`${testInfo.project.use.baseURL}/#cards`)
+  await expect(page.locator('.deck-card-item')).toHaveCount(78)
+  await expect(page.locator('.deck-card-item img[src]')).toHaveCount(0)
+  await page.locator('#deck-hand').focus()
+  await page.locator('#deck-hand').press('ArrowRight')
+  await expect(page.locator('.deck-card-item.is-front .card-word')).toHaveText('BANANA')
+  await expect(page.locator('.deck-card-item img[src]')).toHaveCount(7)
+  await expect
+    .poll(() => page.locator('.deck-card-item.is-front img').evaluate((image) => image.complete && image.naturalWidth > 0))
+    .toBe(true)
+})
+
 for (const { width, height, touch, reduced = false } of layouts) {
   test(`${width}x${height}${reduced ? ' reduced motion' : ''}: layout, readable deck and footer navigation`, async ({
     browser,
@@ -107,6 +129,29 @@ for (const { width, height, touch, reduced = false } of layouts) {
           )
           .toBeLessThan(2)
       }
+      // Clues must be readable at the card's actual responsive size, without a bar across the letters.
+      const clueReadability = await page.locator('.deck-card-item.is-front .card-clues > span:not(.no-clues)').evaluateAll((clues) =>
+        clues.map((clue) => {
+          const style = getComputedStyle(clue)
+          const after = getComputedStyle(clue, '::after')
+          return {
+            fontSize: parseFloat(style.fontSize),
+            decoration: style.textDecorationLine,
+            obscuringOverlay: after.content !== 'none' && after.position === 'absolute',
+            fits: clue.scrollWidth <= clue.clientWidth,
+          }
+        })
+      )
+      expect(clueReadability.length).toBeGreaterThan(0)
+      for (const clue of clueReadability) {
+        expect(clue.fontSize).toBeGreaterThanOrEqual(12)
+        expect(clue.decoration).toBe('none')
+        expect(clue.obscuringOverlay).toBe(false)
+        expect(clue.fits).toBe(true)
+      }
+      const illustration = await page.locator('.deck-card-item.is-front .card-art img').boundingBox()
+      const targetWord = await page.locator('.deck-card-item.is-front .card-word').boundingBox()
+      expect(illustration.y + illustration.height).toBeLessThanOrEqual(targetWord.y)
       await page.screenshot({ path: testInfo.outputPath('cards-from-footer.png') })
       await page.reload()
       await expect(page.locator('.pixel-curtain')).toHaveCount(0)

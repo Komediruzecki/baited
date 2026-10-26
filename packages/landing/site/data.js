@@ -1,4 +1,6 @@
-// The approved showcase deck. Targets and clue order mirror server/cards.ts.
+import { expansion } from './card-expansion.js'
+
+// The showcase deck. Targets and clue order mirror server/cards.ts.
 // Questions are editorial examples, not dialogue sent to Twitch.
 export const cards = [
   ['volcano', 'medium', ['lava', 'eruption'], 'Where would you definitely not build a house?'],
@@ -19,6 +21,7 @@ export const cards = [
   ['pirate', 'easy', [], 'Who says arr and wears a tricorn?'],
   ['saxophone', 'medium', ['jazz', 'instrument'], 'What would you play in a smoky club at 2 a.m.?'],
   ['octopus', 'medium', ['tentacles', 'eight'], 'Who could hold every controller at once?'],
+  ...expansion,
 ].map(([word, difficulty, clues, question], index) => ({
   word,
   difficulty,

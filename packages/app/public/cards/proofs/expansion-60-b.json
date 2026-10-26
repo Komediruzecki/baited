@@ -1,0 +1,880 @@
+{
+  "batch": "expansion-60-b",
+  "generatedOn": "2026-10-26",
+  "tool": "ChatGPT built-in image_gen",
+  "requested": 30,
+  "assets": [
+    {
+      "id": "origami",
+      "file": "origami.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 687660,
+      "sha256": "c82cf2c2c2adeea91095385cc020ef2a9515e0526f0015718c10b69b9df30d60",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "9f6abd77-b342-4c96-8069-6b529c2230fe",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One folded ORIGAMI paper crane, crisp angular cream and lavender paper planes, long neck, pointed beak, raised wings and folded tail. Three-quarter view, no real feathers, no paper sheet under it.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "trampoline",
+      "file": "trampoline.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 801619,
+      "sha256": "2cc1ccca769219254641e9308be66917ce9ed2042fb025bc551f862b368b7fb0",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "30d46577-020e-4ded-b379-91d02d2e8d53",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One compact round TRAMPOLINE, charcoal jumping mat, purple padded rim, visible amber springs and four short silver U-shaped supports. Three-quarter view, no person or enclosure.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "yogurt",
+      "file": "yogurt.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 759205,
+      "sha256": "51f44fe07becd6a37022ada144326b81c0c4d7945f014b05d827381e9e5f8131",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "7af9a528-ee4c-4899-89d8-dbd722a18b1d",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One open YOGURT pot with a peeled-back foil lid, cream yogurt surface and a small attached spoon. Purple unlabelled container with a simple amber band. No fruit, letters or brand.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "glacier",
+      "file": "glacier.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 791752,
+      "sha256": "5b82e3d22424817817faf2399378e4b6013c59db34545dc50dcd74250b70c5da",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "ce3e464f-3447-40ce-b41f-100c41a1c48f",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One isolated GLACIER as a compact block of blue-white ice, stepped ridges, a deep cyan crevasse and purple shadows at its broken front edge. Small contained shape, no landscape.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "platypus",
+      "file": "platypus.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 791585,
+      "sha256": "f6e95f85a4ea1872e66e3587070a178c0eb30b35f918250cede9199b833f6126",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "166dc712-d328-4fc5-9fbe-be9e4b5f6aa0",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One stout PLATYPUS with a broad duck bill, flat beaver-like tail, four short webbed feet and tiny bright eyes. Amber-brown body with purple shadows and cream highlights. Three-quarter full-body pose.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "accordion",
+      "file": "accordion.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 977355,
+      "sha256": "7a6cc85bff7445cbffd9fc7f02bf77151dd6d88ea22736f4f5c6dc57fbf815b2",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "966f013a-a063-4cfe-ac11-358a1bb1db13",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One squat ACCORDION with expanded purple bellows, cream piano keys on one end and a few large amber buttons at the other, dark aubergine body, short strap. No musician or lettering.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "kaleidoscope",
+      "file": "kaleidoscope.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 810290,
+      "sha256": "5273c882226b3d1b1c488038c23a62fc2f9444c873d90ccaa28b4ffe52301503",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "d6119787-070c-4fde-8728-905885e6be12",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One KALEIDOSCOPE toy tube viewed three-quarter, purple barrel with amber rings and an open front lens containing a simple symmetric star of cream, cyan and amber facets. No text or scattered patterns outside.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "chandelier",
+      "file": "chandelier.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 597645,
+      "sha256": "fa9f2249387fa7a230b132a51a56e3e094bfd39b3987b3ead595cf4ca473e52e",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "8b140cff-cd2c-438f-97c4-b7a60cad46ca",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One small CHANDELIER with three upward-curving golden arms, three cream candle-shaped lights, a central purple crystal and a short suspension chain. All branches and droplets inside the canvas.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "archipelago",
+      "file": "archipelago.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 922052,
+      "sha256": "4150749b8f1ee3c98b53c8551c4b8df35082a2c9419cfded342d5e1c655614aa",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "648e75c5-0be6-4e9f-8348-c04304f095f1",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One ARCHIPELAGO icon: three distinct small green-purple tropical islands in one compact, connected cyan water patch, amber shoreline edges, one simple palm on the largest island. Isolated contained object, no horizon or scene.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "quicksand",
+      "file": "quicksand.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 748838,
+      "sha256": "a079d048a95904972eb2fccd62acdc4e1d42a117f5bad3aa5f283b68ca5a3c6c",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "8167ffd0-4d71-4663-867e-906fdb644a04",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One QUICKSAND icon: a compact ochre sand pit with concentric sinking rings and one purple boot half swallowed at its center. No person, suffering, face, hand, landscape or scenery. Clearly readable as sinking sand.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "sundial",
+      "file": "sundial.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 845212,
+      "sha256": "297e8cf3d7eb67c167f93d377fc1b602854201841135309241aa7c70b2e31318",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "a44c6307-5d1d-4daa-a2e9-5c61606c08c6",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One SUNDIAL with a round golden stone dial seen three-quarter from above, one triangular purple gnomon casting a short dark wedge onto the dial, simple large tick marks without numerals. No ground or pedestal.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "gargoyle",
+      "file": "gargoyle.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1021017,
+      "sha256": "fed5f406799a59190136d4a356fe8b6a6c41760ebdb1a945d41b10e1f65e37f2",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "ebebde2a-2b47-485a-a90f-c433e3013a4b",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One crouching stone GARGOYLE, squat purple-gray body, two compact bat wings, pointed ears, curled tail and broad paws. Mischievous harmless expression, cream stone highlights, isolated full body.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "labyrinth",
+      "file": "labyrinth.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 824082,
+      "sha256": "52533ba5ff9facde57978a73e5709310dcc30f75c3e1a1b71e3f2f1dfb4423d1",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "b42b292e-f0a9-413d-a72a-27169f73ef57",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One LABYRINTH represented by a small thick square maze tile seen in isometric view, purple raised walls on an amber base, a readable winding path entering one side and reaching a central cream square. No words or arrows.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "bagpipes",
+      "file": "bagpipes.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 888323,
+      "sha256": "1e1835df0887b4793e3a6d5eb504ba5b3155b90e37bc8d9e475dd2e6a73276fc",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "c245c92d-5898-48c2-b563-c1686af24fa1",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One set of BAGPIPES with an inflated purple tartan bag, three upward pipes, one angled chanter, amber wood and cream ferrules. Simple sparse geometric tartan stripes, no player or scene.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "alchemy",
+      "file": "alchemy.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 754516,
+      "sha256": "a247988f0c7446eb108d64abb4fcb316a97c82e34861d6b64b081f76d8dc3b01",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "5888feaa-825f-4f6b-880e-6764f0c82a83",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One ALCHEMY icon: a round purple-glass flask containing glowing amber liquid with one small golden nugget suspended inside and a cork. Broad cream highlights. No letters, labels, symbols, smoke or extra props.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "tumbleweed",
+      "file": "tumbleweed.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 886338,
+      "sha256": "94322e0ea17ed45bcd0efaf2f45bac88938ae57e889b3948dcda249ca5fc4fa0",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "cd756dfe-d3ea-47e0-be74-95de45765a0b",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One TUMBLEWEED ball made from a few thick interwoven amber branches with purple shadow gaps, clearly airy rounded twig silhouette, slightly asymmetric. No desert, ground, motion lines or scenery.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "zeppelin",
+      "file": "zeppelin.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 834074,
+      "sha256": "652eaf30634cd6a950e744d36870b6075bd8d26003cc41cea168c8ee03446370",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "504c404a-7f2c-476b-bfec-c865fb5d2db9",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One ZEPPELIN airship floating diagonally upward, broad cream elongated hull with purple bands, four compact tail fins and a tiny amber gondola below. No insignia, lettering, clouds or scenery.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "sphinx",
+      "file": "sphinx.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 932212,
+      "sha256": "37f455d75c2370cbb45dc846dd15391a0c9784d7ae812642d724398e0559232a",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "f71bb3d3-5f66-499c-9c35-bfeb737616e6",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One SPHINX statue, full reclining lion body, two front paws and stylized human head wearing a simple gold-and-purple striped headdress. Warm sandy stone with cream highlights, no pyramid or background.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "catapult",
+      "file": "catapult.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 829723,
+      "sha256": "494731934462e385187890cc48f7796dabe79e9e01fc315e2b9228a128d0e9f1",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "77982c44-f132-4bb9-86e4-fa062b3431db",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One medieval CATAPULT, compact amber wooden frame, two wheels, long raised throwing arm with a cupped stone holder, thick purple rope bundle. Three-quarter view, no projectile flying, no scene or people.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "obelisk",
+      "file": "obelisk.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 531055,
+      "sha256": "977f19079398b870b2cf8dd9ced85941c817c73acd347725f845c8745a37b3a5",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "02900f3d-624a-487d-8cab-97b2f195ffb0",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One OBELISK, tall tapered purple-gray stone pillar with a pyramidal amber tip and small square foot that belongs to the monument. Three-quarter view, cream edge highlights, plain uninscribed stone.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "armadillo",
+      "file": "armadillo.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 914397,
+      "sha256": "dad65c32a7aecd1ab00131a1676a005cd1fc0386f8abb891ee4fc8cabfbef4ea",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "4d65cbba-030c-4818-b1ed-db03d0efe6be",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One curled but recognizable ARMADILLO with segmented amber armor plates, small pointed snout, two short ears, four little feet and a thick tapered tail. Purple shadows and cream highlights, three-quarter view.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "periscope",
+      "file": "periscope.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 646323,
+      "sha256": "227683630a78a121c8022c3297a81b9ddf2cc65cad25aba4841b22da97ebaa21",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "2f7261ba-8fa6-48d5-af27-9b889bced4a0",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One compact PERISCOPE with an upright purple metal tube, elbow at the top and a large cyan glass viewing lens facing diagonally toward viewer. Amber collars and cream highlights. No submarine or water.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "tapestry",
+      "file": "tapestry.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 897467,
+      "sha256": "35ee8c17a493679cdf155677e771d2c3fe17f19073ce449609bbbbffe58e41b8",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "f60442b8-9b36-42fb-a526-79bf7b7d88eb",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One hanging TAPESTRY with purple woven fabric, amber geometric diamond motif, cream border and a few chunky tassels, supported by a short wooden rod. No letters, people, animal picture or wall.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "wombat",
+      "file": "wombat.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 994313,
+      "sha256": "8d86cd32f9bd2af091ef4aeca3542de670a44f0414067439b90ccf8b5b156c95",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "9f0b15c0-3497-424f-95f1-ec604729ac81",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One stout WOMBAT, round amber-brown body, short legs, tiny rounded ears, broad dark nose and bright eyes, low three-quarter full-body stance. Purple shadows, cream cheek highlights, no scenery.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "mushroom",
+      "file": "mushroom.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 797477,
+      "sha256": "b54e54ff397a425bc0f26d58b77bc8cd571f43342b617f13fb9d7b87925b3b45",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "63c05b6b-41d8-403a-ad60-233378a2021a",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One squat MUSHROOM toadstool, broad purple cap with a few large cream spots, thick warm cream stalk, amber underside gills and dark aubergine outline. No face, grass, soil or extra mushrooms.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "ghost",
+      "file": "ghost.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 786031,
+      "sha256": "8f881f0f81920da3bcb1d495884eb994a4b3fc169053e516fe894676a263a6a9",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "7b109193-d130-4486-a93a-ec17c0486a59",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One playful GHOST, simple floating cream sheet silhouette with a scalloped lower edge, two dark purple eyes and a small surprised mouth, lavender folded shading, small raised sheet arms. No props or scenery.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "donut",
+      "file": "donut.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 823725,
+      "sha256": "5939077eab248d4c6c1b45b6b2410ad5e99023e25faa889b19f8c70c9d45281c",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "45bfd136-feb1-48cd-8c37-6f86c5ccd04c",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One thick ring DONUT at a slight tilt, golden dough, purple icing dripping over one edge and a few large cream and amber sprinkles, clearly open center hole. No face, plate or extra pastry.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "hedgehog",
+      "file": "hedgehog.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 883211,
+      "sha256": "2bfae5ecb9301188e5620b38f26da9fd4fc59ff36afa16e3f17a2a99cf98ed75",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "46804584-c4b3-4498-a605-d8c191530041",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One squat HEDGEHOG with a rounded back of short chunky aubergine-purple spines, amber face and tiny feet, cream belly edge, small dark nose and bright eyes. Full-body three-quarter pose.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "gramophone",
+      "file": "gramophone.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 802429,
+      "sha256": "00ce2640474279e863b38a67dda30a64503f4fa983cead532464d9804e0c22b8",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "dc130645-7c06-4ad7-9a8b-8546133ebd82",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One GRAMOPHONE with a large flared golden brass horn angled upper-left, a squat purple cabinet, black record with cream center and a small amber crank. No text or brand, whole horn and crank visible.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    },
+    {
+      "id": "hourglass",
+      "file": "hourglass.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 807232,
+      "sha256": "46ba584c358345639f9232d19d3388e2c27fd53cc7f04527e929f3a40916ad97",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "e80a86f8-252c-49d7-8cea-65ad8e7bcb95",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a BAITED game card. Match the approved arcade card style visible in the references: chunky square pixel clusters, stepped contours, heavy dark aubergine outline, cream highlights, warm orange and amber accents with purple midtones and small pale cyan accents. Limited arcade-sprite palette and flat pixel-art shading. Big simple silhouette readable at 100 pixels. Centered square composition, entire subject visible with a generous transparent margin of about 16 percent. Transparent background with genuine alpha. No smooth gradients, blur, tiny speckled details, scenery, ground plane, cast-shadow plane, frame, card border, text, numbers, logos, watermark, bomb or hook. Illustration only; all typography is added separately in the app. Subject: One upright HOURGLASS, two cyan glass bulbs pinched in the middle, amber sand falling in a thin pixel column, purple wooden top and bottom with two side supports, cream reflections. No clock face, letters or numbers.",
+      "references": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ],
+      "transformations": [],
+      "visualReview": {
+        "status": "candidate",
+        "notes": "Inspected generated output: complete recognizable subject, matching chunky pixel style, no lettering or card furniture."
+      }
+    }
+  ],
+  "completed": 30,
+  "remaining": []
+}

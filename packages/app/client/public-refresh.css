@@ -188,17 +188,25 @@
   margin: 12px 0 0;
 }
 .viewer-room .target-card > .clue-card .clue-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 9px;
-  border: 1px solid #6d6478;
+  border: 1px solid #806478;
   border-radius: 3px;
-  background: transparent;
-  color: #e1d4f1;
-  font-size: 11px;
-  font-weight: 550;
-  text-decoration: line-through;
-  text-decoration-color: #bf96ff;
-  text-decoration-thickness: 2px;
+  background: #302731;
+  color: #f2e3ee;
+  font-size: 12px;
+  font-weight: 600;
   text-transform: uppercase;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.viewer-room .target-card > .clue-card .clue-chips li::before {
+  content: '';
+  flex: 0 0 6px;
+  height: 2px;
+  background: #e4a2bd;
 }
 .viewer-room .target-card > .clue-card p {
   color: #b5afbf;

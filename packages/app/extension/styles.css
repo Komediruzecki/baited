@@ -262,19 +262,26 @@ h3 {
   padding: 0;
 }
 .forbidden li {
-  border: 1px solid #746585;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #806478;
   border-radius: 2px;
+  background: #302731;
   padding: 3px 7px;
   font-size: 12px;
   line-height: 1.3;
-  font-weight: 550;
+  font-weight: 600;
   text-transform: uppercase;
-  text-decoration: line-through;
-  text-decoration-color: var(--lit);
-  text-decoration-thickness: 2px;
-  color: var(--copy);
+  color: #f2e3ee;
   overflow-wrap: anywhere;
   max-width: 100%;
+}
+.forbidden li::before {
+  content: '';
+  flex: 0 0 6px;
+  height: 2px;
+  background: #e4a2bd;
 }
 .clock {
   margin-inline: 16px;

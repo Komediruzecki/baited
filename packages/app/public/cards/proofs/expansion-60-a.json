@@ -1,0 +1,909 @@
+{
+  "batch": "expansion-60-a",
+  "generatedOn": "2026-10-26",
+  "tool": "ChatGPT built-in image_gen",
+  "requestedOutputs": 30,
+  "completedOutputs": 30,
+  "assets": [
+    {
+      "id": "avocado",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one avocado half angled three-quarter, dark purple-green skin, yellow-green flesh, one large round warm brown pit and cream edge highlights. No knife, plate, face or separate fruit.",
+      "status": "candidate",
+      "file": "avocado.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 841135,
+      "sha256": "5967e6f8998381563a4f09a63f3ed1c99a150026a1020dd7de07c6794e2554c5",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "9971431c-b6b8-47b0-902b-16d3b46124da",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Single avocado half with central round pit and purple-green skin, whole silhouette and no props or text."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "bicycle",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one compact purple bicycle in clear side view with two full dark wheels, cream spokes simplified into chunky crosses, orange frame accents, raised handlebars and a small cream saddle. No rider or ground.",
+      "status": "candidate",
+      "file": "bicycle.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 781578,
+      "sha256": "3e2b959f74c4876b749f6f1f43f2fc5a2aba2840d0e1ee165207ac408f7a6b6a",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "ac9743f7-91e7-49c8-92eb-5e8c7482c84a",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Purple bicycle with both complete wheels, pedals, saddle and handlebars, clear side-view silhouette without rider."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "birthday",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one small round birthday cake with lavender icing, cream frosting drips and three short orange candles with cream flames. Whole cake centered, no words, numbers, banners or plate.",
+      "status": "candidate",
+      "file": "birthday.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 850609,
+      "sha256": "df52828c07b5b7f7656dd3f84aa2514c6767cb36dae7215e2254085dba7f88b0",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "4d3fb513-d169-4576-956f-eee892ebf2d6",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Round purple iced cake with three candles, clear whole silhouette and no text or number decorations."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "bubble",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one large iridescent soap bubble, a single circular ring made of pale cyan, lavender and cream pixel bands, with sparse orange highlight accents and a mostly transparent interior. No other bubbles, face or wand.",
+      "status": "candidate",
+      "file": "bubble.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 636705,
+      "sha256": "b5f3402a0839e9306f7e76f16dcf1e2bc718174210441ba016d989d88d7db194",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "7ed6683e-8983-4ea3-98a7-d8ad760c0176",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Single iridescent soap-bubble ring with transparent interior and pixel highlights, no other bubbles or text."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "cheese",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one triangular golden-yellow cheese wedge with three large holes, thick orange rind, cream highlights and a clear three-quarter view. No mouse or board.",
+      "status": "candidate",
+      "file": "cheese.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 760625,
+      "sha256": "71d9d49431dc8c42d3ef2f3f9ffeaf2080b58ef0419eb4a9f398a671771ff908",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "96b6017b-1f2f-485b-abae-27e3834bd508",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Whole triangular cheese wedge in three-quarter view with three large holes, clear yellow and orange pixel silhouette."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "chicken",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one plump cream chicken with a red-orange comb and wattle, orange beak and feet, small purple wing shadows and a proud three-quarter pose. Whole body and both feet visible.",
+      "status": "candidate",
+      "file": "chicken.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 889227,
+      "sha256": "c4dd9bd8018eae8d5b3f3352a4c1fdee2f4730d1a4327f2353d53a20d1aa3086",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "b3ad1ce2-4a1f-4e58-a4cd-0a98e77d681d",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Whole chicken with two feet, clear comb and tail, cream and orange arcade palette, no text or background."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "coffee",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one squat purple ceramic mug filled with dark coffee, a thick curved handle on the right, cream rim highlights, and two short stepped cream steam curls. No face, saucer or lettering.",
+      "status": "candidate",
+      "file": "coffee.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 797004,
+      "sha256": "495045c6f1c62405c29735ecdb8821f56130b82841aa89ce293f2d5672b69d2c",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "21154445-ac6c-45e4-a515-82f9c993e3e6",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Recognizable purple coffee mug with separate steam, clean transparent silhouette, no lettering; matches approved pixel style."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "compass",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one open round pocket compass, warm gold rim, lavender face and a bold orange-and-cream two-ended needle. A small top loop and chunky pixel highlights. No cardinal letters, text, numbers or map.",
+      "status": "candidate",
+      "file": "compass.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 791500,
+      "sha256": "9148b0961d91996225d9cfcb414e09c9900dda55fb22b44cbfd89a47409668c4",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "cb0df6dd-68d0-4456-a1b0-7dcea28106f6",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Open gold pocket compass with lavender face and bold two-ended needle; complete recognizable silhouette and no letters or numbers."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "cookie",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one thick round golden chocolate-chip cookie, a bite taken from the upper-right edge, five chunky dark-purple chocolate pieces and cream edge highlights. No crumbs outside the silhouette.",
+      "status": "candidate",
+      "file": "cookie.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 842118,
+      "sha256": "0a50735116f9b4e011ed4306921b6c639a4c713d321b9142dea20aa77bbf18cc",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "bfa2f649-5672-4bb7-832a-8c77c5e258de",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Bitten round cookie with five dark chocolate chips, readable silhouette and no text; approved style retained."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "dinosaur",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one playful squat green Tyrannosaurus dinosaur with a large head, tiny forearms, cream belly, purple shadow clusters, orange back spikes and a curled tail. Whole body visible, no scenery.",
+      "status": "candidate",
+      "file": "dinosaur.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 971751,
+      "sha256": "b343fe6bf3fdff541347262827a1a762f7c0dcc79382a3326da5919ffe9a06e7",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "bb9f4b18-1623-4241-9ebd-bd3207e0c065",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Wingless green dinosaur with tiny arms and large tail, full body visible, matching arcade creature style."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "disco",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one hanging disco mirrorball, round sphere with large square mirrored facets in purple, cyan, cream and amber, a tiny short loop at the top. No words, stars, dance floor or beams.",
+      "status": "candidate",
+      "file": "disco.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 805030,
+      "sha256": "2fc7f70541edfb7fe084e851e588a1735015f09e7e3b5670d7b69ea4294c9961",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "b4492398-7219-4db9-8d73-d6285bf8654a",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Single mirrored disco sphere with square purple, cyan, cream and amber facets and top loop, no text or beams."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "flamingo",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one bright pink flamingo standing on one leg, long curved neck and dark-tipped orange beak, purple wing shadows and cream highlights. Entire neck, body and legs visible, no water or scenery.",
+      "status": "candidate",
+      "file": "flamingo.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 509638,
+      "sha256": "c828dfb14d282ff5fe919a7b29851f7bf0c536d0c175a03b61b96687884aa35c",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "be1b12ec-3dd2-4271-a51d-b4d389b09a53",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Whole pink flamingo on one supporting leg with the other folded, long curved neck and no scenery."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "football",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one clearly recognizable soccer football, round white-cream ball with large dark aubergine pentagonal patches and subtle purple block shading. No team marks, lettering, ground or player.",
+      "status": "candidate",
+      "file": "football.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 877903,
+      "sha256": "8beb226ebf564d271eedcf43ddee2a9b57e6e09b106832f924bddf40723dd0b4",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "df02117f-0e00-41fb-bb2c-a028119e9f3d",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Clear round soccer ball with large cream and aubergine panels, no marks or lettering."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "igloo",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one small cream and pale-cyan igloo with large clearly stepped ice-block seams, a short arched entrance tunnel with dark purple interior and a rounded dome. No ground, snowflakes or people.",
+      "status": "candidate",
+      "file": "igloo.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 894286,
+      "sha256": "3b73f4d9aaf74f272e1f5e0d8bc17f2a69ff74694cfad33a11f9a0b51e4ea908",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "cce8f1ee-9da1-4cbb-b9d7-85bb02fdb99b",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Cream and cyan block dome with arched dark entrance, whole simple igloo silhouette with no landscape."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one squat cream lighthouse with two bold purple horizontal bands, amber lantern chamber and a pointed purple roof, small dark doorway and one tiny window. Whole tower visible, no island, sea, beams or ground.",
+      "status": "candidate",
+      "file": "lighthouse.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 559668,
+      "sha256": "466608f4fb73264bc8fbddf9fca8f000f67b246b08d80f27c19ee28608036b14",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "c93f74de-6a18-421d-bd7d-2d93c11d095e",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Complete cream and purple lighthouse with amber lantern chamber and pointed roof; no letters, beams, ground or scenery."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "marshmallow",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one oversized cylindrical marshmallow with pale cream sides, a toasted amber top and a small purple shadow band, pierced diagonally by a short plain brown roasting stick. No campfire, hand or scenery.",
+      "status": "candidate",
+      "file": "marshmallow.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 723143,
+      "sha256": "4a065f6eaabc24e613629a633fab64dbb4e1fea5a41068bfa4fe603389814369",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "85169668-0e8e-4ff6-ab5a-5f4174690950",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Cream marshmallow cylinder with toasted amber top on a diagonal brown stick; entire subject visible and no extras."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "mermaid",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one friendly mermaid with warm brown skin, flowing orange hair, simple purple seashell top and curled turquoise fish tail with purple fins. Seated floating three-quarter pose, whole silhouette, no rocks, water or accessories.",
+      "status": "candidate",
+      "file": "mermaid.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 887090,
+      "sha256": "726bdb0fb5a8b54ae359e685e36b9105652e0e3933845e2955687e10695306e3",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "f4850f90-172c-44fd-bc42-c6deba20729e",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Friendly mermaid with orange hair and curled turquoise tail with purple fins; full recognizable silhouette without scenery or text."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "monkey",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one friendly small orange-brown monkey with a cream muzzle and belly, large round ears, curved purple-shadowed tail and a playful seated pose. Whole animal including tail visible, no banana or jungle.",
+      "status": "candidate",
+      "file": "monkey.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 931515,
+      "sha256": "57a6dffa9ce76638bf4169382840f8e9bd27085c35487b07d170de8decec1ca4",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "438c8dfb-dfb2-4892-8606-8851091d4a3a",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Whole seated orange monkey with long curled tail and round ears, consistent pixel creature style and no props."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "mustache",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one oversized curled handlebar mustache, dark aubergine and purple with amber edge highlights, two thick symmetrical halves sweeping up at the tips. No face, nose, eyes or other props.",
+      "status": "candidate",
+      "file": "mustache.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 488200,
+      "sha256": "b925bfdfa8a4fdde5e96cc310c85160724b9a2831ea2d8a919b3972d696ef4b8",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "63021ff5-9148-47e6-8fdd-df51424d9fb6",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Distinct curled purple handlebar mustache with amber edge highlights; complete symmetrical silhouette without face, text or extras."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "pancake",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one short stack of three golden pancakes with a square yellow butter pat and a thick amber syrup drip. Cream highlights and purple shadow bands. No plate, utensils or lettering.",
+      "status": "candidate",
+      "file": "pancake.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 941615,
+      "sha256": "5f9493ef77821da3aa257f2439a8693b60102b4b9c3f82c1047ffa33c7e6fbd3",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "18ddb726-e8aa-4318-8a3b-794c002528d4",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Three distinct pancakes with butter and syrup, whole centered silhouette, no extra props or lettering."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "pillow",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one plump lavender pillow, cream piping around its four softly bulging corners and broad purple folded shadow bands. Slight diagonal three-quarter view. No bed, pattern, words or face.",
+      "status": "candidate",
+      "file": "pillow.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 799073,
+      "sha256": "bf8002137444722c84d47d3588388446ca394475a1213e70cd5a23c11dabe8c1",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "763a09af-1ee0-455c-8593-2bc55ea6c68d",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Single lavender pillow with four pointed corners and cream piping, no pattern or lettering."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "popcorn",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one open purple-and-cream striped paper tub filled with oversized golden popcorn kernels, orange edge accents. No lettering, labels, face or scattered kernels.",
+      "status": "candidate",
+      "file": "popcorn.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 823623,
+      "sha256": "757f53be92438a0ae54f2e34822dde864191e2ea5eebdb7f5abfcd87fe24694d",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "1d31f12a-92e3-41f8-a164-ea579576f6b7",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Striped purple tub with large gold popcorn kernels, complete silhouette and no lettering."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "potato",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one irregular golden-brown potato with a few large aubergine eye marks and a small cream cut facet showing the pale interior. No face, plate or fries.",
+      "status": "candidate",
+      "file": "potato.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 669376,
+      "sha256": "9539fba1d3edadf31994f79d53456c7bdb454a0923d602ffb5a9b713226971b4",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "f4756458-5f45-4427-85ee-01cd3aed8b51",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Clear irregular potato with eye marks and cut end, thick stepped outline, no text or scenery."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "rainbow",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one broad semicircular rainbow with bold discrete red-orange, gold, green, cyan and purple bands, ending in two small connected cream pixel clouds. Simple symmetrical arch with transparent open center.",
+      "status": "candidate",
+      "file": "rainbow.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 757073,
+      "sha256": "36c9e76f0d7f6f265ab20fd32518f3a355f08f44023715b7b909e4e4edcf2016",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "f3efdf44-4584-44e2-88bc-f8455dc4bb3d",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Multicolor stepped arch with two cream end clouds and open transparent center; whole silhouette intact."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "sandwich",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one thick triangular sandwich with cream bread and toasted orange crust, visible layers of green lettuce, red tomato and yellow cheese, standing at a slight diagonal. No plate or wrapper.",
+      "status": "candidate",
+      "file": "sandwich.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 872120,
+      "sha256": "2e3331aa6287fadd43d70848603bfbb8d7932c526512ef643aa6b01053f4d887",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "0b6f53a5-d978-4bc3-90bc-19027e92f531",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Triangular sandwich with distinct bread, lettuce, tomato and cheese layers, full visible silhouette and no lettering."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "snowman",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one squat snowman with two cream snowballs, orange carrot nose, two dark eyes, small dark buttons, purple scarf and a short purple top hat. Short twig arms, whole figure visible, no snow ground.",
+      "status": "candidate",
+      "file": "snowman.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 793358,
+      "sha256": "9fa46feb528ead8b1bfaf1c14e6c88962f77f783c0bd5dc891731fd735f188bd",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "e80b5b0b-fd1c-47d4-a45f-0ecef6a965a0",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Complete two-ball snowman with purple hat and scarf, carrot nose and twig arms, clear readable silhouette."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "squirrel",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one small orange squirrel sitting upright, oversized curled fluffy tail behind it, cream belly, purple shadow bands, holding one simple golden acorn with both front paws. Whole silhouette visible, no tree.",
+      "status": "candidate",
+      "file": "squirrel.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 949678,
+      "sha256": "f39ae635d10305452076b23f3b6fc1c49b8a2b4261fb204cf5f7185a8201d6d3",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "13ba6e4a-b45e-486f-aa6d-5d929956f195",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Whole orange squirrel with large curled tail holding one acorn, no scenery or lettering."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "tornado",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one compact winding tornado funnel with broad purple and gray stepped spiral bands, a wide top narrowing to a hooked bottom, a few integrated cream and orange accent clusters. No buildings, ground, debris or lightning.",
+      "status": "candidate",
+      "file": "tornado.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 773930,
+      "sha256": "9dfd9fe72175e5ed8159ab27ddabcfacd7d2b24d0ddb582d9fff7bc935503135",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "00d49dde-3b52-41e3-8497-c7e193aa17dd",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Single tapering spiral funnel, purple and gray bands with orange accents, no scenery or debris."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "turtle",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one small turtle in three-quarter view, dark green domed shell with broad gold and purple segmented pattern, pale green head and four visible stubby feet. Whole silhouette visible, no water.",
+      "status": "candidate",
+      "file": "turtle.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 859702,
+      "sha256": "dace1b9c938d2fa2f46fc9b50c51ee5daaad1a04812bfeed1af48e58e3ae7575",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "8ef7a674-7415-4f25-a801-4b1882f0f6b8",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Green turtle with segmented purple and gold shell, clear three-quarter pose with far foot naturally occluded, no background or text."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    },
+    {
+      "id": "waffle",
+      "prompt": "Use case: stylized-concept. Create ONE isolated illustration for a Baited game card. Image 1 and Image 2 are STYLE REFERENCES ONLY, not edit targets or subjects to repeat. Match their chunky square pixel clusters, stepped contours, heavy dark aubergine outlines, cream highlights and orange-amber accents. Purple midtones and sensible subject colors; limited arcade-sprite palette. Flat pixel-art shading, no smooth gradients, blur or speckled texture. Big simple silhouette recognizable at 100 pixels. Centered square canvas with whole subject fully visible and about 16 percent transparent margin. Genuine transparent alpha background. No scenery, ground, cast-shadow plane, frame, card border, words, letters, numbers, logo, watermark, bomb or hook. Illustration only; the app will draw all card text. Subject: one thick golden square waffle with a clear large 3-by-3 grid of inset pockets, cream highlights and an amber syrup ribbon down one corner. Slight three-quarter view, no plate, berries or utensils.",
+      "status": "candidate",
+      "file": "waffle.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 877012,
+      "sha256": "2ccca0e36df3c31d192f82dc4d16b2dba3865ecc725e23f67bd55e026883bb1d",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "generationId": "be276785-fdfb-4c08-9abd-da3ec67c0653",
+      "transformations": [],
+      "visualReview": {
+        "status": "passed",
+        "notes": "Clear square waffle with nine inset pockets and syrup edge, whole three-quarter silhouette and no props."
+      },
+      "styleReferences": [
+        {
+          "file": "dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5"
+        },
+        {
+          "file": "monocle.png",
+          "sha256": "3bf744060b4f74b79f736f3af192c44d73bd457127ea005bd94e3d2b68b079cc"
+        }
+      ]
+    }
+  ]
+}

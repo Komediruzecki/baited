@@ -18,4 +18,14 @@ The images were generated for this BAIT project. The existing source repository'
 
 ## Approved expansion
 
-The owner approved the original six and requested more cards. Twelve additional illustrations use the same bomb-derived pixel style: pizza, robot, rocket, pirate, cactus, jellyfish, telescope, saxophone, octopus, boomerang, narwhal and parachute. The separate expansion manifests record their exact prompts, hashes and generation IDs. Original six files remain unchanged. The deck viewer at `/card-proofs` includes all 18.
+The owner approved the original six and requested more cards. Twelve additional illustrations use the same bomb-derived pixel style: pizza, robot, rocket, pirate, cactus, jellyfish, telescope, saxophone, octopus, boomerang, narwhal and parachute. The separate expansion manifests record their exact prompts, hashes and generation IDs. Original six files remain unchanged. That expansion brought the illustrated deck to 18.
+
+## 60-card expansion
+
+The next batch adds illustrations for the 54 remaining original targets and six new targets: mushroom, ghost, donut, hedgehog, gramophone and hourglass. The catalogue now has 78 illustrated, playable targets. The new files use approved existing illustrations as style references. Each was generated separately with the built-in ChatGPT image tool; titles, clue restrictions, questions and card furniture remain live interface elements rather than pixels in the artwork.
+
+`expansion-60-a.json` and `expansion-60-b.json` retain the exact prompts, style references, generation identifiers, measured dimensions, bytes and original SHA-256 hashes. Visual review is recorded separately from the owner's selection. All 18 earlier originals are preserved. No production release is implied by these source assets.
+
+The landing and native Extension keep unchanged copies so each package can deploy independently. From the workspace root, run `node packages/app/scripts/sync-card-art.mjs` to add missing recorded copies, or append `--check` to verify them without writing. The script refuses incomplete manifests, changed originals and conflicting existing copies.
+
+A new Twitch Hosted Test ZIP must be built and uploaded before the native installed panel receives these images or the revised clue styling. A landing deployment alone does not update an installed Twitch Extension.

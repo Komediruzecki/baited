@@ -1,5 +1,6 @@
 import type { Difficulty } from '../shared/types.js';
-// Original, curated one-word prompts. Kept server-side; never bundled into the studio.
+// The server selects the active target. The public art catalogue lists supported
+// words, but cannot identify which word is in a live round.
 export const words: Record<Difficulty, string[]> = {
   easy: [
     'banana',
@@ -26,6 +27,9 @@ export const words: Record<Difficulty, string[]> = {
     'pillow',
     'monkey',
     'bicycle',
+    'mushroom',
+    'ghost',
+    'donut',
   ],
   medium: [
     'penguin',
@@ -52,6 +56,8 @@ export const words: Record<Difficulty, string[]> = {
     'yogurt',
     'glacier',
     'octopus',
+    'hedgehog',
+    'hourglass',
   ],
   hard: [
     'platypus',
@@ -78,5 +84,6 @@ export const words: Record<Difficulty, string[]> = {
     'wombat',
     'monocle',
     'parachute',
+    'gramophone',
   ],
 };

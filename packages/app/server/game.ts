@@ -44,14 +44,28 @@ export const tokens = (s: string): string[] =>
     .normalize('NFKC')
     .toLocaleLowerCase('en-US')
     .match(/[\p{L}\p{N}]+(?:['’][\p{L}]+)?/gu) ?? [];
-export const matches = (text: string, word: string) => tokens(text).includes(word.toLowerCase());
+// These spellings name the same target. Keep speech, spoiler checks and private
+// guesses consistent without treating synonyms or longer words as a catch.
+const spellingGroups: readonly (readonly string[])[] = [
+  ['donut', 'doughnut'],
+  ['yogurt', 'yoghurt'],
+  ['mustache', 'moustache'],
+];
+const spellings = (word: string): readonly string[] => {
+  const lower = word.toLowerCase();
+  return spellingGroups.find((group) => group.includes(lower)) ?? [lower];
+};
+export const matches = (text: string, word: string) => {
+  const forms = spellings(word);
+  return tokens(text).some((token) => forms.includes(token));
+};
 export const clueMatches = (text: string, clue: string) => {
-  const variants = new Set([
-    clue,
-    `${clue}s`,
-    `${clue}es`,
-    ...(clue.endsWith('y') ? [`${clue.slice(0, -1)}ies`] : []),
-  ]);
+  const variants = new Set(spellings(clue).flatMap((form) => [
+    form,
+    `${form}s`,
+    `${form}es`,
+    ...(form.endsWith('y') ? [`${form.slice(0, -1)}ies`] : []),
+  ]));
   return tokens(text).some((token) => variants.has(token.replace(/['’]s$/, '')));
 };
 interface Hint extends HintCandidate {
@@ -428,7 +442,7 @@ export class Game {
     if (guess.length !== 1 || guess[0].length > 40)
       throw new Error('Only one word can be submitted.');
     r.guessUsed = true;
-    if (guess[0] === r.word) {
+    if (matches(guess[0], r.word)) {
       this.finish('escaped', 'guess');
       return { correct: true, bonus: 0 };
     }

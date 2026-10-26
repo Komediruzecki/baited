@@ -74,6 +74,12 @@ export const clueCards: Record<string, readonly [string, string, string, string]
   wombat: ['australia', 'marsupial', 'burrow', 'animal'],
   monocle: ['eye', 'lens', 'glasses', 'single'],
   parachute: ['jump', 'skydiving', 'canopy', 'fall'],
+  mushroom: ['fungus', 'cap', 'toadstool', 'spores'],
+  ghost: ['haunted', 'spirit', 'boo', 'phantom'],
+  donut: ['doughnut', 'glaze', 'hole', 'sprinkles'],
+  hedgehog: ['spines', 'quills', 'prickly', 'hedge'],
+  gramophone: ['record', 'needle', 'horn', 'phonograph'],
+  hourglass: ['sand', 'timer', 'glass', 'minute'],
 };
 
 export function forbiddenClues(word: string, difficulty: Difficulty): string[] {

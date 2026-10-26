@@ -29,6 +29,6 @@ test('every secret word has its own color with at least 4.5:1 on the card face',
 test('the VOLCANO card in How it plays uses the same face as the deck', async () => {
   const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8')
   assert.match(html, /class="card-word card-word--volcano">VOLCANO</)
-  assert.match(html, /card-forbidden__label">Forbidden words</)
+  assert.match(html, /card-forbidden__label">Keep out of chat</)
   assert.doesNotMatch(html, /card-hook|bait-bomb-logo\.png" alt=""/)
 })

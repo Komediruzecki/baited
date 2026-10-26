@@ -54,7 +54,7 @@ function node(tag, className, text) {
 
 // One card face. The artwork loads when the deck comes near the screen.
 // The secret word takes its item's color (card-word--<word> in styles.css); the level shows as
-// one to three dots, and every forbidden word is struck through.
+// one to three dots. Off-limits clues stay readable beneath the word.
 function cardFace(card) {
   const face = node('div', 'bait-card')
   face.setAttribute('role', 'group')
@@ -62,7 +62,7 @@ function cardFace(card) {
   face.setAttribute('aria-label', `${card.word.toUpperCase()}, ${card.difficulty}`)
   const top = node('span', 'card-top')
   const number = node('span', '', String(card.index + 1).padStart(2, '0'))
-  number.append(node('small', '', '/ 18'))
+  number.append(node('small', '', `/ ${cards.length}`))
   const pips = node('span', 'card-pips')
   pips.setAttribute('aria-hidden', 'true')
   const level = { easy: 1, medium: 2, hard: 3 }[card.difficulty]
@@ -77,11 +77,12 @@ function cardFace(card) {
   image.dataset.src = card.art
   art.append(image)
   const word = node('span', `card-word card-word--${card.word}`, card.word.toUpperCase())
+  if (card.word.length > 10) word.classList.add('card-word--long')
   const forbidden = node('span', 'card-forbidden')
   const clues = node('span', 'card-clues')
   for (const clue of card.clues) clues.append(node('span', '', clue.toUpperCase()))
   if (!card.clues.length) clues.append(node('span', 'no-clues', 'Only the word itself'))
-  forbidden.append(node('span', 'card-forbidden__label', 'Forbidden words'), clues)
+  forbidden.append(node('span', 'card-forbidden__label', 'Keep out of chat'), clues)
   const footer = node('span', 'card-footer')
   footer.append(node('b', '', 'bait'), document.createTextNode(' them.'))
   const shade = node('span', 'card-shade')
@@ -115,7 +116,9 @@ const deck = createDeck({
   items,
   gsap: window.gsap,
   reduced,
-  onFront(index) {
+  onFront(index, { deliberate } = {}) {
+    // Browsing the deck is enough to load its art, even if its proximity observer is delayed.
+    if (deliberate) deckNear = true
     warmArt(index)
   },
   onSettle(index, { deliberate } = {}) {

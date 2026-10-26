@@ -277,7 +277,7 @@ export function ForbiddenClueCard({ game }: { game: GameView }) {
     <section className="clue-card" aria-label="Clue rules">
       <div>
         <Eye size={19} />
-        <h3>{clues.length ? 'Off limits' : 'Only the word is off limits.'}</h3>
+        <h3>{clues.length ? 'Keep out of chat' : 'Only the word is off limits.'}</h3>
         <span>{game.round.difficulty}</span>
       </div>
       {clues.length > 0 && (

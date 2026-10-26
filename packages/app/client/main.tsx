@@ -964,7 +964,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <h2 id="studio-sound-title">Round sounds</h2>
             <SoundControls roomId={g.id} game={g} offline={offline} />
             <a href="/card-proofs">
-              Open all 18 cards and Sound Lab <ArrowUpRight size={14} />
+              Browse the cards and Sound Lab <ArrowUpRight size={14} />
             </a>
           </section>
           <footer className="studio-footer">

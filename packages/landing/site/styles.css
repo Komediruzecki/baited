@@ -940,6 +940,9 @@ input {
   z-index: -1;
 }
 .card-art img {
+  position: absolute;
+  inset: 0;
+  margin: auto;
   width: 100%;
   height: 100%;
   max-height: 170px;
@@ -965,6 +968,9 @@ input {
   text-align: center;
   overflow-wrap: anywhere;
 }
+.card-word--long {
+  font-size: 27px;
+}
 .card-forbidden {
   display: grid;
   justify-items: center;
@@ -973,12 +979,10 @@ input {
   text-align: center;
 }
 .card-forbidden__label {
-  color: #b9b4c1;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  color: #d7c5d7;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 .card-clues {
   display: flex;
@@ -987,33 +991,34 @@ input {
   gap: 5px;
   min-height: 21px;
 }
-/* Every forbidden word gets a thick bar through the middle of its capitals. With Inter at this
-   line height the capitals' middle is the middle of the line, so the bar sits at 50%. */
+/* The restriction mark sits beside the clue so every letter stays readable. */
 .card-clues span {
-  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 3px 7px;
-  border: 1px solid #665b72;
+  border: 1px solid #806478;
   border-radius: 3px;
-  font-size: 11.5px;
-  font-weight: 700;
+  background: #302731;
+  color: #f2e3ee;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1.3;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
-.card-clues span:not(.no-clues)::after {
+.card-clues span:not(.no-clues)::before {
   content: '';
-  position: absolute;
-  top: 50%;
-  right: 4px;
-  left: 4px;
-  height: 2.5px;
-  margin-top: -1.25px;
-  border-radius: 2px;
-  background: #ff5449;
+  flex: 0 0 6px;
+  height: 2px;
+  background: #e4a2bd;
 }
 .card-clues .no-clues {
   align-self: center;
   padding: 0;
   border: 0;
+  background: transparent;
   color: #c5bfcd;
   font-size: 11px;
   font-weight: 500;
@@ -1456,6 +1461,9 @@ input {
   .card-word {
     font-size: 28px;
   }
+  .card-word--long {
+    font-size: 23px;
+  }
   .card-forbidden {
     gap: 5px;
     margin-top: 6px;
@@ -1465,11 +1473,11 @@ input {
     gap: 4px;
   }
   .card-clues span {
-    font-size: 10px;
+    font-size: 12px;
     padding: 2px 5px;
   }
   .card-clues .no-clues {
-    font-size: 10px;
+    font-size: 12px;
   }
   .card-question {
     font-size: 12px;
@@ -1517,9 +1525,6 @@ input {
   height: auto;
 }
 @media (max-width: 700px) {
-  .deck-card-item .card-clues span {
-    font-size: 10.5px;
-  }
   .deck-card-item .card-question {
     font-size: 14px;
   }
@@ -1547,4 +1552,186 @@ input {
   .deck-card-item {
     will-change: auto;
   }
+}
+
+/* Additional card subjects use readable tones drawn from their sprite palette. */
+.card-word--coffee {
+  color: #cfacff;
+}
+.card-word--chicken {
+  color: #ffe19b;
+}
+.card-word--potato {
+  color: #eeb56b;
+}
+.card-word--cookie {
+  color: #f2ba79;
+}
+.card-word--rainbow {
+  color: #ff9fcf;
+}
+.card-word--football {
+  color: #e2dbec;
+}
+.card-word--cheese {
+  color: #ffd65c;
+}
+.card-word--sandwich {
+  color: #edb978;
+}
+.card-word--birthday {
+  color: #f8a7d4;
+}
+.card-word--pancake {
+  color: #fdc264;
+}
+.card-word--dinosaur {
+  color: #a7de91;
+}
+.card-word--popcorn {
+  color: #ffdf8a;
+}
+.card-word--turtle {
+  color: #acdc8d;
+}
+.card-word--bubble {
+  color: #a9e1f4;
+}
+.card-word--snowman {
+  color: #e2e9f6;
+}
+.card-word--pillow {
+  color: #d4b3ff;
+}
+.card-word--monkey {
+  color: #f2b27b;
+}
+.card-word--bicycle {
+  color: #c7a2ff;
+}
+.card-word--avocado {
+  color: #b4d989;
+}
+.card-word--tornado {
+  color: #c9b6e4;
+}
+.card-word--waffle {
+  color: #f5bd71;
+}
+.card-word--squirrel {
+  color: #f9ad6c;
+}
+.card-word--disco {
+  color: #c4d9fa;
+}
+.card-word--flamingo {
+  color: #ff9fc6;
+}
+.card-word--igloo {
+  color: #bce7f6;
+}
+.card-word--compass {
+  color: #efcf82;
+}
+.card-word--marshmallow {
+  color: #f5e4d4;
+}
+.card-word--mermaid {
+  color: #cba4ff;
+}
+.card-word--lighthouse {
+  color: #ffc59b;
+}
+.card-word--mustache {
+  color: #dab3ee;
+}
+.card-word--origami {
+  color: #e5d7ff;
+}
+.card-word--trampoline {
+  color: #c9a8ff;
+}
+.card-word--yogurt {
+  color: #e1c7ff;
+}
+.card-word--glacier {
+  color: #a8e5f3;
+}
+.card-word--platypus {
+  color: #e6ad7c;
+}
+.card-word--accordion {
+  color: #d4acff;
+}
+.card-word--kaleidoscope {
+  color: #e6a6ed;
+}
+.card-word--chandelier {
+  color: #f3d190;
+}
+.card-word--archipelago {
+  color: #a7d8c0;
+}
+.card-word--quicksand {
+  color: #eac38b;
+}
+.card-word--sundial {
+  color: #eec47e;
+}
+.card-word--gargoyle {
+  color: #c9b9dc;
+}
+.card-word--labyrinth {
+  color: #cebbef;
+}
+.card-word--bagpipes {
+  color: #f1ac87;
+}
+.card-word--alchemy {
+  color: #c3e396;
+}
+.card-word--tumbleweed {
+  color: #eebc79;
+}
+.card-word--zeppelin {
+  color: #d3c4ed;
+}
+.card-word--sphinx {
+  color: #edc281;
+}
+.card-word--catapult {
+  color: #eec081;
+}
+.card-word--obelisk {
+  color: #e3c99e;
+}
+.card-word--armadillo {
+  color: #e6ba9c;
+}
+.card-word--periscope {
+  color: #d1c3eb;
+}
+.card-word--tapestry {
+  color: #e7a9d2;
+}
+.card-word--wombat {
+  color: #dcc0a3;
+}
+.card-word--mushroom {
+  color: #ffab9e;
+}
+.card-word--ghost {
+  color: #e8e4fa;
+}
+.card-word--donut {
+  color: #ffb4d4;
+}
+.card-word--hedgehog {
+  color: #efc298;
+}
+.card-word--gramophone {
+  color: #f4d18a;
+}
+.card-word--hourglass {
+  color: #b9e8ed;
 }
