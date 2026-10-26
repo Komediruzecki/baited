@@ -12,10 +12,18 @@ import { LocalSpeechBridge } from './local-speech.js';
 import { extensionRouter } from './extension.js';
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
-import type { Config } from './config.js';
+import { isPrivateIPv4, type Config } from './config.js';
 import type { Session } from './security.js';
 import type { Studio } from '../shared/types.js';
 import type { Response, Request, NextFunction } from 'express';
+
+export function canUseDemo(config: Config, clientIp: string | undefined, socketAddress: string | undefined) {
+  if (!config.demo) return false;
+  // LAN previews reject proxy configuration, so only the actual socket peer is trusted.
+  return config.previewLanHost
+    ? isLoopback(socketAddress) || isPrivateIPv4(socketAddress?.replace(/^::ffff:/, ''))
+    : isLoopback(clientIp);
+}
 
 export async function createBait(config: Config, developmentHmr = false) {
   const app = express(),
@@ -276,12 +284,12 @@ export async function createBait(config: Config, developmentHmr = false) {
       authenticated: !!s,
       twitchReady: config.twitchReady,
       speechReady: speechReady(),
-      demoAvailable: config.demo && isLoopback(req.ip),
+      demoAvailable: canUseDemo(config, req.ip, req.socket.remoteAddress),
       ...(s ? { user: { name: s.name, mode: s.mode }, csrf: s.csrf } : {}),
     });
   });
   app.post('/api/demo/start', (req, res) => {
-    if (!config.demo || !isLoopback(req.ip)) {
+    if (!canUseDemo(config, req.ip, req.socket.remoteAddress)) {
       res.status(404).end();
       return;
     }
@@ -617,7 +625,7 @@ export async function createBait(config: Config, developmentHmr = false) {
   });
   app.post('/api/demo/:kind', protect, (req, res) => {
     const game = gameFor(res);
-    if (game.data.mode !== 'demo' || !config.demo || !isLoopback(req.ip)) {
+    if (game.data.mode !== 'demo' || !canUseDemo(config, req.ip, req.socket.remoteAddress)) {
       res.status(404).end();
       return;
     }

@@ -37,7 +37,23 @@ Open [the Extension workbench](http://127.0.0.1:3322/). Choose viewer/configurat
 
 ## Lifecycle and acceptance boundary
 
-Both commands bind only to `127.0.0.1`, use a strict port and stop after three hours. **Ctrl+C** stops the corresponding process sooner. An occupied port is an error: stop this preview through its own terminal before restarting; do not kill unrelated services. These previews are not reachable from Paolo's computer. A command in this document is not proof of a running process; verify the URL responds after launch.
+Both commands bind to `127.0.0.1` by default, use a strict port and stop after three hours. **Ctrl+C** stops the corresponding process sooner. An occupied port is an error: stop this preview through its own terminal before restarting; do not kill unrelated services. A command in this document is not proof of a running process; verify the URL responds after launch.
+
+## Tablet preview on the local network
+
+For design review from another device on the same network, explicitly bind the computer's private IPv4 address. Its current Ethernet address is `192.168.178.33`; update it if the network assigns a different address. Stop the corresponding localhost previews first, then run each command in its own terminal:
+
+```sh
+rtk proxy timeout --foreground 10810s env PREVIEW_PORT=3330 PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/twigame/baited-v0.0.1 preview:local --host 192.168.178.33
+```
+
+```sh
+rtk proxy timeout --foreground 10810s env EXTENSION_PREVIEW_PORT=3322 EXTENSION_PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/twigame/baited-v0.0.1 preview:extension --host 192.168.178.33
+```
+
+Open [Studio](http://192.168.178.33:3330/) or [the Extension workbench](http://192.168.178.33:3322/) on the tablet. Studio uses a separate demo store at `data/lan-preview`; choose **Try the local demo** to enter. The LAN option requires a credential-free development configuration and pins requests to the selected host and origin. The Extension workbench adapts its fixture runtime only; the installable Twitch bundle is unchanged.
+
+These HTTP previews support visual review and simulated rounds. Tablet microphone access needs a trusted HTTPS connection. If a page does not load, check that both devices share the same network and that its firewall permits these ports. This does not provide internet access for Paolo's remote test.
 
 The separate real Twitch rehearsal uses the authenticated local Studio at port 3000 and HTTPS gateway at 3443. The local installable bundle targets those addresses, not this visual preview. Follow [the local Twitch test guide](baited-local-test.md) when ready to resume that session. Creating the ZIP does not upload it or start the gateway.
 

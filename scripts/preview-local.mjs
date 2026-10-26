@@ -2,8 +2,11 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { previewHost } from './preview-host.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const host = previewHost();
+const lan = host !== '127.0.0.1';
 const port = Number(process.env.PREVIEW_PORT || 3318);
 const seconds = Number(process.env.PREVIEW_SECONDS || 10800);
 if (!Number.isInteger(port) || port < 1024 || port > 65535)
@@ -14,21 +17,24 @@ if (existsSync(resolve(root, '.env')))
   throw new Error('Local preview requires a copy without .env. Use Proton Pass for live credentials.');
 if (!existsSync(resolve(root, 'dist/server/index.js')))
   throw new Error('Build first with pnpm build.');
-const origin = `http://127.0.0.1:${port}`;
+const origin = `http://${host}:${port}`;
 const child = spawn(process.execPath, ['dist/server/index.js', '--static'], {
   cwd: root,
   stdio: 'inherit',
   env: {
     ...process.env,
-    NODE_ENV: 'development', HOST: '127.0.0.1', PORT: String(port),
+    NODE_ENV: 'development', HOST: host, PORT: String(port),
     PUBLIC_URL: origin, ENABLE_DEMO: 'true',
-    DATA_DIR: process.env.PREVIEW_DATA_DIR || resolve(root, 'data/local-preview'),
+    LOCAL_PREVIEW_HOST: lan ? host : '',
+    DATA_DIR: process.env.PREVIEW_DATA_DIR || resolve(root, lan ? 'data/lan-preview' : 'data/local-preview'),
     TWITCH_CLIENT_ID: '', TWITCH_CLIENT_SECRET: '', TOKEN_ENCRYPTION_KEY: '',
+    TWITCH_EXTENSION_CLIENT_ID: '', TWITCH_EXTENSION_SECRET: '', EXTENSION_ALLOWED_ORIGINS: '',
     DEEPGRAM_API_KEY: '', TRUSTED_PROXIES: '',
     SPEECH_PROVIDER: 'moonshine',
   },
 });
 console.log(`Local fixture preview: ${origin}. Stops after ${seconds / 60} minutes; Ctrl+C stops it now. The port is fixed and will not fall back.`);
+if (lan) console.log('LAN visual demo only. Tablet microphone access requires trusted HTTPS.');
 let forced;
 function stop() {
   child.kill('SIGTERM');

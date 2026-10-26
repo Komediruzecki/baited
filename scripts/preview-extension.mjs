@@ -3,6 +3,7 @@ import { constants } from 'node:fs';
 import { open, realpath } from 'node:fs/promises';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { previewHost, validatePreviewHost } from './preview-host.mjs';
 import {
   EXTENSION_FILES,
   HELPER_URL,
@@ -193,7 +194,8 @@ async function readHarness(file) {
   }
 }
 
-export function createExtensionPreviewServer() {
+export function createExtensionPreviewServer({ host: requestedHost = '127.0.0.1' } = {}) {
+  const previewAddress = validatePreviewHost(requestedHost);
   function reply(
     req,
     res,
@@ -213,10 +215,10 @@ export function createExtensionPreviewServer() {
   }
   async function serve(req, res) {
     const address = server.address();
-    const host = `127.0.0.1:${address && typeof address === 'object' ? address.port : ''}`;
+    const host = `${previewAddress}:${address && typeof address === 'object' ? address.port : ''}`;
     const origin = `http://${host}`;
     if (req.headers.host !== host)
-      return reply(req, res, 421, 'Open the preview with its 127.0.0.1 address.');
+      return reply(req, res, 421, 'Open the preview with its configured address.');
     if (!['GET', 'HEAD'].includes(req.method))
       return reply(req, res, 405, '', undefined, { Allow: 'GET, HEAD' });
     const path = requestPath(req.url);
@@ -286,6 +288,21 @@ export function createExtensionPreviewServer() {
             }),
           )
         : await readFrontendFile(file);
+    if (previewAddress !== '127.0.0.1' && file === 'client.js') {
+      // Only the local harness adapts the transport. The shipped parser and ZIP stay strict.
+      const source = data.toString();
+      const parser = 'export function readRuntimeConfig(value) {';
+      if (source.split(parser).length !== 2) throw new Error('Preview parser adaptation failed.');
+      data = Buffer.from(source.replace(parser, 'function readStrictConfig(value) {') + `
+export function readRuntimeConfig(value) {
+  const origin = ${JSON.stringify(origin)};
+  if (!value || value.apiBaseUrl !== origin || value.studioBaseUrl !== origin)
+    throw new Error('Local preview service address is invalid.');
+  const checked = readStrictConfig({ ...value, apiBaseUrl: 'http://127.0.0.1', studioBaseUrl: 'http://127.0.0.1' });
+  return { ...checked, apiBaseUrl: origin, studioBaseUrl: origin };
+}
+`);
+    }
     if (file.endsWith('.html'))
       data = Buffer.from(data.toString().replaceAll(HELPER_URL, '/__preview/helper.js'));
     return reply(req, res, 200, data, mime.get(extname(file)));
@@ -304,13 +321,14 @@ export function createExtensionPreviewServer() {
 }
 
 function main() {
+  const host = previewHost();
   const port = Number(process.env.EXTENSION_PREVIEW_PORT || 3322);
   const seconds = Number(process.env.EXTENSION_PREVIEW_SECONDS || 10800);
   if (!Number.isInteger(port) || port < 1024 || port > 65535)
     throw new Error('EXTENSION_PREVIEW_PORT must be 1024 to 65535.');
   if (!Number.isInteger(seconds) || seconds < 60 || seconds > 18000)
     throw new Error('EXTENSION_PREVIEW_SECONDS must be 60 to 18000.');
-  const server = createExtensionPreviewServer();
+  const server = createExtensionPreviewServer({ host });
   let lifetime;
   function stop() {
     clearTimeout(lifetime);
@@ -325,9 +343,9 @@ function main() {
     );
     process.exitCode = 1;
   });
-  server.listen(port, '127.0.0.1', () => {
+  server.listen(port, host, () => {
     console.log(
-      `baited Extension fixture preview: http://127.0.0.1:${port}. No Twitch connection or microphone. Strict port; stops after ${seconds / 60} minutes or Ctrl+C.`,
+      `baited Extension fixture preview: http://${host}:${port}. No Twitch connection or microphone. Strict port; stops after ${seconds / 60} minutes or Ctrl+C.`,
     );
     lifetime = setTimeout(stop, seconds * 1000);
   });

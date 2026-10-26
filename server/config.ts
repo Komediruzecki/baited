@@ -2,6 +2,14 @@ import { resolve } from 'node:path';
 import { isIP } from 'node:net';
 import { z } from 'zod';
 import { extensionKey } from './extension.js';
+
+export function isPrivateIPv4(address: string | undefined) {
+  if (!address || isIP(address) !== 4) return false;
+  const [first, second] = address.split('.').map(Number);
+  return first === 10 || (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168);
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   // Trust only named proxy addresses/subnets, never arbitrary forwarded headers or hop counts.
   const trustedProxies = (env.TRUSTED_PROXIES || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -26,6 +34,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     clientSecret = env.TWITCH_CLIENT_SECRET || '';
   const extensionClientId = env.TWITCH_EXTENSION_CLIENT_ID || '';
   const extensionSecret = env.TWITCH_EXTENSION_SECRET || '';
+  const host = env.HOST || '127.0.0.1';
+  const previewLanHost = env.LOCAL_PREVIEW_HOST || null;
+  if (previewLanHost && (
+    production || !isPrivateIPv4(previewLanHost) || host !== previewLanHost ||
+    url.hostname !== previewLanHost || !['http:', 'https:'].includes(url.protocol) ||
+    key || clientId || clientSecret || extensionClientId || extensionSecret ||
+    env.DEEPGRAM_API_KEY || trustedProxies.length
+  )) throw new Error('LOCAL_PREVIEW_HOST requires a private IPv4 bind and matching PUBLIC_URL, development mode, and no credentials or trusted proxies.');
   const validExtensionId = /^[a-z0-9]{1,64}$/.test(extensionClientId);
   const extensionOrigins = (env.EXTENSION_ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
   for (const allowed of extensionOrigins) {
@@ -49,7 +65,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     trustedProxies,
     origin,
     port,
-    host: env.HOST || '127.0.0.1',
+    host,
+    previewLanHost,
     demo: !production && env.ENABLE_DEMO !== 'false',
     key,
     clientId,
