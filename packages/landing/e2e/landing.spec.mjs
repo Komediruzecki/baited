@@ -96,6 +96,15 @@ for (const { width, height, touch, reduced = false } of layouts) {
         await expect
           .poll(() => page.locator('.site-footer').evaluate((footer) => footer.getBoundingClientRect().top >= innerHeight))
           .toBe(true)
+        // A pinned heading can be visible while native smooth scrolling is still in flight.
+        // Finish the fragment navigation before testing the browser's reload restoration.
+        await expect
+          .poll(() =>
+            page.locator('#cards').evaluate((anchor) =>
+              Math.abs(anchor.getBoundingClientRect().top - parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop))
+            )
+          )
+          .toBeLessThan(2)
       }
       await page.screenshot({ path: testInfo.outputPath('cards-from-footer.png') })
       await page.reload()
@@ -104,10 +113,10 @@ for (const { width, height, touch, reduced = false } of layouts) {
         .poll(() =>
           page.locator('#deck-title').evaluate((title) => {
             const rect = title.getBoundingClientRect()
-            return rect.top >= 0 && rect.bottom < innerHeight
+            return { visible: rect.top >= 0 && rect.bottom < innerHeight, top: rect.top, bottom: rect.bottom, scroll: scrollY }
           })
         )
-        .toBe(true)
+        .toMatchObject({ visible: true })
       expect(errors).toEqual([])
     } finally {
       await context.close()
