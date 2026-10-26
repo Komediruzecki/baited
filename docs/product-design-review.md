@@ -1,29 +1,31 @@
 # baited product design review
 
-The owner approved the landing release and asked us to extend its taste into the game while Opus usage is unavailable. This pass implements the actual product surfaces for local review. It does not deploy the game or release the Twitch Extension.
+This work applies Opus's critique to the streamer studio, native Twitch viewer/configuration, standalone viewer and OBS source. The approved landing and B logo remain the visual authority. The game stays private; this pass does not deploy, upload the Extension, open a PR or tag production.
 
 ## Current status: 2026-10-26
 
-Opus completed the requested inspect-only review on 2026-10-25. Its product critique is Part 2 of `/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/60103fe0ce074c16ab35de66e1dc26b2/deliverables/opus-motion-and-product-review.md`. It inspected the actual product code and screenshots, not only the landing. The initial product redesign was implemented by Codex; Opus supplied the subsequent critique and concrete polish direction.
+A fresh inspect-only review completed on 26 October using the verified `irch` account and `claude-opus-5-5`, with explicit Max effort and a 45-minute deadline. The review ran for 21 minutes 37 seconds. The receipt verifies the account before and after; Max was requested through the CLI, not independently observable as an effective server setting. Opus inspected the pre-fix implementation, landing references and curated browser evidence. Codex implemented its recommendations and checked the resulting screens. This is not final approval by Opus or the owner.
 
-Commit `882359a` addressed the live solo-reveal gate and pending-catch overlay redaction first. The separately opted-in local transcript diagnostic remains available for microphone testing, as requested by the owner.
+Review and evidence: `/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-26/60dfe3fa2d544eb794006883802da269`. The complete critique is `deliverables/opus-product-review.md`; the receipt is `scratch/opus-inspect-root/receipt.json`. Post-fix source assessment and the one final Impeccable detector pass are in `evidence/browser-after/`.
 
-The next polish was implemented by Codex while Opus usage was unavailable, following that completed critique and the owner-approved BAITED logo B:
+Implemented:
 
-- Studio timer and primary round controls precede the card; the 320 × 640 layout keeps start/pause within the first viewport. Local speech tools sit beside the microphone.
-- Catch review uses a charcoal card and two explicit decisions. Settings return focus to their opener after closing.
-- Native viewers use the word's approved artwork, struck capital off-limits clues, length-based word sizing and a short deal animation. Hidden/broadcaster states remove the artwork URL.
-- OBS retains the compact transparent HUD and reveals a result card only for confirmed wins or escapes. Singular/plural wins are corrected.
-- Generic standalone cards collapse the absent illustration area. Setup privacy text and actions remain readable on narrow screens; the native connection refresh sits beside its status and activation is step 4.
-- BAITED B replaces the provisional product wordmark. Existing artwork is copied without alteration.
+- Studio uses one 190 × 266 px card position beside top-aligned round copy, with microphone controls to the right. Share links and recent rounds follow the round column. It stacks at 1000 px. Underlined navigation, a compact masthead and footer statistics replace the redundant breadcrumb and metrics strip.
+- Catch review has an accurate consequence: “No” ends this round; the next round gets a new word. On phones, a compact word heading replaces the full card and both decisions fit within 320 × 640. Review focus does not override an input or dialog. Reverse win remains available through idle until the next round starts.
+- A shared striped card back carries the approved bomb and B wordmark. Result identity survives confirmation, so the verdict stamps in without a second flip. Words without illustrations have a typographic face.
+- OBS exposes words only for caught or escaped results, with separate server and UI guards. Historical words are stripped from its API view. Pending, rejected, skipped and ended results stay private. The HUD has readable type and a visible terminal mission label; its checked mission state measures 540 × 140.
+- Native panels place the essential rule inside the active card, retain a short footer, and fit the word, four clues, clock and skip action in the actual 318 × 500 content area. All 72 current word labels fit on one line. The preview harness has a hard-mode fixture. Configuration acknowledges the connected channel truthfully.
+- Product copy uses “Microphone”, “Solo test”, “Speech test” and “What your mic heard”. Moonshine consent, privacy and transcript gating remain intact. Sound stays opt-in; its secondary controls use charcoal and violet.
 
-Local evidence and the installable, unuploaded ZIP are in `/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-26/18e81898621d49429a0b37f38d44ba6b`. Read `evidence/product-polish-verification.md` for the exact checks and limitations. The bundle contains 32 frontend files, 12,177,521 bytes, and no fixture Helper, backend, secrets or Moonshine models. It targets the existing local HTTPS rehearsal. No game deployment or production tag is part of this pass.
+The final local suite passes 191 tests. Type checking and production build pass. Browser checks include actual local demo start/pause/resume and a simulated speech-final catch, same-card confirmation, idle recovery, 320/390 px decisions, native width/word fitting, broadcaster redaction, configuration and reduced motion. OBS fixtures cover pending privacy, artwork and generic results, and mission expiry. Frozen visual fixtures prove appearance only, not timing. The complete validation ledger distinguishes these from real microphone and broadcast acceptance.
 
-The local suite passes 188 tests, including OBS result privacy, native artwork cleanup and pluralization. The build passes. Local browser checks cover demo start/pause/resume, simulated catch confirmation, 320 px layouts, generic and long words, keyboard settings and reduced motion. They do not establish real Twitch installation, microphone accuracy, actual OBS capture or remote participation. A new Opus acceptance critique remains optional when quota returns; do not describe this implementation as newly reviewed by Opus.
+An unuploaded v0.0.1 ZIP with 32 frontend files is in `deliverables/baited-v0.0.1-opus-polish.zip` under the evidence run. It targets the existing local HTTPS rehearsal (`https://localhost:3443`, studio `http://localhost:3000`), using only its existing public client configuration. SHA-256: `7a00f8d6dae19300aad954255d4539e218d4288a725aac74604613adcce10d53`. It excludes fixture helpers, backend code, secrets and Moonshine models.
 
-## Original direction and review brief
+Real Twitch installation, physical microphone recognition, OBS compositing, remote Paolo participation and physical phone acceptance remain separate checks. The safe visual previews are `http://127.0.0.1:3330` and `http://127.0.0.1:3322`; they do not replace the authenticated rehearsal.
 
-The visual authority is the approved landing in `/home/maff/foss/worktrees/disjoint-colliders/bait-dev-landing/packages/bait/site`, released as `bait-v1.1.0`. Carry forward charcoal playing cards, violet `#9146FF`, restrained pale yellow `#FFFC79`, Russo One for the brand and card words, and Inter for controls. Use the existing approved bomb. The textual `baited` lockup is provisional; this work does not replace the approved mascot or commission a new identity.
+## Design authority and review brief
+
+The visual authority is the approved landing in `/home/maff/foss/worktrees/disjoint-colliders/bait-dev-landing/packages/bait/site`, released as `bait-v1.1.0`. Carry forward charcoal playing cards, violet `#9146FF`, restrained pale yellow `#FFFC79`, Russo One for the brand and card words, and Inter for controls. Use the existing approved bomb. The approved BAITED B asset supplies the wordmark; this work does not replace it or commission a new identity.
 
 Each screen has a different job:
 

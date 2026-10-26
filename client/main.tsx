@@ -18,7 +18,7 @@ import {
   Monitor,
   Eye,
   ShieldCheck,
-  ChevronRight,
+  Volume2,
   RotateCcw,
   X,
   HelpCircle,
@@ -38,7 +38,10 @@ import { SpeechLab } from './SpeechLab';
 import CardProofs from './CardProofs';
 import { CardArt } from './CardArt';
 import { ResultCard } from './ResultCard';
-import { wordSize, winLabel } from '../extension/presentation.js';
+import { CardBack } from './CardBack';
+import { CatchDecision } from './CatchDecision';
+import { ObsHud } from './ObsHud';
+import { wordSize } from '../extension/presentation.js';
 import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
@@ -46,6 +49,7 @@ import Landing from './Landing';
 import { productBrand as brand, Button, Tag, CopyButton, Modal, HowTo } from './ui';
 import './brand.css';
 import { MissionStatus, GuessForm, AwardReview, ForbiddenClueCard, PublicAward } from './mechanics';
+import './mechanics.css';
 import './angular.css';
 import './landing-game.css';
 import './refinement.css';
@@ -69,13 +73,19 @@ const fmt = (ms: number) => {
     .toString()
     .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 };
+const spokenTime = (ms: number, paused: boolean) => {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(total / 60),
+    seconds = total % 60;
+  return `${minutes ? `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ` : ''}${seconds} ${seconds === 1 ? 'second' : 'seconds'} ${paused ? 'paused' : 'left'}`;
+};
 const outcomeLabel: Record<Result['outcome'], string> = {
   caught: 'CHAT WINS',
   escaped: 'TIME UP',
   skipped: 'SKIPPED',
   ended: 'ENDED',
   overturned: 'CATCH REJECTED',
-  review: 'CHECK THIS CATCH',
+  review: 'CATCH PENDING',
 };
 const cx = (...values: (string | false | undefined)[]) => values.filter(Boolean).join(' ');
 function useNow() {
@@ -141,7 +151,7 @@ function Confetti() {
               '--x': `${(i * 37) % 100}%`,
               '--delay': `${(i % 7) * 0.08}s`,
               '--turn': `${i * 51}deg`,
-              '--color': ['#a970ff', '#00e5b0', '#ffd37a'][i % 3],
+              '--color': ['#9146ff', '#c9a8ff', '#fffc79'][i % 3],
             } as React.CSSProperties
           }
         />
@@ -408,9 +418,25 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           })}
         </nav>
         <div className="sidebar-bottom">
-          <button className="nav-item" onClick={() => setModal('how')}>
-            <HelpCircle size={17} /> How to play
+          <a className="sound-toggle" href="#studio-sound" aria-label="Sound controls">
+            <Volume2 size={17} />
+            <span>Sound</span>
+          </a>
+          <button className="icon-button" aria-label="How to play" onClick={() => setModal('how')}>
+            <HelpCircle size={18} />
           </button>
+          {!demo && (
+            <span className={cx('connection-pill', connected && 'online')}>
+              <span className="dot" />
+              {connected ? (
+                <>
+                  Twitch<span className="connection-channel"> · @{g.channel}</span>
+                </>
+              ) : (
+                g.connection.status
+              )}
+            </span>
+          )}
           <div className="profile">
             <div className="avatar">
               {demo ? 'D' : session.user?.name.slice(0, 1).toUpperCase()}
@@ -426,30 +452,6 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
         </div>
       </aside>
       <div className="workspace">
-        <header className="topbar">
-          <div className="breadcrumb">
-            baited <ChevronRight size={14} />
-            <strong>
-              {tab === 'studio' ? 'Studio' : tab === 'community' ? 'Community' : 'Stream setup'}
-            </strong>
-          </div>
-          <div className="topbar-right">
-            <a className="sound-toggle" href="#studio-sound">
-              Sound controls
-            </a>
-            <span className={cx('connection-pill', (connected || demo) && 'online')}>
-              <span className="dot" />
-              {demo
-                ? 'LOCAL DEMO'
-                : connected
-                  ? `TWITCH / ${g.channel}`
-                  : g.connection.status.toUpperCase()}
-            </span>
-            <button className="icon-button" aria-label="Help" onClick={() => setModal('how')}>
-              <HelpCircle size={18} />
-            </button>
-          </div>
-        </header>
         <main className="main-content">
           <div className="page-title">
             <div>
@@ -481,7 +483,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <div className="rehearsal-banner">
               <span>
                 <Terminal size={15} />
-                <strong>Local demo.</strong> Simulated chat. Test your mic here.
+                <strong>Local demo.</strong> Simulated chat.{' '}
+                <span className="demo-detail">Test your mic here.</span>
               </span>
               <button
                 onClick={() =>
@@ -519,7 +522,13 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   )}
                 >
                   <div className="card-heading">
-                    <span className="small-label">CURRENT ROUND</span>
+                    <span className="round-identity">
+                      {g.mission?.status === 'active' && !pendingCatch
+                        ? `Word ${Math.min(3, g.mission.completed + 1)} of 3`
+                        : g.round
+                          ? `Round ${String(g.round.number).padStart(2, '0')}`
+                          : 'Next round'}
+                    </span>
                     <Tag tone={active ? 'lime' : paused || pendingCatch ? 'amber' : 'muted'}>
                       <span className="dot" />
                       {active
@@ -527,7 +536,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         : paused
                           ? 'PAUSED'
                           : pendingCatch
-                            ? 'AWAITING CONFIRMATION'
+                            ? 'YOUR CALL'
                             : cool
                               ? 'ROUND COMPLETE'
                               : settling
@@ -539,30 +548,19 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   </div>
                   <div className="round-console">
                     <div className="timer-block">
-                      <span className="small-label">
-                        {pendingCatch
-                          ? 'ROUND'
-                          : cool
-                            ? g.mission?.status === 'active'
-                              ? 'NEXT WORD'
-                              : 'NEXT ROUND'
-                            : active || paused || settling
-                              ? g.mission
-                                ? `WORD ${Math.min(3, g.mission.completed + 1)} OF 3`
-                                : `ROUND ${String(g.round?.number).padStart(2, '0')}`
-                              : g.settings.mission === 'three'
-                                ? 'SESSION TIMER'
-                                : 'ROUND TIMER'}
-                      </span>
                       <div
                         className={cx(
                           'timer',
                           active && ms < 15000 && 'urgent',
                           pendingCatch && 'timer-stopped',
                         )}
+                        role={active || paused || settling ? 'timer' : undefined}
+                        aria-label={
+                          active || paused || settling ? spokenTime(ms, paused) : undefined
+                        }
                       >
                         {pendingCatch
-                          ? 'Stopped'
+                          ? `Round ${String(g.result?.number).padStart(2, '0')} · Clock stopped`
                           : cool
                             ? fmt(next)
                             : active || paused || settling
@@ -572,15 +570,17 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                     ? g.settings.missionDuration
                                     : g.settings.duration) * 1000,
                                 )}
-                        <span>
-                          {pendingCatch
-                            ? 'CHECK THE CARD BELOW'
-                            : cool
+                        {!active && !paused && !settling && !pendingCatch && (
+                          <span>
+                            {cool
                               ? g.settings.auto
-                                ? 'AUTO START'
-                                : 'COOLDOWN'
-                              : 'REMAINING'}
-                        </span>
+                                ? 'Auto start in'
+                                : next > 0
+                                  ? 'Next round in'
+                                  : 'Ready for the next round'
+                              : 'Round length'}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="round-actions" hidden={pendingCatch}>
@@ -643,123 +643,77 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     </div>
                   </div>
                   <div
-                    className={cx('mission-center', cool && !!g.result && 'mission-center--result')}
+                    className={cx(
+                      'mission-center',
+                      'studio-stage',
+                      !active && !paused && !settling && !!g.result && 'studio-stage--result',
+                      pendingCatch && 'studio-stage--review',
+                    )}
                   >
-                    {!active && !paused && !settling && g.result ? (
-                      <div className="studio-result" key={`${g.result.id}:${g.result.outcome}`}>
-                        <ResultCard result={g.result} />
-                        <div className="studio-result__decision" role="status" aria-live="polite">
+                    <div className="studio-card-slot">
+                      {!active && !paused && !settling && g.result ? (
+                        <ResultCard key={g.result.id} result={g.result} />
+                      ) : (
+                        <CardBack />
+                      )}
+                    </div>
+                    <div className="studio-stage__copy">
+                      {!active && !paused && !settling && g.result ? (
+                        <CatchDecision
+                          key={g.result.id}
+                          result={g.result}
+                          disabled={busy || offline}
+                          hasAward={!!studio.awardBoard}
+                          onDecide={(decision) => void decideCatch(decision)}
+                          onReverse={() => void action('reverse')}
+                        />
+                      ) : (
+                        <>
                           <h2>
-                            {pendingCatch
-                              ? 'Did you say it?'
-                              : g.result.outcome === 'caught'
-                                ? 'Chat got you.'
-                                : g.result.outcome === 'escaped'
-                                  ? 'You got away.'
-                                  : g.result.outcome === 'overturned'
-                                    ? 'Catch reversed.'
-                                    : 'Round over.'}
+                            {settling
+                              ? 'Checking final words.'
+                              : active
+                                ? 'Chat has the word.'
+                                : paused
+                                  ? 'Round paused.'
+                                  : 'Ready when chat is.'}
                           </h2>
                           <p>
-                            {pendingCatch
-                              ? `${studio.speechProvider === 'moonshine' ? 'Moonshine' : 'Speech recognition'} heard this word. The clock is stopped until you answer.`
-                              : g.result.outcome === 'caught'
-                                ? `You said it after ${g.result.elapsed} ${g.result.elapsed === 1 ? 'second' : 'seconds'}.`
-                                : g.result.outcome === 'overturned'
-                                  ? 'That catch does not count. The next round gets a new word.'
-                                  : g.result.reason === 'guess'
-                                    ? 'Correct guess. You escaped.'
-                                    : 'A new word is ready when you are.'}
+                            {settling
+                              ? 'The clock has stopped. Checking speech from before the buzzer.'
+                              : active
+                                ? 'Keep streaming. Viewers will try to steer the conversation.'
+                                : paused
+                                  ? 'The timer and speech detection are paused.'
+                                  : demo
+                                    ? 'Open the viewer room and try a round. Local speech tests are beside your microphone.'
+                                    : 'Share the viewer link, enable your microphone, and start a round.'}
                           </p>
-                          {pendingCatch && (
-                            <div className="round-actions" aria-label="Confirm speech result">
-                              <Button
-                                className="primary"
-                                disabled={busy || offline}
-                                onClick={() => void decideCatch('confirm')}
-                              >
-                                Yes, chat wins
-                              </Button>
-                              <Button
-                                className="secondary"
-                                disabled={busy || offline}
-                                onClick={() => void decideCatch('reject')}
-                              >
-                                No, I didn't
-                              </Button>
+                          <div className="secret-capsule">
+                            <ShieldCheck size={15} />
+                            <span>Only chat sees the secret word.</span>
+                          </div>
+                          {(active || paused) && g.round?.guessEnabled && (
+                            <div className="guess-control">
+                              {g.round.guessUsed ? (
+                                <p className="guess-used">
+                                  Guess used. Chat got {g.round.wrongGuessBonus} extra seconds.
+                                </p>
+                              ) : (
+                                <Button
+                                  className="secondary"
+                                  disabled={!active || busy || offline}
+                                  onClick={() => setModal('guess')}
+                                >
+                                  <Target size={16} />
+                                  Call the bait
+                                </Button>
+                              )}
                             </div>
                           )}
-                          {g.result.outcome === 'caught' && (
-                            <button
-                              className="undo-button"
-                              disabled={busy || offline}
-                              onClick={() => void action('reverse')}
-                            >
-                              <RotateCcw size={13} /> Wrong detection? Reverse win
-                            </button>
-                          )}
-                          {g.result.outcome === 'caught' && studio.awardBoard && (
-                            <a href="#award-review" className="text-button">
-                              {g.result.award ? 'Change the award' : 'Choose “You baited me” award'}
-                              <ChevronDown size={16} />
-                            </a>
-                          )}
-                          <PublicAward award={g.result.award} />
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div
-                          className={cx('secret-card-back', active && 'in-play')}
-                          aria-hidden="true"
-                        >
-                          <img src="/brand/bait-bomb.png" alt="" width="88" height="102" />
-                          <span className="card-back-wordmark baited-glyph" />
-                        </div>
-                        <h2>
-                          {settling
-                            ? 'Checking final words'
-                            : active
-                              ? 'Chat has the word.'
-                              : paused
-                                ? 'Round paused'
-                                : 'Ready when chat is.'}
-                        </h2>
-                        <p>
-                          {settling
-                            ? 'The clock has stopped. Checking speech from before the buzzer.'
-                            : active
-                              ? 'Keep streaming. Viewers will try to steer the conversation.'
-                              : paused
-                                ? 'The timer and speech detection are paused.'
-                                : demo
-                                  ? 'Open the viewer room and try a round. Local speech tests are beside your microphone.'
-                                  : 'Share the viewer link, enable your microphone, and start a round.'}
-                        </p>
-                        <div className="secret-capsule">
-                          <ShieldCheck size={15} />
-                          <span>Only chat sees the secret word.</span>
-                        </div>
-                        {(active || paused) && g.round?.guessEnabled && (
-                          <div className="guess-control">
-                            {g.round.guessUsed ? (
-                              <p className="guess-used">
-                                Guess used. Chat got {g.round.wrongGuessBonus} extra seconds.
-                              </p>
-                            ) : (
-                              <Button
-                                className="secondary"
-                                disabled={!active || busy || offline}
-                                onClick={() => setModal('guess')}
-                              >
-                                <Target size={16} />
-                                Call the bait
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
                   {!demo && (
                     <div className="round-readiness" role="status">
@@ -787,8 +741,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                               disabled={offline || settling}
                               onClick={() => void enableMic()}
                             >
-                              {studio.speechReady ? 'Enable microphone' : 'Set up speech'}{' '}
-                              <ArrowUpRight size={14} />
+                              <Mic size={14} />
+                              {studio.speechReady ? 'Enable microphone' : 'Set up speech'}
                             </button>
                           )}
                         </>
@@ -801,22 +755,40 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     />
                   </div>
                   <div className="mission-footer">
-                    <span>
-                      <Target size={13} />
-                      {(g.round?.difficulty ?? g.settings.difficulty).toUpperCase()} DIFFICULTY
+                    <span className="round-difficulty">
+                      {g.round?.difficulty ?? g.settings.difficulty}
                     </span>
-                    <span>
-                      {g.mission?.status === 'active'
-                        ? 'ONE SESSION CLOCK'
-                        : g.settings.auto
-                          ? 'AUTOMATIC ROUNDS'
-                          : 'MANUAL ROUNDS'}
+                    <span className="round-totals">
+                      <span>
+                        <strong>{g.participants}</strong> chatting
+                      </span>
+                      <span>·</span>
+                      <span>
+                        Skip{' '}
+                        <strong>
+                          {g.voters}/{g.voteThreshold}
+                        </strong>
+                      </span>
+                      <span>·</span>
+                      <span>
+                        Streak <strong>{g.score.streak}</strong>
+                      </span>
+                      <span>·</span>
+                      <span>
+                        <strong>{g.score.wins}</strong> {g.score.wins === 1 ? 'win' : 'wins'}
+                      </span>
+                      {g.settings.auto && (
+                        <>
+                          <span>·</span>
+                          <span>Auto rounds</span>
+                        </>
+                      )}
                     </span>
                   </div>
                 </section>
                 <section className="mic-card">
                   <div className="card-heading">
-                    <span className="small-label">YOUR MICROPHONE</span>
+                    <span className="small-label">Microphone</span>
                     <span className={cx('status-dot', micStatus === 'listening' && 'online')} />
                   </div>
                   <div className="mic-visual">
@@ -856,7 +828,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         ? 'Opening the speech connection. The round pauses if it cannot connect.'
                         : micStatus === 'listening'
                           ? studio.speechProvider === 'moonshine'
-                            ? 'Moonshine listens on this computer. Confirm catches before they count.'
+                            ? 'Listening on this computer.'
                             : 'Listening for complete words. Audio is streamed to Deepgram.'
                           : consent
                             ? 'Mic enabled. Recognition starts with the next active round.'
@@ -886,8 +858,10 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   <div className="mic-footnote">
                     <ShieldCheck size={12} />
                     {studio.speechReady
-                      ? 'MIC INPUT ONLY · NO AUDIO STORAGE'
-                      : 'SPEECH SETUP NEEDED'}
+                      ? studio.speechProvider === 'moonshine'
+                        ? 'Speech is checked on this computer.'
+                        : 'Audio streams to Deepgram during rounds.'
+                      : 'Speech setup needed'}
                   </div>
                   {!offline &&
                     (active || paused || settling) &&
@@ -915,73 +889,47 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       />
                     )}
                 </section>
-              </div>
-              <div className="stats-grid">
-                <Stat
-                  label="COMMUNITY WINS"
-                  value={g.score.wins}
-                  icon={<Trophy size={17} />}
-                  detail={`${g.score.played} rounds played`}
-                />
-                <Stat
-                  label="CURRENT STREAK"
-                  value={String(g.score.streak).padStart(2, '0')}
-                  icon={<Flame size={18} />}
-                  detail={`Best streak: ${g.score.best}`}
-                />
-                <Stat
-                  label="PARTICIPANTS"
-                  value={g.participants}
-                  icon={<Users size={18} />}
-                  detail="Unique chatters this round"
-                />
-                <Stat
-                  label="SKIP VOTES"
-                  value={`${g.voters} / ${g.voteThreshold}`}
-                  icon={<SkipForward size={18} />}
-                  detail="One !skip vote per chatter"
-                />
-              </div>
-              <div className="bottom-grid">
-                <section className="panel viewer-share">
-                  <div className="section-heading">
-                    <div>
-                      <span className="small-label">VIEWER ROOM</span>
-                      <h3>Share the viewer link</h3>
-                    </div>
-                    <Link2 size={21} />
-                  </div>
-                  <p>Post this link in Twitch chat. It reveals the secret word to viewers.</p>
-                  <div className="link-field">
-                    <input aria-label="Viewer room link" readOnly value={studio.viewerUrl} />
-                    <CopyButton value={studio.viewerUrl} />
-                  </div>
-                  <div className="share-footer">
-                    <span>
-                      <Users size={13} /> No viewer account needed
-                    </span>
-                    <a href={studio.viewerUrl} target="_blank" rel="noreferrer">
-                      Open viewer room <ArrowUpRight size={14} />
-                    </a>
-                  </div>
-                </section>
-                <section className="panel recent-rounds">
-                  <div className="section-heading">
-                    <h3>Recent rounds</h3>
-                    <span className="small-label">LAST {Math.min(g.history.length, 3)}</span>
-                  </div>
-                  {g.history.length ? (
-                    g.history.slice(0, 3).map((r) => <ResultRow key={r.id} result={r} />)
-                  ) : (
-                    <div className="empty-history">
-                      <Timer size={22} />
+                <div className="bottom-grid">
+                  <section className="panel viewer-share">
+                    <div className="section-heading">
                       <div>
-                        <strong>No finished rounds yet.</strong>
-                        <p>Start a round to begin.</p>
+                        <span className="small-label">VIEWER ROOM</span>
+                        <h3>Share the viewer link</h3>
                       </div>
+                      <Link2 size={21} />
                     </div>
-                  )}
-                </section>
+                    <p>Post this link in Twitch chat. It reveals the secret word to viewers.</p>
+                    <div className="link-field">
+                      <input aria-label="Viewer room link" readOnly value={studio.viewerUrl} />
+                      <CopyButton value={studio.viewerUrl} />
+                    </div>
+                    <div className="share-footer">
+                      <span>
+                        <Users size={13} /> No viewer account needed
+                      </span>
+                      <a href={studio.viewerUrl} target="_blank" rel="noreferrer">
+                        Open viewer room <ArrowUpRight size={14} />
+                      </a>
+                    </div>
+                  </section>
+                  <section className="panel recent-rounds">
+                    <div className="section-heading">
+                      <h3>Recent rounds</h3>
+                      <span className="small-label">LAST {Math.min(g.history.length, 3)}</span>
+                    </div>
+                    {g.history.length ? (
+                      g.history.slice(0, 3).map((r) => <ResultRow key={r.id} result={r} />)
+                    ) : (
+                      <div className="empty-history">
+                        <Timer size={22} />
+                        <div>
+                          <strong>No finished rounds yet.</strong>
+                          <p>Start a round to begin.</p>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                </div>
               </div>
               {studio.awardBoard && (
                 <AwardReview
@@ -1015,7 +963,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           >
             <h2 id="studio-sound-title">Round sounds</h2>
             <SoundControls roomId={g.id} game={g} offline={offline} />
-            <a href="/card-proofs">Open all 18 cards and Sound Lab ↗</a>
+            <a href="/card-proofs">
+              Open all 18 cards and Sound Lab <ArrowUpRight size={14} />
+            </a>
           </section>
           <footer className="studio-footer">
             <span className="footer-brand">
@@ -1038,11 +988,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                 : modal === 'guess'
                   ? 'Call the bait'
                   : modal === 'consent'
-                    ? 'Let Baited listen to your microphone?'
+                    ? 'Let baited listen to your microphone?'
                     : modal === 'end'
                       ? 'End this round?'
                       : modal === 'delete'
-                        ? 'Delete your Baited data?'
+                        ? 'Delete your baited data?'
                         : modal === 'twitch'
                           ? 'Set up Twitch'
                           : 'Set up microphone recognition'
@@ -1066,13 +1016,13 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <>
               <p>
                 {studio.speechProvider === 'moonshine'
-                  ? 'Baited will load Moonshine Tiny on this computer, then ask for your microphone. Recognition runs here during active rounds. Only final words and timing go to the game server.'
-                  : 'Baited will request your microphone and stream it through this server to Deepgram during active rounds only.'}
+                  ? 'baited will load Moonshine Tiny on this computer, then ask for your microphone. Recognition runs here during active rounds. Only final words and timing go to the game server.'
+                  : 'baited will request your microphone and stream it through this server to Deepgram during active rounds only.'}
               </p>
               <p className="muted">
                 {studio.speechProvider === 'moonshine'
-                  ? 'Confirm catches: this model can mistake similar words. Baited stops the round and asks you before awarding a win. The first model download is about 84 MB and is cached in your browser.'
-                  : 'Baited does not record or store audio or transcripts. Deepgram processes the audio under its own terms.'}{' '}
+                  ? 'Confirm catches: this model can mistake similar words. baited stops the round and asks you before awarding a win. The first model download is about 84 MB and is cached in your browser.'
+                  : 'baited does not record or store audio or transcripts. Deepgram processes the audio under its own terms.'}{' '}
                 Use headphones to reduce sound from your stream reaching the mic. You can stop at
                 any time.
               </p>
@@ -1087,7 +1037,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </>
           ) : modal === 'end' ? (
             <>
-              <p>The current target will be revealed and automatic rounds will stop.</p>
+              <p>The secret word will be revealed and automatic rounds will stop.</p>
               <Button
                 className="danger"
                 disabled={settling || busy || offline}
@@ -1119,11 +1069,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           ) : modal === 'twitch' ? (
             <>
               <p>
-                Store Twitch application credentials in Proton Pass, then restart BAIT with the
+                Store Twitch application credentials in Proton Pass, then restart baited with the
                 reference template in the README.
               </p>
               <p className="muted">
-                Only chat-read permission is requested. BAIT does not post target words or
+                Only chat-read permission is requested. baited does not post target words or
                 announcements.
               </p>
             </>
@@ -1137,10 +1087,10 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               <ol className="setup-list">
                 <li>
                   {studio.speechProvider === 'moonshine'
-                    ? 'Open BAIT on localhost or HTTPS in a current browser. The page needs cross-origin isolation for the speech model.'
+                    ? 'Open baited on localhost or HTTPS in a current browser. The page needs cross-origin isolation for the speech model.'
                     : 'Store your Deepgram key in Proton Pass and add its reference to the README’s setup template.'}
                 </li>
-                <li>Restart BAIT, then enable your microphone here.</li>
+                <li>Restart baited, then enable your microphone here.</li>
               </ol>
               <p className="muted">
                 {demo
@@ -1154,7 +1104,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     </div>
   );
 }
-function ResultRow({ result: r }: { result: Result }) {
+function ResultRow({ result: r }: { result: GameView['history'][number] }) {
   return (
     <div className="result-row">
       <span className={cx('result-icon', r.outcome === 'caught' && 'win')}>
@@ -1261,7 +1211,7 @@ function SettingsForm({
       </div>
       <p className="field-help">
         {s.difficulty === 'easy'
-          ? 'No forbidden clues.'
+          ? 'No off-limits clues.'
           : s.difficulty === 'medium'
             ? 'Viewers must avoid two obvious clues.'
             : 'Viewers must avoid four obvious clues.'}{' '}
@@ -1334,7 +1284,7 @@ function Rehearsal({
         setFeedback(
           r.accepted
             ? 'Test chatter counted.'
-            : 'Not counted: inactive, cooldown, duplicate chatter, or target spoiler.',
+            : 'Not counted: inactive, cooldown, duplicate chatter, or secret word spoiler.',
         );
         setText('');
       } else {
@@ -1345,8 +1295,8 @@ function Rehearsal({
         );
         setFeedback(
           r.matched
-            ? 'Complete target word matched. Community win recorded.'
-            : 'No match. Only the exact complete target word wins.',
+            ? 'Secret word matched. Community win recorded.'
+            : 'No match. Only the exact secret word wins.',
         );
         setTranscript('');
       }
@@ -1365,7 +1315,7 @@ function Rehearsal({
       {open && (
         <div className="rehearsal-body">
           <p>
-            Open the viewer room in a separate tab to learn the target. These inputs simulate
+            Open the viewer room in a separate tab to see the secret word. These inputs simulate
             events; they are not Twitch messages or speech recognition.
           </p>
           <div className="rehearsal-inputs">
@@ -1638,7 +1588,7 @@ function Setup({
         <div>
           <h3>Your game data</h3>
           <p className="muted">
-            Baited stores settings, scores, participation and award counts. Recent chat hints stay
+            baited stores settings, scores, participation and award counts. Recent chat hints stay
             in memory for award review, then clear ten minutes after the round. Chat text, audio and
             transcripts are never written to disk.
           </p>
@@ -1707,73 +1657,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     return (
       <div className="obs-root">
         <PublicAward award={g.history[0]?.award} />
-        <div
-          className={cx(
-            'obs-hud',
-            won && 'obs-hud-win',
-            paused && 'obs-hud-paused',
-            stale && 'obs-hud-stale',
-          )}
-        >
-          <div className={cx('obs-widget', won && 'obs-win')}>
-            <div className="obs-logo">{brand}</div>
-            <div className="obs-message">
-              <span>
-                {g.mode === 'demo' ? 'LOCAL DEMO · ' : ''}
-                {stale
-                  ? 'RECONNECTING'
-                  : settling
-                    ? 'CHECKING FINAL WORDS'
-                    : pendingCatch
-                      ? 'CHECKING A CATCH'
-                      : won
-                        ? 'CHAT WINS'
-                        : active
-                          ? 'CHAT HAS A WORD'
-                          : paused
-                            ? 'ROUND PAUSED'
-                            : finished
-                              ? g.result?.reason === 'guess'
-                                ? 'BAIT CALLED'
-                                : outcomeLabel[g.result!.outcome]
-                              : 'WAITING FOR A ROUND'}
-              </span>
-              <strong>
-                {pendingCatch
-                  ? '—'
-                  : won
-                    ? g.result?.word
-                    : active || paused || settling
-                      ? g.mission
-                        ? `WORD ${Math.min(3, g.mission.completed + 1)} OF 3`
-                        : `ROUND ${g.round?.number}`
-                      : finished
-                        ? g.result?.word
-                        : 'BAIT THEM.'}
-              </strong>
-            </div>
-            <div className="obs-time">
-              {active || paused || settling
-                ? fmt(ms)
-                : won
-                  ? '+1'
-                  : finished && g.result?.reason === 'timer'
-                    ? '00:00'
-                    : '—'}
-            </div>
-            <div className="obs-progress">
-              <i style={{ width: `${g.round ? (ms / g.round.duration) * 100 : 0}%` }} />
-            </div>
-          </div>
-          <MissionStatus compact game={g} now={now} offset={offset.current} />
-          <div className="obs-score">
-            <Trophy size={15} />
-            {winLabel(g.score.wins)}
-            <span>·</span>
-            <Flame size={15} />
-            STREAK {g.score.streak}
-          </div>
-        </div>
+        <ObsHud game={g} timeLeft={fmt(ms)} now={now} offset={offset.current} offline={stale} />
         {finished &&
           g.result &&
           ['caught', 'escaped'].includes(g.result.outcome) &&
@@ -1810,7 +1694,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
         </div>
         <h1>
           {pendingCatch
-            ? 'Check this catch.'
+            ? 'Catch pending.'
             : settling
               ? 'Checking final words.'
               : g.mission?.status === 'complete'
@@ -1915,7 +1799,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
                   <div className="waiting-eyes">
                     <img src="/brand/bait-bomb.png" alt="" width="116" height="136" />
                   </div>
-                  <h2>Waiting for a round</h2>
+                  <h2>Waiting for a round.</h2>
                   <p>The word will appear when the streamer starts.</p>
                 </>
               )}
@@ -2026,14 +1910,14 @@ function Privacy() {
           {brand}
         </a>
         <a className="text-button" href="/">
-          Back to BAIT <ArrowUpRight size={16} />
+          Back to baited <ArrowUpRight size={16} />
         </a>
       </header>
       <main className="privacy-copy">
-        <div className="eyebrow">BAIT</div>
+        <div className="eyebrow">baited</div>
         <h1>Privacy</h1>
         <p>
-          BAIT is an independent community game. The person running this server operates this
+          baited is an independent community game. The person running this server operates this
           instance.
         </p>
         <h2>Microphone audio</h2>
@@ -2041,7 +1925,7 @@ function Privacy() {
           The streamer chooses whether to enable the microphone. The consent screen names the speech
           provider. With Moonshine, English recognition runs in the browser and only final text and
           word timing reach this server. With Deepgram, audio travels through this server to
-          Deepgram. BAIT does not save audio or transcript text. Disabling the microphone, closing
+          Deepgram. baited does not save audio or transcript text. Disabling the microphone, closing
           the studio, or disconnecting the input stops capture. Pausing stops recognition.
         </p>
         <p>
@@ -2055,17 +1939,17 @@ function Privacy() {
         </p>
         <h2>Twitch and participation</h2>
         <p>
-          The streamer authorizes BAIT to read their channel’s chat. For each word, BAIT keeps up to
-          40 eligible hints and 20 flagged hints in memory for a post-round award. The current word
-          and the previous review can coexist. Each chatter has at most three clean hints and one
-          flagged hint in that set. Raw text clears when the next round ends or ten minutes after
-          its own round ends, whichever comes first. It is never written to disk. Hints are shown to
-          the streamer only after the word is revealed.
+          The streamer authorizes baited to read their channel’s chat. For each word, baited keeps
+          up to 40 eligible hints and 20 flagged hints in memory for a post-round award. The current
+          word and the previous review can coexist. Each chatter has at most three clean hints and
+          one flagged hint in that set. Raw text clears when the next round ends or ten minutes
+          after its own round ends, whichever comes first. It is never written to disk. Hints are
+          shown to the streamer only after the word is revealed.
         </p>
         <p>
           Channel identity, settings, results, participation and award counts are stored. Up to
           1,000 participant IDs and display names are retained per room; leading totals and the
-          streamer’s selected award name appear publicly. Awards are manual picks. BAIT does not
+          streamer’s selected award name appear publicly. Awards are manual picks. baited does not
           infer which hint caused a win or delete messages from Twitch.
         </p>
         <h2>Private guesses</h2>
@@ -2078,12 +1962,12 @@ function Privacy() {
         <p>
           The studio uses an essential session cookie that expires after 12 hours. Twitch access and
           refresh tokens are encrypted on this server. Viewers can use the room without signing in.
-          BAIT adds no advertising or analytics cookies.
+          baited adds no advertising or analytics cookies.
         </p>
         <h2>Delete or disconnect</h2>
         <p>
           Streamers can use Stream setup → Delete my data to delete the room, scores, and stored
-          Twitch authorization. You can also revoke BAIT in Twitch’s connection settings. For a
+          Twitch authorization. You can also revoke baited in Twitch’s connection settings. For a
           participant record or other privacy request, contact the broadcaster whose room you
           joined.
         </p>
@@ -2130,7 +2014,7 @@ function App() {
     return (
       <div className="loading">
         <span className="brand">{brand}</span>
-        <p>Loading BAIT…</p>
+        <p>Loading baited…</p>
       </div>
     );
   return session.authenticated ? (

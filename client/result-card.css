@@ -1,4 +1,9 @@
 /* One authored payoff: the same charcoal card turns over in Studio and OBS. */
+.result-deal,
+.studio-card-slot {
+  --card-r: 9px 15px 9px 9px;
+  --stripe: 8px;
+}
 .result-deal {
   width: 190px;
   perspective: 1200px;
@@ -11,32 +16,55 @@
   transform-style: preserve-3d;
   animation: result-turn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+.card-back,
+.result-card__face {
+  border: 1px solid #515057;
+  border-top-color: #c9a8ff80;
+  border-radius: var(--card-r);
+  background: #242426;
+  box-shadow:
+    0 6px 0 -2px #120d1a,
+    0 16px 32px #0007;
+}
+.card-back {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  background: repeating-linear-gradient(
+    45deg,
+    #242426 0 var(--stripe),
+    #2a2830 var(--stripe) calc(var(--stripe) * 2)
+  );
+}
+.card-back::before {
+  content: '';
+  position: absolute;
+  inset: 7%;
+  border: 1px solid #c9a8ff2e;
+  border-radius: inherit;
+}
+.card-back img {
+  position: relative;
+  width: 62%;
+  height: auto;
+  image-rendering: pixelated;
+}
+.card-back .baited-glyph {
+  position: relative;
+  width: 72%;
+  color: #c9a8ff;
+}
 .result-card__back,
 .result-card__face {
-  border: 1px solid #756383;
-  border-radius: 8px;
-  background: #242426;
   backface-visibility: hidden;
-  box-shadow: 4px 7px 0 #100d16;
 }
 .result-card__back {
   position: absolute;
   inset: 0;
   transform: rotateY(180deg);
-  display: grid;
-  place-items: center;
-  color: #c9a8ff;
-  padding: 24px;
-}
-.result-card__back::after {
-  content: '';
-  position: absolute;
-  inset: 9px;
-  border: 1px solid #51405e;
-  border-radius: 4px;
-}
-.result-card__back .baited-glyph {
-  width: 100%;
 }
 .result-card__face {
   min-height: inherit;
@@ -44,6 +72,7 @@
   flex-direction: column;
   align-items: flex-start;
   padding: 20px 16px 14px;
+  transition: border-color 200ms ease-out;
 }
 .result-card__verdict {
   font:
@@ -78,6 +107,16 @@
 .result-card__word[data-word-size='extended'] {
   font-size: 14px;
 }
+.result-card__face[data-art='word'] .result-card__word {
+  flex: 1;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  min-height: 128px;
+  margin: 8px 0;
+  background: radial-gradient(ellipse at 50% 72%, #4f2878aa 0, #3b247033 42%, transparent 70%);
+}
 .result-card__outcome {
   font:
     600 10px/1.5 Inter,
@@ -95,7 +134,10 @@
   width: 65px;
 }
 .result-card[data-outcome='caught'] .result-card__face {
-  border-color: #a6a261;
+  border-color: #fffc79;
+}
+.result-card[data-outcome='caught'] .result-card__verdict {
+  animation: verdict-stamp 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .result-card[data-outcome='caught'] .result-card__outcome {
   color: #fffc79;
@@ -104,6 +146,8 @@
   color: #fffdf7;
 }
 .result-deal--broadcast {
+  --card-r: 14px 24px 14px 14px;
+  --stripe: 12px;
   position: absolute;
   top: 200px;
   left: 40px;
@@ -121,7 +165,10 @@
   height: 216px;
 }
 .result-deal--broadcast .result-card__verdict {
-  font-size: 13px;
+  font-size: 18px;
+}
+.result-deal--broadcast .result-card__face[data-art='word'] .result-card__word {
+  min-height: 216px;
 }
 .result-deal--broadcast .result-card__word {
   font-size: 38px;
@@ -136,7 +183,13 @@
   font-size: 20px;
 }
 .result-deal--broadcast .result-card__outcome {
-  font-size: 13px;
+  font-size: 16px;
+}
+@keyframes verdict-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.12);
+  }
 }
 @keyframes result-turn {
   from {
@@ -175,7 +228,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .result-deal,
-  .result-card {
+  .result-card,
+  .result-card__verdict {
     animation: none !important;
   }
 }

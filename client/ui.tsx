@@ -115,7 +115,7 @@ export function HowTo() {
         [
           '03',
           'You say it. Chat wins.',
-          'Enable your mic. Moonshine proposes a catch when it hears the whole word; confirm it to give chat the win. Outlast the clock to escape.',
+          'Enable your mic. Local speech proposes a catch when it hears the whole word; confirm it to give chat the win. Outlast the clock to escape.',
           Mic,
         ],
       ].map(([n, title, description, Icon]) => {
@@ -135,7 +135,7 @@ export function HowTo() {
         <summary>Optional rules</summary>
         <ul>
           <li>
-            <strong>Forbidden clues:</strong> Easy: none. Medium: two. Hard: four. A flagged hint
+            <strong>Off-limits clues:</strong> Easy: none. Medium: two. Hard: four. A flagged hint
             can’t win an award. The round continues.
           </li>
           <li>

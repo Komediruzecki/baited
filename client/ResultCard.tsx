@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { GameView } from '../shared/types';
 import { CardArt } from './CardArt';
-import { wordSize } from '../extension/presentation.js';
+import { CardBack } from './CardBack';
+import { cardArtFile, wordSize } from '../extension/presentation.js';
 
 // Only a server-authorized result belongs here. OBS must never render a review.
 export function ResultCard({
@@ -25,17 +26,19 @@ export function ResultCard({
     >
       <div className="result-card" data-outcome={result.outcome}>
         <div className="result-card__back" aria-hidden="true">
-          <span className="baited-glyph" />
+          <CardBack />
         </div>
-        <div className="result-card__face">
+        <div className="result-card__face" data-art={cardArtFile(result.word) ? 'art' : 'word'}>
           <span className="result-card__verdict">
             {review
-              ? 'CHECK THIS CATCH'
+              ? 'HEARD'
               : caught
                 ? 'THEY SAID IT.'
                 : result.outcome === 'escaped'
                   ? 'THE STREAMER ESCAPED.'
-                  : 'ROUND ENDED'}
+                  : result.outcome === 'overturned'
+                    ? 'CATCH REJECTED'
+                    : 'ROUND ENDED'}
           </span>
           <CardArt word={result.word} />
           <strong className="result-card__word" data-word-size={wordSize(result.word)}>
@@ -43,7 +46,7 @@ export function ResultCard({
           </strong>
           <span className="result-card__outcome">
             {review
-              ? 'Awaiting your call'
+              ? 'NOT SCORED YET'
               : caught
                 ? 'CHAT WINS'
                 : result.reason === 'guess'

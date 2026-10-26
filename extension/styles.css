@@ -76,7 +76,7 @@ h3 {
 
 /* The native panel is one card. Keep its edges separate from Twitch's chrome. */
 .panel {
-  padding: 14px 12px 12px;
+  padding: 10px 12px 8px;
   max-width: 480px;
   margin-inline: auto;
 }
@@ -85,7 +85,7 @@ h3 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 2px 14px;
+  padding: 0 2px 10px;
   min-height: 42px;
 }
 /* Same alpha framing as the approved landing wordmark; source pixels unchanged. */
@@ -145,6 +145,9 @@ h3 {
   background: #ffffff24;
 }
 .secret-card {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   position: relative;
   background: var(--card);
   border: 1px solid var(--line);
@@ -353,13 +356,13 @@ progress::-moz-progress-bar {
   text-align: right;
 }
 .panel-footer {
-  padding: 14px 2px 4px;
+  padding: 10px 2px 0;
   color: var(--copy);
   font-size: 12px;
   line-height: 1.5;
 }
 .skip-note {
-  margin-top: 7px;
+  margin-top: 4px;
   color: var(--muted);
   font-size: 11px;
 }
@@ -369,9 +372,25 @@ code {
   color: var(--lit);
 }
 .secret-card[data-state='active'] .card-center {
-  min-height: 140px;
-  padding-block: 18px 20px;
-  gap: 10px;
+  min-height: 0;
+  padding-block: 12px 14px;
+  gap: 8px;
+}
+.secret-card:is([data-state='active'], [data-state='paused']) .word-art {
+  width: 132px;
+  height: 84px;
+}
+.secret-card[data-state='active'] .card-detail {
+  max-width: none;
+}
+.secret-card:is([data-state='active'], [data-state='paused']) .clock {
+  padding-block: 8px 10px;
+}
+.secret-card:is([data-state='active'], [data-state='paused']) .forbidden {
+  padding-bottom: 12px;
+}
+.secret-card:is([data-state='active'], [data-state='paused']) .card-baseline {
+  padding-block: 8px 9px;
 }
 .secret-card[data-state='active'] .target {
   color: var(--yellow);
@@ -381,9 +400,9 @@ code {
   height: 50px;
 }
 .secret-card[data-state='paused'] .card-center {
-  min-height: 168px;
-  padding-block: 16px 20px;
-  gap: 12px;
+  min-height: 0;
+  padding-block: 12px 14px;
+  gap: 8px;
 }
 .secret-card[data-state='paused'] .bomb {
   width: 42px;

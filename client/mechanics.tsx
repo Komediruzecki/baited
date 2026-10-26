@@ -3,7 +3,6 @@ import type { AwardBoard, GameView, Studio } from '../shared/types';
 import { request } from './api';
 import { Button } from './ui';
 import { Check, Eye, ShieldCheck, Target, Timer, Trophy } from './icons';
-import './mechanics.css';
 
 function timer(ms: number) {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -265,7 +264,7 @@ export function AwardReview({
       </p>
       <p className="hint-note">
         Review keeps up to 40 clean hints and 20 flagged hints, with limits per chatter. Text clears
-        ten minutes after the round. BAIT does not delete Twitch messages.
+        ten minutes after the round. baited does not delete Twitch messages.
       </p>
     </section>
   );

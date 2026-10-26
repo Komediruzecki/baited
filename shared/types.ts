@@ -24,6 +24,7 @@ export interface Result {
   award?: { name: string };
   reason?: 'guess' | 'timer';
 }
+export type ResultView = Omit<Result, 'word'> & { word?: string };
 export interface Leader {
   name: string;
   rounds: number;
@@ -73,9 +74,9 @@ export interface GameView {
     guessUsed: boolean;
     wrongGuessBonus: number;
   } | null;
-  // Overlay results omit the word while a suggested catch awaits confirmation.
-  result: (Omit<Result, 'word'> & { word?: string }) | null;
-  history: Result[];
+  // OBS reveals only caught/escaped results and never receives words in history.
+  result: ResultView | null;
+  history: ResultView[];
   settings: Settings;
   score: { wins: number; played: number; streak: number; best: number };
   participants: number;

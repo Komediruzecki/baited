@@ -55,7 +55,7 @@ export function SoloTarget({
 
   return (
     <div className="solo-target">
-      <span className="small-label">SOLO TEST</span>
+      <span className="small-label">Solo test</span>
       <p>
         {!revealed
           ? 'Reveal the word to check your microphone.'

@@ -149,7 +149,8 @@ export class Game {
   }
   start() {
     this.tick();
-    if (this.pendingCatch) throw new Error('Confirm or reject the catch before starting a new word.');
+    if (this.pendingCatch)
+      throw new Error('Confirm or reject the catch before starting a new word.');
     if (['active', 'paused', 'settling'].includes(this.phase))
       throw new Error('Finish the current round first.');
     if (this.phase === 'cooldown' && this.nextAt !== null && this.clock() < this.nextAt)
@@ -246,9 +247,13 @@ export class Game {
     r.remaining = Math.max(0, r.endsAt - now);
     if (this.mission?.status === 'active') this.mission.remaining = r.remaining;
     this.result = {
-      id: r.id, number: r.number, word: r.word, outcome: 'review',
+      id: r.id,
+      number: r.number,
+      word: r.word,
+      outcome: 'review',
       elapsed: Math.round((r.duration - r.remaining) / 1000),
-      participants: r.participants.size, at: now,
+      participants: r.participants.size,
+      at: now,
     };
     // Stop first, then reveal. Pending catches never enter score/history or awards.
     this.phase = 'cooldown';
@@ -282,8 +287,7 @@ export class Game {
     };
     if (this.mission?.status === 'active') {
       const mission = this.mission;
-      mission.remaining =
-        frozen ? mission.remaining : Math.max(0, mission.endsAt - now);
+      mission.remaining = frozen ? mission.remaining : Math.max(0, mission.endsAt - now);
       if (wasPending) mission.endsAt = now + mission.remaining;
       if (outcome === 'caught') {
         mission.completed++;
@@ -291,13 +295,16 @@ export class Game {
       } else if (outcome === 'escaped') mission.status = reason === 'guess' ? 'escaped' : 'failed';
       else if (outcome === 'ended') mission.status = 'ended';
     }
-    this.review = outcome === 'caught' && now < reviewExpiresAt ? {
-      roundId: r.id,
-      word: r.word,
-      expiresAt: reviewExpiresAt,
-      selectedHintId: null,
-      candidates: r.hints,
-    } : null;
+    this.review =
+      outcome === 'caught' && now < reviewExpiresAt
+        ? {
+            roundId: r.id,
+            word: r.word,
+            expiresAt: reviewExpiresAt,
+            selectedHintId: null,
+            candidates: r.hints,
+          }
+        : null;
     r.hints = [];
     this.data.history.unshift(this.result);
     // Retain 100 outcomes while retaining aggregate scores for older rounds.
@@ -307,8 +314,8 @@ export class Game {
       this.data.priorPlayed++;
       if (old.outcome === 'caught') this.data.priorWins++;
     }
-    this.streak = outcome === 'caught' ? this.streak + 1 :
-      outcome === 'overturned' ? r.previousStreak : 0;
+    this.streak =
+      outcome === 'caught' ? this.streak + 1 : outcome === 'overturned' ? r.previousStreak : 0;
     this.data.priorBest = Math.max(this.data.priorBest, this.streak);
     for (const [id, name] of r.participants) {
       const item = this.data.leaders[id] ?? { name, rounds: 0 };
@@ -380,15 +387,18 @@ export class Game {
       return;
     }
     if (this.phase === 'active' && this.round && now >= this.round.endsAt) {
-      if (this.mic === 'listening' &&
-        now < this.round.endsAt + SPEECH_SETTLE_MS) {
+      if (this.mic === 'listening' && now < this.round.endsAt + SPEECH_SETTLE_MS) {
         this.round.settleUntil = this.round.endsAt + SPEECH_SETTLE_MS;
         this.phase = 'settling';
         this.changed();
       } else this.finish('escaped', 'timer');
       return;
     }
-    if (this.mission?.status === 'active' && this.phase !== 'paused' && now >= this.mission.endsAt) {
+    if (
+      this.mission?.status === 'active' &&
+      this.phase !== 'paused' &&
+      now >= this.mission.endsAt
+    ) {
       this.mission.status = 'failed';
       this.mission.remaining = 0;
       this.phase = this.data.settings.auto ? 'cooldown' : 'idle';
@@ -506,24 +516,44 @@ export class Game {
       now = this.clock();
     if (
       !['active', 'settling'].includes(this.phase) ||
-      !r || t.roundId !== r.id || t.epoch !== r.epoch || !t.final || r.seen.has(t.id)
-    ) return false;
+      !r ||
+      t.roundId !== r.id ||
+      t.epoch !== r.epoch ||
+      !t.final ||
+      r.seen.has(t.id)
+    )
+      return false;
     if (r.seen.size > 2000) r.seen.clear();
     r.seen.add(t.id);
     // Provider finals carry individual words. An unrelated uncertain word must neither
     // reject a clear target nor let an uncertain target inherit the sentence average.
-    const candidates = t.words ?? [{
-      text: t.text, confidence: t.confidence, capturedAt: t.capturedAt, endedAt: t.capturedAt,
-    }];
-    const matched = candidates.some((word) =>
-      matches(word.text, r.word) && Number.isFinite(word.confidence) && word.confidence >= 0.8 &&
-      Number.isFinite(word.capturedAt) && Number.isFinite(word.endedAt) &&
-      word.capturedAt >= r.segmentAt && word.endedAt >= word.capturedAt &&
-      word.endedAt < r.endsAt && word.endedAt <= now + 1000 &&
-      // A target early in a just-completed sentence is still fresh evidence.
-      // Adapters validate this complete segment end against their capture clock.
-      (t.endedAt === undefined ? now - word.endedAt <= 5000 :
-        Number.isFinite(t.endedAt) && t.endedAt >= word.endedAt && t.endedAt <= now + 1000 && now - t.endedAt <= 5000),
+    const candidates = t.words ?? [
+      {
+        text: t.text,
+        confidence: t.confidence,
+        capturedAt: t.capturedAt,
+        endedAt: t.capturedAt,
+      },
+    ];
+    const matched = candidates.some(
+      (word) =>
+        matches(word.text, r.word) &&
+        Number.isFinite(word.confidence) &&
+        word.confidence >= 0.8 &&
+        Number.isFinite(word.capturedAt) &&
+        Number.isFinite(word.endedAt) &&
+        word.capturedAt >= r.segmentAt &&
+        word.endedAt >= word.capturedAt &&
+        word.endedAt < r.endsAt &&
+        word.endedAt <= now + 1000 &&
+        // A target early in a just-completed sentence is still fresh evidence.
+        // Adapters validate this complete segment end against their capture clock.
+        (t.endedAt === undefined
+          ? now - word.endedAt <= 5000
+          : Number.isFinite(t.endedAt) &&
+            t.endedAt >= word.endedAt &&
+            t.endedAt <= now + 1000 &&
+            now - t.endedAt <= 5000),
     );
     if (!matched) return false;
     if (policy === 'confirm') this.proposeCatch();
@@ -563,9 +593,9 @@ export class Game {
   view(role: 'studio' | 'viewer' | 'overlay'): GameView {
     const r = this.round;
     let result: GameView['result'] = this.result;
-    if (role === 'overlay' && result?.outcome === 'review') {
-      const { word: _word, ...pendingResult } = result;
-      result = pendingResult;
+    if (role === 'overlay' && result && !['caught', 'escaped'].includes(result.outcome)) {
+      const { word: _word, ...privateResult } = result;
+      result = privateResult;
     }
     return {
       id: this.data.id,
@@ -597,7 +627,11 @@ export class Game {
           }
         : null,
       result,
-      history: this.data.history.slice(0, 12),
+      history: this.data.history.slice(0, 12).map((entry) => {
+        if (role !== 'overlay') return entry;
+        const { word: _word, ...publicHistory } = entry;
+        return publicHistory;
+      }),
       settings: this.data.settings,
       score: this.score,
       participants: r?.participants.size ?? 0,
