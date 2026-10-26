@@ -20,7 +20,7 @@ Viewers steer an ordinary conversation toward a hidden word. The entertainment i
 
 ## Operating Context
 
-The current build has an external streamer studio connected to Twitch chat through EventSub, a standalone viewer room, an OBS browser overlay, and native Twitch Extension viewer/configuration surfaces. Extension version 0.0.1 is in Twitch Hosted Test, not publicly released or submitted for review. The test backend at play-baited.maff.app runs through a named Cloudflare Tunnel on the owner's Linux computer; its availability depends on that computer and the bounded backend/tunnel processes. OBS testing uses the same Linux computer.
+The current build has an external streamer studio connected to Twitch chat through EventSub, a standalone viewer room, an OBS browser overlay, and native Twitch Extension viewer/configuration surfaces. The redesigned Extension version 0.0.2 is uploaded in Twitch Hosted Test, not publicly released or submitted for review; its activation on the channel still needs confirmation. Earlier successful rounds used version 0.0.1. The test backend at play-baited.maff.app runs through a named Cloudflare Tunnel on the owner's Linux computer; its availability depends on that computer and the bounded backend/tunnel processes. OBS testing uses the same Linux computer.
 
 ## Capabilities and Constraints
 

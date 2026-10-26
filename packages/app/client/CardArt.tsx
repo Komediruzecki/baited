@@ -12,7 +12,7 @@ export function CardArt({ word, className = '' }: { word?: string; className?: s
   return (
     <img
       className={`bait-card-art ${className}`}
-      src={`/cards/proofs/${word.toLowerCase()}.png`}
+      src={`${import.meta.env.BASE_URL}cards/proofs/${word.toLowerCase()}.png`}
       alt=""
       width="1254"
       height="1254"

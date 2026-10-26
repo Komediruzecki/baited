@@ -45,7 +45,7 @@ This writes `packages/app/dist/baited-v0.0.2.zip`. Only public connection settin
 - The browser shows the new Baited sign-in screen. Reconnect Twitch and enable the microphone before testing a real round.
 - Each test process expires after 180 minutes, around 27 October 02:13 UTC / 03:13 CET. Ctrl+C stops its terminal sooner. The backend binds to `127.0.0.1:3300`; only the existing named tunnel exposes it.
 - New-card panel fixtures: both new studies fit all 13 states at 318 × 500 using hard `kaleidoscope` (26 checks). Reduced motion keeps the original artwork visible and hides the canvas. These are local fixtures, not physical-device or live Twitch acceptance.
-- App CI: 225 tests, build and Extension packaging passed. Review-host: 5 tests passed. Landing browser CI is being retried once after its Wrangler/esbuild server crashed; record its final result separately.
+- All three CI jobs passed on the recorded final handoff head `c0f3063`: app 225 tests, build and Extension packaging; landing 52 tests, both deployment bundles and 9 browser tests; review-host 5 tests and checks. [Authoritative run](https://github.com/Komediruzecki/baited/actions/runs/40418590722). An earlier landing server crash passed on an unchanged retry; the final head passed on its first attempt.
 
 Restart each service in its own terminal, from any directory:
 

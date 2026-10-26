@@ -120,7 +120,7 @@ function ReviewFrame({ context, cardProps, replay, seconds }: { context: Context
   </>;
 }
 
-export default function CardDesignLab({ session }: { session: SessionInfo }) {
+export default function CardDesignLab({ session, standalone = false }: { session: SessionInfo; standalone?: boolean }) {
   const [initial] = useState(() => new URLSearchParams(location.search));
   const [edition, setEdition] = useState<Edition>(() => isEdition(initial.get('edition')) ? initial.get('edition') as Edition : 'table');
   const [word, setWord] = useState(() => initial.get('word') === generic.word || reviewDeck.some(entry => entry.word === initial.get('word')) ? initial.get('word')! : 'volcano');
@@ -171,8 +171,8 @@ export default function CardDesignLab({ session }: { session: SessionInfo }) {
   const props: CardProps = { edition, entry, state, time, back, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion: motion };
   if (!allowed) return <main className="card-lab"><div className="cl-closed">{productBrand}<h1>Card lab is local.</h1><p>Open the local preview without Twitch credentials to compare editions. The game never reads these examples.</p><a href="/">Back to Baited</a></div></main>;
   return <main className="card-lab">
-    <header className="cl-top"><a href="/" aria-label="Baited Studio">{productBrand}</a><nav aria-label="Card lab tools"><button type="button" aria-pressed={compare} onClick={() => setCompare(value => !value)}>Compare</button><button type="button" aria-pressed={back} onClick={() => setBack(value => !value)}>{back ? 'Show front' : 'Show back'}</button><button type="button" onClick={() => setReplay(value => value + 1)}>Replay deal</button><a href="#cl-picks">Your picks</a></nav><a className="cl-product-link" href="/product-review">Product screens</a></header>
-    <div className="cl-intro"><div><h1>Card lab</h1><p>Same word, different cards. Pick the one chat should hold.</p></div><p className="cl-local-note">Local only. Synthetic rounds.<br />Nothing here reads or changes a live game.</p></div>
+    <header className="cl-top"><a href="/" aria-label={standalone ? 'Baited website' : 'Baited Studio'}>{productBrand}</a><nav aria-label="Card lab tools"><button type="button" aria-pressed={compare} onClick={() => setCompare(value => !value)}>Compare</button><button type="button" aria-pressed={back} onClick={() => setBack(value => !value)}>{back ? 'Show front' : 'Show back'}</button><button type="button" onClick={() => setReplay(value => value + 1)}>Replay deal</button><a href="#cl-picks">Your picks</a></nav><a className="cl-product-link" href={standalone ? '/' : '/product-review'}>{standalone ? 'Back to Baited' : 'Product screens'}</a></header>
+    <div className="cl-intro"><div><h1>Card lab</h1><p>Same word, different cards. Pick the one chat should hold.</p></div><p className="cl-local-note">{standalone ? 'Design review. Synthetic rounds.' : 'Local only. Synthetic rounds.'}<br />Nothing here reads or changes a live game.</p></div>
     <div className="cl-workspace">
       <aside className="cl-controls">
         <fieldset className="cl-editions"><legend>Edition</legend>{editions.map((item, index) => <label className="cl-edition-option" key={item.id} data-selected={edition === item.id}><input type="radio" name="edition" value={item.id} checked={edition === item.id} onChange={() => setEdition(item.id)} /><span className="cl-edition-number">{String(index).padStart(2, '0')}</span><span><strong>{item.name}{item.id === 'table' && <small>Opus’s pick</small>}</strong><span>{item.note}</span></span></label>)}</fieldset>
@@ -222,7 +222,7 @@ export default function CardDesignLab({ session }: { session: SessionInfo }) {
       <p role="status">{saveStatus}</p>
     </div></section>
     <details className="cl-sound"><summary>Sound Lab</summary><p>Sound starts off. Enable it to audition the game effects.</p><SoundControls roomId="card-design-lab" lab /></details>
-    <footer className="cl-footer"><span>Design direction by Opus. Working previews by Codex.</span><a href="/product-review">Check the product screens</a><a href="https://baited.maff.app" target="_blank" rel="noreferrer">Current landing</a></footer>
+    <footer className="cl-footer"><span>Design direction by Opus. Working previews by Codex.</span>{!standalone && <a href="/product-review">Check the product screens</a>}<a href={standalone ? '/' : 'https://baited.maff.app'}>Baited website</a></footer>
     <div className="cl-mobile-bar"><button type="button" onClick={() => step(-1)}>← Word</button><button type="button" onClick={() => setBack(value => !value)}>Flip</button><button type="button" onClick={() => step(1)}>Word →</button></div>
   </main>;
 }
