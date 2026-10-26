@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { request } from 'node:http';
@@ -8,11 +8,60 @@ import { spawnSync } from 'node:child_process';
 import type { AddressInfo } from 'node:net';
 import { runInNewContext } from 'node:vm';
 
-const { EXTENSION_FILES, HELPER_URL, buildExtension, publicConfig, readFrontendFile, runtimeConfigSource } =
+const { EXTENSION_FILES, HELPER_URL, buildExtension, extensionBuildPaths, publicConfig, readFrontendFile, runtimeConfigSource } =
   await import(new URL('../scripts/build-extension.mjs', import.meta.url).href);
 const { createExtensionPreviewServer, fixtureState } =
   await import(new URL('../scripts/preview-extension.mjs', import.meta.url).href);
 const clientId = 'baitedtestclient0001';
+
+test('release defaults preserve v0.0.1 paths and v0.0.2 names its own artifact', () => {
+  const legacy = extensionBuildPaths();
+  assert.equal(legacy.version, '0.0.1');
+  assert.equal(legacy.outDir, new URL('../dist/extension', import.meta.url).pathname);
+  assert.equal(legacy.zipPath, new URL('../dist/baited-v0.0.1.zip', import.meta.url).pathname);
+  const release = extensionBuildPaths({ version: '0.0.2' });
+  assert.equal(release.version, '0.0.2');
+  assert.equal(release.outDir, legacy.outDir);
+  assert.equal(release.zipPath, new URL('../dist/baited-v0.0.2.zip', import.meta.url).pathname);
+  const preview = extensionBuildPaths({ version: '0.0.2', localPreview: true });
+  assert.equal(preview.outDir, new URL('../dist/extension-local-preview', import.meta.url).pathname);
+  assert.equal(preview.zipPath, new URL('../dist/baited-v0.0.2-local-preview.zip', import.meta.url).pathname);
+  assert.match(extensionBuildPaths({ version: '1.2.3-rc.1+build.5' }).zipPath,
+    /baited-v1\.2\.3-rc\.1\+build\.5\.zip$/);
+});
+
+test('invalid release versions and path injection are rejected before any files are written', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'baited-version-safety-test-'));
+  try {
+    for (const version of ['', null, 2, 'v0.0.2', '0.0', '01.0.2', '0.0.2-01', '0.0.2 ', '0.0.2\n',
+      '../../0.0.2', '0.0.2/escape', '0.0.2\\escape', '0.0.2?file=escape', '0.0.2+']) {
+      await assert.rejects(buildExtension({ version, clientId, apiBaseUrl: 'https://api.example.test',
+        outDir: join(root, 'output'), zipPath: join(root, 'result.zip') }), /valid SemVer/);
+    }
+    assert.deepEqual(await readdir(root), []);
+    const missingVersion = spawnSync(process.execPath, [new URL('../scripts/build-extension.mjs', import.meta.url).pathname,
+      '--version'], { encoding: 'utf8' });
+    assert.equal(missingVersion.status, 1);
+    assert.match(missingVersion.stderr, /Usage:.*--version SEMVER/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('versioned packaging still refuses source overlap and ZIP paths inside its output', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'baited-version-path-test-'));
+  try {
+    const sourceDir = new URL('../extension', import.meta.url).pathname;
+    for (const paths of [
+      { outDir: sourceDir, zipPath: join(root, 'release.zip') },
+      { outDir: join(root, 'output'), zipPath: join(sourceDir, 'release.zip') },
+      { outDir: join(root, 'output'), zipPath: join(root, 'output', 'release.zip') },
+      { outDir: join(root, 'output'), zipPath: join(root, 'release.txt') },
+    ]) {
+      await assert.rejects(buildExtension({ version: '0.0.2', clientId,
+        apiBaseUrl: 'https://api.example.test', ...paths }), /dedicated output directory/);
+    }
+    assert.deepEqual(await readdir(root), []);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
 
 test('installable configuration rejects unresolved IDs, credentials and non-HTTPS API origins', () => {
   for (const id of [undefined, '', 'pass://dev/item/id', 'id-with-dashes', '<script>'])
@@ -50,7 +99,9 @@ test('build creates deterministic ZIPs containing only explicit frontend files a
   try {
     const opts = { clientId, apiBaseUrl: 'https://localhost:3443', studioBaseUrl: 'http://localhost:3000' };
     const first = await buildExtension({ ...opts, outDir: join(root, 'first'), zipPath: join(root, 'first.zip') });
-    const second = await buildExtension({ ...opts, outDir: join(root, 'second'), zipPath: join(root, 'second.zip') });
+    const second = await buildExtension({ ...opts, version: '0.0.2', outDir: join(root, 'second'), zipPath: join(root, 'second.zip') });
+    assert.equal(first.version, '0.0.1');
+    assert.equal(second.version, '0.0.2');
     assert.equal(first.sha256, second.sha256);
     assert.equal(first.mode, 'installable');
     assert.deepEqual(await readFile(first.zipPath), await readFile(second.zipPath));
@@ -68,6 +119,25 @@ test('build creates deterministic ZIPs containing only explicit frontend files a
     assert.equal(data.names.includes('assets/bait-bomb.png'), false);
     assert.doesNotMatch(data.viewer, /__preview|fixture-only/);
     assert.equal(data.names.some((name: string) => /preview|fixture|node_modules|server|moonshine|\.env|DESIGN|PROVENANCE/.test(name)), false);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('CLI --version emits the requested release receipt without changing the API schema', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'baited-version-cli-test-'));
+  try {
+    const zipPath = join(root, 'baited-v0.0.2.zip');
+    const build = spawnSync(process.execPath, [new URL('../scripts/build-extension.mjs', import.meta.url).pathname,
+      '--version', '0.0.2', '--out-dir', join(root, 'output'), '--zip', zipPath], {
+      encoding: 'utf8', env: { ...process.env, TWITCH_EXTENSION_CLIENT_ID: clientId,
+        EXTENSION_API_BASE_URL: 'https://api.example.test', EXTENSION_STUDIO_BASE_URL: 'https://studio.example.test' },
+    });
+    assert.equal(build.status, 0, build.stderr);
+    const receipt = JSON.parse(build.stdout);
+    assert.equal(receipt.version, '0.0.2');
+    assert.equal(receipt.zipPath, zipPath);
+    assert.equal(receipt.mode, 'installable');
+    const client = await readFile(join(root, 'output', 'client.js'), 'utf8');
+    assert.match(client, /VERSION\s*=\s*['"]0\.0\.1['"]/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

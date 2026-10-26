@@ -1,12 +1,12 @@
 # Baited card and product review
 
-26 October 2026. This is a local review handoff, not a release receipt.
+Updated 27 October 2026. Card Lab is a local review handoff. The native Extension v0.0.2 has separately been uploaded to Twitch Hosted Test; see the release receipt below.
 
 ## What is ready to review
 
-The earlier **78-card collection is already on main and development at `d93edb9`**. This pass adds eight Card Lab directions and updates the local standalone viewer, native Twitch viewer/configuration, streamer Studio and OBS presentation. The product keeps the current card edition until the owner chooses a replacement. Selecting a preference in the lab does not change the game.
+The earlier **78-card collection is already on main and development at `d93edb9`**. This pass adds ten Card Lab directions and updates the local standalone viewer, native Twitch viewer/configuration, streamer Studio and OBS presentation. The product keeps the current card edition until the owner chooses a replacement. Selecting a preference in the lab does not change the game.
 
-The new design work is private feature-branch review work, and its previews run locally. It awaits owner review. Saving or pushing the branch is a source checkpoint, not a deployment. Production and Twitch Hosted Test have not been updated; the repository remains private.
+The new design work is private feature-branch review work, and its previews run locally. It awaits owner review. Saving or pushing the branch is a source checkpoint, not a deployment. The landing and production have not been updated. Twitch accepted the redesigned native viewer/configuration ZIP as v0.0.2 in Hosted Test on 27 October; Studio is a separate backend update. The repository remains private.
 
 Opus 5.5 completed its design inspection in **26m59s** through the owner-authorized personal login. **Max effort and a 45-minute limit were requested; the CLI did not attest the effective effort level.** Its specification is a design plan, not proof of browser measurements or visual acceptance.
 
@@ -16,7 +16,7 @@ Connect to the same local network as the Linux computer.
 
 | Preview | Link | Purpose |
 | --- | --- | --- |
-| Card Lab | [192.168.178.33:3335/card-lab](http://192.168.178.33:3335/card-lab) | Compare the eight editions using the same word and state. Synthetic examples only. |
+| Card Lab | [192.168.178.33:3335/card-lab](http://192.168.178.33:3335/card-lab) | Compare the ten editions using the same word and state. Synthetic examples only. |
 | Product review | [192.168.178.33:3335/product-review](http://192.168.178.33:3335/product-review) | Switch between local Studio, viewer, OBS and card views at different sizes. |
 | Studio | [192.168.178.33:3335/studio](http://192.168.178.33:3335/studio) | Use the local demo controls and inspect the operating layout directly. |
 | Native Extension | [192.168.178.33:3334](http://192.168.178.33:3334/) | Viewer/configuration fixture harness, including waiting, hard-word, review and reconnect states. No Twitch connection. |
@@ -24,7 +24,7 @@ Connect to the same local network as the Linux computer.
 
 These are visual/demo previews. LAN HTTP does not provide the trusted secure context needed for microphone access. The product-review frames explicitly disable the microphone too. Use the separately configured trusted HTTPS Studio for a real speech test; these links do not replace Hosted Test.
 
-## The eight directions
+## The ten directions
 
 | Edition | What to judge |
 | --- | --- |
@@ -33,9 +33,12 @@ These are visual/demo previews. LAN HTTP does not provide the trusted secure con
 | **Glance** | Fewer labels and more space for the art/word. Test whether the icons are understandable with and without their labels. |
 | **Cut** | A violet field with an angled edge and stronger type. Check long-word contrast and balance. |
 | **Pixel** | A game-item screen with stepped edges and a pixel-grid composition. Check that decoration leaves enough room for the clues. |
-| **Foil** | A reflective frame that follows the pointer. A possible special edition; inspect touch and reduced-motion behavior too. |
+| **Foil** | A reflective frame that follows the pointer. The owner approved keeping it for a special edition; inspect touch and reduced-motion behavior too. |
 | **Wide** | A horizontal desktop card. It falls back to Table in smaller contexts; compare it in Desktop viewer. |
 | **Picture** | Experimental picture-led face with the exact word available on demand. Use “Always show Picture's word” to compare. Clues remain readable and the game still matches the exact target word. |
+
+| **Table Reveal** | Table with a 630 ms coarse-to-sharp artwork reveal. Text and clues stay sharp throughout. |
+| **Glance Plus** | Larger chat/clock/help symbols, larger artwork, clearer clue grouping and the same artwork reveal. Toggle the icon labels to compare. |
 
 Start with **Compare**, choose up to four editions, then inspect a short word and the stress examples **kaleidoscope, marshmallow, alchemy and archipelago**. Check the 318 × 500 Twitch-panel and 320 × 640 phone contexts, a hard card with four clues, waiting/reconnecting, pending catch and final result.
 
@@ -92,4 +95,4 @@ These commands assume the current checkout, installed dependencies and registere
 - [Technology and evidence boundaries](devpost-stack.md)
 - [Gallery and 2:50 demo plan](/home/maff/.dotfiles/personal/games/baited/submission-media-plan.md)
 
-After the owner chooses, apply the selected card edition, polish the affected states, verify the final build and capture the actual product. Development/production deployment and a rebuilt Hosted Test upload are later steps; this review guide does not authorize or report them.
+After the owner chooses, apply the selected card edition, polish the affected states, verify the final build and capture the actual product. The everyday edition is still undecided. Carry the selected edition into the landing only after that choice. No production tag or Twitch review submission was created. See [v0.0.2 Hosted Test receipt](releases/extension-v0.0.2.md) for the separate upload status.

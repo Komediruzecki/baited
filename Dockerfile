@@ -5,6 +5,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/app/package.json packages/app/package.json
 RUN pnpm install --frozen-lockfile --filter @baited/app...
 COPY packages/app packages/app
+# The app's catalogue check verifies card inks against this shared design source.
+# Only this CSS file is needed at build time; the runtime remains app-only.
+COPY packages/landing/site/styles.css packages/landing/site/styles.css
 RUN pnpm --filter @baited/app build
 # pnpm deploy creates portable production dependencies from the workspace.
 # Keep the final image independent of the landing package and build tools.

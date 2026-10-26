@@ -45,6 +45,23 @@ test('exported picks round-trip without losing preferred edition, empty notes or
   assert.deepEqual(parsePicks(JSON.stringify(saved)), saved);
 });
 
+test('version-one choices preserve previous picks alongside both new reveal studies', () => {
+  for (const preferred of ['table-reveal', 'glance-reveal'] as const) {
+    const saved: Picks = {
+      version: 1,
+      preferred,
+      picks: {
+        table: { note: 'Keep the house layout.', reviewed: ['deck', 'panel'], experimental: false },
+        glance: { note: 'Keep the original icons too.', reviewed: ['phone'], experimental: false },
+        'table-reveal': { note: '', reviewed: ['panel', 'desktop'], experimental: false },
+        'glance-reveal': { note: 'Compare the larger symbols.', reviewed: ['phone', 'panel'], experimental: false },
+      },
+      updatedAt: '2026-10-26T22:50:00.000Z',
+    };
+    assert.deepEqual(parsePicks(JSON.stringify(saved)), saved);
+  }
+});
+
 test('malformed or incompatible stored values reset to empty choices', () => {
   for (const source of [null, '', '{', 'null', '[]', '42', '{}', '{"version":2,"picks":{}}', '{"version":1,"picks":null}']) {
     assert.deepEqual(parsePicks(source), emptyPicks(), String(source));

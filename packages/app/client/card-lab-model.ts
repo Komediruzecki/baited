@@ -9,6 +9,8 @@ export const editions = [
   { id: 'foil', name: 'Foil', note: 'A reflective frame for the rare catch.' },
   { id: 'wide', name: 'Wide', note: 'The card on its side. Desktop edition.' },
   { id: 'picture', name: 'Picture', note: 'An experiment. Read the word on demand.' },
+  { id: 'table-reveal', name: 'Table Reveal', note: 'The house card, revealed from pixels.' },
+  { id: 'glance-reveal', name: 'Glance Plus', note: 'Larger icons and art that resolves into focus.' },
 ] as const;
 export type Edition = typeof editions[number]['id'];
 export type ReviewEntry = { word: string; difficulty: string; clues: string[]; example: string; ink: string; synthetic?: boolean };

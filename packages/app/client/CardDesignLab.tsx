@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { SessionInfo } from '../shared/types';
 import { productBrand } from './ui';
 import { CardArt } from './CardArt';
+import { PixelRevealArt } from './PixelRevealArt';
 import { SoundControls } from './SoundControls';
 import { contexts, editions, exactClues, generic, isEdition, parsePicks, reviewDeck, stateLabel, states, type CardState, type Context, type Edition, type Picks, type ReviewEntry } from './card-lab-model';
 import './card-design-lab.css';
@@ -20,8 +21,8 @@ function Pips({ difficulty }: { difficulty: string }) {
   return <span className="cl-pips" role="img" aria-label={`${difficulty} difficulty`}>{[1, 2, 3].map(index => <i key={index} data-filled={index <= count} />)}</span>;
 }
 
-type CardProps = { edition: Edition; entry: ReviewEntry; state: CardState; time: number; back: boolean; large?: boolean; compact?: boolean; wide?: boolean; labels: boolean; alwaysWord: boolean; whiteWord: boolean; round: number; mission: boolean; crisp: boolean };
-function EditionCard({ edition, entry, state, time, back, large, compact, wide, labels, alwaysWord, whiteWord, round, mission, crisp }: CardProps) {
+type CardProps = { edition: Edition; entry: ReviewEntry; state: CardState; time: number; back: boolean; large?: boolean; compact?: boolean; wide?: boolean; labels: boolean; alwaysWord: boolean; whiteWord: boolean; round: number; mission: boolean; crisp: boolean; reducedMotion: boolean };
+function EditionCard({ edition, entry, state, time, back, large, compact, wide, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion }: CardProps) {
   const [revealed, setRevealed] = useState(false);
   const [legend, setLegend] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,9 +31,11 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
   const picture = edition === 'picture';
   const showWord = !picture || alwaysWord || revealed;
   const effective = edition === 'wide' && !wide ? 'table' : edition;
+  const layout = effective === 'glance-reveal' ? 'glance' : effective === 'table-reveal' ? 'table' : effective;
+  const pixelReveal = effective === 'table-reveal' || effective === 'glance-reveal';
   const faceDown = back || state === 'waiting' || state === 'broadcaster';
   const clues = exactClues(entry);
-  const iconLabels = effective === 'glance' || picture;
+  const iconLabels = layout === 'glance' || picture;
   const showLabels = labels || legend;
   const elapsedState = !['live', 'urgent', 'paused'].includes(state);
   const urgent = state === 'urgent' || (!elapsedState && time <= 15);
@@ -56,7 +59,7 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
   const resetTilt = () => { if (tiltFrame.current) cancelAnimationFrame(tiltFrame.current); card.current?.style.setProperty('--tilt-x', '0deg'); card.current?.style.setProperty('--tilt-y', '0deg'); };
   const effectiveTime = state === 'urgent' ? Math.min(time, 15) : time;
   const clockLabel = state === 'reconnecting' ? '—:—' : elapsedState ? stateLabel(state) : clock(effectiveTime);
-  return <article ref={card} className="cl-card" data-edition={effective} data-size={compact ? 'xs' : large ? 'l' : 's'} data-face={faceDown ? 'back' : 'front'} data-state={state} data-crisp={crisp} data-urgent={urgent || undefined}
+  return <article ref={card} className="cl-card" data-edition={effective} data-layout={layout} data-size={compact ? 'xs' : large ? 'l' : 's'} data-face={faceDown ? 'back' : 'front'} data-state={state} data-crisp={crisp} data-urgent={urgent || undefined}
     aria-label={faceDown ? 'Face-down Baited card' : picture && !showWord ? `Picture experiment. ${word.length} letters. ${entry.difficulty}.` : `${word}. ${entry.difficulty}.${clues.length ? ` Keep out of chat: ${clues.join(', ')}.` : ' Only the target is off limits.'}`}
     style={{ '--chars': Math.max(word.length, 1), '--word-ink': whiteWord ? '#fffdf7' : entry.ink, '--clock-left': `${Math.max(0, Math.min(1, effectiveTime / 120)) * 100}%` } as React.CSSProperties}
     onPointerMove={tilt} onPointerLeave={resetTilt} onPointerCancel={resetTilt} onPointerUp={resetTilt}>
@@ -64,7 +67,7 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
     {faceDown ? <div className="cl-card__back"><span className="baited-glyph" aria-hidden="true" /></div> : <>
       <header className="cl-card__rail"><span>{picture ? 'Experiment' : `Round ${String(round).padStart(2, '0')}`}</span><Pips difficulty={entry.difficulty} /></header>
       <div className="cl-card__art">
-        {entry.synthetic ? <div className="cl-card__generic" aria-hidden="true">Aa</div> : <CardArt word={entry.word} />}
+        {entry.synthetic ? <div className="cl-card__generic" aria-hidden="true">Aa</div> : pixelReveal ? <PixelRevealArt key={`${effective}-${entry.word}`} word={entry.word} disabled={reducedMotion || state === 'paused' || state === 'reconnecting'} /> : <CardArt word={entry.word} />}
         {effective === 'pixel' && <span className="cl-card__curtain" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <i key={index} style={{ '--tile-delay': `${((index * 17) % 36) * 6}ms` } as React.CSSProperties} />)}</span>}
         {state === 'caught' && <span className="cl-card__stamp" aria-hidden="true"><span className="baited-glyph" /></span>}
       </div>
@@ -83,7 +86,7 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
       <footer className="cl-card__foot">
         {iconLabels ? <PixelSymbol type="clock" /> : <span className="cl-card__signature"><span className="baited-glyph" aria-hidden="true" /></span>}
         <span className="cl-card__clock" aria-label={elapsedState ? clockLabel : `${clockLabel} remaining`}>{clockLabel}</span>
-        {effective === 'glance' && <button className="cl-card__legend" type="button" aria-label="Show icon labels" aria-pressed={legend} onClick={() => setLegend(value => !value)}><PixelSymbol type="help" /></button>}
+        {layout === 'glance' && <button className="cl-card__legend" type="button" aria-label={legend ? 'Hide icon labels' : 'Show icon labels'} aria-pressed={legend} onClick={() => setLegend(value => !value)}><PixelSymbol type="help" /></button>}
       </footer>
       {mission && <span className="cl-card__mission">Word 2 of 3 · example mission</span>}
     </>}
@@ -165,7 +168,7 @@ export default function CardDesignLab({ session }: { session: SessionInfo }) {
   };
   const exportChoices = JSON.stringify(picks, null, 2);
   const download = () => { const url = URL.createObjectURL(new Blob([exportChoices], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `baited-card-choices-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  const props: CardProps = { edition, entry, state, time, back, labels, alwaysWord, whiteWord, round, mission, crisp };
+  const props: CardProps = { edition, entry, state, time, back, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion: motion };
   if (!allowed) return <main className="card-lab"><div className="cl-closed">{productBrand}<h1>Card lab is local.</h1><p>Open the local preview without Twitch credentials to compare editions. The game never reads these examples.</p><a href="/">Back to Baited</a></div></main>;
   return <main className="card-lab">
     <header className="cl-top"><a href="/" aria-label="Baited Studio">{productBrand}</a><nav aria-label="Card lab tools"><button type="button" aria-pressed={compare} onClick={() => setCompare(value => !value)}>Compare</button><button type="button" aria-pressed={back} onClick={() => setBack(value => !value)}>{back ? 'Show front' : 'Show back'}</button><button type="button" onClick={() => setReplay(value => value + 1)}>Replay deal</button><a href="#cl-picks">Your picks</a></nav><a className="cl-product-link" href="/product-review">Product screens</a></header>
@@ -196,7 +199,7 @@ export default function CardDesignLab({ session }: { session: SessionInfo }) {
         {(edition === 'picture' || (compare && compared.includes('picture'))) && <p className="cl-experiment">Picture is an experiment. Its exact word can be revealed, and the off-limits clues stay readable. It does not change the game’s matching rules.</p>}
         {compare && <fieldset className="cl-compare-picker"><legend>Compare up to four</legend>{editions.map(item => <label key={item.id}><input type="checkbox" checked={compared.includes(item.id)} disabled={!compared.includes(item.id) && compared.length >= 4} onChange={event => setCompared(value => event.target.checked ? [...value, item.id] : value.filter(id => id !== item.id))} />{item.name}</label>)}</fieldset>}
         <div className="cl-stage" data-motion={motion ? 'reduced' : 'full'} tabIndex={0} aria-label="Card stage. Arrow keys browse words. F flips, R replays, C compares."
-          onKeyDown={event => { if (event.target !== event.currentTarget) return; if (['ArrowLeft', 'ArrowRight', 'f', 'F', 'r', 'R', 'c', 'C'].includes(event.key)) event.preventDefault(); if (event.key === 'ArrowLeft') step(-1); if (event.key === 'ArrowRight') step(1); if (event.key.toLowerCase() === 'f') setBack(value => !value); if (event.key.toLowerCase() === 'r') setReplay(value => value + 1); if (event.key.toLowerCase() === 'c') setCompare(value => !value); if (/^[1-8]$/.test(event.key)) setEdition(editions[Number(event.key) - 1].id); }}
+          onKeyDown={event => { if (event.target !== event.currentTarget) return; if (['ArrowLeft', 'ArrowRight', 'f', 'F', 'r', 'R', 'c', 'C'].includes(event.key)) event.preventDefault(); if (event.key === 'ArrowLeft') step(-1); if (event.key === 'ArrowRight') step(1); if (event.key.toLowerCase() === 'f') setBack(value => !value); if (event.key.toLowerCase() === 'r') setReplay(value => value + 1); if (event.key.toLowerCase() === 'c') setCompare(value => !value); if (/^[0-9]$/.test(event.key)) { const index = event.key === '0' ? 9 : Number(event.key) - 1; if (editions[index]) setEdition(editions[index].id); } }}
           onPointerDown={event => { if ((event.target as HTMLElement).closest('button,input,select,[data-edition="foil"]')) return; pointer.current = { x: event.clientX, y: event.clientY, id: event.pointerId }; }}
           onPointerUp={event => { const start = pointer.current; pointer.current = null; if (!start || start.id !== event.pointerId) return; const dx = event.clientX - start.x, dy = event.clientY - start.y; if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1); }} onPointerCancel={() => { pointer.current = null; }}>
           <div className="cl-stage-grid" data-compare={compare}>{(compare ? compared : [edition]).map(id => <div className="cl-study" key={id}>
@@ -205,7 +208,7 @@ export default function CardDesignLab({ session }: { session: SessionInfo }) {
           </div>)}</div>
           {compare && compared.length === 0 && <p className="cl-empty">Select editions above to compare them.</p>}
         </div>
-        <p className="cl-stage-help">Drag sideways to browse. Focus the stage for keyboard shortcuts. Foil follows your pointer; Picture reveals its word when held.</p>
+        <p className="cl-stage-help">Drag sideways to browse. Replay deal to watch the artwork resolve in Table Reveal and Glance Plus. Foil follows your pointer; Picture reveals its word when held.</p>
         <p className="cl-stage-help">{entry.synthetic ? entry.example : `Question example: ${entry.example}`}</p>
       </section>
     </div>

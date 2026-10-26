@@ -15,7 +15,18 @@ export const EXTENSION_FILES = Object.freeze([
   ...proofWords.map((word) => `assets/card-${word}.png`),
 ]);
 export const HELPER_URL = 'https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js';
+export const DEFAULT_EXTENSION_RELEASE_VERSION = '0.0.1';
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+export function extensionBuildPaths({ version = DEFAULT_EXTENSION_RELEASE_VERSION, localPreview = false, outDir, zipPath } = {}) {
+  // Release labels are independent of the wire/API schema version in the frontend.
+  const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+  if (typeof version !== 'string' || version.length > 128 || !semver.test(version))
+    throw new Error('Extension release version must be a valid SemVer without a v prefix or path characters.');
+  const suffix = localPreview ? '-local-preview' : '';
+  return { version, outDir: resolve(outDir ?? resolve(project, `dist/extension${suffix}`)),
+    zipPath: resolve(zipPath ?? resolve(project, `dist/baited-v${version}${suffix}.zip`)) };
+}
 
 function within(root, path) {
   const part = relative(root, path);
@@ -80,12 +91,11 @@ async function verifyOutputDirectory(root, prefix = '') {
   }
 }
 
-export async function buildExtension({ sourceDir = resolve(project, 'extension'), outDir, zipPath, clientId, apiBaseUrl, studioBaseUrl, localPreview = false }) {
+export async function buildExtension({ sourceDir = resolve(project, 'extension'), outDir, zipPath, version, clientId, apiBaseUrl, studioBaseUrl, localPreview = false }) {
+  ({ version, outDir, zipPath } = extensionBuildPaths({ version, outDir, zipPath, localPreview }));
   const config = publicConfig(clientId, apiBaseUrl, localPreview, studioBaseUrl);
   if ((await lstat(sourceDir)).isSymbolicLink()) throw new Error('Extension source files must not be symlinks.');
   const source = await realpath(sourceDir);
-  outDir = resolve(outDir);
-  zipPath = resolve(zipPath);
   if (outDir === source || within(source, outDir) || within(outDir, source) ||
       !zipPath.endsWith('.zip') || zipPath === source || within(source, zipPath) || within(outDir, zipPath))
     throw new Error('Choose a dedicated output directory and a separate .zip path outside Extension sources.');
@@ -123,22 +133,21 @@ export async function buildExtension({ sourceDir = resolve(project, 'extension')
   const zipFile = await open(zipPath, constants.O_RDONLY | constants.O_NOFOLLOW);
   let bytes;
   try { bytes = await zipFile.readFile(); } finally { await zipFile.close(); }
-  return { version: '0.0.1', mode: localPreview ? 'local-preview' : 'installable', outDir, zipPath,
+  return { version, mode: localPreview ? 'local-preview' : 'installable', outDir, zipPath,
     files: EXTENSION_FILES.length, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
 
 async function main() {
   const args = process.argv.slice(2);
-  let localPreview = false, outDir, zipPath;
+  let localPreview = false, outDir, zipPath, version;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--local-preview') localPreview = true;
     else if (args[i] === '--out-dir' && args[i + 1]) outDir = args[++i];
     else if (args[i] === '--zip' && args[i + 1]) zipPath = args[++i];
-    else throw new Error('Usage: node scripts/build-extension.mjs [--local-preview] [--out-dir PATH] [--zip PATH]');
+    else if (args[i] === '--version' && args[i + 1]) version = args[++i];
+    else throw new Error('Usage: node scripts/build-extension.mjs [--version SEMVER] [--local-preview] [--out-dir PATH] [--zip PATH]');
   }
-  const suffix = localPreview ? '-local-preview' : '';
-  const result = await buildExtension({ outDir: outDir || resolve(project, `dist/extension${suffix}`),
-    zipPath: zipPath || resolve(project, `dist/baited-v0.0.1${suffix}.zip`), localPreview,
+  const result = await buildExtension({ outDir, zipPath, version, localPreview,
     clientId: process.env.TWITCH_EXTENSION_CLIENT_ID, apiBaseUrl: process.env.EXTENSION_API_BASE_URL,
     studioBaseUrl: process.env.EXTENSION_STUDIO_BASE_URL });
   console.log(JSON.stringify(result, null, 2));
