@@ -1,6 +1,6 @@
-# Baited v0.0.1: Hosted Test with Paolo
+# Baited v0.0.1: Hosted Test
 
-This test serves the Extension panel from Twitch and runs the game backend on Maff's Linux PC through a named Cloudflare Tunnel. The repository stays private. Hosted Test is not a review submission or a public Extension release.
+This test serves the Extension panel from Twitch and runs the game backend on Maff's Linux PC through a named Cloudflare Tunnel. The repository stays private. Hosted Test is not a review submission or a public Extension release. The owner selected **lakeeko** for the first remote round; his saved Testing Account Allowlist entry was verified in the console. Paolo remains allowlisted for later tests.
 
 ## Current setup boundary
 
@@ -23,6 +23,7 @@ No review was submitted. Paolo joining, real chat delivery, the physical microph
 | OAuth callback | `https://play-baited.maff.app/auth/twitch/callback` |
 | Broadcaster | `komediruzecki7` / Twitch ID `501062940` |
 | Paolo | `yahwehwastaken` / Twitch ID `566058624` |
+| Current remote tester | `lakeeko` (saved Testing Account Allowlist entry verified) |
 | Extension version | `0.0.1` |
 | Viewer file | `viewer.html` |
 | Existing Mobile view | `viewer.html` (physical Twitch mobile test pending) |
@@ -108,15 +109,15 @@ These settings are based on the actual Baited panel architecture. Twitch's [life
 
 The required listing images are separate from the frontend ZIP: logo 100×100 PNG, discovery 300×200 PNG, and at least one 4:3 screenshot at 1024×768 or larger, below 10 MB. A 24×24 taskbar icon is only required for a video-component Extension, but an export is supplied for future use. See [Version Details requirements](https://dev.twitch.tv/docs/extensions/life-cycle/#version-details). Use real UI screenshots; replace staged screenshots with a recorded real test before review where appropriate.
 
-## Run one round with OBS and Paolo
+## Run one round with OBS and lakeeko
 
 1. Open [Studio](https://play-baited.maff.app/studio) and connect `komediruzecki7`. Review Twitch's requested `user:read:chat` permission and approve it yourself. Wait until Studio says Twitch is connected.
 2. Click **Enable microphone**, read the consent screen, then allow the intended microphone in the browser. The first use downloads Moonshine. Keep the Studio tab open and wait until the microphone is ready. No Deepgram key is needed.
 3. In Studio's **Stream setup**, copy **OBS overlay URL**. In OBS, add **Sources → + → Browser**, paste it, and set 1920×1080. Capture game/camera plus this source. Keep the viewer panel and its secret word out of the scene. Capture Studio sound once if sounds are enabled; the overlay itself stays silent.
-4. Paolo signs in as `yahwehwastaken`, opens [your channel](https://www.twitch.tv/komediruzecki7), reloads after the allowlist change, and accepts the prerelease disclosure. He should see Baited in the channel panels.
-5. Start OBS streaming when both people are ready. Start a round in Studio. Paolo checks that he sees the target card while Studio and OBS keep its word hidden.
-6. Paolo sends clues in normal Twitch chat. Check that the Studio receives his live messages. Say the target naturally in a sentence. When Moonshine proposes a catch, confirm it only if it was correct.
-7. Verify the confirmed result appears in Paolo's panel and the OBS source. Run an escape or pause/resume round too. Reject an intentionally mistaken catch and verify it does not award a win or reveal the word on OBS.
+4. Lakeeko signs into `lakeeko`, opens [your channel's About page](https://www.twitch.tv/komediruzecki7/about), reloads after the allowlist change, and accepts the prerelease disclosure. He should see Baited in the channel panels. If it is missing, try the [direct Twitch panel](https://www.twitch.tv/popout/komediruzecki7/extensions/54ysfu9jbragbdbvown2n8zrrli0g0-0.0.1/panel); no installation on his own channel is needed.
+5. Rehearse offline first using OBS Start Recording and Proton Meet for voice, or choose Start Streaming for a normal public Twitch broadcast. The panel and chat do not require an active broadcast. Start a round in Studio. Lakeeko checks that he sees the target card while Studio and OBS keep its word hidden.
+6. Lakeeko sends clues in normal Twitch chat. Check that the Studio receives his live messages. Say the target naturally in a sentence. When Moonshine proposes a catch, confirm it only if it was correct.
+7. Verify the confirmed result appears in lakeeko's panel and the OBS source. Run an escape or pause/resume round too. Reject an intentionally mistaken catch and verify it does not award a win or reveal the word on OBS.
 
 Moonshine hears the microphone granted to Studio, not arbitrary audio from the Twitch video player. Recognition runs on the streamer's computer. Final text and timing go to the game server for matching. A public HTTPS origin is a different browser permission/storage context from localhost, so grant the mic again and expect its first model load.
 
@@ -131,10 +132,10 @@ Check these only after observing them in the real hosted session:
 - [x] Native configuration loads from Twitch's CDN in `hosted_test` state and reports Studio connected.
 - [x] Broadcaster dashboard shows Baited 0.0.1 activated in Panel 1.
 - [x] Broadcaster's native viewer loads from Twitch's CDN, both inline on the channel and in the pop-out, and shows the waiting state.
-- [ ] Broadcaster and Paolo both see the panel from Twitch's CDN.
-- [ ] Studio receives Paolo's real chat messages.
+- [ ] Broadcaster and the remote tester both see the panel from Twitch's CDN.
+- [ ] Studio receives the remote tester's real chat messages.
 - [ ] Physical microphone and Moonshine work while the intended OBS scene is running.
-- [ ] Active target stays hidden in Studio and OBS; Paolo sees it.
+- [ ] Active target stays hidden in Studio and OBS; the remote tester sees it.
 - [ ] Confirmed catch, rejected catch, pause/resume and escape show the intended results.
 - [ ] Reload/reconnect does not duplicate scoring or replay an old result sound.
 - [ ] Real screenshots and a short OBS recording are saved for the later review package.
