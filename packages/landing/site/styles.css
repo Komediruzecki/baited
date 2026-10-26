@@ -37,7 +37,8 @@
   box-sizing: border-box;
 }
 html {
-  scroll-behavior: smooth;
+  /* Restoration and ScrollTrigger measurements must be immediate. Link clicks animate in nav.js. */
+  scroll-behavior: auto;
   scroll-padding-top: 32px;
 }
 /* One continuous ground from the hero into "How it plays": the glow fades out to nothing
