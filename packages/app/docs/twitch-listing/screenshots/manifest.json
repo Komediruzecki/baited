@@ -1,0 +1,44 @@
+{
+  "captured_at": "2026-10-26T19:31:20.915904+00:00",
+  "source_commit": "df276cfddfcc792140015d89b4bd442ad4947d40 plus hosted-test original-logo changes",
+  "capture_method": "CUA browser screenshot, JPEG decoded and saved as PNG without pixel edits, resizing, or invented content",
+  "status": "Local demonstrations, not proof of Twitch Hosted Test or a remote participant round",
+  "screenshots": [
+    {
+      "file": "studio-local-demo.png",
+      "width": 1024,
+      "height": 768,
+      "bytes": 291509,
+      "sha256": "f3b3f03569e17726a0f3f7c14dd39cc0551092bc8450d72c41de073112c5aee8"
+    },
+    {
+      "file": "viewer-local-fixture.png",
+      "width": 1024,
+      "height": 768,
+      "bytes": 106537,
+      "sha256": "113c4547f6e4a3445bb1de3176cc72e12c9cce6a92f4cd7c9a557fe3ec24d32d"
+    },
+    {
+      "file": "config-local-fixture.png",
+      "width": 1024,
+      "height": 768,
+      "bytes": 252495,
+      "sha256": "8885158f479c217afb8f3e71813336b5227a317d845b311ba0eef66b976d8f6e"
+    }
+  ],
+  "states": {
+    "studio-local-demo.png": {
+      "url": "http://127.0.0.1:3330/",
+      "state": "Secretless local demo, active round 2, microphone off, local demo notice visible. Real app UI; no Twitch connection."
+    },
+    "viewer-local-fixture.png": {
+      "url": "http://127.0.0.1:3322/viewer.html?fixture=active",
+      "state": "Real native viewer frontend with preview helper and simulated VOLCANO active-round data. No Twitch connection. Panel renders at its 480px maximum within 1024x768 canvas."
+    },
+    "config-local-fixture.png": {
+      "url": "http://127.0.0.1:3322/config.html?fixture=active",
+      "state": "Real native configuration frontend with simulated preview_channel connected status. No actual Twitch connection."
+    }
+  },
+  "replacement_gate": "Replace fixture screenshots with a real allowlisted Hosted Test session before final review if screenshots must evidence actual integration."
+}

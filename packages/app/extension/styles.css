@@ -88,7 +88,7 @@ h3 {
   padding: 0 2px 10px;
   min-height: 42px;
 }
-/* Same alpha framing as the approved landing wordmark; source pixels unchanged. */
+/* The original owner-supplied BAITED lettering also used by the landing. */
 .wordmark {
   width: 104px;
   flex: none;
@@ -97,11 +97,10 @@ h3 {
 .baited-glyph {
   display: block;
   width: 100%;
-  aspect-ratio: 3.347126;
+  aspect-ratio: 1280 / 376;
   background: currentColor;
-  -webkit-mask: url('./assets/baited-wordmark-b.png') 52.5% 44.312394% / 105.494505% 235.402299%
-    no-repeat;
-  mask: url('./assets/baited-wordmark-b.png') 52.5% 44.312394% / 105.494505% 235.402299% no-repeat;
+  -webkit-mask: url('./assets/baited-original-mask.svg') center / contain no-repeat;
+  mask: url('./assets/baited-original-mask.svg') center / contain no-repeat;
 }
 .round-index {
   font-size: 11px;

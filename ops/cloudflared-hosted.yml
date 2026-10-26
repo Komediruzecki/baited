@@ -1,0 +1,5 @@
+# Non-secret local settings. Ingress comes from the named tunnel's remote config.
+# This explicit file prevents loading an unrelated ~/.cloudflared/config.yml.
+no-autoupdate: true
+loglevel: warn
+metrics: 127.0.0.1:20249

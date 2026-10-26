@@ -128,6 +128,10 @@ test('preview serves a bounded allowlist, requires exact Host/origin, and keeps 
     assert.match(viewer.body, /\/__preview\/helper.js/);
     assert.equal(viewer.body.includes(HELPER_URL), false);
     assert.ok((await readFrontendFile('viewer.html')).toString().includes(HELPER_URL));
+    const wordmark = await get('/assets/baited-original-mask.svg');
+    assert.equal(wordmark.status, 200);
+    assert.equal(wordmark.headers['content-type'], 'image/svg+xml');
+    assert.match(wordmark.body, /BAITED original wordmark/);
     const runtime = await get('/runtime-config.js');
     assert.match(runtime.body, new RegExp(`http://127.0.0.1:${port}`));
     assert.match(runtime.body, /studioBaseUrl/);

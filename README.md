@@ -33,6 +33,10 @@ pnpm build:extension     # Requires public Extension client ID and backend origi
 
 The Extension ZIP is separate from the app server and the landing. It never includes the Moonshine model, backend credentials or the server. Production hosting of the game is a separate task from landing releases.
 
+For a round with remote testers, follow [Twitch Hosted Test](packages/app/docs/HOSTED_TEST.md). It covers the named Cloudflare Tunnel on the Linux host, Proton-backed backend commands, the upload ZIP, Twitch settings and an OBS round with Paolo. The planned test service is `play-baited.maff.app`; it is available only while the host and both bounded processes are running. See the guide's verification status before treating it as live.
+
+The approved original wordmark and upload-ready logo, icon and discovery exports live in [Twitch listing assets](packages/app/assets/twitch/v0.0.1/README.md). Older logo variants remain available for reference. Preparing these files does not submit the Extension for review.
+
 ## Deployment and access
 
 The landing workflow deploys `main` to dev. Production requires an annotated `bait-vX.Y.Z` tag matching `packages/landing/package.json` and pointing to a commit on `main`. The repository variable `LANDING_DEPLOY_ENABLED` must be `true`. See [deployment ownership and secrets](docs/landing-deployment.md).

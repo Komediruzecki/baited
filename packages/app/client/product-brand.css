@@ -1,4 +1,4 @@
-/* Approved variant B, framed exactly as on the landing. The source PNG is unchanged. */
+/* Owner-supplied original BAITED lettering. Hook variants remain archived. */
 .product-brand {
   display: inline-flex;
   width: 116px;
@@ -8,11 +8,10 @@
 .baited-glyph {
   display: block;
   width: 100%;
-  aspect-ratio: 3.347126;
+  aspect-ratio: 1280 / 376;
   background: currentColor;
-  -webkit-mask: url('/brand/baited-wordmark-b.png') 52.5% 44.312394% / 105.494505% 235.402299%
-    no-repeat;
-  mask: url('/brand/baited-wordmark-b.png') 52.5% 44.312394% / 105.494505% 235.402299% no-repeat;
+  -webkit-mask: url('/brand/baited-original-mask.svg') center / contain no-repeat;
+  mask: url('/brand/baited-original-mask.svg') center / contain no-repeat;
 }
 .small-brand .product-brand {
   width: 94px;

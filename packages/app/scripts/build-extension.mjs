@@ -11,7 +11,7 @@ export const EXTENSION_FILES = Object.freeze([
   'client.js', 'viewer.js', 'config.js', 'presentation.js',
   'assets/bait-bomb.png', 'assets/inter-latin.woff2', 'assets/russo-one.ttf',
   'assets/Inter-OFL.txt', 'assets/RussoOne-OFL.txt',
-  'assets/baited-wordmark-b.png',
+  'assets/baited-original-mask.svg',
   ...proofWords.map((word) => `assets/card-${word}.png`),
 ]);
 export const HELPER_URL = 'https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js';

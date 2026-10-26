@@ -1,0 +1,16 @@
+{
+  "config": {
+    "ingress": [
+      {
+        "hostname": "play-baited.maff.app",
+        "service": "http://127.0.0.1:3300",
+        "originRequest": {
+          "httpHostHeader": "play-baited.maff.app"
+        }
+      },
+      {
+        "service": "http_status:404"
+      }
+    ]
+  }
+}

@@ -8,7 +8,7 @@ const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const apiPaths = new Set(['/api/extension/state', '/api/extension/config']);
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8', '.png': 'image/png',
+  '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml',
   '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.txt': 'text/plain; charset=utf-8',
 };
 const policy = [

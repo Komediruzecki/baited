@@ -43,7 +43,8 @@ function get(port: number, path: string, headers: RequestOptions['headers'] = {}
 test('local gateway serves only its native bundle, pins Host and rejects unsafe raw paths', async () => {
   let proxied = 0;
   const handler = gateway.createExtensionLocalHandler({
-    files: new Map([['/viewer.html', Buffer.from('native viewer')], ['/config.html', Buffer.from('native setup')], ['/styles.css', Buffer.from('body {}')]]),
+    files: new Map([['/viewer.html', Buffer.from('native viewer')], ['/config.html', Buffer.from('native setup')], ['/styles.css', Buffer.from('body {}')],
+      ['/assets/baited-original-mask.svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')]]),
     requestUpstream: () => { proxied++; throw new Error('unexpected'); },
   });
   const server = createServer(handler);
@@ -53,6 +54,9 @@ test('local gateway serves only its native bundle, pins Host and rejects unsafe 
     assert.equal(index.status, 200);
     assert.equal(index.body, 'native viewer');
     assert.equal(index.headers['cache-control'], 'no-store');
+    const wordmark = await get(port, '/assets/baited-original-mask.svg');
+    assert.equal(wordmark.status, 200);
+    assert.equal(wordmark.headers['content-type'], 'image/svg+xml');
     assert.match(index.headers['content-security-policy'] as string, /https:\/\/extension-files\.twitch\.tv/);
     assert.match(index.headers['content-security-policy'] as string, /frame-ancestors https:\/\/twitch.tv https:\/\/\*\.twitch.tv/);
     assert.equal((await get(port, '/viewer.html', {}, 'HEAD')).body, '');
