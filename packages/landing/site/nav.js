@@ -20,6 +20,27 @@ export function navState({ y, lastY, folded }) {
 
 export const navAway = (footerTop) => footerTop <= AWAY_AT
 
+// Smooth only deliberate navigation. Global CSS smoothing also animates the browser's reload
+// restoration and ScrollTrigger's measurement scrolls, leaving fragment links at the wrong place.
+export function initAnchorNavigation() {
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    const link = event.target.closest('a[href^="#"]')
+    if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return
+    const hash = link.getAttribute('href')
+    const target = document.getElementById(hash.slice(1))
+    if (!target) return
+    event.preventDefault()
+    if (location.hash !== hash) history.pushState(history.state, '', hash)
+    if (!target.hasAttribute('tabindex')) {
+      target.setAttribute('tabindex', '-1')
+      target.addEventListener('blur', () => target.removeAttribute('tabindex'), { once: true })
+    }
+    target.focus({ preventScroll: true })
+    target.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+  })
+}
+
 // The logo's hover fill: square pixels that each light up at their own random moment.
 export const LOGO_COLUMNS = 10
 export const LOGO_ROWS = 4

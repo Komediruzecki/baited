@@ -85,6 +85,7 @@ for (const { width, height, touch, reduced = false } of layouts) {
         await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }))
         await page.locator('.footer-links a[href="#cards"]')[touch ? 'tap' : 'click']()
         await expect(page).toHaveURL(/#cards$/)
+        await expect(page.locator('#cards')).toBeFocused()
         await expect
           .poll(() =>
             page.locator('#deck-title').evaluate((title) => {
@@ -96,7 +97,7 @@ for (const { width, height, touch, reduced = false } of layouts) {
         await expect
           .poll(() => page.locator('.site-footer').evaluate((footer) => footer.getBoundingClientRect().top >= innerHeight))
           .toBe(true)
-        // A pinned heading can be visible while native smooth scrolling is still in flight.
+        // A pinned heading can be visible while smooth scrolling is still in flight.
         // Finish the fragment navigation before testing the browser's reload restoration.
         await expect
           .poll(() =>

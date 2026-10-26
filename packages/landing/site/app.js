@@ -3,10 +3,11 @@ import { createDeck, wrapIndex, wrapOffset } from './deck.js'
 import { initWhyStack } from './why-stack.js'
 import { initWhyScenes } from './why-scenes.js'
 import { initFooter } from './footer.js'
-import { initNav } from './nav.js'
+import { initAnchorNavigation, initNav } from './nav.js'
 import { karaoke, typeIn } from './reveal.js'
 
 initNav()
+initAnchorNavigation()
 
 // How it plays: the step cards stack up as the page scrolls, and the scene inside each card
 // plays when its card arrives. Without the stack the scenes keep their final picture.
