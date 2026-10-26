@@ -220,6 +220,7 @@
 .cl-context--panel .cl-card[data-edition=glance-reveal] .cl-card__foot { margin-top:8px; min-height:54px; }
 .cl-context--panel .cl-card[data-edition=glance-reveal]:has(.cl-card__verdict) .cl-card__art { width:124px; }
 .cl-context--panel .cl-card[data-edition=table-reveal]:has(.cl-card__verdict) .cl-card__art { width:120px; }
+.cl-context--panel .cl-card:is([data-edition=table-reveal],[data-edition=glance-reveal])[data-face=back] { width:272px; margin-inline:auto; }
 .cl-card[data-edition=cut] .cl-card__cut { display:block; position:absolute; inset:0; background:linear-gradient(172deg,#48218f,#1d0b45 80%); clip-path:polygon(0 0,100% 0,100% 50%,0 57%); z-index:-1; }
 .cl-card[data-edition=cut] .cl-card__information { text-align:left; }
 .cl-card[data-edition=cut] .cl-card__word { color:#fffdf7; font-size:min(34px,calc(100cqi / var(--chars) / .78)); }
