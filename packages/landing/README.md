@@ -60,6 +60,8 @@ rtk pnpm --filter @baited/landing deploy:dry-run:prod
 
 The deck tests cover the fan's slot geometry, wraparound, the release rules, the spring and lift curves and how the fan closes up on narrow screens. The scene tests cover the round clock, the chat and facecam timing, and that the chat never types the secret word. The footer tests cover the pixel edge's columns, fill order, fade and fixed pattern, and the logo's size and squares. The card tests check every secret word's color against the card face and that the first step card uses the deck's face. The pixel tests cover the curtain's size and which links get it, the navigation's float, fold and step-away rules, the typing pace, that every page loads the curtain early and that no served file uses the old yellow. The package's Worker tests cover host and environment guards, read-only serving, indexing headers, robots, sitemap, unpublished proof routes and response preservation. Brand tests restrict proof selection to known variants on review hosts. Browser verification must also cover the film, the scroll-built steps, deck dragging and legal navigation with the actual Worker content policy.
 
+`pnpm --filter @baited/landing test:browser` runs the responsive regression checks in headless Chromium against a local Worker. Install Chromium first with `pnpm --filter @baited/landing exec playwright install chromium`. Set `BAITED_TEST_OUTPUT` to a registered run's `scratch/raw-logs/` directory for screenshots and failure traces; CI uses its runner temporary directory. Set `BAITED_TEST_URL` to check an already running preview or deployed host instead. The tests cover mobile button alignment, the intro-to-card gap, an unobscured interval before the footer wipe, repeated footer navigation, direct card links and reduced motion. The local test server uses the installed workerd's supported compatibility date; deployment configuration is unchanged.
+
 ## Development and production
 
 Local review on this workstation (the installed local workerd currently supports 2026-08-08):
@@ -79,6 +81,6 @@ The former `bait.maff.app` and `dev.bait.maff.app` domains remain attached to th
 
 For an authorized recovery, the package scripts are `deploy:dev` and `deploy:prod`. Local credentials must come through Proton Pass. No credential values belong in this package.
 
-The Worker accepts GET and HEAD, serves only the configured environments, and applies a self-only content policy. Development remains `noindex, nofollow`; that discourages indexing but is not access control. An unset environment or mismatched production host returns 404. Successful production responses are indexable. The package version is prepared as 1.3.0 for the next authorized landing release. This source version alone is not evidence of a deployment or a published tag.
+The Worker accepts GET and HEAD, serves only the configured environments, and applies a self-only content policy. Development remains `noindex, nofollow`; that discourages indexing but is not access control. An unset environment or mismatched production host returns 404. Successful production responses are indexable. This source version alone is not evidence of a deployment or a published tag.
 
 No deployment is implied by these source files. Confirm the exact revision and served pages in the workflow result before reporting a deployment complete.

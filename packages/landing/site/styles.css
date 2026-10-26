@@ -677,6 +677,10 @@ input {
   font-size: 14px;
   margin-top: 8px;
 }
+.cards-anchor.is-pinned {
+  /* Keep the deck clear for a short scroll before the footer starts its wipe. */
+  padding-bottom: clamp(160px, 40svh, 420px);
+}
 .deck-section {
   --deck-h: 530px;
   --deck-zoom: 1;
@@ -1358,12 +1362,12 @@ input {
     gap: 12px;
     margin-top: 26px;
   }
-  /* Centred, with its words in the middle of the whole button: the right side mirrors the box.
+  /* Centre the words in the space between the icon box and the right edge.
      (.hero .hero-cta, because pixels.css loads after this file.) */
   .hero .hero-cta {
     width: auto;
     min-width: 248px;
-    padding-right: calc(var(--btn-box) + var(--btn-pad) + 18px);
+    padding-right: 18px;
   }
   .hero .microline {
     margin: 0;

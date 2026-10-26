@@ -42,7 +42,9 @@ export function seededRandom(seed) {
 
 export function initFooter({ gsap, ScrollTrigger } = {}) {
   const footer = document.querySelector('.site-footer')
-  const deck = document.getElementById('cards')
+  // The fragment target stays in normal flow; only its child is pinned/transformed.
+  const anchor = document.getElementById('cards')
+  const deck = anchor?.querySelector('.deck-section')
   const edge = footer?.querySelector('.footer-edge')
   if (!footer || !gsap) return
   if (ScrollTrigger) gsap.registerPlugin(ScrollTrigger)
@@ -67,6 +69,7 @@ export function initFooter({ gsap, ScrollTrigger } = {}) {
         })
 
       if (ScrollTrigger && edge && deck) {
+        anchor.classList.add('is-pinned')
         let cells = []
         const build = () => {
           const columns = edgeColumns(footer.clientWidth)
@@ -97,12 +100,12 @@ export function initFooter({ gsap, ScrollTrigger } = {}) {
             paint(self.progress)
           },
         })
-        // "The cards" waits under the rising footer: pinned from when it fills the screen until the
-        // footer's top reaches the top of the screen.
+        // Hold the complete deck before the wipe, then keep it under the rising footer.
         const pin = ScrollTrigger.create({
           trigger: deck,
           start: 'bottom bottom',
-          end: () => `+=${window.innerHeight}`,
+          endTrigger: footer,
+          end: 'top top',
           pin: true,
           pinSpacing: false,
           anticipatePin: 1,
@@ -110,6 +113,7 @@ export function initFooter({ gsap, ScrollTrigger } = {}) {
         cleanups.push(() => {
           wipe.kill()
           pin.kill()
+          anchor.classList.remove('is-pinned')
           edge.replaceChildren()
         })
       }

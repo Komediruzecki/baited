@@ -52,8 +52,9 @@
 /* The stage carries the page padding, so "The cards" after it can run edge to edge (and be pinned). */
 .why-vtg__stage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, var(--why-card-size));
-  column-gap: clamp(2rem, 6vw, 7rem);
+  grid-template-columns: minmax(0, 34rem) minmax(0, var(--why-card-size));
+  justify-content: center;
+  column-gap: clamp(2rem, 4vw, 4rem);
   align-items: start;
   margin-bottom: clamp(40px, 6vw, 80px);
   padding-inline: var(--pad);
@@ -775,7 +776,7 @@
   }
   .why-vtg__stage {
     grid-template-columns: minmax(0, 1fr);
-    row-gap: 2.75rem;
+    row-gap: 1.75rem;
     margin-bottom: calc(24px + var(--why-stack-depth));
   }
   .why-vtg__intro-sticky {

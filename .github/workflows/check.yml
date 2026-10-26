@@ -41,6 +41,13 @@ jobs:
       - name: Check landing and both deployment bundles
         if: matrix.package == 'landing'
         run: pnpm check:landing
+      - name: Check landing in Chromium
+        if: matrix.package == 'landing'
+        env:
+          BAITED_TEST_OUTPUT: ${{ runner.temp }}/baited-browser
+        run: |
+          pnpm --filter @baited/landing exec playwright install --with-deps chromium
+          pnpm --filter @baited/landing test:browser
       - name: Check review-host helper
         if: matrix.package == 'review-host'
         run: |
