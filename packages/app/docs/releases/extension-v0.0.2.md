@@ -20,7 +20,7 @@ Channel activation and an actual round on v0.0.2 need verification after the hos
 
 ## Separate Studio service
 
-The ZIP updates the native Twitch viewer/configuration. Studio, the standalone viewer, OBS, speech recognition and the server run at `https://play-baited.maff.app` and require a separate backend image/restart. At upload time the public endpoint returned HTTP 530, the bounded tunnel had stopped, and the still-local backend served the older Studio build. A new backend image is being prepared; the owner has been asked before ending any active round or in-memory session.
+The ZIP updates the native Twitch viewer/configuration. Studio, the standalone viewer, OBS, speech recognition and the server run at `https://play-baited.maff.app` and require a separate backend image/restart. At upload time the public endpoint returned HTTP 530, the bounded tunnel had stopped, and the still-local backend served the older Studio build. The owner then approved the restart. Both old bounded processes had already expired. The new image was started on 26 October at 23:13 UTC and the same named tunnel was restarted. Public health and session checks pass; four tunnel connections are ready and demo mode is disabled. The persistent `baited-hosted-test-data` volume and original Proton encryption key were retained.
 
 ## Card selection
 
@@ -35,3 +35,26 @@ rtk proxy pass-cli run --env-file /home/maff/foss/worktrees/baited/card-expansio
 ```
 
 This writes `packages/app/dist/baited-v0.0.2.zip`. Only public connection settings enter the ZIP. Do not use `--local-preview` for Twitch upload. Keep previous artifacts intact.
+
+## Hosted restart verification
+
+- Source revision: `ece246da215ab1e60daf003d1556998ca4bffb11`.
+- Image: `baited-hosted-test:review-ece246d`, promoted to the existing local test alias.
+- Image ID: `sha256:9a72d635a27b19737c47b771f1fe9eab52667955200310760c559094ad23b929`.
+- Public Studio serves `/assets/index-D4fgGsu0.js`, SHA-256 `599776c4c527ee3d8cd8a27219b73631b6d573004bb4d984b89cbe8d4c25acfb`, containing the redesigned Studio marker.
+- The browser shows the new Baited sign-in screen. Reconnect Twitch and enable the microphone before testing a real round.
+- Each test process expires after 180 minutes, around 27 October 02:13 UTC / 03:13 CET. Ctrl+C stops its terminal sooner. The backend binds to `127.0.0.1:3300`; only the existing named tunnel exposes it.
+- New-card panel fixtures: both new studies fit all 13 states at 318 × 500 using hard `kaleidoscope` (26 checks). Reduced motion keeps the original artwork visible and hides the canvas. These are local fixtures, not physical-device or live Twitch acceptance.
+- App CI: 225 tests, build and Extension packaging passed. Review-host: 5 tests passed. Landing browser CI is being retried once after its Wrangler/esbuild server crashed; record its final result separately.
+
+Restart each service in its own terminal, from any directory:
+
+```sh
+rtk proxy pass-cli run --env-file /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/docs/baited.hosted-backend.env.tmpl -- node /home/maff/foss/worktrees/baited/card-expansion-60/ops/hosted-test.mjs backend
+```
+
+```sh
+rtk proxy pass-cli run --env-file /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/docs/baited.hosted-tunnel.env.tmpl -- node /home/maff/foss/worktrees/baited/card-expansion-60/ops/hosted-test.mjs tunnel
+```
+
+Do not delete the persistent volume or rotate its encryption key as part of a restart. If port 3300 is occupied, reuse the intended running test or stop that exact session before restarting.

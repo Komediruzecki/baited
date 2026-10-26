@@ -1,4 +1,6 @@
-# Baited v0.0.1: Hosted Test
+# Baited: Hosted Test
+
+Latest update, 27 October 2026: **v0.0.2 is uploaded and in Hosted Test**. The redesigned Studio backend has also been restarted with the existing persistent data volume. See the [v0.0.2 receipt and restart commands](releases/extension-v0.0.2.md). The v0.0.1 notes below preserve the first-round setup and must not be read as proof that the channel has switched to v0.0.2. No Twitch review has been submitted.
 
 This test serves the Extension panel from Twitch and runs the game backend on Maff's Linux PC through a named Cloudflare Tunnel. The repository stays private. Hosted Test is not a review submission or a public Extension release. The owner selected **Paolo (`yahwehwastaken`)** for the first remote round. Paolo reports seeing the waiting panel. `lakeeko` is also allowlisted, but his blank panel in Firefox is deferred.
 
