@@ -258,6 +258,8 @@ const chatEvent = z.object({
   message_id: z.string(),
   message: z.object({ text: z.string().max(2000) }),
   badges: z.array(z.object({ set_id: z.string().max(64) })).max(64).optional(),
+  // Set during a Shared Chat session; another channel's ID means the message was sent there.
+  source_broadcaster_user_id: z.string().nullish(),
 });
 /** A validated chat message, handed to chat commands after the game has seen it. */
 export interface ChatMessage {
@@ -420,7 +422,13 @@ export class TwitchConnection {
     )
       return false;
     const event = chatEvent.safeParse(p.event);
-    if (!event.success || event.data.broadcaster_user_id !== this.game.data.owner) return false;
+    if (
+      !event.success ||
+      event.data.broadcaster_user_id !== this.game.data.owner ||
+      (event.data.source_broadcaster_user_id != null &&
+        event.data.source_broadcaster_user_id !== this.game.data.owner)
+    )
+      return false;
     this.seen.set(m.message_id, now);
     if (this.seen.size > 10000)
       for (const [id, t] of this.seen) if (now - t > 60000) this.seen.delete(id);

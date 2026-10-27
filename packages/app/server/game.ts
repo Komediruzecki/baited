@@ -728,23 +728,29 @@ export class Game {
       return false;
     if (this.chatIds.size > 10000) this.chatIds.clear();
     this.chatIds.add(id);
-    if (now - (this.recentChat.get(userId) ?? -Infinity) < 3000) return false;
     if (!r.participants.has(userId) && r.participants.size >= 10000) return false;
+    // A vote is counted once and sits outside the hint limit, so a hint and a !skip never block each other.
+    if (text.trim().toLowerCase() === '!skip') {
+      if (r.votes.has(userId)) return false;
+      r.votes.add(userId);
+      r.participants.set(userId, name.slice(0, 40));
+      if (r.votes.size >= this.data.settings.skipVotes && !this.skipUsed) {
+        this.skipUsed = true;
+        this.finish('skipped');
+      } else {
+        this.changed();
+        this.emit({ type: 'skip-vote' });
+      }
+      return true;
+    }
+    if (now - (this.recentChat.get(userId) ?? -Infinity) < 3000) return false;
     const spoiled = spoils(text, r.word);
     this.rememberHint(r, userId, name, text, spoiled);
     // Spoiler text, however disguised, earns no participation credit and is never echoed by BAIT.
     if (spoiled) return false;
     this.recentChat.set(userId, now);
     r.participants.set(userId, name.slice(0, 40));
-    const voted = text.trim().toLowerCase() === '!skip' && !r.votes.has(userId);
-    if (voted) r.votes.add(userId);
-    if (r.votes.size >= this.data.settings.skipVotes && !this.skipUsed) {
-      this.skipUsed = true;
-      this.finish('skipped');
-    } else {
-      this.changed();
-      if (voted) this.emit({ type: 'skip-vote' });
-    }
+    this.changed();
     return true;
   }
   view(role: 'studio' | 'viewer' | 'overlay'): GameView {
