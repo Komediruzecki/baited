@@ -121,7 +121,7 @@ test('trusted touch keeps dragging when implicit capture transfers from the word
     await expect.poll(async () => (await deckState(page)).revealStarts).toBe(1)
     await expect(page.locator('.deck-card-item .card-art.is-resolving')).toHaveCount(0)
     const state = await deckState(page)
-    expect(state).toMatchObject({ front: 'BANANA', frontCount: 1, maxFronts: 1, captures: false, glass: 1, images: 8, maxImages: 8, maxReveals: 1, revealStarts: 1, overflow: false })
+    expect(state).toMatchObject({ front: 'BANANA', frontCount: 1, maxFronts: 1, captures: false, glass: 1, images: 7, maxImages: 7, maxReveals: 1, revealStarts: 1, overflow: false })
     expect(state.frontWords).toEqual(['VOLCANO', 'BANANA'])
     expect(state.events.filter(event => event.type === 'pointerup')).toHaveLength(1)
     expect(state.events.every(event => event.trusted && event.pointerType === 'touch')).toBe(true)
