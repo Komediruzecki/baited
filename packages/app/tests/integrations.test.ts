@@ -223,6 +223,9 @@ test('Helix handles 401 refresh and rate-limit reset without exposing tokens', a
     await rm(dir, { recursive: true, force: true });
   }
 });
+const subscribed = (calls: unknown[]) =>
+  calls.map((args) => JSON.parse(String((args as [string, string, RequestInit])[2].body)));
+const chatTypes = ['channel.chat.message', 'channel.chat.message_delete', 'channel.chat.clear_user_messages'];
 test('EventSub welcome subscribes once; migration retains subscriptions until new welcome', async (t) => {
   const g = game(),
     sockets: FakeSocket[] = [],
@@ -249,7 +252,7 @@ test('EventSub welcome subscribes once; migration retains subscriptions until ne
   sockets[0].message(welcome());
   await tick();
   assert.equal(g.connection.status, 'connected');
-  assert.equal(calls.length, 1);
+  assert.deepEqual(subscribed(calls).map((body) => body.type), chatTypes);
   sockets[0].message(
     envelope('session_reconnect', {
       session: { reconnect_url: 'wss://eventsub.wss.twitch.tv/ws?reconnect=opaque' },
@@ -262,8 +265,57 @@ test('EventSub welcome subscribes once; migration retains subscriptions until ne
   sockets[1].message(welcome('migrated'));
   await tick();
   assert.equal(sockets[0].readyState, WebSocket.CLOSED);
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, chatTypes.length);
   assert.equal(g.connection.status, 'connected');
+});
+test('moderator deletes and clears are read as the broadcaster, with the chat scope already granted', async (t) => {
+  const g = game(),
+    calls: unknown[] = [],
+    socket = new FakeSocket();
+  const auth = {
+    api: async (...args: unknown[]) => {
+      calls.push(args);
+      return Response.json({});
+    },
+  } as unknown as TwitchAuth;
+  const c = new TwitchConnection(g, auth, () => {}, () => socket as unknown as WebSocket);
+  t.after(() => c.stop());
+  c.start();
+  socket.message(welcome('moderation'));
+  await tick();
+  for (const body of subscribed(calls)) {
+    assert.equal(body.version, '1');
+    assert.deepEqual(body.condition, { broadcaster_user_id: '123', user_id: '123' });
+    assert.deepEqual(body.transport, { method: 'websocket', session_id: 'moderation' });
+  }
+});
+test('a refused moderation subscription leaves chat connected', async (t) => {
+  const g = game(),
+    sockets: FakeSocket[] = [];
+  g.begin();
+  const auth = {
+    api: async (_owner: string, _path: string, init: RequestInit) => {
+      if (JSON.parse(String(init.body)).type !== 'channel.chat.message')
+        throw new Error('Twitch request failed (403). Check authorization and reconnect.');
+      return Response.json({});
+    },
+  } as unknown as TwitchAuth;
+  const c = new TwitchConnection(g, auth, () => {}, () => {
+    const s = new FakeSocket();
+    sockets.push(s);
+    return s as unknown as WebSocket;
+  });
+  t.after(() => c.stop());
+  c.start();
+  sockets[0].message(welcome());
+  await tick();
+  await tick();
+  assert.equal(g.connection.status, 'connected');
+  assert.equal(sockets.length, 1, 'no reconnect');
+  assert.equal(sockets[0].readyState, WebSocket.OPEN);
+  sockets[0].message(event('a hint after the refusal'));
+  await tick();
+  assert.equal(g.view('studio').participants, 1);
 });
 test('EventSub rejects duplicates, stale events, wrong channels and malformed payloads', () => {
   const g = game();
@@ -322,6 +374,92 @@ test('EventSub ignores Shared Chat messages sent from partner channels', () => {
   assert.equal(c.acceptNotification(shared('solo', null, 'it waddles')), true);
   assert.deepEqual(seen, ['cold place', 'it waddles']);
   assert.equal(g.view('studio').participants, 2);
+});
+const moderation = (
+  type: 'channel.chat.message_delete' | 'channel.chat.clear_user_messages',
+  target: string,
+  patch: Record<string, unknown> = {},
+  id = Math.random().toString(),
+  at = Date.now(),
+) => {
+  const e = envelope(
+    'notification',
+    {
+      event: {
+        broadcaster_user_id: '123',
+        broadcaster_user_name: 'Bait',
+        broadcaster_user_login: 'bait',
+        target_user_id: target,
+        target_user_name: 'Viewer',
+        target_user_login: 'viewer',
+        ...patch,
+      },
+    },
+    id,
+    at,
+  );
+  return { ...e, metadata: { ...e.metadata, subscription_type: type } };
+};
+const chatFrom = (chatter: string, messageId: string, text: string, source: string | null = null) =>
+  envelope(
+    'notification',
+    {
+      event: {
+        ...event().payload.event,
+        chatter_user_id: chatter,
+        chatter_user_name: `Viewer${chatter}`,
+        message_id: messageId,
+        message: { text },
+        source_broadcaster_user_id: source,
+      },
+    },
+    `event-${messageId}`,
+  );
+test('EventSub drops a hint that a moderator deletes in this channel', () => {
+  const g = game();
+  g.begin();
+  const c = new TwitchConnection(g, {} as TwitchAuth, () => {});
+  assert.equal(c.acceptNotification(chatFrom('456', 'chat-a', 'a fancy outfit')), true);
+  assert.equal(c.acceptNotification(chatFrom('789', 'chat-b', 'slides on ice')), true);
+  const del = (target: string, messageId: string, patch: Record<string, unknown> = {}, id?: string, at?: number) =>
+    moderation('channel.chat.message_delete', target, { message_id: messageId, ...patch }, id, at);
+  assert.equal(c.acceptNotification(del('456', 'chat-a', { broadcaster_user_id: '999' })), false);
+  assert.equal(c.acceptNotification(del('456', 'chat-a', {}, 'stale', Date.now() - 20000)), false);
+  assert.equal(c.acceptNotification(del('456', 'chat-a', { message_id: undefined })), false);
+  assert.equal(g.round!.hints.length, 2);
+  const deletion = del('456', 'chat-a', {}, 'delete-a');
+  assert.equal(c.acceptNotification(deletion), true);
+  assert.equal(c.acceptNotification(deletion), false, 'a duplicate is ignored');
+  assert.deepEqual(g.round!.hints.map((hint) => hint.text), ['slides on ice']);
+});
+test('EventSub clears a banned or timed-out chatter and the award they won', () => {
+  const g = game();
+  g.begin();
+  const c = new TwitchConnection(g, {} as TwitchAuth, () => {});
+  c.acceptNotification(chatFrom('456', 'chat-a', 'a fancy outfit'));
+  c.acceptNotification(chatFrom('789', 'chat-b', 'slides on ice'));
+  g.transcript({
+    roundId: g.round!.id, epoch: g.round!.epoch, text: g.round!.word, final: true,
+    confidence: 0.99, capturedAt: Date.now(), id: 'speech',
+  });
+  const board = g.awardBoard!;
+  g.award(board.roundId, board.candidates.find((hint) => hint.name === 'Viewer456')!.id);
+  assert.equal(c.acceptNotification(moderation('channel.chat.clear_user_messages', '456', { broadcaster_user_id: '999' })), false);
+  assert.equal(g.result?.award?.name, 'Viewer456');
+  assert.equal(c.acceptNotification(moderation('channel.chat.clear_user_messages', '456')), true);
+  assert.equal(g.result?.award, undefined);
+  assert.deepEqual(g.awardBoard!.candidates.map((hint) => hint.name), ['Viewer789']);
+});
+test('Shared Chat partners cannot reach this channel’s hints through deletes or clears', () => {
+  const g = game();
+  g.begin();
+  const c = new TwitchConnection(g, {} as TwitchAuth, () => {});
+  c.acceptNotification(chatFrom('456', 'chat-own', 'a fancy outfit'));
+  assert.equal(c.acceptNotification(chatFrom('321', 'chat-partner', 'from next door', '999')), false);
+  // A partner channel's copy of a message has its own ID; only this channel's ID can match.
+  assert.equal(c.acceptNotification(moderation('channel.chat.message_delete', '456', { message_id: 'copy-of-chat-own' })), false);
+  assert.equal(c.acceptNotification(moderation('channel.chat.clear_user_messages', '321')), false);
+  assert.deepEqual(g.round!.hints.map((hint) => hint.text), ['a fancy outfit']);
 });
 test('EventSub watchdog reconnects after missing keepalive', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });

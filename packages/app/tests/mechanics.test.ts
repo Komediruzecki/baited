@@ -219,6 +219,71 @@ test('each reviewed hint keeps the time its chatter sent it', () => {
   assert.deepEqual(sent, { Alex: first, Blair: second });
 });
 
+test('a hint a moderator deletes leaves the round and the review, and takes its award along', () => {
+  const f = fixture();
+  f.game.begin();
+  f.game.chat('msg-a', 'a', 'Alex', 'why the formal outfit?', f.now());
+  f.game.chat('msg-b', 'b', 'Blair', 'slides on its belly?', f.now());
+  f.game.chat('msg-c', 'c', 'Casey', 'cold feet much?', f.now());
+  assert.equal(f.game.dropMessage('msg-c', 'c'), true);
+  assert.deepEqual(f.game.round!.hints.map((hint) => hint.name), ['Alex', 'Blair']);
+  f.game.transcript(f.transcript());
+  assert.equal(f.game.dropMessage('msg-b', 'b'), true);
+  const board = f.game.awardBoard!;
+  assert.deepEqual(board.candidates.map((hint) => hint.name), ['Alex']);
+  f.game.award(board.roundId, board.candidates[0].id);
+  assert.equal(f.game.data.leaders.a.baits, 1);
+  assert.equal(f.game.dropMessage('msg-a', 'a'), true);
+  assert.equal(f.game.result?.award, undefined, 'the picked hint is gone, so is its award');
+  assert.equal(f.game.data.leaders.a.baits, 0);
+  assert.deepEqual(f.game.view('viewer').mvps, []);
+  assert.equal(f.game.awardBoard!.selectedHintId, null);
+  assert.equal(f.game.awardBoard!.candidates.length, 0);
+  assert.equal(f.game.score.wins, 1, 'the community win stays');
+});
+
+test('a delete that names an unknown message or another chatter changes nothing', () => {
+  const f = fixture();
+  f.game.begin();
+  f.game.chat('msg-a', 'a', 'Alex', 'why the formal outfit?', f.now());
+  assert.equal(f.game.dropMessage('unknown', 'a'), false);
+  assert.equal(f.game.dropMessage('msg-a', 'b'), false);
+  assert.equal(f.game.round!.hints.length, 1);
+});
+
+test('a ban or timeout drops every hint from that chatter and takes back their award', () => {
+  const f = fixture();
+  f.game.begin();
+  f.game.chat('msg-1', 'a', 'Alex', 'why the formal outfit?', f.now());
+  f.game.chat('msg-2', 'b', 'Blair', 'slides on its belly?', f.now());
+  f.advance(3000);
+  f.game.chat('msg-3', 'a', 'Alex', 'waddle waddle', f.now());
+  f.advance(3000);
+  f.game.chat('msg-4', 'a', 'Alex', 'BIRD', f.now());
+  f.game.transcript(f.transcript());
+  const board = f.game.awardBoard!;
+  f.game.award(board.roundId, board.candidates.find((hint) => hint.text === 'waddle waddle')!.id);
+  assert.equal(f.game.dropChatter('a'), true);
+  assert.deepEqual(f.game.awardBoard!.candidates.map((hint) => hint.name), ['Blair']);
+  assert.equal(f.game.result?.award, undefined);
+  assert.equal(f.game.data.leaders.a.baits, 0);
+  assert.equal(f.game.dropChatter('a'), false, 'nothing left to take');
+});
+
+test('a ban after the review has closed leaves that award in place', () => {
+  const f = fixture();
+  f.game.begin();
+  f.game.chat('msg-1', 'a', 'Alex', 'why the formal outfit?', f.now());
+  f.game.transcript(f.transcript());
+  const board = f.game.awardBoard!;
+  f.game.award(board.roundId, board.candidates[0].id);
+  f.advance(600000);
+  f.game.tick();
+  assert.equal(f.game.dropChatter('a'), false);
+  assert.equal(f.game.result?.award?.name, 'Alex');
+  assert.equal(f.game.data.leaders.a.baits, 1);
+});
+
 test('non-winning rounds and commands cannot produce an award', () => {
   const f = fixture();
   f.game.begin();

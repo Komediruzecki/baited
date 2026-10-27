@@ -276,8 +276,10 @@ export function AwardReview({
         the Bait MVPs board. Only the name is shown, never the hint.
       </p>
       <p className="hint-note">
-        Review keeps up to 40 clean hints and 20 flagged hints, with limits per chatter. Text clears
-        ten minutes after the round. baited does not delete Twitch messages.
+        Review keeps up to 40 clean hints and 20 flagged hints, with limits per chatter. A hint
+        drops off when a moderator deletes it, or bans or times out whoever sent it. If it was your
+        pick, the award goes too. Text clears ten minutes after the round. baited does not delete
+        Twitch messages.
       </p>
     </section>
   );

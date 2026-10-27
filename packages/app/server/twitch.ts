@@ -261,6 +261,17 @@ const chatEvent = z.object({
   // Set during a Shared Chat session; another channel's ID means the message was sent there.
   source_broadcaster_user_id: z.string().nullish(),
 });
+/**
+ * Moderator actions the game follows: one deleted message, and every message from a chatter
+ * who was banned or timed out. Like chat itself they need only `user:read:chat`.
+ */
+const MESSAGE_DELETE = 'channel.chat.message_delete',
+  CLEAR_USER = 'channel.chat.clear_user_messages';
+const moderationEvent = z.object({
+  broadcaster_user_id: z.string(),
+  target_user_id: z.string(),
+  message_id: z.string().optional(),
+});
 /** A validated chat message, handed to chat commands after the game has seen it. */
 export interface ChatMessage {
   id: string;
@@ -339,25 +350,17 @@ export class TwitchConnection {
           welcomed = true;
           timeout = ((session.keepalive_timeout_seconds ?? 10) + 5) * 1000;
           watch();
-          if (!migrating)
-            await this.auth.api(this.game.data.owner, 'eventsub/subscriptions', {
-              method: 'POST',
-              body: JSON.stringify({
-                type: 'channel.chat.message',
-                version: '1',
-                condition: {
-                  broadcaster_user_id: this.game.data.owner,
-                  user_id: this.game.data.owner,
-                },
-                transport: { method: 'websocket', session_id: session.id },
-              }),
-            });
+          if (!migrating) await this.subscribe('channel.chat.message', session.id);
           if (this.stopped || socket.readyState !== WebSocket.OPEN) return;
           const old = this.current;
           this.current = socket;
           if (migrating && old && old !== socket) old.close();
           this.attempts = 0;
           this.status('connected', 'Live chat connected');
+          // Optional: chat works without them, so a refusal leaves the connection alone.
+          if (!migrating)
+            for (const type of [MESSAGE_DELETE, CLEAR_USER])
+              this.subscribe(type, session.id).catch(() => {});
         } else if (m.message_type === 'session_reconnect') {
           const s = z.object({ reconnect_url: z.string().url() }).parse(p.session);
           const u = new URL(s.reconnect_url);
@@ -406,6 +409,22 @@ export class TwitchConnection {
       }
     });
   }
+  private subscribe(type: string, sessionId: string) {
+    return this.auth.api(this.game.data.owner, 'eventsub/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify({
+        type,
+        version: '1',
+        condition: { broadcaster_user_id: this.game.data.owner, user_id: this.game.data.owner },
+        transport: { method: 'websocket', session_id: sessionId },
+      }),
+    });
+  }
+  private remember(id: string, now: number) {
+    this.seen.set(id, now);
+    if (this.seen.size > 10000)
+      for (const [seenId, t] of this.seen) if (now - t > 60000) this.seen.delete(seenId);
+  }
   acceptNotification(input: unknown) {
     const parsed = envelope.safeParse(input);
     if (!parsed.success) return false;
@@ -414,13 +433,15 @@ export class TwitchConnection {
       now = Date.now();
     if (
       m.message_type !== 'notification' ||
-      m.subscription_type !== 'channel.chat.message' ||
       !Number.isFinite(at) ||
       now - at > 15000 ||
       at > now + 2000 ||
       this.seen.has(m.message_id)
     )
       return false;
+    if (m.subscription_type === MESSAGE_DELETE || m.subscription_type === CLEAR_USER)
+      return this.acceptModeration(m.subscription_type, m.message_id, p.event, now);
+    if (m.subscription_type !== 'channel.chat.message') return false;
     const event = chatEvent.safeParse(p.event);
     if (
       !event.success ||
@@ -429,9 +450,7 @@ export class TwitchConnection {
         event.data.source_broadcaster_user_id !== this.game.data.owner)
     )
       return false;
-    this.seen.set(m.message_id, now);
-    if (this.seen.size > 10000)
-      for (const [id, t] of this.seen) if (now - t > 60000) this.seen.delete(id);
+    this.remember(m.message_id, now);
     const e = event.data;
     // A streamer who uses their own account as the bot still needs their own commands.
     if (
@@ -460,6 +479,26 @@ export class TwitchConnection {
       /* A failing command must not look like a broken chat connection. */
     }
     return accepted;
+  }
+  /**
+   * These events name no Shared Chat source channel. They still follow the chat rule: only
+   * messages sent here become hints, and Twitch gives a partner channel's copy of a message
+   * its own message ID, so a delete or clear can only reach this channel's own hints.
+   */
+  private acceptModeration(
+    type: typeof MESSAGE_DELETE | typeof CLEAR_USER,
+    id: string,
+    input: unknown,
+    now: number,
+  ) {
+    const event = moderationEvent.safeParse(input);
+    if (!event.success || event.data.broadcaster_user_id !== this.game.data.owner) return false;
+    const { target_user_id: userId, message_id: messageId } = event.data;
+    if (type === MESSAGE_DELETE && !messageId) return false;
+    this.remember(id, now);
+    return type === MESSAGE_DELETE
+      ? this.game.dropMessage(messageId!, userId)
+      : this.game.dropChatter(userId);
   }
   private schedule(delay?: number) {
     if (this.stopped || this.retry) return;
