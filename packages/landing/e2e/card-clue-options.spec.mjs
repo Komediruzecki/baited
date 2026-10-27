@@ -223,13 +223,19 @@ test('reduced motion and forced colors preserve clue readability and hide words 
   }
 })
 
-// Each width gets its own page/trace and the normal 45-second test budget. The
-// complete 78-card × four-style matrix is unchanged; one 16-navigation test made
-// tens of thousands of traced assertions share a single CI deadline.
+// Exercise every authored card without shipping the full answer catalogue on
+// the public landing. This private test fixture exists only in the test browser.
+// Each width gets its own page/trace and the normal 45-second test budget.
 for (const width of [320, 390, 1440, 1920]) {
   test(`${width}px: all 78 native landing cards fit all four proposed clue styles`, async ({ page }, testInfo) => {
     const catalogue = JSON.parse(readFileSync(new URL('../../app/shared/card-review-catalogue.json', import.meta.url), 'utf8'))
     expect(catalogue).toHaveLength(78)
+    await page.route('**/data.js', async route => {
+      const response = await route.fetch()
+      const source = await response.text()
+      const cards = catalogue.map((card, index) => ({ ...card, index, question: card.example, art: `/card-lab/cards/proofs/${card.word}.png` }))
+      await route.fulfill({ response, body: source.replace(/export const cards = [\s\S]*?\n\nexport const chapters =/, `export const cards = ${JSON.stringify(cards)}\n\nexport const chapters =`) })
+    })
     const expected = Object.fromEntries(catalogue.map((card) => [card.word, {
       clues: card.clues.slice(0, card.difficulty === 'hard' ? 4 : card.difficulty === 'medium' ? 2 : 0),
       question: card.example,

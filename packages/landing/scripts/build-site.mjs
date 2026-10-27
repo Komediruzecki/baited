@@ -6,6 +6,7 @@ import { installSelectedCards } from './selected-cards.mjs'
 import { installPresentedDeck } from './presented-deck.mjs'
 import { installRibbon } from './ribbon.mjs'
 import { buildCardPreviews } from './card-previews.mjs'
+import { installPublicSamples } from './public-samples.mjs'
 
 const landingRoot = fileURLToPath(new URL('..', import.meta.url))
 const appRoot = resolve(landingRoot, '../app')
@@ -92,13 +93,13 @@ export async function copyStaticTree(source, destination, { excludedRoots = [], 
   await copyDirectory(source, destination, 0)
 }
 
-export async function prepareStaticSite({ environment, source, destination }) {
+export async function prepareStaticSite({ environment, source, destination, excludedRoots = [] }) {
   if (!['dev', 'prod'].includes(environment) || basename(destination) !== `site-${environment}`) {
     throw new Error('Static build destination must match site-dev or site-prod')
   }
   await rm(destination, { recursive: true, force: true })
   await copyStaticTree(source, destination, {
-    excludedRoots: environment === 'prod' ? ['lab', 'card-lab'] : ['card-lab'],
+    excludedRoots: [...excludedRoots, ...(environment === 'prod' ? ['lab', 'card-lab'] : ['card-lab'])],
   })
 }
 
@@ -150,7 +151,7 @@ export async function publishStaticSite({ environment, source, destination }) {
   }
 }
 
-export async function stageAndPublishSite({ environment, source, destination, build = async () => {} }) {
+export async function stageAndPublishSite({ environment, source, destination, excludedRoots = [], build = async () => {} }) {
   if (!['dev', 'prod'].includes(environment) || basename(destination) !== `site-${environment}`) {
     throw new Error('Static build destination must match site-dev or site-prod')
   }
@@ -158,7 +159,7 @@ export async function stageAndPublishSite({ environment, source, destination, bu
   const stagingRoot = await mkdtemp(join(dirname(destination), `.${basename(destination)}.stage-`))
   const stagingSite = join(stagingRoot, basename(destination))
   try {
-    await prepareStaticSite({ environment, source, destination: stagingSite })
+    await prepareStaticSite({ environment, source, destination: stagingSite, excludedRoots })
     await build(stagingSite)
     await publishStaticSite({ environment, source: stagingSite, destination })
   } finally {
@@ -173,7 +174,9 @@ export async function buildSite(environment) {
 }
 
 async function buildSiteLocked(environment, destination) {
-  await stageAndPublishSite({ environment, source: resolve(landingRoot, 'site'), destination, build: async stagingSite => {
+  const source = resolve(landingRoot, 'site')
+  await stageAndPublishSite({ environment, source, destination, excludedRoots: ['cards', 'card-expansion.js'], build: async stagingSite => {
+    await installPublicSamples({ source, stagingSite })
     if (environment === 'dev') {
       const labRoot = resolve(stagingSite, 'card-lab')
       const result = spawnSync(process.execPath, [

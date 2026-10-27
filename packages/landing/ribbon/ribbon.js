@@ -1,4 +1,4 @@
-import { ribbonPose, blendPose, qualifiesSpread } from './ribbon-geometry.js'
+import { ribbonPose, blendPose, qualifiesSpread, visibleCardFraction } from './ribbon-geometry.js'
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const wrap = (value, count) => ((value % count) + count) % count
@@ -26,7 +26,7 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   let frame = 0
   let lastTime = null
   let idleTimer = 0
-  let leaveTimer = 0
+  let visibilityFrame = 0
   let openingTimer = 0
   let warmed = null
   let aborting = false
@@ -73,9 +73,9 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   }
   function clearTimers() {
     clearTimeout(idleTimer)
-    clearTimeout(leaveTimer)
     clearTimeout(openingTimer)
-    idleTimer = leaveTimer = openingTimer = 0
+    cancelAnimationFrame(visibilityFrame)
+    idleTimer = openingTimer = visibilityFrame = 0
   }
   function idle() {
     clearTimeout(idleTimer)
@@ -301,7 +301,6 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     } else openingTimer = setTimeout(maybeOpen, 120)
   }
   function hold() {
-    clearTimeout(leaveTimer)
     clearTimeout(idleTimer)
     const from = open ? state.p : inner.hold()
     gesture = { from, last: from, unit: inner.dragUnit(), started: null, samples: [], spreadInput: from, spreadPosition: from }
@@ -352,7 +351,9 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     if (aborting) return
     gesture = null
     clearTimeout(openingTimer)
-    if (open) gather()
+    // Native vertical scrolling cancels a touch pointer. Release the horizontal
+    // interaction, but leave the spread available and its cards stationary.
+    if (open) pause()
     else inner.to(inner.target)
   }
   function to(index, details = {}) {
@@ -417,10 +418,8 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   }
   listen(document, 'pointermove', event => {
     if (!open || event.pointerType !== 'mouse' || gesture) return
-    if (inside(event)) { clearTimeout(leaveTimer); leaveTimer = 0; idle() }
-    else if (!leaveTimer) leaveTimer = setTimeout(() => gather(), 700)
+    if (inside(event)) idle()
   }, { passive: true })
-  listen(document, 'pointerdown', event => { if (open && !hand.contains(event.target) && !help.contains(event.target)) gather() }, true)
   listen(document, 'visibilitychange', () => {
     if (!document.hidden) return
     if (open) gather({ instant: true })
@@ -430,15 +429,34 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
       pauseReveal?.()
     }
   })
-  const visibility = new IntersectionObserver(entries => {
-    const latest = entries.at(-1)
-    if (open && latest && latest.intersectionRatio < .35) gather({ instant: true })
-  }, { threshold: [0, .35] })
+  const footer = document.querySelector('.site-footer')
+  function checkVisibility() {
+    visibilityFrame = 0
+    if (!open || destroyed) return
+    const viewport = window.visualViewport
+    const top = viewport?.offsetTop ?? 0
+    const bottom = top + (viewport?.height ?? window.innerHeight)
+    const card = items[wrap(lens, items.length)].getBoundingClientRect()
+    const coverTop = footer ? footer.getBoundingClientRect().top : bottom
+    if (visibleCardFraction(card, { top, bottom, coverTop }) < .5) gather({ instant: true })
+  }
+  function queueVisibilityCheck() {
+    if (!open || visibilityFrame || destroyed) return
+    // At most one layout read per scroll frame; no scroll interception or
+    // additional frame loop while the gallery is closed.
+    visibilityFrame = requestAnimationFrame(checkVisibility)
+  }
+  listen(window, 'scroll', () => { if (open) { idle(); queueVisibilityCheck() } }, { passive: true })
+  listen(window, 'resize', queueVisibilityCheck, { passive: true })
+  if (window.visualViewport) {
+    listen(window.visualViewport, 'resize', queueVisibilityCheck, { passive: true })
+    listen(window.visualViewport, 'scroll', queueVisibilityCheck, { passive: true })
+  }
+  const visibility = new IntersectionObserver(queueVisibilityCheck, { threshold: [0, .5, 1] })
   visibility.observe(hand)
   cleanups.push(() => visibility.disconnect())
-  const footer = document.querySelector('.site-footer')
   if (footer) {
-    const footerVisibility = new IntersectionObserver(entries => { if (open && entries.at(-1)?.isIntersecting) gather({ instant: true }) })
+    const footerVisibility = new IntersectionObserver(queueVisibilityCheck)
     footerVisibility.observe(footer)
     cleanups.push(() => footerVisibility.disconnect())
   }
@@ -463,7 +481,7 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
       }
       warmed = null
       inner.refresh()
-      if (open) { draw(); syncControls() }
+      if (open) { draw(); syncControls(); queueVisibilityCheck() }
     },
     destroy() {
       if (destroyed) return

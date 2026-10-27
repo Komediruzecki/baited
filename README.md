@@ -37,7 +37,7 @@ For a round with remote testers, follow [Twitch Hosted Test](packages/app/docs/H
 
 The approved original wordmark and upload-ready logo, icon and discovery exports live in [Twitch listing assets](packages/app/assets/twitch/v0.0.1/README.md). Older logo variants remain available for reference. Preparing these files does not submit the Extension for review.
 
-The deck has 78 illustrated targets. [Card artwork and provenance](packages/app/public/cards/proofs/README.md) records the 18 original illustrations and the 60-card expansion. Artwork is separate from titles, clue restrictions and example questions. Run `node packages/app/scripts/sync-card-art.mjs --check` to verify the unchanged image copies used by the app, native Extension and landing. Updating the landing does not update an installed Twitch Extension; that requires a rebuilt ZIP and a new Hosted Test upload.
+The game deck has 78 illustrated targets. The public landing shows ten fixed example cards; its build includes only those card records and artwork. [Card artwork and provenance](packages/app/public/cards/proofs/README.md) records the 18 original illustrations and the 60-card expansion. Artwork is separate from titles, clue restrictions and example questions. Run `node packages/app/scripts/sync-card-art.mjs --check` to verify the unchanged source image copies used by the app, native Extension and landing. Updating the landing does not update an installed Twitch Extension; that requires a rebuilt ZIP and a new Hosted Test upload.
 
 The development-only [Card Lab](https://dev.baited.maff.app/card-lab/) compares card editions, materials, backs and gameplay states at panel, phone and Studio sizes. It uses synthetic rounds, and review choices stay in that browser without changing the game. The route and its assets are excluded from production. See [the design and test record](packages/app/docs/card-product-review.md) for local previews, Opus's direction and the checks completed so far.
 
@@ -54,3 +54,5 @@ The repository stays private. Paolo has collaborator access and can clone this r
 The existing game history is retained, including `paolo-original-2026-10-24`. The landing and review-host were imported from a fixed revision of `disjoint-colliders`, with per-file hashes, source revision and original license notices in their `IMPORT-MANIFEST.json` files. All landing runtime assets are included. The old source branch is preserved.
 
 Technical and team docs belong in this repository. Personal coordination and historical plan snapshots remain in `.dotfiles/personal/games/baited`; they are not build inputs or prerequisites for a collaborator.
+
+[Card maker plan](docs/card-maker-plan.md) proposes channel-owned packs, a Studio editor, a private speech rehearsal and later artwork uploads. It also explains the difference between limiting public examples and protecting the active target. The maker is planned, not shipped.
