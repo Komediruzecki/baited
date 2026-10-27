@@ -55,7 +55,17 @@ import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
 import Landing from './Landing';
-import { productBrand as brand, botNotices, BotSignInLink, Button, Tag, CopyButton, Modal, HowTo } from './ui';
+import {
+  productBrand as brand,
+  botNotices,
+  AllowBotButton,
+  BotSignInLink,
+  Button,
+  Tag,
+  CopyButton,
+  Modal,
+  HowTo,
+} from './ui';
 import './brand.css';
 import {
   MissionStatus,
@@ -1741,11 +1751,7 @@ function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
           It never posts the word while a round is live, because you read your chat too.
         </p>
         {game.mode === 'twitch' && bot.mode === 'twitch' && !bot.channelAllowed && (
-          <div className="connection-buttons">
-            <Button className="primary" onClick={() => location.assign('/auth/twitch?bot=1')}>
-              Allow the bot in your chat <ArrowUpRight size={16} />
-            </Button>
-          </div>
+          <AllowBotButton phase={game.phase} />
         )}
         <p className="setup-commands">
           Chat can type <code>!bait help</code>, <code>!bait score</code>, <code>!bait top</code> and{' '}

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import Landing from '../client/Landing';
-import { botNotices, BotSignInLink } from '../client/ui';
-import type { SessionInfo } from '../shared/types';
+import { AllowBotButton, botNotices, BotSignInLink } from '../client/ui';
+import type { Phase, SessionInfo } from '../shared/types';
 
 const session = { authenticated: false, twitchReady: true, demoAvailable: false } as SessionInfo;
 const landing = (notice: string, info: SessionInfo = session) => {
@@ -37,4 +37,18 @@ test('a bot sign-in that did not finish links back to the bot sign-in, not only 
   const banner = renderToStaticMarkup(React.createElement(BotSignInLink, { notice: 'bot-oauth' }));
   assert.match(banner, /href="\/auth\/twitch\/bot"/);
   assert.equal(renderToStaticMarkup(React.createElement(BotSignInLink, { notice: 'oauth' })), '');
+});
+
+test('allowing the bot waits until no round is running, and says why', () => {
+  const render = (phase: Phase) => renderToStaticMarkup(React.createElement(AllowBotButton, { phase }));
+  for (const phase of ['active', 'paused', 'settling'] as const) {
+    const html = render(phase);
+    assert.match(html, /<button[^>]*disabled=""[^>]*>Allow the bot in your chat/, phase);
+    assert.match(html, /Finish the round first\./, phase);
+  }
+  for (const phase of ['idle', 'cooldown'] as const) {
+    const html = render(phase);
+    assert.doesNotMatch(html, /disabled/, phase);
+    assert.doesNotMatch(html, /Finish the round first/, phase);
+  }
 });
