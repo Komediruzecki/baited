@@ -99,3 +99,16 @@
   .selected-card .card-clues li,.selected-card .card-clues li::before,.selected-card[data-clue=pills] .card-clues li { background:Canvas; color:CanvasText; border-color:CanvasText; }
   .selected-card .card-rule,.selected-card .card-term,.selected-card .card-easy { color:CanvasText; }
 }
+/* Hidden catalogue entries need neither their own compositing hint nor a
+   retained 3D transform. Their layout box stays measurable for deck refresh. */
+.deck-card-item.is-out {
+  will-change: auto;
+  transform: none !important;
+  content-visibility: hidden;
+}
+/* Face/back gates explicitly restore visibility. An offscreen item must win
+   those gates too, including on browsers without content-visibility support. */
+.deck-card-item.is-out .selected-card__back,
+.deck-card-item.is-out .card-art {
+  visibility: hidden !important;
+}

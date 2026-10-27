@@ -52,6 +52,39 @@ function logo() {
   return mark
 }
 
+const artWindows = new WeakMap()
+// A catalogue is not an image cache. Release references outside the visible
+// window so a long browsing session does not retain every decoded illustration.
+export function warmSelectedArt(items, around, before = 3, after = 3) {
+  const whole = Math.round(around)
+  const key = `${whole}:${before}:${after}`
+  let window = artWindows.get(items)
+  if (!window) {
+    window = { key: null, images: items.map(item => item.querySelector('.card-art img')), held: new Set() }
+    artWindows.set(items, window)
+  }
+  if (window.key === key) return
+  const keep = new Set()
+  for (let offset = -before; offset <= after; offset++) keep.add(((whole + offset) % items.length + items.length) % items.length)
+  for (const index of window.held) {
+    if (keep.has(index)) continue
+    window.images[index]?.removeAttribute('src')
+    const canvas = items[index].querySelector('.selected-card__pixels')
+    if (canvas) canvas.width = canvas.height = 1
+  }
+  for (const index of keep) {
+    const image = window.images[index]
+    if (image && !image.getAttribute('src')) image.src = image.dataset.src
+  }
+  window.held = keep
+  window.key = key
+}
+
+export function previewArt(path) {
+  const name = /^\/cards\/proofs\/([a-z0-9-]+)\.png$/.exec(path)?.[1]
+  return name ? `/card-lab/landing/art/${name}.webp` : path
+}
+
 export const clueStyles = ['baseline', 'rail', 'pills', 'tokens', 'quiet']
 // Ruled is Opus's provisional proposal, not an owner-selected final clue style.
 export function parseClueStyle(search) {
@@ -114,8 +147,8 @@ export function cardFace(card, total, style = parseClueStyle(globalThis.location
   top.append(number, pips)
   const art = node('span', 'card-art')
   const image = node('img')
-  Object.assign(image, { alt: '', width: 1254, height: 1254, decoding: 'async', draggable: false })
-  image.dataset.src = card.art
+  Object.assign(image, { alt: '', width: 640, height: 640, decoding: 'async', draggable: false })
+  image.dataset.src = previewArt(card.art)
   const canvas = node('canvas', 'selected-card__pixels')
   canvas.setAttribute('aria-hidden', 'true')
   image.addEventListener('load', () => revealSelectedCard(face.closest('.deck-card-item')))

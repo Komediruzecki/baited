@@ -21,13 +21,19 @@ export async function installSelectedCards({ environment, stagingSite }) {
   if (!mosaic.isFile() || mosaic.isSymbolicLink()) throw new Error('The selected Mosaic back is missing from the dev build')
 
   html = replaceOnce(html, '<script type="module" src="/app.js"></script>', '<link rel="stylesheet" href="/card-lab/landing/selected-cards.css" />\n    <script type="module" src="/app.js"></script>')
-  app = "import { cardFace as selectedCardFace, prepareSelectedScenes, revealSelectedCard, pauseSelectedReveal, settleSelectedCard } from '/card-lab/landing/selected-cards.js'\n" + app
+  app = "import { cardFace as selectedCardFace, prepareSelectedScenes, revealSelectedCard, pauseSelectedReveal, settleSelectedCard, warmSelectedArt } from '/card-lab/landing/selected-cards.js'\n" + app
   app = replaceOnce(app, 'initNav()\n', 'prepareSelectedScenes(cards)\ninitNav()\n')
   const first = app.indexOf('function cardFace(card) {')
   const last = app.indexOf("\nconst hand = $('deck-hand')", first)
   if (first < 0 || last < first || app.indexOf('function cardFace(card) {', first + 1) >= 0) throw new Error('The landing card factory changed')
   app = app.slice(0, first) + 'const cardFace = (card) => selectedCardFace(card, cards.length)\n' + app.slice(last)
-  app = replaceOnce(app, "const image = item.querySelector('img')", "const image = item.querySelector('.card-art img')")
+  app = replaceOnce(app,
+    `  items.forEach((item, index) => {
+    if (Math.abs(wrapOffset(index, around, items.length)) > 3) return
+    const image = item.querySelector('img')
+    if (!image.getAttribute('src')) image.src = image.dataset.src
+  })`,
+    '  warmSelectedArt(items, around)')
   app = replaceOnce(app, '    warmArt(index)\n', '    pauseSelectedReveal()\n    warmArt(index)\n')
   app = replaceOnce(app, '  onSettle(index, { deliberate } = {}) {\n', '  onSettle(index, { deliberate } = {}) {\n    settleSelectedCard(items[index])\n')
   app = replaceOnce(app, "hand.addEventListener('keydown', (event) => {", "settleSelectedCard(items[deck.front])\n\nhand.addEventListener('keydown', (event) => {")

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createRibbonDeck } from '../ribbon/ribbon.js'
+import { warmSelectedArt } from '../selected-cards/selected-cards.js'
 
 // A deterministic browser clock exercises the actual controller's scheduling
 // and event listeners without approximating CSS layout or emulating its state.
@@ -96,7 +97,7 @@ function scene(t, { reduced = false, room = 1440 } = {}) {
   const status = new clock.Node()
   const items = Array.from({ length: 20 }, (_, index) => {
     const item = new clock.Node()
-    const image = { dataset: { src: `/proof-${index}.webp` }, src: '', getAttribute() { return this.src || null } }
+    const image = { dataset: { src: `/proof-${index}.webp` }, src: '', getAttribute() { return this.src || null }, removeAttribute() { this.src = '' } }
     item.querySelector = selector => selector === '.card-art img' ? image : null
     return item
   })
@@ -133,6 +134,7 @@ function scene(t, { reduced = false, room = 1440 } = {}) {
     createDeck, hand, items, help, status,
     cards: items.map((_, index) => ({ word: `word-${index}`, difficulty: 'easy' })),
     reduced: { matches: reduced }, gsap: {}, pauseReveal: () => paused++,
+    warmArt: (around, before, after) => warmSelectedArt(items, around, before, after),
   })
   return { clock, hand, help, originalHelp, status, api, settled, metrics, items, get paused() { return paused } }
 }
