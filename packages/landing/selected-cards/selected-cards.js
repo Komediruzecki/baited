@@ -228,6 +228,8 @@ export function prepareSelectedScenes(cards) {
   if (old && volcano) {
     const face = cardFace(volcano, cards.length)
     face.classList.add('why-deal__face')
+    // Only the gallery controller fades this dimmer; the How scene owns its flip.
+    face.querySelector('.card-shade').remove()
     const image = face.querySelector('.card-art img')
     image.loading = 'lazy'
     image.src = image.dataset.src
