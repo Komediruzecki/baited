@@ -39,6 +39,22 @@ test('browser server diagnostics expose error structure without runtime or messa
   ]) assert.equal(serverDiagnostic(line), null)
 })
 
+test('serialized ProxyWorker causes retain only verified structural diagnostics', () => {
+  assert.equal(serverDiagnostic('Error in ProxyController: Error inside ProxyWorker'), 'Error in ProxyController: Error inside ProxyWorker')
+  assert.equal(serverDiagnostic("name: 'TypeError',"), 'cause name: TypeError')
+  assert.equal(serverDiagnostic('name: "AbortError"'), 'cause name: AbortError')
+  assert.equal(serverDiagnostic("stack: 'TypeError: private-value\\n    at postProcess (/worker/ProxyWorker.js:25:7)\\n    at node:internal/process/task_queues:104:5'"),
+    'at /worker/ProxyWorker.js:25:7\nat node:internal/process/task_queues:104:5')
+  assert.equal(serverDiagnostic("'    at queue (file:///worker/ProxyWorker.js:29:8)\\n' +"), 'at file:///worker/ProxyWorker.js:29:8')
+  for (const line of [
+    "message: 'private-value',", "stack: 'Error: private-value'", "name: 'PrivateValueError',",
+    'Error in ProxyController: arbitrary private reason', 'Error in PrivateController: Error inside ProxyWorker',
+    "stack: 'Error: private header\\n    at headers (/worker/ProxyWorker.js:1:1)'",
+    "stack: 'Error: token=private-value\\n    at queue (/worker/ProxyWorker.js:1:1)'",
+    "config: { stack: 'Error: private-value\\n    at queue (/worker/ProxyWorker.js:1:1)' }",
+  ]) assert.equal(serverDiagnostic(line), null)
+})
+
 test('browser server preserves failure status and only forwards safe diagnostics', async () => {
   const messages = []
   const code = await runBrowserServer({

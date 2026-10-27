@@ -22,7 +22,9 @@ BANANA/Table Reveal and ARCHIPELAGO/Glance Plus fit the mock panel, GHOST/Cut fi
 
 Six focused SVG tests passed, including 64 sibling lenses, resource-reference isolation, deterministic rendering and the flat fallback. Nine material-model tests passed. These are local Chromium and synthetic-host checks; Firefox, WebKit, physical phones and Twitch-hosted acceptance of Glass remain unverified. No idle performance trace was recorded.
 
-The earlier local Wrangler process also stopped unexpectedly during navigation. A safe supervisor now preserves its exit status and forwards structural diagnostics without messages or authentication headers; its six focused tests passed. This is diagnostic hardening, not a claimed fix for the unexplained exit. Fresh PR CI remains the complete gate before merge.
+The earlier local Wrangler process also stopped unexpectedly during navigation. CI's structural stack located the fatal path in Wrangler 4.119.0's ProxyWorker error handling. Cloudflare fixed that path in [Wrangler 4.129.1](https://github.com/cloudflare/workers-sdk/pull/15252), which is now pinned exactly. Installed-source inspection confirmed the upstream GET/HEAD retry and nonfatal individual-request handling. The original nested exception was lost from the older diagnostics, so its precise transport trigger remains unconfirmed.
+
+The safe supervisor preserves exit status and forwards structural diagnostics without messages or authentication headers; its seven focused tests passed. The unchanged nine-case Chromium suite passed locally with 4.129.1, and a frozen install accepted the scoped lockfile. Fresh PR CI remains the complete gate before merge. There are no suite retries or automatic server restarts.
 
 ## Materials and backs
 

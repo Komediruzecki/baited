@@ -40,8 +40,26 @@ export function browserServerOptions(argv = []) {
 export function serverDiagnostic(input) {
   const line = stripVTControlCharacters(input).trim()
   if (/secret|token|password|credential|authorization|cookie|headers|binding|\bvars\b/i.test(line)) return null
+  // ProxyWorker errors cross JSON and are wrapped in an empty Error by Wrangler.
+  // Retain this verified controller/reason and structural fields of its cause;
+  // never forward the serialized message or surrounding config object.
+  if (line === 'Error in ProxyController: Error inside ProxyWorker') return line
+  const causeName = /^name: ['"](Error|TypeError|RangeError|SyntaxError|URIError|ReferenceError|EvalError|AggregateError|AbortError|DOMException)['"],?$/.exec(line)
+  if (causeName) return `cause name: ${causeName[1]}`
   const frame = /^at (?:.+? \()?((?:node:|file:\/\/\/|\/)[\w./:@ +%-]+:\d+:\d+)\)?$/.exec(line)
   if (frame) return `at ${frame[1]}`
+  // util.inspect may quote each stack line separately or escape newlines inside
+  // the stack value. Extract only complete frame locations, not their prefix.
+  const quotedStack = /^(?:stack: )?['"]/.test(line)
+  if (quotedStack) {
+    const frames = []
+    for (const part of line.replace(/^(?:stack: )?['"]/, '').split('\\n')) {
+      const frameLine = part.replace(/['"]\s*\+?$/, '').trim()
+      const nested = /^at (?:.+? \()?((?:node:|file:\/\/\/|\/)[\w./:@ +%-]+:\d+:\d+)\)?$/.exec(frameLine)
+      if (nested) frames.push(`at ${nested[1]}`)
+    }
+    if (frames.length) return frames.join('\n')
+  }
   const name = /^(?:Caused by: )?([A-Za-z_$][\w$]*(?:Error|Exception)|Error)(?: \[[A-Z0-9_]+\])?(?::|$)/.exec(line)?.[1]
   const code = /\b(?:ERR_[A-Z0-9_]+|EACCES|EADDRINUSE|EADDRNOTAVAIL|ECONNABORTED|ECONNREFUSED|ECONNRESET|EHOSTUNREACH|EIO|EMFILE|ENETUNREACH|ENFILE|ENOENT|ENOMEM|ENOSPC|ENOTFOUND|EPIPE|ESRCH|ETIMEDOUT)\b/.exec(line)?.[0]
   if (name) return code ? `${name} (${code})` : name
