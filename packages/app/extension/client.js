@@ -42,7 +42,8 @@ export function readState(value) {
   if (r.result !== null) {
     const resultValue = r.result;
     if (!object(resultValue) || !string(resultValue.id) || !string(resultValue.word) || !outcomes.has(resultValue.outcome)) throw new Error('Invalid result.');
-    result = { id: resultValue.id, word: resultValue.word, outcome: resultValue.outcome };
+    if (resultValue.reason !== undefined && !['guess', 'timer'].includes(resultValue.reason)) throw new Error('Invalid result.');
+    result = { id: resultValue.id, word: resultValue.word, outcome: resultValue.outcome, ...(resultValue.reason ? { reason: resultValue.reason } : {}) };
   }
   return { configured: true, room: { phase: r.phase, channel: r.channel, serverTime: r.serverTime, round, result } };
 }

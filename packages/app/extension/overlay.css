@@ -1,0 +1,371 @@
+/* The video overlay draws one card over the live video and nothing else.
+   Sizes come from the player height so the card reads the same in a small
+   player, theatre mode and fullscreen. Card content scales with the card. */
+:root {
+  /* Browsers paint an opaque canvas behind a frame whose color scheme differs
+     from its embedder's, which would cover the video. Keep the default scheme. */
+  color-scheme: normal;
+  background: transparent;
+}
+body[data-surface='overlay'] {
+  min-width: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+}
+.table {
+  position: fixed;
+  inset: 0;
+}
+.deal {
+  position: absolute;
+  top: 50%;
+  right: clamp(8px, 2.4vw, 40px);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  translate: 0 -50%;
+  transition:
+    opacity 240ms ease-out,
+    visibility 240ms;
+}
+.table[data-visible='false'] .deal {
+  visibility: hidden;
+  opacity: 0;
+}
+.deal[data-collapsed='true'] .playing-card {
+  display: none;
+}
+
+/* Collapse tab: the viewer can put the card away and bring it back. */
+.collapse {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #71627f;
+  border-radius: 4px 9px 4px 4px;
+  background: #121016e6;
+  color: var(--paper);
+  transition:
+    background 150ms ease-out,
+    border-color 150ms ease-out;
+}
+.collapse:hover {
+  background: #2b2435;
+  border-color: #b988ff;
+}
+.collapse-glyph {
+  width: 8px;
+  height: 8px;
+  margin-left: -3px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+}
+.deal[data-collapsed='true'] .collapse {
+  height: 72px;
+  border-color: #9c7fbd;
+}
+.deal[data-collapsed='true'] .collapse-glyph {
+  margin: 0 0 0 3px;
+  transform: rotate(135deg);
+}
+.collapse-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* A 5:7 playing card. Container units keep type proportional to the card. */
+.playing-card {
+  --card-h: clamp(150px, 54vh, 420px);
+  position: relative;
+  height: var(--card-h);
+  aspect-ratio: 5 / 7;
+  container-type: size;
+  perspective: 1100px;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 200ms ease-out;
+}
+.playing-card[data-stale='true'] {
+  opacity: 0.72;
+}
+.card-turn {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 520ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.playing-card[data-face='back'] .card-turn {
+  transform: rotateY(180deg);
+}
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #9c7fbd;
+  border-radius: 2.6cqw 9cqw 2.6cqw 2.6cqw;
+  background: var(--card);
+  box-shadow:
+    0 1.4cqh 0 -0.4cqh #09080c,
+    0 3cqh 7cqh #00000066;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.face-back {
+  transform: rotateY(180deg);
+}
+
+/* Front: the word, its art, and the clues chat must avoid. */
+.face-topline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4cqw;
+  padding: 6cqw 7cqw 0;
+}
+/* Each size has a floor so a default-size player still reads; small cards
+   drop their secondary lines below instead of shrinking past the floor. */
+.face-kicker {
+  font-size: max(10px, 5.2cqw);
+  font-weight: 650;
+  color: var(--copy);
+}
+.face-clock {
+  font-size: max(12px, 7.4cqw);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--paper);
+}
+.playing-card[data-urgent='true'] .face-clock {
+  color: var(--yellow);
+}
+.face-center {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.2cqh;
+  padding: 2cqh 7cqw;
+  text-align: center;
+}
+.face-art {
+  width: 70cqw;
+  height: auto;
+  max-height: 30cqh;
+  object-fit: contain;
+}
+.face-word {
+  max-width: 100%;
+  font:
+    400 max(18px, 15cqw) / 1.04 Russo,
+    Impact,
+    sans-serif;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  color: var(--paper);
+}
+.face-word[data-word-size='medium'] {
+  font-size: max(16px, 12cqw);
+}
+.face-word[data-word-size='long'] {
+  font-size: max(14px, 9.6cqw);
+}
+.face-word[data-word-size='extended'] {
+  font-size: max(13px, 8cqw);
+  line-height: 1.12;
+}
+.face-word[data-word-size='message'] {
+  font-size: max(15px, 10cqw);
+  text-transform: none;
+}
+.playing-card:is([data-state='active'], [data-state='result']) .face-word {
+  color: var(--yellow);
+}
+.face-detail {
+  max-width: 30ch;
+  font-size: max(10px, 4.6cqw);
+  line-height: 1.45;
+  color: var(--copy);
+}
+.face-clues {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.6cqw;
+  margin: 0;
+  padding: 0 7cqw 3cqh;
+  list-style: none;
+}
+.face-clues li {
+  max-width: 100%;
+  padding: 0.6cqh 2cqw;
+  border: 1px solid #746585;
+  border-radius: 2px;
+  font-size: max(10px, 4.2cqw);
+  font-weight: 550;
+  line-height: 1.3;
+  text-transform: uppercase;
+  text-decoration: line-through;
+  text-decoration-color: var(--lit);
+  text-decoration-thickness: 2px;
+  color: var(--copy);
+  overflow-wrap: anywhere;
+}
+.face-baseline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3cqw;
+  margin: 0 7cqw;
+  padding: 2.6cqh 0 4.4cqh;
+  border-top: 1px solid var(--line);
+}
+.face-baseline .card-tagline {
+  font-size: max(10px, 4.6cqw);
+}
+.face-baseline .card-tagline b {
+  font-size: max(12px, 6cqw);
+}
+.face-stamp {
+  font-size: max(9px, 3.9cqw);
+  color: var(--muted);
+  text-align: right;
+}
+.playing-card[data-outcome='caught'] .face-front {
+  border-color: var(--yellow);
+  box-shadow:
+    0 1.4cqh 0 -0.4cqh #09080c,
+    0 0 0 0.8cqw #fffc7926,
+    0 3cqh 7cqh #00000066;
+}
+.playing-card:is([data-state='result'], [data-state='review']) .face-front .face-clock {
+  visibility: hidden;
+}
+
+/* Back: the same card stock, face down. The streamer sees only this. */
+.back-pattern {
+  position: absolute;
+  inset: 4.4cqw;
+  border: 1px solid #9146ff55;
+  border-radius: 1.6cqw 6.4cqw 1.6cqw 1.6cqw;
+  background:
+    radial-gradient(circle at 50% 44%, #242426 0 31%, transparent 31.5%),
+    repeating-linear-gradient(45deg, #9146ff1c 0 1.8cqw, transparent 1.8cqw 3.6cqw),
+    repeating-linear-gradient(-45deg, #9146ff12 0 1.8cqw, transparent 1.8cqw 3.6cqw);
+}
+.back-center {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.4cqh;
+  padding: 8cqw;
+  text-align: center;
+}
+.back-bomb {
+  width: 34cqw;
+  height: 34cqw;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.back-wordmark {
+  width: 50cqw;
+  color: var(--lit);
+}
+.back-copy {
+  font-size: max(10px, 5.4cqw);
+  font-weight: 650;
+  color: var(--paper);
+}
+.back-clock {
+  font-size: max(13px, 9cqw);
+}
+.playing-card[data-urgent='true'] .back-clock {
+  color: var(--yellow);
+}
+
+/* Time left runs along the bottom edge on both faces. */
+.card-progress {
+  position: absolute;
+  right: 6cqw;
+  bottom: 1.6cqh;
+  left: 6cqw;
+  height: max(3px, 0.8cqh);
+  overflow: hidden;
+  background: #48414f;
+  pointer-events: none;
+}
+.card-progress i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--violet);
+}
+.playing-card[data-urgent='true'] .card-progress i {
+  background: var(--yellow);
+}
+.playing-card:is([data-state='result'], [data-state='review'], [data-state='waiting'])
+  .card-progress {
+  visibility: hidden;
+}
+
+/* Small cards keep the word, the clues and the clock. */
+@container (max-height: 300px) {
+  .face-detail,
+  .face-baseline,
+  .back-copy {
+    display: none;
+  }
+  .face-center {
+    gap: 1.4cqh;
+  }
+  .face-clues {
+    padding-bottom: 6cqh;
+  }
+}
+@container (max-height: 230px) {
+  .face-art,
+  .back-wordmark {
+    display: none;
+  }
+}
+
+/* A narrow player keeps the card small; a mini player shows nothing. */
+@media (max-width: 560px) {
+  .playing-card {
+    --card-h: clamp(132px, 46vh, 260px);
+  }
+}
+@media (max-height: 220px) {
+  .deal {
+    display: none;
+  }
+}
+@media (forced-colors: active) {
+  .face,
+  .collapse {
+    border-color: CanvasText;
+  }
+  .back-pattern {
+    background: none;
+  }
+}

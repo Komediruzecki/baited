@@ -22,8 +22,11 @@
   ]);
   const query = new URLSearchParams(location.search);
   const fixture = modes.has(query.get('fixture')) ? query.get('fixture') : 'active';
+  // The overlay harness shows one viewer frame and one broadcaster frame for the same fixture.
   const role =
-    location.pathname.endsWith('/config.html') || fixture === 'broadcaster'
+    location.pathname.endsWith('/config.html') ||
+    fixture === 'broadcaster' ||
+    query.get('role') === 'broadcaster'
       ? 'broadcaster'
       : 'viewer';
   const encode = (value) =>

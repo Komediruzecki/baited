@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>baited · Card on the stream</title>
+    <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+    <script src="./runtime-config.js"></script>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./overlay.css" />
+  </head>
+  <body data-surface="overlay">
+    <!-- THESIS: One card dealt onto the video. Chat sees its face; the streamer
+    watching the same channel sees its back. OWN-WORLD: The panel's charcoal card
+    stock, violet edge and yellow word, at playing-card proportions.
+    STORY: The card lands face down, turns over for chat, and turns over for
+    everyone when the round is decided.
+    FIRST VIEWPORT: Transparent video. One card at the right edge, clear of the
+    title and player controls, with a minimise tab.
+    FORM: A 5:7 card sized from the player height. Nothing is drawn between rounds. -->
+    <main class="table" id="table" data-visible="false" aria-label="baited card">
+      <section class="deal" id="deal" data-collapsed="false">
+        <div class="playing-card" id="card" data-face="back" data-state="waiting">
+          <div class="card-turn" id="card-turn">
+            <div class="face face-front" id="face-front" aria-hidden="true">
+              <div class="face-topline">
+                <span class="face-kicker" id="front-kicker">Chat's secret</span>
+                <span class="face-clock" id="front-clock">0:00</span>
+              </div>
+              <div class="face-center">
+                <img class="face-art" id="front-art" alt="" width="160" height="126" hidden />
+                <h2 class="face-word" id="front-word"></h2>
+                <p class="face-detail" id="front-detail"></p>
+              </div>
+              <ul class="face-clues" id="front-clues" aria-label="Off-limits clues" hidden></ul>
+              <div class="face-baseline">
+                <span class="card-tagline"><b>bait</b> them.</span
+                ><span class="face-stamp" id="front-stamp">Only chat knows</span>
+              </div>
+            </div>
+            <div class="face face-back" id="face-back" aria-hidden="true">
+              <div class="back-pattern" aria-hidden="true"></div>
+              <div class="back-center">
+                <img class="back-bomb" src="./assets/bait-bomb.png" alt="" width="80" height="80" />
+                <span class="back-wordmark"><span class="baited-glyph"></span></span>
+                <p class="back-copy" id="back-copy">Chat has the word.</p>
+                <span class="face-clock back-clock" id="back-clock">0:00</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-progress" aria-hidden="true"><i id="card-progress"></i></div>
+        </div>
+        <button class="collapse" id="collapse" type="button" aria-expanded="true">
+          <span class="collapse-glyph" aria-hidden="true"></span>
+          <span class="collapse-label" id="collapse-label">Hide card</span>
+        </button>
+      </section>
+    </main>
+    <p id="announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+    <script type="module" src="./overlay.js"></script>
+  </body>
+</html>

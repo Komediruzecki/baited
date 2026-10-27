@@ -61,7 +61,7 @@ function requestPath(raw) {
   const path = separator === -1 ? raw : raw.slice(0, separator);
   if (path !== '/' && !path.slice(1).split('/').every((part) => /^[a-zA-Z0-9_-][a-zA-Z0-9._-]*$/.test(part))) return null;
   if (separator !== -1) {
-    if (!['/viewer.html', '/config.html'].includes(path)) return null;
+    if (!['/viewer.html', '/config.html', '/overlay.html'].includes(path)) return null;
     // Twitch appends these public environment hints. They never authorize an API request.
     // https://dev.twitch.tv/docs/extensions/reference/#client-query-parameters
     const allowed = {
@@ -233,7 +233,7 @@ export async function main() {
   process.once('SIGINT', stop);
   process.once('SIGTERM', stop);
   console.log(JSON.stringify({ localOnly: true, baseUri: `${origin}/`, viewerPath: 'viewer.html',
-    configPath: 'config.html', backend: 'http://localhost:3000', expiresInSeconds: seconds,
+    overlayPath: 'overlay.html', configPath: 'config.html', backend: 'http://localhost:3000', expiresInSeconds: seconds,
     certificateTrust: 'Open the base URI and trust the local certificate before Twitch Local Test.' }));
   return server;
 }

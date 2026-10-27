@@ -50,11 +50,51 @@
             <option value="480">480 px</option>
           </select>
         </label>
+        <label
+          >Player size
+          <select id="player">
+            <option value="640">640 × 360 · default player</option>
+            <option value="854">854 × 480</option>
+            <option value="480">480 × 270 · small player</option>
+            <option value="1280">1280 × 720 · theatre</option>
+          </select>
+        </label>
         <button id="restart" type="button">Restart fixture</button>
       </div>
       <p class="fixture-note" id="fixture-note" role="status">
         The timer starts at 1:30. Change the state to inspect another moment.
       </p>
+      <section class="overlay-screens" aria-labelledby="overlay-heading">
+        <h2 id="overlay-heading" class="overlay-heading">
+          Video overlay <span>One card, two faces: chat sees the word, the streamer sees the back.</span>
+        </h2>
+        <div class="screens">
+          <section class="screen">
+            <h2>What chat sees <span>viewer role</span></h2>
+            <div class="video-stage" id="viewer-stage">
+              <div class="video-fixture" aria-hidden="true"><span>LIVE</span></div>
+              <iframe
+                id="overlay-viewer"
+                title="baited video overlay, viewer fixture"
+                src="/overlay.html?fixture=active"
+                sandbox="allow-scripts allow-same-origin"
+              ></iframe>
+            </div>
+          </section>
+          <section class="screen">
+            <h2>What the streamer sees <span>broadcaster role</span></h2>
+            <div class="video-stage" id="broadcaster-stage">
+              <div class="video-fixture" aria-hidden="true"><span>LIVE</span></div>
+              <iframe
+                id="overlay-broadcaster"
+                title="baited video overlay, broadcaster fixture"
+                src="/overlay.html?fixture=active&amp;role=broadcaster"
+                sandbox="allow-scripts allow-same-origin"
+              ></iframe>
+            </div>
+          </section>
+        </div>
+      </section>
       <div class="screens">
         <section class="screen viewer-screen">
           <h2>Viewer panel <span id="size-label">318 × 500</span></h2>

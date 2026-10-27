@@ -18,4 +18,12 @@ The viewer reads a single secret word, its off-limits clues, and the clock while
 - Configuration is a handoff sheet: channel status, one studio action, then numbered microphone/OBS preparation. The first step changes to “Twitch channel connected” after authorization. It has no duplicate game controls. The setup action is still hidden until authorization gives a validated destination.
 - Error and reconnect messages remain above the card. Broadcaster and renewed-authorization states keep secrets cleared. No redesign changes request handling, game state, retry behavior or announcements.
 
+## Video overlay
+
+`overlay.html` is the Video - Fullscreen view. It deals the same charcoal card onto the live video, at the right edge and vertically centred, clear of the title and player controls. The card is 5:7 and sized from the player height (54 vh, 150–420 px); its type scales with the card but never drops below 9–10 px. Cards under 300 px tall drop the rule line and signature, and under 230 px they also drop the artwork, so the word, clues and clock stay legible in the default player. A mini player shows nothing.
+
+- The card lands face down. A viewer's card turns over to the word; the broadcaster's never does, because the broadcaster's projection carries no target. A decided round turns over for everyone and leaves after 12 seconds. Between rounds the frame is fully transparent.
+- A tab beside the card hides it; the choice is remembered per viewer when storage is available.
+- The frame keeps the default color scheme. Declaring `dark` would make browsers paint an opaque canvas behind the transparent overlay.
+
 The Extension ZIP must exclude preview fixtures and test code. Real Twitch authorization is required by the shipped entry points. Local preview state is labelled by its separate harness, not passed off as a live session.
