@@ -33,8 +33,11 @@ export function backendInvocation(env, containerName) {
       '--env', `PUBLIC_URL=${hostedOrigin}`, '--env', 'ENABLE_DEMO=false',
       '--env', 'DATA_DIR=/app/data', '--env', 'SPEECH_PROVIDER=moonshine',
       '--env', 'TRUSTED_PROXIES=127.0.0.1',
-      ...backendSecretNames.flatMap(name => ['--env', name]), 'baited-hosted-test:local'],
-    env: { ...systemEnv(env), ...Object.fromEntries(backendSecretNames.map(name => [name, env[name]])) },
+      ...backendSecretNames.flatMap(name => ['--env', name]),
+      // Optional and not a secret: the chat bot's numeric Twitch user ID.
+      ...(env.TWITCH_BOT_USER_ID ? ['--env', 'TWITCH_BOT_USER_ID'] : []), 'baited-hosted-test:local'],
+    env: { ...systemEnv(env), ...Object.fromEntries(backendSecretNames.map(name => [name, env[name]])),
+      ...(env.TWITCH_BOT_USER_ID ? { TWITCH_BOT_USER_ID: env.TWITCH_BOT_USER_ID } : {}) },
   };
 }
 
