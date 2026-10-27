@@ -45,8 +45,8 @@ test('exported picks round-trip without losing preferred edition, empty notes or
   assert.deepEqual(parsePicks(JSON.stringify(saved)), saved);
 });
 
-test('version-one choices preserve previous picks alongside both new reveal studies', () => {
-  for (const preferred of ['table-reveal', 'glance-reveal'] as const) {
+test('version-one choices preserve previous picks alongside the reveal studies and open frame', () => {
+  for (const preferred of ['table-reveal', 'glance-reveal', 'table-open'] as const) {
     const saved: Picks = {
       version: 1,
       preferred,
@@ -55,6 +55,7 @@ test('version-one choices preserve previous picks alongside both new reveal stud
         glance: { note: 'Keep the original icons too.', reviewed: ['phone'], experimental: false },
         'table-reveal': { note: '', reviewed: ['panel', 'desktop'], experimental: false },
         'glance-reveal': { note: 'Compare the larger symbols.', reviewed: ['phone', 'panel'], experimental: false },
+        'table-open': { note: 'No inner frame.', reviewed: ['deck', 'panel'], experimental: false },
       },
       updatedAt: '2026-10-26T22:50:00.000Z',
     };

@@ -6,7 +6,7 @@ import { PixelRevealArt } from './PixelRevealArt';
 import { GlassField, GlassLens, type GlassSize } from './CardGlass';
 import { ClueRow } from './CardClues';
 import { SoundControls } from './SoundControls';
-import { contexts, editions, exactClues, generic, isEdition, parsePicks, reviewDeck, stateLabel, states, type CardState, type Context, type Edition, type Picks, type ReviewEntry } from './card-lab-model';
+import { contexts, editions, exactClues, generic, isEdition, isTableEdition, parsePicks, reviewDeck, stateLabel, states, type CardState, type Context, type Edition, type Picks, type ReviewEntry } from './card-lab-model';
 import { backs, finishes, logoModes, finishHost, backShowsLogo, type FinishId, type BackId, type LogoMode } from './card-finish-catalogue';
 import { CARD_SURFACE_STORAGE_KEY, parseSurfaceReview, parseSurfaceUrl, type SurfaceReview, type SurfaceSelection, type SurfaceView } from './card-surface-model';
 import { clueTreatments, CARD_CLUE_STORAGE_KEY, parseClueReview, parseClueUrl, type ClueReview, type ClueTreatmentId } from './card-clue-catalogue';
@@ -50,8 +50,8 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
   const effective = edition === 'wide' && !wide ? 'table' : edition;
   const host = finishHost(effective);
   const activeFinish = host === 'own' ? 'stock' : finish;
-  const layout = effective === 'glance-reveal' ? 'glance' : effective === 'table-reveal' ? 'table' : effective;
-  const pixelReveal = effective === 'table-reveal' || effective === 'glance-reveal';
+  const layout = effective === 'glance-reveal' ? 'glance' : isTableEdition(effective) ? 'table' : effective;
+  const pixelReveal = effective === 'table-reveal' || effective === 'table-open' || effective === 'glance-reveal';
   const faceDown = back || state === 'waiting' || state === 'broadcaster';
   const clues = exactClues(entry);
   const iconLabels = layout === 'glance' || picture;
@@ -91,7 +91,7 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
     {faceDown ? <div className={`cl-card__back${backStyle !== 'current' ? ' cl-card__back--custom' : ''}`}><BackLayers back={backStyle} logo={logo} /></div> : <>
       {!foilPlate && rail}
       <div className="cl-card__art">
-        {activeFinish === 'glass' && <GlassLens size={size} bend={bend} />}
+        {activeFinish === 'glass' && effective !== 'table-open' && <GlassLens size={size} bend={bend} />}
         <svg className="cl-card__aperture" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M.5 .5H88L99.5 12V99.5H.5Z" /><path d="M4 4H86L96 14V96H4Z" /></svg>
         {entry.synthetic ? <div className="cl-card__generic" aria-hidden="true">Aa</div> : pixelReveal ? <PixelRevealArt key={`${effective}-${entry.word}`} word={entry.word} disabled={reducedMotion || state === 'paused' || state === 'reconnecting'} /> : <CardArt word={entry.word} />}
         {effective === 'pixel' && <span className="cl-card__curtain" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <i key={index} style={{ '--tile-delay': `${((index * 17) % 36) * 6}ms` } as React.CSSProperties} />)}</span>}
@@ -191,7 +191,7 @@ export default function CardDesignLab({ session, standalone = false }: { session
   const [back, setBack] = useState(false);
   const [replay, setReplay] = useState(0);
   const [compare, setCompare] = useState(initial.get('compare') === '1');
-  const [compared, setCompared] = useState<Edition[]>(['table', 'foil']);
+  const [compared, setCompared] = useState<Edition[]>(['table-reveal', 'table-open']);
   const [motion, setMotion] = useState(initial.get('motion') === 'reduced');
   const [labels, setLabels] = useState(false);
   const [alwaysWord, setAlwaysWord] = useState(false);
@@ -256,7 +256,7 @@ export default function CardDesignLab({ session, standalone = false }: { session
       <aside className="cl-controls">
         <fieldset className="cl-editions"><legend>Edition</legend>{editions.map((item, index) => <label className="cl-edition-option" key={item.id} data-selected={edition === item.id}><input type="radio" name="edition" value={item.id} checked={edition === item.id} onChange={() => setEdition(item.id)} /><span className="cl-edition-number">{String(index).padStart(2, '0')}</span><span><strong>{item.name}{item.id === 'table-reveal' && <small>Selected direction</small>}</strong><span>{item.note}</span></span></label>)}</fieldset>
         <SurfaceSelectors choice={surfaces} change={changeSurface} />
-        <fieldset className="cl-clue-selector"><legend>Forbidden-word style</legend>{clueTreatments.map(item => <label key={item.id}><input type="radio" name="clue-style" value={item.id} checked={clueReview.selected === item.id} onChange={() => selectClue(item.id)} /><span>{item.name}{item.id === 'rail' && <small>Opus’s proposal</small>}{item.id === 'baseline' && <small>Current</small>}</span></label>)}{!['table', 'table-reveal', 'wide'].includes(edition) && <p>Table and Table Reveal only. Other editions keep their own clue rows.</p>}<button type="button" onClick={() => setView('clues')}>Compare clue styles</button></fieldset>
+        <fieldset className="cl-clue-selector"><legend>Forbidden-word style</legend>{clueTreatments.map(item => <label key={item.id}><input type="radio" name="clue-style" value={item.id} checked={clueReview.selected === item.id} onChange={() => selectClue(item.id)} /><span>{item.name}{item.id === 'rail' && <small>Opus’s proposal</small>}{item.id === 'baseline' && <small>Current</small>}</span></label>)}{!isTableEdition(edition) && edition !== 'wide' && <p>Clue styles apply to Table editions. Other editions keep their own clue rows.</p>}<button type="button" onClick={() => setView('clues')}>Compare clue styles</button></fieldset>
         <details className="cl-inspector" open><summary>Word and state</summary><div className="cl-control-fields">
           <label>Word pool<select value={pool} onChange={event => { const next = event.target.value; setPool(next); if (next !== 'all' && entry.difficulty !== next) chooseWord(reviewDeck.find(item => item.difficulty === next)!.word); }}><option value="all">All 78 words</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
           <label>Word<select value={word} onChange={event => chooseWord(event.target.value)}>{available.map(item => <option value={item.word} key={item.word}>{item.word}</option>)}{entry.synthetic && <option value={generic.word}>{generic.word} · synthetic</option>}</select></label>
@@ -272,12 +272,12 @@ export default function CardDesignLab({ session, standalone = false }: { session
           <label className="cl-check"><input type="checkbox" checked={alwaysWord} onChange={event => setAlwaysWord(event.target.checked)} />Always show Picture’s word</label>
           <label className="cl-check"><input type="checkbox" checked={whiteWord} onChange={event => setWhiteWord(event.target.checked)} />White words instead of item colors</label>
           <label className="cl-check"><input type="checkbox" checked={crisp} onChange={event => setCrisp(event.target.checked)} />Crisp pixel rendering</label>
-          {surfaces.finish === 'glass' && <label className="cl-check"><input type="checkbox" checked={bend} onChange={event => setBend(event.target.checked)} />Bend glass</label>}
+          {surfaces.finish === 'glass' && (compare ? compared.some(id => id !== 'table-open') : edition !== 'table-open') && <label className="cl-check"><input type="checkbox" checked={bend} onChange={event => setBend(event.target.checked)} />Bend glass</label>}
           <label className="cl-check"><input type="checkbox" checked={mission} onChange={event => setMission(event.target.checked)} />Example three-word mission</label>
         </div></details>
       </aside>
       <section className="cl-stage-area" aria-label="Card comparison" hidden={view !== 'stage'}>
-        <div className="cl-stage-summary"><h2>{compare ? 'Side by side.' : editionName(edition)} · {finishes.find(item => item.id === surfaces.finish)!.name}</h2><span>{entry.word.toUpperCase()} · {entry.difficulty}{entry.synthetic ? ' · synthetic word' : ''}<br />Back: {backs.find(item => item.id === surfaces.back)!.name}{['table', 'table-reveal'].includes(edition) && <><br />Clues: {clueTreatments.find(item => item.id === clueReview.selected)!.name}{clueReview.preferred === clueReview.selected ? ' · your pick' : clueReview.selected === 'rail' ? ' · proposal' : ''}</>}</span></div>
+        <div className="cl-stage-summary"><h2>{compare ? 'Side by side.' : editionName(edition)} · {finishes.find(item => item.id === surfaces.finish)!.name}</h2><span>{entry.word.toUpperCase()} · {entry.difficulty}{entry.synthetic ? ' · synthetic word' : ''}<br />Back: {backs.find(item => item.id === surfaces.back)!.name}{isTableEdition(edition) && <><br />Clues: {clueTreatments.find(item => item.id === clueReview.selected)!.name}{clueReview.preferred === clueReview.selected ? ' · your pick' : clueReview.selected === 'rail' ? ' · proposal' : ''}</>}</span></div>
         {finishHost(edition) === 'own' && surfaces.finish !== 'stock' && <p className="cl-stage-help">Current, Pixel and Wide keep their own stock. Backs apply to every edition.</p>}
         {(edition === 'picture' || (compare && compared.includes('picture'))) && <p className="cl-experiment">Picture is an experiment. Its exact word can be revealed, and the off-limits clues stay readable. It does not change the game’s matching rules.</p>}
         {compare && <fieldset className="cl-compare-picker"><legend>Compare up to four</legend>{editions.map(item => <label key={item.id}><input type="checkbox" checked={compared.includes(item.id)} disabled={!compared.includes(item.id) && compared.length >= 4} onChange={event => setCompared(value => event.target.checked ? [...value, item.id] : value.filter(id => id !== item.id))} />{item.name}</label>)}</fieldset>}
@@ -298,8 +298,8 @@ export default function CardDesignLab({ session, standalone = false }: { session
         <div className="cl-gallery__intro"><h2>Five ways to keep a secret.</h2><p>Same card, same words. Only the off-limits clues change. These are labels, not buttons.</p><p>Table Reveal, Glass and Mosaic are the chosen direction. Clue style is still yours to pick.</p><p>Change the word, state or context on the left to compare every style.</p></div>
         <div className="cl-clue-studies">{clueTreatments.map(item => <div className="cl-clue-study" data-clue-study={item.id} data-selected={clueReview.selected === item.id} key={item.id}>
           <header><h3>{item.name}{item.id === 'rail' && clueReview.preferred !== item.id && <small>Opus’s proposal</small>}</h3><p>{item.note}</p></header>
-          <div className="cl-clue-preview" tabIndex={0} aria-label={`${item.name} preview. Scroll sideways for wider contexts.`}><div className="cl-clue-preview__inner"><ReviewFrame context={context} cardProps={{ ...props, back: false, edition: ['table', 'table-reveal'].includes(edition) ? edition : 'table-reveal', clueTreatment: item.id }} replay={replay} seconds={scrub} /></div></div>
-          <div className="cl-gallery__actions"><button type="button" onClick={() => { selectClue(item.id); setBack(false); if (!['table', 'table-reveal'].includes(edition)) setEdition('table-reveal'); setView('stage'); requestAnimationFrame(() => stage.current?.focus()); }}>Show on stage</button><button type="button" aria-pressed={clueReview.preferred === item.id} onClick={() => preferClue(item.id)}>{clueReview.preferred === item.id ? 'Your clue pick' : `Prefer ${item.name}`}</button></div>
+          <div className="cl-clue-preview" tabIndex={0} aria-label={`${item.name} preview. Scroll sideways for wider contexts.`}><div className="cl-clue-preview__inner"><ReviewFrame context={context} cardProps={{ ...props, back: false, edition: isTableEdition(edition) ? edition : 'table-reveal', clueTreatment: item.id }} replay={replay} seconds={scrub} /></div></div>
+          <div className="cl-gallery__actions"><button type="button" onClick={() => { selectClue(item.id); setBack(false); if (!isTableEdition(edition)) setEdition('table-reveal'); setView('stage'); requestAnimationFrame(() => stage.current?.focus()); }}>Show on stage</button><button type="button" aria-pressed={clueReview.preferred === item.id} onClick={() => preferClue(item.id)}>{clueReview.preferred === item.id ? 'Your clue pick' : `Prefer ${item.name}`}</button></div>
         </div>)}</div>
         <p className="cl-clue-status" role="status">{clueStatus}</p>
         <label className="cl-clue-note">Note for {clueTreatments.find(item => item.id === clueReview.selected)!.name}<textarea maxLength={1000} value={clueNote} onChange={event => setClueNote(event.target.value)} /></label><button type="button" onClick={() => preferClue(clueReview.selected, true)}>Save clue style with note</button>

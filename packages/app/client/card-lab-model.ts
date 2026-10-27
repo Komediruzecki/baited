@@ -11,8 +11,10 @@ export const editions = [
   { id: 'picture', name: 'Picture', note: 'An experiment. Read the word on demand.' },
   { id: 'table-reveal', name: 'Table Reveal', note: 'The house card, revealed from pixels.' },
   { id: 'glance-reveal', name: 'Glance Plus', note: 'Larger icons and art that resolves into focus.' },
+  { id: 'table-open', name: 'Table Open', note: 'Pixel reveal. Artwork without an inner frame.' },
 ] as const;
 export type Edition = typeof editions[number]['id'];
+export const isTableEdition = (edition: Edition) => ['table', 'table-reveal', 'table-open'].includes(edition);
 export type ReviewEntry = { word: string; difficulty: string; clues: string[]; example: string; ink: string; synthetic?: boolean };
 export const reviewDeck: ReviewEntry[] = catalogue;
 export const generic: ReviewEntry = { word: 'network', difficulty: 'medium', clues: ['connection', 'computers'], example: 'A synthetic example without an illustration.', ink: '#c9a8ff', synthetic: true };

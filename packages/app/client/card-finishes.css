@@ -114,6 +114,11 @@
 }
 .cl-card[data-host=slab] .cl-glass { bottom:12px; }
 
+/* Table Open keeps the full-card material, without a second frame around the art. */
+.cl-card[data-edition=table-open] .cl-card__art::before,
+.cl-card[data-edition=table-open] .cl-card__aperture { display:none; }
+.cl-card[data-edition=table-open] .cl-card__generic { border:0; background:none; }
+
 /* Cut's material ends above the word even when its card grows for a result. */
 .cl-card[data-host=slab]:not([data-finish=stock]) {
   --cut-edge:calc(var(--surface-pad-top) + 26px + var(--surface-art));
