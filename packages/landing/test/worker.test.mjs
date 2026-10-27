@@ -77,14 +77,55 @@ test('document canonical links use the new production origin', async () => {
   }
 })
 
-test('the brand lab and its images are never served in production', async () => {
-  for (const path of ['/lab', '/lab/brand/', '/lab/brand/baited-a.png', '/l%61b/brand/', '/lab%2Fbrand%2Fbaited-c.png', '/%zz']) {
-    const response = await worker.fetch(new Request(`${productionOrigin}${path}`), {
-      ENVIRONMENT: 'prod',
-      ASSETS: { fetch: async () => assert.fail('brand proofs must bypass assets in production') },
+test('all lab pages and assets bypass production assets even through encoded prefixes', async () => {
+  const paths = [
+    '/lab', '/lab/brand/', '/lab/brand/baited-a.png', '/l%61b/brand/', '/lab%2Fbrand%2Fbaited-c.png',
+    '/card-lab', '/card-lab/', '/card-lab?edition=foil', '/card-lab/index.html',
+    '/card-lab/assets/index-AbC123.js', '/card-lab/assets/style-AbC123.css', '/card-lab/assets/index.js.map',
+    '/card-lab/cards/proofs/banana.png', '/card-lab/finishes/foil.webp', '/card-lab/assets/font.woff2',
+    '/CARD-LAB/assets/index.js', '/%63ard-lab/', '/card-lab%2Fassets/index.js',
+    '/%2Fcard-lab/assets/index.js', '//card-lab/assets/index.js', '/%5Ccard-lab/assets/index.js', '/%zz',
+  ]
+  for (const path of paths) {
+    for (const method of ['GET', 'HEAD']) {
+      const response = await worker.fetch(new Request(`${productionOrigin}${path}`, { method }), {
+        ENVIRONMENT: 'prod',
+        ASSETS: { fetch: async () => assert.fail('lab assets must bypass production assets') },
+      })
+      assert.equal(response.status, 404, `${method} ${path}`)
+      assertHeaders(response)
+    }
+  }
+})
+
+test('dev card lab permits style attributes only and keeps networking and scripts restricted', async () => {
+  for (const path of ['/card-lab/', '/card-lab?edition=glance-reveal', '/card-lab/assets/index.js']) {
+    const response = await worker.fetch(new Request(`${origin}${path}`), {
+      ENVIRONMENT: 'dev',
+      ASSETS: { fetch: async () => new Response('Card lab') },
     })
-    assert.equal(response.status, 404)
-    assertHeaders(response)
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow')
+    const policy = response.headers.get('content-security-policy')
+    assert.match(policy, /default-src 'none'/)
+    assert.match(policy, /script-src 'self'/)
+    assert.match(policy, /style-src 'self'/)
+    assert.match(policy, /style-src-attr 'unsafe-inline'/)
+    assert.doesNotMatch(policy, /unsafe-eval|https?:|script-src[^;]*unsafe-inline/)
+    assert.equal(response.headers.get('permissions-policy'), 'camera=(), microphone=(), geolocation=()')
+  }
+})
+
+test('lab query flags and similar names do not change the normal landing policy', async () => {
+  for (const { ENVIRONMENT, origin } of environments) {
+    for (const path of ['/?lab=cards', '/card-laboratory', '/labyrinth']) {
+      const response = await worker.fetch(new Request(`${origin}${path}`), {
+        ENVIRONMENT,
+        ASSETS: { fetch: async () => new Response('Landing') },
+      })
+      assert.equal(response.status, 200)
+      assertHeaders(response, ENVIRONMENT === 'prod')
+    }
   }
 })
 

@@ -14,6 +14,11 @@
     'reconnect',
     'error',
     'longword',
+    'kaleidoscope',
+    'archipelago',
+    'dinosaur',
+    'marshmallow',
+    'alchemy',
   ]);
   const query = new URLSearchParams(location.search);
   const fixture = modes.has(query.get('fixture')) ? query.get('fixture') : 'active';

@@ -9,6 +9,14 @@ on:
     paths:
       - 'packages/landing/**'
       - 'packages/review-host/**'
+      # The development Card Lab reuses application components and public art.
+      - 'packages/app/client/**'
+      - 'packages/app/shared/**'
+      - 'packages/app/extension/presentation.js'
+      - 'packages/app/public/**'
+      - 'packages/app/card-lab.html'
+      - 'packages/app/vite.card-lab.config.ts'
+      - 'packages/app/package.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -63,7 +71,7 @@ jobs:
           node-version: 24
       - run: npm install --global pnpm@10.34.3
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter '@baited/landing...'
+        run: pnpm install --frozen-lockfile --filter '@baited/landing...' --filter '@baited/app...'
       - name: Check BAIT
         run: pnpm --filter @baited/landing check
       - name: Test BAIT
@@ -95,7 +103,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             if curl --fail --silent --show-error --max-time 20 \
               "$SITE_ORIGIN/" -o "$RUNNER_TEMP/bait-index.html" \
-              && cmp --silent packages/landing/site/index.html "$RUNNER_TEMP/bait-index.html"; then
+              && cmp --silent "packages/landing/dist/site-$TARGET/index.html" "$RUNNER_TEMP/bait-index.html"; then
               echo "The $TARGET domain serves this release."
               exit 0
             fi
@@ -103,3 +111,45 @@ jobs:
           done
           echo 'The domain did not return the expected landing.' >&2
           exit 1
+      - name: Verify development Card Lab
+        if: env.TARGET == 'dev'
+        run: |
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if curl --fail --silent --show-error --max-time 20 \
+              "$SITE_ORIGIN/card-lab/" -o "$RUNNER_TEMP/bait-card-lab.html" \
+              && cmp --silent packages/landing/dist/site-dev/card-lab/index.html "$RUNNER_TEMP/bait-card-lab.html"; then
+              echo 'The development domain serves this Card Lab build.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'The development domain did not return the expected Card Lab.' >&2
+          exit 1
+      - name: Verify production excludes review labs
+        if: env.TARGET == 'prod'
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, readdirSync } from 'node:fs'
+          const labDirectory = 'packages/landing/dist/site-dev/card-lab'
+          const html = readFileSync(`${labDirectory}/index.html`, 'utf8')
+          const labFiles = readdirSync(labDirectory, { recursive: true })
+          const referenced = [...html.matchAll(/(?:src|href)="(\/card-lab\/[^"?#]+)"/g)].map(match => match[1])
+          const paths = new Set([
+            '/card-lab', '/card-lab/', '/card-lab/?edition=foil',
+            '/%63ard-lab/', '/card-lab%2Findex.html', '/%2Fcard-lab/', '//card-lab/',
+            '/lab/brand/',
+            ...referenced,
+            ...referenced.filter(path => /\.(?:js|css)$/.test(path)).map(path => `${path}.map`),
+            ...['.png', '.woff2', '.svg'].flatMap(extension => {
+              const file = labFiles.find(file => file.endsWith(extension))
+              return file ? [`/card-lab/${file}`] : []
+            }),
+          ])
+          for (const path of paths) {
+            const response = await fetch(process.env.SITE_ORIGIN + path, {
+              method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(20_000),
+            })
+            if (response.status !== 404) throw new Error(`Review path must be absent in production: ${path} (${response.status})`)
+          }
+          console.log('Production rejects the Card Lab page, generated assets and brand lab.')
+          NODE

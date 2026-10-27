@@ -1,0 +1,22 @@
+@import './fonts.css';
+@import './product-brand.css';
+
+@font-face {
+  font-family: 'Russo One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/russo-one.ttf') format('truetype');
+}
+
+:root {
+  color-scheme: dark;
+  font-family: Inter, Arial, sans-serif;
+  font-synthesis: none;
+  background: #121016;
+}
+
+body { margin: 0; }
+button, input, select, textarea { font: inherit; }
+svg { flex-shrink: 0; vertical-align: middle; }
+::selection { background: #9146ff; color: #fffdf7; }

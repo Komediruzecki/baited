@@ -12,8 +12,18 @@
       "workers_dev": false,
       "preview_urls": false,
       "vars": { "ENVIRONMENT": "dev" },
+      "build": {
+        "command": "node scripts/build-site.mjs --env dev",
+        "watch_dir": [
+          "site",
+          "../app/client",
+          "../app/public/card-lab",
+          "../app/card-lab.html",
+          "../app/vite.card-lab.config.ts",
+        ],
+      },
       "assets": {
-        "directory": "site",
+        "directory": "dist/site-dev",
         "binding": "ASSETS",
         "run_worker_first": true,
         "not_found_handling": "404-page",
@@ -28,8 +38,12 @@
       "workers_dev": false,
       "preview_urls": false,
       "vars": { "ENVIRONMENT": "prod" },
+      "build": {
+        "command": "node scripts/build-site.mjs --env prod",
+        "watch_dir": ["site"],
+      },
       "assets": {
-        "directory": "site",
+        "directory": "dist/site-prod",
         "binding": "ASSETS",
         "run_worker_first": true,
         "not_found_handling": "404-page",

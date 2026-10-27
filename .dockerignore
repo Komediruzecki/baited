@@ -12,7 +12,10 @@
 .git
 .github
 docs
-packages/landing
+# The catalogue check needs only the landing's card ink definitions.
+packages/landing/**
+!packages/landing/site/
+!packages/landing/site/styles.css
 packages/app/concepts
 packages/app/docs
 packages/app/.impeccable

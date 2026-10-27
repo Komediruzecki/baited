@@ -45,7 +45,7 @@ test('viewer clears visible and accessible secrets on Helper renewal, role chang
   const allText = () => [...elements.values()].map((element) => element.textContent).join(' ');
   const state = (secret = true, word = '<Pineapple>') => ({ version: '0.0.1', configured: true, room: {
     phase: 'active', channel: 'streamer', serverTime: 10000, result: null,
-    round: { id: 'round-one', number: 1, duration: 60000, remaining: 45000, endsAt: 55000,
+    round: { id: 'round-one', number: 1, duration: 60000, remaining: 45000, endsAt: 55000, difficulty: 'medium',
       ...(secret ? { target: word, forbiddenClues: ['Pizza', 'Fruit'] } : {}) },
   } });
   const respond = async (index, secret = true, word = '<Pineapple>') => {
@@ -66,16 +66,22 @@ test('viewer clears visible and accessible secrets on Helper renewal, role chang
     await respond(1, true, 'VOLCANO');
     assert.equal(elements.get('word-art').hidden, false);
     assert.equal(elements.get('word-art').attributes.get('src'), './assets/card-volcano.png');
-    assert.equal(elements.get('bomb').hidden, true);
+    assert.equal(elements.get('card-back').hidden, true);
+    assert.equal(elements.get('difficulty').attributes.get('aria-label'), 'Medium difficulty');
+    assert.deepEqual(elements.get('difficulty').children.map(pip => pip.dataset.filled), ['true', 'true', 'false']);
 
     // A fresh Helper JWT can change account or role. Clear the old view before awaiting its response.
     authorize(auth('broadcaster-private-token'));
     assert.doesNotMatch(allText(), /Pineapple|Pizza|Fruit/);
     assert.equal(elements.get('word-art').hidden, true);
     assert.equal(elements.get('word-art').attributes.has('src'), false);
+    assert.equal(elements.get('difficulty').hidden, true);
+    assert.equal(elements.get('difficulty').attributes.has('aria-label'), false);
     assert.doesNotMatch(allText(), /VOLCANO/);
     await respond(2, false);
     assert.equal(elements.get('card-title').textContent, 'Your viewers have the word.');
+    assert.equal(elements.get('difficulty').hidden, true);
+    assert.equal(elements.get('card-back').hidden, false);
     assert.doesNotMatch(allText(), /Pineapple|Pizza|Fruit|private-token/);
 
     authorize(auth('viewer-again-private-token'));

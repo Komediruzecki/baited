@@ -1,0 +1,744 @@
+{
+  "project": "Baited",
+  "prepared_on": "2026-10-26",
+  "purpose": "Devpost-format review media; not an uploaded or approved final gallery",
+  "source_worktree": "/home/maff/foss/worktrees/baited/card-expansion-60",
+  "source_baseline": "d93edb9780f0607112e83debcbab154758f0a3a1",
+  "design_source_state": "Private feature-branch review changes after the baseline; captured locally before final owner acceptance.",
+  "limits_source": "Owner-pasted Devpost form: JPG/PNG/GIF, <=5 MB each, up to 15 images, 3:2 recommended.",
+  "composition": "Pillow crop, proportional resize, solid padding and captions only. No invented or inpainted UI.",
+  "default_card_edition": "Current, unchanged pending owner choice",
+  "upload_performed": false,
+  "deployment_or_hosted_test_update_performed": false,
+  "real_twitch_capture_present": false,
+  "youtube_demo_present": false,
+  "assets": [
+    {
+      "filename": "01-studio-local-demo.png",
+      "title": "Streamer Studio \u00b7 local demo",
+      "caption": "A paused round with simulated chat. The microphone is off.",
+      "evidence_class": "local_application_demo",
+      "review_status": "prepared_for_owner_review",
+      "upload_candidate_after_owner_review": true,
+      "width": 1500,
+      "height": 1000,
+      "aspect_ratio": "3:2",
+      "bytes": 405306,
+      "sha256": "d77aed99e196cd6970427d4d836b8a269e09b8302643bc76099435025d292e8b",
+      "sources": [
+        {
+          "path": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/evidence/product-after/studio-desktop-paused.png",
+          "sha256": "e4acfb950d08792c105d02823fc2d23c8a10b156900f71388f27eed1a8e040f9",
+          "width": 1265,
+          "height": 712,
+          "file_mtime_utc": "2026-10-26T22:11:18.434863+00:00",
+          "crop_box_xyxy": [
+            0,
+            0,
+            1251,
+            712
+          ]
+        }
+      ],
+      "transformations": [
+        {
+          "destination_xy": [
+            50,
+            40
+          ],
+          "destination_size": [
+            1400,
+            797
+          ],
+          "resampling": "LANCZOS",
+          "crop_box_xyxy": [
+            0,
+            0,
+            1251,
+            712
+          ]
+        }
+      ],
+      "note": "Actual local app capture, including its Local demo banner. Not a live Twitch capture."
+    },
+    {
+      "filename": "02-viewer-surfaces-local.png",
+      "title": "Viewer surfaces \u00b7 local review",
+      "caption": "Native fixture and standalone demo in browser viewports. Separate paused rounds.",
+      "evidence_class": "native_fixture_and_responsive_local_demo",
+      "review_status": "prepared_for_owner_review",
+      "upload_candidate_after_owner_review": true,
+      "width": 1500,
+      "height": 1000,
+      "aspect_ratio": "3:2",
+      "bytes": 378695,
+      "sha256": "78a02fbbb93f1fdca5bdcf361affd8838084a502b6b030bfd4969266a112bf08",
+      "sources": [
+        {
+          "path": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/evidence/product-after/native-panel-config.png",
+          "sha256": "b8ca3a6e8e04a20be4ab0450d00cdc3b7be9d7b778e4320e5cc7fadbc834d311",
+          "width": 1265,
+          "height": 712,
+          "file_mtime_utc": "2026-10-26T22:13:51.468837+00:00",
+          "crop_box_xyxy": [
+            106,
+            107,
+            428,
+            609
+          ]
+        },
+        {
+          "path": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/evidence/product-after/phone-viewer-320.png",
+          "sha256": "7d0f5e2e4e61b52b32ace0c37e6665f6154d7da86e4db7982e8d33a66f517328",
+          "width": 1265,
+          "height": 712,
+          "file_mtime_utc": "2026-10-26T22:14:21.473686+00:00",
+          "crop_box_xyxy": [
+            464,
+            22,
+            787,
+            661
+          ]
+        }
+      ],
+      "transformations": [
+        {
+          "destination_xy": [
+            144,
+            38
+          ],
+          "destination_size": [
+            502,
+            782
+          ],
+          "resampling": "LANCZOS",
+          "crop_box_xyxy": [
+            106,
+            107,
+            428,
+            609
+          ]
+        },
+        {
+          "destination_xy": [
+            907,
+            38
+          ],
+          "destination_size": [
+            395,
+            782
+          ],
+          "resampling": "LANCZOS",
+          "crop_box_xyxy": [
+            464,
+            22,
+            787,
+            661
+          ]
+        }
+      ],
+      "note": "Only the intact native viewer is used; the clipped configuration is excluded. Separate synthetic/local rounds, not synchronized gameplay."
+    },
+    {
+      "filename": "03-card-lab-table-foil.png",
+      "title": "Table and Foil \u00b7 card design study",
+      "caption": "Two proposed editions using the same word. The current edition remains in use.",
+      "evidence_class": "synthetic_card_design_study",
+      "review_status": "prepared_for_owner_review",
+      "upload_candidate_after_owner_review": true,
+      "width": 1500,
+      "height": 1000,
+      "aspect_ratio": "3:2",
+      "bytes": 593686,
+      "sha256": "2b80191d464fec483ef02cffd6e0d46419c2e91351970b15b69d23e7b87a171c",
+      "sources": [
+        {
+          "path": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/evidence/product-after/card-lab-table-foil.png",
+          "sha256": "2c92f6e3135f44b40bb3ab0ac4618203c7e50be83a4fa99cf731f48bbb56dc7f",
+          "width": 1265,
+          "height": 712,
+          "file_mtime_utc": "2026-10-26T22:15:09.478513+00:00",
+          "crop_box_xyxy": [
+            348,
+            48,
+            1201,
+            666
+          ]
+        }
+      ],
+      "transformations": [
+        {
+          "destination_xy": [
+            182,
+            28
+          ],
+          "destination_size": [
+            1135,
+            822
+          ],
+          "resampling": "LANCZOS",
+          "crop_box_xyxy": [
+            348,
+            48,
+            1201,
+            666
+          ]
+        }
+      ],
+      "note": "Actual Card Lab comparison. Not the selected production or Hosted Test card."
+    },
+    {
+      "filename": "04-landing-card-gallery.png",
+      "title": "Landing card gallery \u00b7 local preview",
+      "caption": "The current 78-target collection, with artwork and readable clue text kept separate.",
+      "evidence_class": "local_landing_capture",
+      "review_status": "prepared_for_owner_review",
+      "upload_candidate_after_owner_review": true,
+      "width": 1500,
+      "height": 1000,
+      "aspect_ratio": "3:2",
+      "bytes": 340003,
+      "sha256": "31705ff22e96096f35de956eb380ce74fcac3b040180cdb5c95f78f692d7122f",
+      "sources": [
+        {
+          "path": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/evidence/product-after/landing-deck.png",
+          "sha256": "fec2e952ba020f1aaf94d6ee43f04e7f58e259bf7fcf7210f8b2b2183570f9c8",
+          "width": 1265,
+          "height": 712,
+          "file_mtime_utc": "2026-10-26T22:14:50.469438+00:00",
+          "crop_box_xyxy": [
+            0,
+            0,
+            1251,
+            712
+          ]
+        }
+      ],
+      "transformations": [
+        {
+          "destination_xy": [
+            50,
+            40
+          ],
+          "destination_size": [
+            1400,
+            797
+          ],
+          "resampling": "LANCZOS",
+          "crop_box_xyxy": [
+            0,
+            0,
+            1251,
+            712
+          ]
+        }
+      ],
+      "note": "Actual local landing capture. New card editions remain proposals."
+    },
+    {
+      "filename": "05-overlay-local-demo.png",
+      "title": "Broadcast HUD \u00b7 local browser preview",
+      "caption": "Paused local demo, cropped from the browser preview. Actual OBS capture is still to record.",
+      "evidence_class": "local_overlay_browser_preview",
+      "review_status": "prepared_for_owner_review",
+      "upload_candidate_after_owner_review": true,
+      "width": 1500,
+      "height": 1000,
+      "aspect_ratio": "3:2",
+      "bytes": 187875,
+      "sha256": "77d453021936ab1db1713382956860ff431da092c87c59e5a260fbe7d1a22f87",
+      "sources": [
+        {
+          "path": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/evidence/product-after/obs-local-paused.png",
+          "sha256": "99785b4255e675c608354644cfc28fb5879cfad72eb88319f0a08f3abba9baba",
+          "width": 1265,
+          "height": 712,
+          "file_mtime_utc": "2026-10-26T22:19:37.528893+00:00",
+          "crop_box_xyxy": [
+            108,
+            62,
+            647,
+            209
+          ]
+        }
+      ],
+      "transformations": [
+        {
+          "destination_xy": [
+            50,
+            248
+          ],
+          "destination_size": [
+            1400,
+            382
+          ],
+          "resampling": "LANCZOS",
+          "crop_box_xyxy": [
+            108,
+            62,
+            647,
+            209
+          ]
+        }
+      ],
+      "note": "Cropped from product review. The source is a browser frame, not OBS Studio. The demo score is zero."
+    },
+    {
+      "filename": "06-card-artwork-selection.png",
+      "title": "18 illustrations from the 78-target collection",
+      "caption": "Existing project illustrations. Gameplay text is rendered separately in the app.",
+      "evidence_class": "project_artwork_contact_sheet",
+      "review_status": "prepared_for_owner_review",
+      "upload_candidate_after_owner_review": true,
+      "width": 1500,
+      "height": 1000,
+      "aspect_ratio": "3:2",
+      "bytes": 788145,
+      "sha256": "adf6a8d51c0e974992d74eea0b5b7b7c49ae36afd440416fe4b9e06b80306331",
+      "sources": [
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/volcano.png",
+          "sha256": "ba1d79a8dde4058a33085d9f76c0a680b0d911f65d6a4cd31fdc639f9b784798",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:24:37.295932+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/penguin.png",
+          "sha256": "9ddce2680486024fca3bcb894cf635e177c1eea005f67e0831bd636e5b6f77cc",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:24:37.281932+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/kaleidoscope.png",
+          "sha256": "5273c882226b3d1b1c488038c23a62fc2f9444c873d90ccaa28b4ffe52301503",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:32:16.386549+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/robot.png",
+          "sha256": "a389d790bb407218a577eb80e62f95261d7ba293873c803ca0f1ffdd3196580a",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:24:37.288932+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/pizza.png",
+          "sha256": "0cfd35a161387a2fe20d6efcb583b9b43e5705653c5162e2aca4c1d1db959d65",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:24:37.286932+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/dragon.png",
+          "sha256": "81667c3fa77decb926d1cde1fe29374613e1e3fe6d1ca416c2d106b9d1c716f5",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:24:37.263932+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/turtle.png",
+          "sha256": "dace1b9c938d2fa2f46fc9b50c51ee5daaad1a04812bfeed1af48e58e3ae7575",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:35:58.727265+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/rocket.png",
+          "sha256": "0cfefd6c50d1fcf1eed89fdd12088add3710a50c0760312be5120398227bdf0d",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:24:37.290932+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/mushroom.png",
+          "sha256": "b54e54ff397a425bc0f26d58b77bc8cd571f43342b617f13fb9d7b87925b3b45",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:46:03.610096+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/ghost.png",
+          "sha256": "8f881f0f81920da3bcb1d495884eb994a4b3fc169053e516fe894676a263a6a9",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:47:22.464315+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/donut.png",
+          "sha256": "5939077eab248d4c6c1b45b6b2410ad5e99023e25faa889b19f8c70c9d45281c",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:47:22.667180+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/hedgehog.png",
+          "sha256": "2bfae5ecb9301188e5620b38f26da9fd4fc59ff36afa16e3f17a2a99cf98ed75",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:48:46.325074+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/gramophone.png",
+          "sha256": "00ce2640474279e863b38a67dda30a64503f4fa983cead532464d9804e0c22b8",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:48:46.507648+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/hourglass.png",
+          "sha256": "46ba584c358345639f9232d19d3388e2c27fd53cc7f04527e929f3a40916ad97",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:49:30.172189+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/octopus.png",
+          "sha256": "6e24d3ee04d8eb589da259e15e3018e059606e7bb28bfcdc4a769ff06aced294",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:24:37.277932+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/pirate.png",
+          "sha256": "f172ad6f90c442b534400a779ac34dc979ca4d85d63c7cea2ccfa837e1ab0448",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:24:37.284932+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/compass.png",
+          "sha256": "9148b0961d91996225d9cfcb414e09c9900dda55fb22b44cbfd89a47409668c4",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:45:11.971095+00:00",
+          "crop_box_xyxy": null
+        },
+        {
+          "path": "/home/maff/foss/worktrees/baited/card-expansion-60/packages/app/public/cards/proofs/saxophone.png",
+          "sha256": "4891e98afff3d6cd46c03834bd84cc1e21411fd23362f18d8c1067f2d6fd5dbf",
+          "width": 1254,
+          "height": 1254,
+          "file_mtime_utc": "2026-10-26T20:24:37.292932+00:00",
+          "crop_box_xyxy": null
+        }
+      ],
+      "transformations": [
+        {
+          "asset": "volcano",
+          "destination_xy": [
+            42,
+            20
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "penguin",
+          "destination_xy": [
+            279,
+            20
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "kaleidoscope",
+          "destination_xy": [
+            516,
+            20
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "robot",
+          "destination_xy": [
+            753,
+            20
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "pizza",
+          "destination_xy": [
+            990,
+            20
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "dragon",
+          "destination_xy": [
+            1227,
+            20
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "turtle",
+          "destination_xy": [
+            42,
+            302
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "rocket",
+          "destination_xy": [
+            279,
+            302
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "mushroom",
+          "destination_xy": [
+            516,
+            302
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "ghost",
+          "destination_xy": [
+            753,
+            302
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "donut",
+          "destination_xy": [
+            990,
+            302
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "hedgehog",
+          "destination_xy": [
+            1227,
+            302
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "gramophone",
+          "destination_xy": [
+            42,
+            584
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "hourglass",
+          "destination_xy": [
+            279,
+            584
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "octopus",
+          "destination_xy": [
+            516,
+            584
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "pirate",
+          "destination_xy": [
+            753,
+            584
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "compass",
+          "destination_xy": [
+            990,
+            584
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        },
+        {
+          "asset": "saxophone",
+          "destination_xy": [
+            1227,
+            584
+          ],
+          "destination_size": [
+            232,
+            232
+          ],
+          "resampling": "LANCZOS",
+          "crop": null
+        }
+      ],
+      "note": "Existing separately generated project illustrations, arranged for review. No new artwork or card edition was generated."
+    },
+    {
+      "filename": "REVIEW-ONLY-staged-landing-film.png",
+      "title": "Review only \u00b7 staged landing film",
+      "caption": "Made-up stream/chat and historical clue styling. Re-render after the card edition is selected.",
+      "evidence_class": "staged_landing_concept_film",
+      "review_status": "prepared_for_owner_review",
+      "upload_candidate_after_owner_review": false,
+      "width": 1500,
+      "height": 1000,
+      "aspect_ratio": "3:2",
+      "bytes": 848268,
+      "sha256": "7d827a1963097a58658464a6062c47d95750e8c45802ce5e3d386fe9ab958da6",
+      "sources": [
+        {
+          "path": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/evidence/product-after/landing-hero.png",
+          "sha256": "7380119691014d1794e66f5727eb60cfc118dcd2a663ef77b6b4fcf22b04221f",
+          "width": 1265,
+          "height": 712,
+          "file_mtime_utc": "2026-10-26T22:15:13.479199+00:00",
+          "crop_box_xyxy": [
+            0,
+            0,
+            1251,
+            712
+          ]
+        }
+      ],
+      "transformations": [
+        {
+          "destination_xy": [
+            50,
+            40
+          ],
+          "destination_size": [
+            1400,
+            797
+          ],
+          "resampling": "LANCZOS",
+          "crop_box_xyxy": [
+            0,
+            0,
+            1251,
+            712
+          ]
+        }
+      ],
+      "note": "Not recommended for upload as current gameplay. Historical crossed-out clue treatment is visible. Replace after edition selection and final film render."
+    }
+  ],
+  "unused_capture": {
+    "path": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/evidence/product-after/card-lab-phone-320.png",
+    "reason": "Retained as raw review evidence. A separate export would repeat the existing study and responsive-viewer subjects."
+  },
+  "still_needed": [
+    "Owner review of the design and final card edition selection",
+    "Real Twitch viewer/chat/Studio round capture using the selected design",
+    "Actual OBS capture showing a confirmed result and synchronized score",
+    "Connected Twitch configuration capture if included in the gallery",
+    "Actual Codex implementation/test evidence",
+    "Approved <=3-minute YouTube demo, public or unlisted without password",
+    "Final landing film re-render if its current concept styling is shown"
+  ]
+}

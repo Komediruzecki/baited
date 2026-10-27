@@ -23,13 +23,13 @@ test('keyboard browsing loads nearby art when the proximity observer is delayed'
   })
   await page.goto(`${testInfo.project.use.baseURL}/#cards`)
   await expect(page.locator('.deck-card-item')).toHaveCount(78)
-  await expect(page.locator('.deck-card-item img[src]')).toHaveCount(0)
+  await expect(page.locator('.deck-card-item .card-art img[src]')).toHaveCount(0)
   await page.locator('#deck-hand').focus()
   await page.locator('#deck-hand').press('ArrowRight')
   await expect(page.locator('.deck-card-item.is-front .card-word')).toHaveText('BANANA')
-  await expect(page.locator('.deck-card-item img[src]')).toHaveCount(7)
+  await expect(page.locator('.deck-card-item .card-art img[src]')).toHaveCount(7)
   await expect
-    .poll(() => page.locator('.deck-card-item.is-front img').evaluate((image) => image.complete && image.naturalWidth > 0))
+    .poll(() => page.locator('.deck-card-item.is-front .card-art img').evaluate((image) => image.complete && image.naturalWidth > 0))
     .toBe(true)
 })
 
@@ -92,7 +92,7 @@ for (const { width, height, touch, reduced = false } of layouts) {
           .toBe(true)
         await expect(page.locator('#deck-title .split-unit')).toHaveCount(0)
         await expect
-          .poll(() => page.locator('.deck-card-item.is-front img').evaluate((image) => image.complete && image.naturalWidth > 0))
+          .poll(() => page.locator('.deck-card-item.is-front .card-art img').evaluate((image) => image.complete && image.naturalWidth > 0))
           .toBe(true)
         await page.screenshot({ path: testInfo.outputPath('cards-before-wipe.png') })
         await page.evaluate((y) => scrollTo({ top: y, behavior: 'instant' }), range.wipe + (range.end - range.wipe) * 0.3)

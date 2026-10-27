@@ -20,12 +20,17 @@ function redirectLocation(url: URL, origin: string): string {
   return target.href
 }
 
-function isUnpublishedPath(pathname: string): boolean {
+function normalizedPath(pathname: string): string | null {
   try {
-    return /^\/lab(?:\/|$)/i.test(decodeURIComponent(pathname).replaceAll('\\', '/'))
+    return decodeURIComponent(pathname).replaceAll('\\', '/').replace(/^\/+/, '/')
   } catch {
-    return true
+    return null
   }
+}
+
+function isUnpublishedPath(pathname: string): boolean {
+  const path = normalizedPath(pathname)
+  return path === null || /^\/(?:lab|card-lab)(?:\/|$)/i.test(path)
 }
 
 const CONTENT_POLICY = [
@@ -76,7 +81,10 @@ export default {
 
     const headers = new Headers(response.headers)
     headers.set('X-Robots-Tag', isProduction && response.ok ? 'index, follow' : 'noindex, nofollow')
-    headers.set('Content-Security-Policy', CONTENT_POLICY)
+    // React uses style attributes for card dimensions and motion controls. The
+    // exception is confined to the dev-only gallery; scripts still need self.
+    const isCardLab = env.ENVIRONMENT === 'dev' && /^\/card-lab(?:\/|$)/i.test(normalizedPath(url.pathname) ?? '')
+    headers.set('Content-Security-Policy', isCardLab ? `${CONTENT_POLICY}; style-src-attr 'unsafe-inline'` : CONTENT_POLICY)
     headers.set('X-Content-Type-Options', 'nosniff')
     headers.set('Referrer-Policy', 'no-referrer')
     headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')

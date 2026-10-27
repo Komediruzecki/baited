@@ -4,6 +4,8 @@
   "type": "module",
   "version": "1.3.1",
   "scripts": {
+    "build:dev": "node scripts/build-site.mjs --env dev",
+    "build:prod": "node scripts/build-site.mjs --env prod",
     "dev": "wrangler dev --env dev --ip 127.0.0.1 --port 4370",
     "check": "tsc --noEmit",
     "test:run": "node --experimental-strip-types --test test/*.test.mjs",
@@ -19,6 +21,6 @@
   "devDependencies": {
     "playwright": "1.62.1",
     "typescript": "^6.0.3",
-    "wrangler": "^4.95.0"
+    "wrangler": "4.129.1"
   }
 }

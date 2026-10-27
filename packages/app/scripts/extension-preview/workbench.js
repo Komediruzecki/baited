@@ -20,6 +20,11 @@ const descriptions = {
   error:
     'The fixture service keeps returning unavailable. No successful connection should be implied.',
   longword: 'A long target and long forbidden clues exercise wrapping in the smallest panel.',
+  kaleidoscope: 'A real target with its four exact clues. Fixed example only.',
+  archipelago: 'A real target with its four exact clues. Fixed example only.',
+  dinosaur: 'A real easy target, with no off-limits clues. Fixed example only.',
+  marshmallow: 'A real medium target with wide letters and its two exact off-limits clues.',
+  alchemy: 'A real hard target, including TRANSMUTATION, with all four exact off-limits clues.',
 };
 function restart() {
   const query = new URLSearchParams({ fixture: fixture.value, instance: String(Date.now()) });

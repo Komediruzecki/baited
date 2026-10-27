@@ -12,9 +12,9 @@ export default defineConfig({
   webServer: process.env.BAITED_TEST_URL
     ? undefined
     : {
-        // Match the installed local workerd; production keeps wrangler.jsonc's release date.
-        command:
-          'pnpm exec wrangler dev --env dev --local --ip 127.0.0.1 --port 4372 --inspector-port 9372 --compatibility-date 2026-08-08',
+        // The supervisor keeps the real local Worker and forwards only safe
+        // exception diagnostics; production keeps wrangler.jsonc's release date.
+        command: 'node scripts/browser-server.mjs',
         url: 'http://127.0.0.1:4372',
         reuseExistingServer: false,
         timeout: 60_000,

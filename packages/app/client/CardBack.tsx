@@ -4,7 +4,6 @@ import React from 'react';
 export function CardBack() {
   return (
     <div className="card-back" aria-hidden="true">
-      <img src="/brand/bait-bomb.png" alt="" width="88" height="102" />
       <span className="baited-glyph" />
     </div>
   );

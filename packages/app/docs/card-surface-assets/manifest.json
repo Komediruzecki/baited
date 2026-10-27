@@ -1,0 +1,758 @@
+{
+  "version": 1,
+  "project": "Baited",
+  "processedAt": "2026-10-26T23:55:32.354Z",
+  "designPlan": "packages/app/docs/card-surfaces-opus-design.md",
+  "promptCatalogue": "packages/app/docs/card-surface-prompts.json",
+  "imageToolVersion": "Version: ImageMagick 7.1.2-34 Q16-HDRI x86_64 c5d4ca8a0:20261014 https://imagemagick.org",
+  "use": "Dev-only Card Lab decorative materials. Text, rules, edges, wordmark, sprites and interaction remain code layers.",
+  "limitations": [
+    "Back textures were requested with 180-degree symmetry, but generated raster symmetry is approximate. No pixels were mirrored or regenerated during optimization; measured rotational MAE is recorded per back.",
+    "The nominal 1024x1536 sources use a 1020x1428 crop so the integer crop is exactly 5:7. The 1060x1484 sources already have that ratio and remain uncropped.",
+    "Image generation model identifier was not returned by the tool and is not inferred."
+  ],
+  "assets": [
+    {
+      "id": "front-prism",
+      "creationTool": "ChatGPT image generation via image_gen",
+      "model": null,
+      "prompt": "Flat 2D full-bleed print texture, seen straight-on like a flatbed scan. Portrait 2:3 canvas, 1024 x 1536, filled edge to edge with one material. No margin, white border or paper edge. No perspective, no shadow, no mockup, no photograph of an object. Do not draw a card, frame, border line, panel, label or rounded corner. Opaque everywhere.\n\nMaterial: holographic foil laminate in a shattered-ice pattern of irregular angular shards, 30 to 120 px across, separated by thin dark seams. Each shard reflects a slightly different cool color: electric violet #9146FF, lilac #C9A8FF, cool cyan #8FD3FF, soft rose #F0B8FF and silver #E9E6F2. A broad, soft diagonal band of brighter light runs from the upper left to the lower right.\n\nLayout. The sheet will be cropped to 5:7 and shown at about 300 x 420 px. A small pixel-art object will later sit in the clear zone, and a solid panel will cover the lower part.\n- Clear zone: a circle centered horizontally, its center 32% down from the top, its diameter 64% of the image width. Inside it the foil fades smoothly into deep violet-black #0E0A16 with only a few faint shard edges. Nothing bright or sharp inside this circle.\n- Around the circle, from the top edge down to 58% of the height: the brightest, densest shards.\n- Lower 42%: the same foil, mostly dark and low in detail, with brighter shards only along the left, right and bottom edges.\n- The 8% nearest each corner: plain shard texture, no highlights. The top and bottom 4% may be cropped away.\n\nStrictly no text, letters, numbers, signatures, watermarks, logos, symbols, emblems, icons, stars, sparkles, hearts, characters, creatures, objects, hooks, fish or bombs. No yellow, no gold, no warm colors. Crisp and print-like, not a glossy 3D render.",
+      "promptSha256": "7fbc79adb54c054b06626057fc674c9466ed966c86e2f6e35cf39f3c47f4000e",
+      "source": {
+        "generatedFile": "exec-614bf01b-a2c8-4475-a6c6-0b1f385b00a7.png",
+        "localGeneratedPath": "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-614bf01b-a2c8-4475-a6c6-0b1f385b00a7.png",
+        "archivePath": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-27/0c85f589cf0e40b5927527d3d9a62e2a/deliverables/card-surface-masters/front-prism.png",
+        "sha256": "8ecf1c04c457c63b04f867e5e07aba091fca0bb9b5c48560b329d766af76bf08",
+        "bytes": 2887725,
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG"
+      },
+      "processing": {
+        "operations": [
+          "auto-orient",
+          "center crop to largest exact integer 5:7 rectangle",
+          "Lanczos resize",
+          "metadata strip",
+          "lossy WebP encode"
+        ],
+        "crop": {
+          "width": 1020,
+          "height": 1428,
+          "x": 2,
+          "y": 54
+        },
+        "creativeEdits": false,
+        "symmetryEdits": false
+      },
+      "rotationMeanAbsoluteError": null,
+      "exports": [
+        {
+          "role": "runtime",
+          "path": "packages/app/public/card-lab/finishes/front-prism.webp",
+          "sha256": "dc5376aa8c1657fe6635bfcbb10eef20d6906dede55e6789a45d89c84201921d",
+          "bytes": 150230,
+          "maxBytes": 160000,
+          "width": 720,
+          "height": 1008,
+          "format": "WebP",
+          "quality": 82,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-614bf01b-a2c8-4475-a6c6-0b1f385b00a7.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "720x1008!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "82",
+            "packages/app/public/card-lab/finishes/front-prism.webp"
+          ]
+        },
+        {
+          "role": "swatch",
+          "path": "packages/app/public/card-lab/finishes/front-prism-swatch.webp",
+          "sha256": "a59ca5fd5fcf3de5486eeed154a0e03997a4c6f4f871ec432421745d912ca9d0",
+          "bytes": 4634,
+          "maxBytes": 8000,
+          "width": 80,
+          "height": 112,
+          "format": "WebP",
+          "quality": 92,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-614bf01b-a2c8-4475-a6c6-0b1f385b00a7.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "80x112!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "92",
+            "packages/app/public/card-lab/finishes/front-prism-swatch.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "front-engraved",
+      "creationTool": "ChatGPT image generation via image_gen",
+      "model": null,
+      "prompt": "Flat 2D full-bleed print texture, seen straight-on like a flatbed scan. Portrait 2:3 canvas, 1024 x 1536, filled edge to edge. No margin, white border or paper edge. No perspective, no shadow, no mockup. Do not draw a card, frame, border line, panel, label or rounded corner. Opaque everywhere.\n\nMaterial: deep aubergine uncoated paper #1C1328 with a faint fibrous tooth, printed with guilloche engraving: interlaced spirograph line patterns cut on an engraving lathe. Lines in muted lilac #8E7BB0 and silver-violet #B9A9D6, slightly raised ink with subtle relief. Matte, no shine.\n\nLayout. The sheet will be cropped to 5:7 and shown at about 300 x 420 px. A small pixel-art object will later sit on the center of the rosette, and a solid panel will cover the lower part.\n- One large mirror-symmetric guilloche rosette, centered horizontally with its center 32% down from the top, about 80% of the image width across. Its outer ring is the most detailed and visible part of the sheet.\n- Clear zone: the inner circle of the rosette, 60% of the image width across, is extremely faint, its lines barely different from the paper.\n- Everywhere else: parallel guilloche wave fields at low contrast, slightly brighter toward the left and right edges.\n- Lower 42%: wave lines only, low contrast, no rosette detail. Corners: plain wave lines. The top and bottom 4% may be cropped away.\n- Lines at least 12 px apart and 3 to 4 px thick everywhere, so the pattern stays clean at 300 px wide. No moiré, no hairlines.\n\nStrictly no text, letters, numbers, microprinting, signatures, watermarks, portraits, faces, crests, seals, coats of arms, currency symbols, keys, locks, eyes, logos, emblems, icons, hooks, fish or bombs. No gold, no yellow, no bright colors.",
+      "promptSha256": "4975d2311c14045f6d834d7a1d6b2e08cd19ac56cc49f14f77e9cc57cb0d1351",
+      "source": {
+        "generatedFile": "exec-b4e2c9ab-afe2-4e10-bd98-359f08b98d35.png",
+        "localGeneratedPath": "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-b4e2c9ab-afe2-4e10-bd98-359f08b98d35.png",
+        "archivePath": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-27/0c85f589cf0e40b5927527d3d9a62e2a/deliverables/card-surface-masters/front-engraved.png",
+        "sha256": "2a2cf30ccfa61e19e37b114224fe7ffb85c89c69419c0eaf8c9a460d18b1e1c0",
+        "bytes": 3059614,
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG"
+      },
+      "processing": {
+        "operations": [
+          "auto-orient",
+          "center crop to largest exact integer 5:7 rectangle",
+          "Lanczos resize",
+          "metadata strip",
+          "lossy WebP encode"
+        ],
+        "crop": {
+          "width": 1020,
+          "height": 1428,
+          "x": 2,
+          "y": 54
+        },
+        "creativeEdits": false,
+        "symmetryEdits": false
+      },
+      "rotationMeanAbsoluteError": null,
+      "exports": [
+        {
+          "role": "runtime",
+          "path": "packages/app/public/card-lab/finishes/front-engraved.webp",
+          "sha256": "86cb806892b9d3710e5c7cefea2ddd3d4fe2d7ba213b80b1950149d367dee90f",
+          "bytes": 146794,
+          "maxBytes": 160000,
+          "width": 720,
+          "height": 1008,
+          "format": "WebP",
+          "quality": 86,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-b4e2c9ab-afe2-4e10-bd98-359f08b98d35.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "720x1008!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "86",
+            "packages/app/public/card-lab/finishes/front-engraved.webp"
+          ]
+        },
+        {
+          "role": "swatch",
+          "path": "packages/app/public/card-lab/finishes/front-engraved-swatch.webp",
+          "sha256": "d177eba2aec8ffa060e1d647f33a458d03a728141f5dbe7c601c69e7d2fd4dbe",
+          "bytes": 2124,
+          "maxBytes": 8000,
+          "width": 80,
+          "height": 112,
+          "format": "WebP",
+          "quality": 92,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-b4e2c9ab-afe2-4e10-bd98-359f08b98d35.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "80x112!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "92",
+            "packages/app/public/card-lab/finishes/front-engraved-swatch.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "front-velvet",
+      "creationTool": "ChatGPT image generation via image_gen",
+      "model": null,
+      "prompt": "Flat 2D full-bleed fabric texture, seen straight-on like a flatbed scan, the velvet filling the canvas edge to edge. Portrait 2:3 canvas, 1024 x 1536. No margin or border, no perspective, no visible object, no mockup. Do not draw a card, box, case, frame, panel, label or rounded corner. Opaque everywhere.\n\nMaterial: crushed velvet in very deep violet-black #140C1F with plum #2A1640 highlights. The pile is pressed in soft irregular swirls that catch a low sheen of muted lilac #6E5A8C. Fine fibers visible up close.\n\nLight and layout. The sheet will be cropped to 5:7 and shown at about 300 x 420 px. A small pixel-art object will later sit in the pool of light, and a solid panel will cover the lower part.\n- Clear zone: a soft, wide pool of light, centered horizontally with its center 32% down from the top, about 70% of the image width across. Inside it the velvet is smooth, slightly lighter, desaturated gray-violet #2C2435, with low-contrast texture and no sharp creases.\n- Outside the pool the velvet darkens gradually toward all four edges, where the pile is pressed flat and almost black #0B0710.\n- Lower 42%: dark velvet with little variation. Corners: dark and plain. The top and bottom 4% may be cropped away.\n\nStrictly no text, letters, numbers, signatures, watermarks, logos, symbols, emblems, gems, jewels, studs, buttons, stitching, seams, ribbons, cushions, hands, objects, hooks, fish or bombs. No gold, no yellow, no saturated bright purple.",
+      "promptSha256": "db7c8a684db8571143a685ee96f773dd4cf6bfd6db33e71d14dbe46ebc910f91",
+      "source": {
+        "generatedFile": "exec-81a1e508-d095-43fa-96f1-91e60dc1310e.png",
+        "localGeneratedPath": "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-81a1e508-d095-43fa-96f1-91e60dc1310e.png",
+        "archivePath": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-27/0c85f589cf0e40b5927527d3d9a62e2a/deliverables/card-surface-masters/front-velvet.png",
+        "sha256": "f46bfea54d537eca71f9240cb998cf9539f8cab252f7a50484384d7046746edf",
+        "bytes": 2729240,
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG"
+      },
+      "processing": {
+        "operations": [
+          "auto-orient",
+          "center crop to largest exact integer 5:7 rectangle",
+          "Lanczos resize",
+          "metadata strip",
+          "lossy WebP encode"
+        ],
+        "crop": {
+          "width": 1020,
+          "height": 1428,
+          "x": 2,
+          "y": 54
+        },
+        "creativeEdits": false,
+        "symmetryEdits": false
+      },
+      "rotationMeanAbsoluteError": null,
+      "exports": [
+        {
+          "role": "runtime",
+          "path": "packages/app/public/card-lab/finishes/front-velvet.webp",
+          "sha256": "c4dfee68ba239bd133e87d0952135e55148e295b0d3152f5beeca3a152ad35ec",
+          "bytes": 144050,
+          "maxBytes": 160000,
+          "width": 720,
+          "height": 1008,
+          "format": "WebP",
+          "quality": 92,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-81a1e508-d095-43fa-96f1-91e60dc1310e.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "720x1008!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "92",
+            "packages/app/public/card-lab/finishes/front-velvet.webp"
+          ]
+        },
+        {
+          "role": "swatch",
+          "path": "packages/app/public/card-lab/finishes/front-velvet-swatch.webp",
+          "sha256": "dcb9db05754517216f133fd51abf1a6e30cc8d7b9aacf4e7d2de0f6fdb2c4925",
+          "bytes": 1730,
+          "maxBytes": 8000,
+          "width": 80,
+          "height": 112,
+          "format": "WebP",
+          "quality": 92,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-81a1e508-d095-43fa-96f1-91e60dc1310e.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "80x112!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "92",
+            "packages/app/public/card-lab/finishes/front-velvet-swatch.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "front-spotlight",
+      "creationTool": "ChatGPT image generation via image_gen",
+      "model": null,
+      "prompt": "Flat 2D full-bleed screen print, seen straight-on like a flatbed scan. Portrait 2:3 canvas, 1024 x 1536, printed edge to edge. No margin, white border or board edge. No perspective, no shadow, no mockup. Do not draw a card, frame, border line, panel, label or rounded corner. Opaque everywhere.\n\nTechnique: two-ink screen print on matte uncoated board. Ink one is electric violet #9146FF; ink two is near-black #120D1A. A thin third pass of pale lilac #C9A8FF appears only as fine highlight lines along some ray edges. Visible halftone dots, slight misregistration between the inks (2 to 4 px), fine board texture, no gloss.\n\nLayout. The sheet will be cropped to 5:7 and shown at about 300 x 420 px. A small pixel-art object will later sit in the center of the disc, and a solid panel will cover the lower part.\n- A radial burst of 18 straight rays, alternating violet and near-black, radiating from one point centered horizontally and 32% down from the top. The rays reach every edge.\n- Clear zone: around that point, a solid near-black disc 72% of the image width across, with no rays and no dots: flat ink only.\n- Toward the outer edges the violet rays break into a coarse halftone dot gradient, dots 10 to 22 px.\n- Lower 42%: the rays continue, darker, with sparser dots. Corners: plain ray texture. The top and bottom 4% may be cropped away.\n\nStrictly no text, letters, numbers, signatures, watermarks, logos, symbols, stars, sparkles, lightning, emblems, icons, characters, hooks, fish or bombs. No yellow, no gold, no warm light and no smooth digital gradients: it must read as ink on board.",
+      "promptSha256": "9f62ba1a84379dacfd9b3e2dd416f0dcdaee1b528e412adcae2415b1fccb9abc",
+      "source": {
+        "generatedFile": "exec-fb07f771-8371-4091-81c1-132598c00e38.png",
+        "localGeneratedPath": "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-fb07f771-8371-4091-81c1-132598c00e38.png",
+        "archivePath": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-27/0c85f589cf0e40b5927527d3d9a62e2a/deliverables/card-surface-masters/front-spotlight.png",
+        "sha256": "e3ffafd031ad1fba60dcec188294fafec80e7483afef187c4487dd5252f27506",
+        "bytes": 3392844,
+        "width": 1060,
+        "height": 1484,
+        "format": "PNG"
+      },
+      "processing": {
+        "operations": [
+          "auto-orient",
+          "center crop to largest exact integer 5:7 rectangle",
+          "Lanczos resize",
+          "metadata strip",
+          "lossy WebP encode"
+        ],
+        "crop": {
+          "width": 1060,
+          "height": 1484,
+          "x": 0,
+          "y": 0
+        },
+        "creativeEdits": false,
+        "symmetryEdits": false
+      },
+      "rotationMeanAbsoluteError": null,
+      "exports": [
+        {
+          "role": "runtime",
+          "path": "packages/app/public/card-lab/finishes/front-spotlight.webp",
+          "sha256": "2d91746a9dde4894ec9fb9eb06be56cf440237657481e8afc48c25163b735d4b",
+          "bytes": 158076,
+          "maxBytes": 160000,
+          "width": 720,
+          "height": 1008,
+          "format": "WebP",
+          "quality": 76,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-fb07f771-8371-4091-81c1-132598c00e38.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1060x1484+0+0",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "720x1008!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "76",
+            "packages/app/public/card-lab/finishes/front-spotlight.webp"
+          ]
+        },
+        {
+          "role": "swatch",
+          "path": "packages/app/public/card-lab/finishes/front-spotlight-swatch.webp",
+          "sha256": "1d33cb537dd60a04b88d31d05dce7a07eda3b913bae30cb92eae859ba34c3b0a",
+          "bytes": 3900,
+          "maxBytes": 8000,
+          "width": 80,
+          "height": 112,
+          "format": "WebP",
+          "quality": 92,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-fb07f771-8371-4091-81c1-132598c00e38.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1060x1484+0+0",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "80x112!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "92",
+            "packages/app/public/card-lab/finishes/front-spotlight-swatch.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "back-mosaic",
+      "creationTool": "ChatGPT image generation via image_gen",
+      "model": null,
+      "prompt": "Flat 2D full-bleed glazed tile mosaic, seen straight-on like a flatbed scan with even light. Portrait 2:3 canvas, 1024 x 1536, tiles edge to edge. No margin or border, no perspective, no shadow, no mockup. Do not draw a card, frame line, panel, label or rounded corner. Opaque everywhere.\n\nMaterial: hand-set glazed ceramic tesserae, square, about 28 px wide, with slightly irregular edges and thin dark grout #07050A. Each tile has a glossy glaze with one tiny soft highlight. Tile colors only: black #0D0A12, aubergine #241338, deep violet #3B1A7A, electric violet #9146FF and a few lilac #C9A8FF accents.\n\nLayout. The sheet will be cropped to 5:7 and shown at about 300 x 420 px. A wordmark will later be placed across the center band.\n- The design looks identical when rotated 180 degrees.\n- Concentric rectangular bands step inward from the edges like a stepped pixel border. The outermost bands are brightest: electric violet with scattered lilac tiles. Each band inward is darker, blended into the next with a checkerboard of the two colors.\n- Clear zone: a horizontal band across the exact center, 28% of the image height tall and spanning the width inside the outer bands, made only of uniform matte black tiles: no pattern, no highlights.\n- Corners: plain tiles. The top and bottom 4% may be cropped away.\n\nStrictly no text, letters, numbers, signatures, watermarks, logos, symbols, emblems, icons, pictures, faces, characters, hooks, fish or bombs. No gold, no yellow, no other colors.",
+      "promptSha256": "eb39649435e6762145e86d378b959523c3c4ed05dd67df5e4846b3412ab0af85",
+      "source": {
+        "generatedFile": "exec-dec8890a-c460-4ef5-9b65-2b4341c2699f.png",
+        "localGeneratedPath": "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-dec8890a-c460-4ef5-9b65-2b4341c2699f.png",
+        "archivePath": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-27/0c85f589cf0e40b5927527d3d9a62e2a/deliverables/card-surface-masters/back-mosaic.png",
+        "sha256": "1e3c5e08e1b7f44e865c92101a6eae8aa136b507ce83065ffe37b184d2ba15b4",
+        "bytes": 1905634,
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG"
+      },
+      "processing": {
+        "operations": [
+          "auto-orient",
+          "center crop to largest exact integer 5:7 rectangle",
+          "Lanczos resize",
+          "metadata strip",
+          "lossy WebP encode"
+        ],
+        "crop": {
+          "width": 1020,
+          "height": 1428,
+          "x": 2,
+          "y": 54
+        },
+        "creativeEdits": false,
+        "symmetryEdits": false
+      },
+      "rotationMeanAbsoluteError": 0.0653273,
+      "exports": [
+        {
+          "role": "runtime",
+          "path": "packages/app/public/card-lab/backs/back-mosaic.webp",
+          "sha256": "31bdf96c5d684fb8c1a922df1bdb9b4c7958ebdd3488bf212b326773d39e937c",
+          "bytes": 110456,
+          "maxBytes": 160000,
+          "width": 720,
+          "height": 1008,
+          "format": "WebP",
+          "quality": 92,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-dec8890a-c460-4ef5-9b65-2b4341c2699f.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "720x1008!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "92",
+            "packages/app/public/card-lab/backs/back-mosaic.webp"
+          ]
+        },
+        {
+          "role": "swatch",
+          "path": "packages/app/public/card-lab/backs/back-mosaic-swatch.webp",
+          "sha256": "e8c41a84c4cc7a99cf11dea0bae794e4b90edcbd14c0429ff1084d5bf971e862",
+          "bytes": 4458,
+          "maxBytes": 8000,
+          "width": 80,
+          "height": 112,
+          "format": "WebP",
+          "quality": 92,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-dec8890a-c460-4ef5-9b65-2b4341c2699f.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "80x112!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "92",
+            "packages/app/public/card-lab/backs/back-mosaic-swatch.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "back-prism",
+      "creationTool": "ChatGPT image generation via image_gen",
+      "model": null,
+      "prompt": "Flat 2D full-bleed embossed holographic foil, seen straight-on like a flatbed scan. Portrait 2:3 canvas, 1024 x 1536, foil edge to edge. No margin or border, no perspective, no shadow, no mockup. Do not draw a card, frame line, panel, label or rounded corner. Opaque everywhere.\n\nMaterial: silver-violet holographic foil embossed with a fine diamond lattice, a woven crosshatch of diagonal ridges with cells about 24 px across. Base tones from silver-lilac #B9A6E0 to mid violet #6E4FB0, with spectral glints of cyan #8FD3FF and rose #F0B8FF along the ridges. One broad, soft diagonal band of brighter light crosses the center from the upper left to the lower right.\n\nLayout. The sheet will be cropped to 5:7 and shown at about 300 x 420 px. A dark wordmark will later be printed across the center band.\n- The lattice looks identical when rotated 180 degrees and covers the sheet evenly.\n- Clear zone: a horizontal band across the exact center, 30% of the image height tall and the full width, is smoother and evenly mid-toned, around #9C88C8, with a low-contrast lattice and no bright glints.\n- Corners: plain lattice. The top and bottom 4% may be cropped away.\n\nStrictly no text, letters, numbers, signatures, watermarks, logos, symbols, emblems, icons, stars, striped rainbows, characters, hooks, fish or bombs. No gold, no yellow, no black areas.",
+      "promptSha256": "ad50f0129bf2bb18f799f3cd56c30bffb8c6972b4a7a27d143935a2c15646b11",
+      "source": {
+        "generatedFile": "exec-af38bdec-5f9d-4a23-b970-6274257f8ffb.png",
+        "localGeneratedPath": "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-af38bdec-5f9d-4a23-b970-6274257f8ffb.png",
+        "archivePath": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-27/0c85f589cf0e40b5927527d3d9a62e2a/deliverables/card-surface-masters/back-prism.png",
+        "sha256": "94b5551fe0381e7c147d4d1a760816e202fd194bff7a812f69862c73bedcfd4d",
+        "bytes": 3213643,
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG"
+      },
+      "processing": {
+        "operations": [
+          "auto-orient",
+          "center crop to largest exact integer 5:7 rectangle",
+          "Lanczos resize",
+          "metadata strip",
+          "lossy WebP encode"
+        ],
+        "crop": {
+          "width": 1020,
+          "height": 1428,
+          "x": 2,
+          "y": 54
+        },
+        "creativeEdits": false,
+        "symmetryEdits": false
+      },
+      "rotationMeanAbsoluteError": 0.0941872,
+      "exports": [
+        {
+          "role": "runtime",
+          "path": "packages/app/public/card-lab/backs/back-prism.webp",
+          "sha256": "dc274f20475e99c4ad21720c0e5743cc870f4fedeb7cc23430a24dc7cf070ebc",
+          "bytes": 146654,
+          "maxBytes": 160000,
+          "width": 720,
+          "height": 1008,
+          "format": "WebP",
+          "quality": 80,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-af38bdec-5f9d-4a23-b970-6274257f8ffb.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "720x1008!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "80",
+            "packages/app/public/card-lab/backs/back-prism.webp"
+          ]
+        },
+        {
+          "role": "swatch",
+          "path": "packages/app/public/card-lab/backs/back-prism-swatch.webp",
+          "sha256": "75b0b8b8e2c9017d49dd0ade46b3318a854de1c049235dd8e3e3b120137ab00c",
+          "bytes": 3750,
+          "maxBytes": 8000,
+          "width": 80,
+          "height": 112,
+          "format": "WebP",
+          "quality": 92,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-af38bdec-5f9d-4a23-b970-6274257f8ffb.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1020x1428+2+54",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "80x112!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "92",
+            "packages/app/public/card-lab/backs/back-prism-swatch.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "back-seal",
+      "creationTool": "ChatGPT image generation via image_gen",
+      "model": null,
+      "prompt": "Flat 2D full-bleed print texture, seen straight-on like a flatbed scan. Portrait 2:3 canvas, 1024 x 1536, printed edge to edge. No margin, white border or paper edge. No perspective, no shadow, no mockup. Do not draw a card, frame line, panel, label or rounded corner. Opaque everywhere.\n\nTechnique: guilloche engraving, interlaced spirograph line patterns cut on an engraving lathe, on deep aubergine paper #1A1226. Lines in muted lilac #8E7BB0 and silver-violet #B9A9D6, with one sparse pass of electric violet #9146FF. Slight ink relief, faint paper tooth, matte.\n\nLayout. The sheet will be cropped to 5:7 and shown at about 300 x 420 px. Only a thin border will be added on top.\n- Mirror-symmetric left to right and identical when rotated 180 degrees.\n- A large central guilloche medallion, 62% of the image width across, centered exactly in the middle: interlaced looping lines building a dense outer ring around an open, faint center.\n- The rest of the sheet: guilloche wave fields and a lattice of interlaced loops at low contrast, slightly brighter toward the edges.\n- Corners: plain wave lines. The top and bottom 4% may be cropped away.\n- Lines at least 12 px apart and 3 to 4 px thick everywhere. No moiré, no hairlines.\n\nStrictly no text, letters, numbers, microprinting, signatures, watermarks, portraits, faces, crests, seals with symbols, keys, keyholes, locks, eyes, currency symbols, logos, emblems, icons, hooks, fish or bombs. No gold, no yellow.",
+      "promptSha256": "35afa3b90a5b104779e31037ca700b9155de734ec46ad557bcb996302d97b73c",
+      "source": {
+        "generatedFile": "exec-d2ef4131-e15a-40df-97d2-cd386290404a.png",
+        "localGeneratedPath": "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-d2ef4131-e15a-40df-97d2-cd386290404a.png",
+        "archivePath": "/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-27/0c85f589cf0e40b5927527d3d9a62e2a/deliverables/card-surface-masters/back-seal.png",
+        "sha256": "d9dc07cdbb916f162d98c8b2403086fc2f6e67e77fa70012923bbcc7b15d0e7a",
+        "bytes": 4156044,
+        "width": 1060,
+        "height": 1484,
+        "format": "PNG"
+      },
+      "processing": {
+        "operations": [
+          "auto-orient",
+          "center crop to largest exact integer 5:7 rectangle",
+          "Lanczos resize",
+          "metadata strip",
+          "lossy WebP encode"
+        ],
+        "crop": {
+          "width": 1060,
+          "height": 1484,
+          "x": 0,
+          "y": 0
+        },
+        "creativeEdits": false,
+        "symmetryEdits": false
+      },
+      "rotationMeanAbsoluteError": 0.1018,
+      "exports": [
+        {
+          "role": "runtime",
+          "path": "packages/app/public/card-lab/backs/back-seal.webp",
+          "sha256": "3dc3240257b0a360a844e16382f4d8ad355cd735fc738a0ef7744b30b2d4fffd",
+          "bytes": 158906,
+          "maxBytes": 160000,
+          "width": 720,
+          "height": 1008,
+          "format": "WebP",
+          "quality": 44,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-d2ef4131-e15a-40df-97d2-cd386290404a.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1060x1484+0+0",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "720x1008!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "44",
+            "packages/app/public/card-lab/backs/back-seal.webp"
+          ]
+        },
+        {
+          "role": "swatch",
+          "path": "packages/app/public/card-lab/backs/back-seal-swatch.webp",
+          "sha256": "a66671e20a22d059f6002f5fb433c19f72a5811c4c032623674c8dd3e481550b",
+          "bytes": 4128,
+          "maxBytes": 8000,
+          "width": 80,
+          "height": 112,
+          "format": "WebP",
+          "quality": 92,
+          "encoderMethod": 6,
+          "commandArguments": [
+            "/home/maff/.codex/generated_images/01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7/exec-d2ef4131-e15a-40df-97d2-cd386290404a.png",
+            "-auto-orient",
+            "-gravity",
+            "NorthWest",
+            "-crop",
+            "1060x1484+0+0",
+            "+repage",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "80x112!",
+            "-strip",
+            "-define",
+            "webp:method=6",
+            "-define",
+            "webp:thread-level=0",
+            "-quality",
+            "92",
+            "packages/app/public/card-lab/backs/back-seal-swatch.webp"
+          ]
+        }
+      ]
+    }
+  ],
+  "codeAssets": [
+    {
+      "id": "dither",
+      "path": "packages/app/public/card-lab/finishes/dither.svg",
+      "generator": "packages/app/scripts/build-card-dither.mjs",
+      "seed": "0x00ba17ed",
+      "width": 72,
+      "height": 101,
+      "sha256": "dede2c24aecd43e15244eca6d36b26f58e4f934a0dd6c1b70ca08a78adda1343",
+      "bytes": 24394,
+      "symmetry": "Exact 180-degree rotational symmetry",
+      "inks": [
+        "#9146ff",
+        "#3b1a7a",
+        "#1f0e42",
+        "#0d0a12",
+        "#c9a8ff"
+      ],
+      "construction": "4x4 Bayer transitions by nearest-edge distance; one seeded lilac highlight per approximately 180 eligible cells; first half rotated into the second."
+    }
+  ]
+}

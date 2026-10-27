@@ -3,16 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "BAIT: chat gets a secret word and tries to make the streamer say it.",
+  "description": "Baited: chat gets a secret word and tries to make the streamer say it.",
   "engines": {
     "node": ">=22.12"
   },
   "scripts": {
     "dev": "tsx watch server/index.ts",
-    "build": "tsc --noEmit && vite build && tsup server/index.ts --format esm --platform node --target node22 --out-dir dist/server --external vite",
+    "build": "tsx scripts/build-review-catalogue.ts --check && tsc --noEmit && vite build && tsup server/index.ts --format esm --platform node --target node22 --out-dir dist/server --external vite",
     "start": "node --env-file-if-exists=.env dist/server/index.js --static",
     "preview:local": "node scripts/preview-local.mjs",
     "preview:concept": "node scripts/preview-concept.mjs",
+    "catalogue:review": "tsx scripts/build-review-catalogue.ts",
     "rehearsal:local": "node scripts/rehearse-local.mjs",
     "test": "tsx --test tests/*.test.ts extension/tests/*.test.js",
     "check": "tsc --noEmit",

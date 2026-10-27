@@ -1,6 +1,7 @@
 const VERSION = '0.0.1';
 const phases = new Set(['idle', 'active', 'paused', 'settling', 'cooldown']);
 const outcomes = new Set(['caught', 'escaped', 'skipped', 'ended', 'overturned', 'review']);
+const difficulties = new Set(['easy', 'medium', 'hard']);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const number = (value) => typeof value === 'number' && Number.isFinite(value);
 const string = (value, max = 120) => typeof value === 'string' && value.length > 0 && value.length <= max;
@@ -33,8 +34,9 @@ export function readState(value) {
     const q = r.round;
     if (!object(q) || !string(q.id) || !Number.isSafeInteger(q.number) || q.number < 1 || !number(q.duration) || q.duration <= 0 || !number(q.remaining) || q.remaining < 0 || !(q.endsAt === null || number(q.endsAt))) throw new Error('Invalid round.');
     if (q.target !== undefined && !string(q.target)) throw new Error('Invalid target.');
+    if (q.difficulty !== undefined && !difficulties.has(q.difficulty)) throw new Error('Invalid difficulty.');
     if (q.forbiddenClues !== undefined && (!Array.isArray(q.forbiddenClues) || q.forbiddenClues.length > 10 || q.forbiddenClues.some((x) => !string(x, 80)))) throw new Error('Invalid clues.');
-    round = { id: q.id, number: q.number, duration: q.duration, remaining: q.remaining, endsAt: q.endsAt, target: q.target, forbiddenClues: q.forbiddenClues ?? [] };
+    round = { id: q.id, number: q.number, duration: q.duration, remaining: q.remaining, endsAt: q.endsAt, difficulty: q.difficulty, target: q.target, forbiddenClues: q.forbiddenClues ?? [] };
   }
   let result = null;
   if (r.result !== null) {

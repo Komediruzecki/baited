@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { CardArt, proofWords, type ProofWord } from './CardArt';
 import { SoundControls } from './SoundControls';
+import { productBrand } from './ui';
 import './card-proofs.css';
 import examples from '../shared/card-examples.json';
 
-/* Extend Hook Line's physical card stock and bomb-derived pixel art. The selected
+/* Keep the existing proof card stock and approved pixel art. The selected
    card leads; named selectors let the owner inspect the actual game illustrations.
    This is a fixed example deck. It never reads a running room's hidden target. */
 const prompts: Record<ProofWord, string> = examples;
@@ -15,7 +16,7 @@ export default function CardProofs() {
   const choose = (next: ProofWord) => { setWord(next); setRevealed(false); };
   return <main className="proof-page">
     <header className="proof-header">
-      <a href="http://127.0.0.1:3319/" className="proof-wordmark" aria-label="BAIT landing preview">bait!</a>
+      <a href="https://baited.maff.app" className="proof-wordmark" aria-label="Baited home">{productBrand}</a>
       <nav aria-label="Preview navigation"><a href="/">Studio</a><a href="/speech-lab">Speech test</a></nav>
       <span>Local proofs</span>
     </header>
@@ -40,7 +41,7 @@ export default function CardProofs() {
       </div>
       <div className={`proof-card-stage ${revealed ? 'is-revealed' : ''}`}>
         <article className="proof-card" aria-label={`${word} card proof`}>
-          <header><span>{revealed ? 'THE REVEAL' : 'CHAT’S SECRET'}</span><b>bait!</b></header>
+          <header><span>{revealed ? 'THE REVEAL' : 'CHAT’S SECRET'}</span>{productBrand}</header>
           <CardArt word={word} />
           <h2>{word}<span>{revealed ? '!' : '.'}</span></h2>
           <div className="proof-card-rule" />
@@ -54,9 +55,9 @@ export default function CardProofs() {
       </div>
     </section>
     <section className="proof-sound-section" aria-labelledby="sound-proof-title">
-      <div><h2 id="sound-proof-title">Hear the catch.</h2><p>Sound Lab effects from Keys, connected to BAIT’s round events. Enable sound to audition them.</p></div>
+      <div><h2 id="sound-proof-title">Hear the catch.</h2><p>Sound Lab effects from Keys, connected to Baited’s round events. Enable sound to audition them.</p></div>
       <SoundControls roomId="card-proof-lab" lab />
     </section>
-    <footer className="proof-footer"><span>BAIT / CARD PROOFS</span><a href="/speech-lab">Test Moonshine in this browser ↗</a><span>Review before deployment</span></footer>
+    <footer className="proof-footer"><span>BAITED / CARD PROOFS</span><a href="/speech-lab">Test Moonshine in this browser ↗</a><span>Review before deployment</span></footer>
   </main>;
 }

@@ -55,7 +55,7 @@ export function CatchDecision({
         </p>
         <p>
           {pending
-            ? 'Your mic caught this word. Yes gives chat the win. No ends this round. The next round gets a new word.'
+            ? 'Yes gives chat the win. No ends this round, and the next round gets a new word.'
             : result.outcome === 'caught'
               ? `You said it after ${result.elapsed} ${result.elapsed === 1 ? 'second' : 'seconds'}.`
               : result.outcome === 'overturned'
@@ -66,7 +66,7 @@ export function CatchDecision({
         </p>
       </div>
       {pending && (
-        <div className="round-actions" aria-label="Confirm speech result">
+        <div className="round-actions catch-actions" aria-label="Confirm speech result">
           <Button className="secondary" disabled={disabled} onClick={() => onDecide('reject')}>
             No, I didn't
           </Button>
