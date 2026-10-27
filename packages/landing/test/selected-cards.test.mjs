@@ -4,9 +4,11 @@ import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
+import { runInNewContext } from 'node:vm'
 import { installSelectedCards } from '../scripts/selected-cards.mjs'
 import { cardFace, clueStyles, exactClues, glassOptics, glassRules, parseClueStyle, pauseSelectedReveal, revealSelectedCard, settleSelectedCard } from '../selected-cards/selected-cards.js'
 import { cards } from '../site/data.js'
+import { wrapIndex } from '../site/deck.js'
 
 const digest = bytes => createHash('sha256').update(bytes).digest('hex')
 async function fixture(t, environment = 'dev') {
@@ -53,6 +55,83 @@ test('production installer is a no-op and a dev hook mismatch fails before publi
   const html = await readFile(join(dev, 'index.html'), 'utf8')
   await assert.rejects(installSelectedCards({ environment: 'dev', stagingSite: dev }), /hook changed/)
   assert.equal(await readFile(join(dev, 'index.html'), 'utf8'), html)
+})
+
+test('staged capture-loss handler ignores descendant losses and still ends a hand capture loss', async t => {
+  const stagingSite = await fixture(t)
+  const original = await readFile(new URL('../site/app.js', import.meta.url), 'utf8')
+  await installSelectedCards({ environment: 'dev', stagingSite })
+  const app = await readFile(join(stagingSite, 'app.js'), 'utf8')
+  const handler = "hand.addEventListener('lostpointercapture', (event) => {\n  if (event.target === hand) endDrag(event)\n})"
+  assert.equal(app.split("hand.addEventListener('lostpointercapture'").length - 1, 1, 'keep exactly one capture-loss handler')
+  assert.ok(app.includes(handler), 'the staged handler must guard the original event target')
+  assert.ok(app.includes("hand.addEventListener('pointerup', (event) => endDrag(event))"))
+  assert.ok(app.includes("hand.addEventListener('pointercancel', (event) => endDrag(event, true))"))
+  const listeners = new Map()
+  const ended = []
+  const hand = { addEventListener: (type, listener) => listeners.set(type, listener) }
+  runInNewContext(handler, { hand, endDrag: event => ended.push(event) })
+  const loss = listeners.get('lostpointercapture')
+  const childLoss = { target: { parentElement: hand }, currentTarget: hand, pointerId: 7 }
+  loss(childLoss)
+  assert.equal(ended.length, 0, 'bubbled implicit capture loss from artwork must not end the hand drag')
+  const handLoss = { target: hand, currentTarget: hand, pointerId: 7 }
+  loss(handLoss)
+  assert.deepEqual(ended, [handLoss], 'genuine hand capture loss still reaches the existing cleanup')
+  assert.equal(await readFile(new URL('../site/app.js', import.meta.url), 'utf8'), original, 'production source remains unchanged')
+})
+
+test('staged live observer uses the newest entry before notifying selected reveal', async t => {
+  const stagingSite = await fixture(t)
+  await installSelectedCards({ environment: 'dev', stagingSite })
+  const app = await readFile(join(stagingSite, 'app.js'), 'utf8')
+  const observers = app.match(/new IntersectionObserver\(\(entries\) => \{[\s\S]*?\}, \{ threshold: 0\.35 \}\)\.observe\(hand\)/g) ?? []
+  assert.equal(observers.length, 1, 'keep one live observer')
+  assert.equal(app.split('new IntersectionObserver(').length - 1, 2, 'do not add duplicate observer pipelines')
+  const items = [{ id: 'first' }, { id: 'second' }]
+  const revealed = []
+  let live = false
+  let callback
+  let observed
+  const hand = { classList: { toggle(name, value) { assert.equal(name, 'is-live'); live = value } } }
+  class IntersectionObserver {
+    constructor(next, options) { callback = next; assert.equal(options.threshold, 0.35) }
+    observe(target) { observed = target }
+  }
+  runInNewContext(observers[0], { IntersectionObserver, hand, items, deck: { target: 3 }, wrapIndex, revealSelectedCard: item => revealed.push({ item, live }) })
+  assert.equal(observed, hand)
+  callback([{ isIntersecting: false }, { isIntersecting: true }])
+  assert.equal(live, true, 'a queued offscreen entry must not hide the final onscreen state')
+  callback([{ isIntersecting: true }, { isIntersecting: false }])
+  assert.equal(live, false, 'the newest offscreen entry must stop live presentation')
+  assert.deepEqual(revealed, [{ item: items[1], live: true }, { item: items[1], live: false }], 'reveal sees the final visibility and the current target')
+  callback([])
+  assert.equal(revealed.length, 2, 'an empty batch must not change presentation')
+})
+
+test('staged proximity observer warms and disconnects only when its newest entry is near', async t => {
+  const stagingSite = await fixture(t)
+  await installSelectedCards({ environment: 'dev', stagingSite })
+  const app = await readFile(join(stagingSite, 'app.js'), 'utf8')
+  const observers = app.match(/new IntersectionObserver\(\n  \(entries, observer\) => \{[\s\S]*?\n  \{ rootMargin: '800px 0px' \}\n\)\.observe\(hand\)/g) ?? []
+  assert.equal(observers.length, 1, 'keep one artwork proximity observer')
+  for (const batch of [[false, true], [true, false]]) {
+    const warmed = []
+    let callback
+    let disconnected = 0
+    const hand = {}
+    class IntersectionObserver {
+      constructor(next, options) { callback = next; assert.equal(options.rootMargin, '800px 0px') }
+      observe(target) { assert.equal(target, hand) }
+    }
+    const context = { IntersectionObserver, hand, deckNear: false, deck: { target: 3 }, items: [{}, {}], wrapIndex, warmArt: index => warmed.push(index) }
+    runInNewContext(observers[0], context)
+    callback(batch.map(isIntersecting => ({ isIntersecting })), { disconnect() { disconnected++ } })
+    const near = batch.at(-1)
+    assert.equal(context.deckNear, near, 'only the final entry may enable artwork warmup')
+    assert.deepEqual(warmed, near ? [1] : [])
+    assert.equal(disconnected, near ? 1 : 0, 'stay subscribed if the final entry is outside the proximity margin')
+  }
 })
 
 test('selected renderer needs neither inline style permission nor live services', async () => {
