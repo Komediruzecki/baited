@@ -1,5 +1,5 @@
 import { clockValue, connectToTwitch, connectionView, readState } from './client.js';
-import { cardArtFile, wordSize } from './presentation.js';
+import { cardArtFile, streakMilestone, wordSize } from './presentation.js';
 
 const byId = (id) => document.getElementById(id);
 let current = null;
@@ -99,7 +99,12 @@ function render({ configured, room }) {
     announce('unconfigured', 'Waiting for the streamer to connect Baited.');
     return;
   }
-  byId('round-index').textContent = room.round ? `Round ${room.round.number}` : "Chat's secret";
+  const streak = room.score.streak;
+  byId('round-index').textContent = room.round
+    ? `Round ${room.round.number}${streak >= 2 ? ` · ${streak} in a row` : ''}`
+    : streak >= 2
+      ? `${streak} in a row`
+      : "Chat's secret";
   const playing = ['active', 'paused', 'settling'].includes(room.phase) && room.round;
   if (playing) {
     const visible = typeof room.round.target === 'string';
@@ -170,13 +175,21 @@ function render({ configured, room }) {
     setTitle(result.word, true);
     setArt(result.word);
     setDifficulty(null);
-    byId('card-detail').textContent = copy[1];
+    const tier =
+      result.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
+    byId('card-detail').textContent = tier
+      ? `${copy[1]} ${result.newBadge ? 'New streak badge' : 'Streak badge'}: ${tier.name}, ${tier.count} in a row.`
+      : copy[1];
     byId('card-detail').hidden = false;
     byId('forbidden').hidden = true;
     byId('forbidden-list').replaceChildren();
     byId('clock').hidden = true;
     byId('card-stamp').textContent =
-      result.outcome === 'caught' ? 'They said it' : 'Next round soon';
+      result.outcome === 'caught'
+        ? streak >= 2
+          ? `${streak} in a row`
+          : 'They said it'
+        : 'Next round soon';
     byId('play-instruction').textContent =
       result.outcome === 'review'
         ? 'A suggested catch only counts after the streamer confirms it.'

@@ -1,5 +1,5 @@
 import { clockValue, connectToTwitch, readState } from './client.js';
-import { cardArtFile, wordSize } from './presentation.js';
+import { cardArtFile, streakArtFile, streakMilestone, streakRow, wordSize } from './presentation.js';
 
 const byId = (id) => document.getElementById(id);
 // A finished card stays on the video briefly, then the overlay is transparent again.
@@ -72,6 +72,49 @@ function setClues(clues) {
   );
 }
 
+/**
+ * Chat's streak is public, so both faces show it from two wins on. During play the
+ * front chip replaces the kicker; a result keeps its verdict and shows coins instead.
+ */
+function setStreak(score, chip = true) {
+  const streak = score?.streak ?? 0;
+  const show = chip && streak >= 2;
+  byId('front-streak').hidden = !show;
+  byId('front-kicker').hidden = show;
+  byId('front-streak-count').textContent = String(streak);
+  byId('back-streak').hidden = streak < 2;
+  byId('back-streak-copy').textContent = `Chat: ${streak} in a row`;
+}
+
+function setRow(streak) {
+  const row = byId('front-row');
+  row.hidden = streak < 1;
+  row.replaceChildren(
+    ...(streak < 1 ? [] : streakRow(streak)).map((slot) => {
+      const item = document.createElement('li');
+      item.dataset.state = slot.state;
+      const coin = document.createElement('span');
+      const flame = document.createElement('img');
+      flame.setAttribute('src', './assets/streak-flame.svg');
+      flame.setAttribute('alt', '');
+      coin.replaceChildren(flame);
+      const n = document.createElement('span');
+      n.textContent = String(slot.n);
+      item.replaceChildren(coin, n);
+      return item;
+    }),
+  );
+}
+
+function setMedal(tier) {
+  const medal = byId('front-medal');
+  medal.hidden = !tier;
+  if (tier) {
+    medal.dataset.tone = tier.tone;
+    byId('front-medal-art').setAttribute('src', `./assets/${streakArtFile(tier.art, 'extension')}`);
+  } else byId('front-medal-art').removeAttribute('src');
+}
+
 /** Removes every secret the front face may hold: word, artwork filename and clues. */
 function clearFront() {
   byId('front-word').textContent = '';
@@ -81,6 +124,8 @@ function clearFront() {
   byId('front-stamp').textContent = 'Only chat knows';
   setArt(null);
   setClues([]);
+  setRow(0);
+  setMedal(null);
 }
 
 function setVisible(visible) {
@@ -97,6 +142,7 @@ function hide(resetAnnouncement = false) {
   landing?.cancel();
   setVisible(false);
   clearFront();
+  setStreak(null);
   setFace('back');
   dealtRound = '';
   byId('card').dataset.state = 'waiting';
@@ -152,6 +198,9 @@ function showRound(room) {
   setVisible(true);
   card.dataset.state = room.phase;
   delete card.dataset.outcome;
+  setStreak(room.score);
+  setRow(0);
+  setMedal(null);
   if (visible) {
     byId('front-kicker').textContent =
       room.phase === 'paused' ? 'Paused' : room.phase === 'settling' ? 'Checking' : "Chat's secret";
@@ -202,9 +251,19 @@ function showResult(room) {
   card.dataset.outcome = result.outcome;
   byId('front-kicker').textContent = copy[0];
   setWord(result.word);
-  setArt(result.word);
   setClues([]);
-  byId('front-detail').textContent = copy[1];
+  setStreak(room.score, false);
+  // A win shows the streak as coins; one that lands on a tier shows its medallion instead of the art.
+  const caught = result.outcome === 'caught';
+  const tier = caught && result.milestone ? streakMilestone(result.milestone) : null;
+  setRow(caught ? room.score.streak : 0);
+  setMedal(tier);
+  setArt(tier ? null : result.word);
+  byId('front-detail').textContent = tier
+    ? result.newBadge
+      ? `New streak badge: ${tier.name}`
+      : `${tier.name}: ${tier.count} in a row`
+    : copy[1];
   byId('front-stamp').textContent = copy[2];
   // The decided card turns over for everyone, including the broadcaster.
   if (!dealtRound) dealtRound = result.id;

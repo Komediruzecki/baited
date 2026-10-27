@@ -1,5 +1,6 @@
 import type { GameView } from '../shared/types.js';
 import type { GameEvent } from './game.js';
+import { nextStreakTier, streakMilestone, streakTiers } from '../extension/presentation.js';
 
 /**
  * Everything the chat bot can say. Each function reads only the overlay projection,
@@ -15,12 +16,21 @@ export interface Announcement {
   ttl: number;
 }
 
-export type ChatCommand = 'join' | 'help' | 'score' | 'top' | 'start' | 'pause' | 'resume';
+export type ChatCommand =
+  | 'join'
+  | 'help'
+  | 'score'
+  | 'streak'
+  | 'top'
+  | 'start'
+  | 'pause'
+  | 'resume';
 export const MOD_COMMANDS: ReadonlySet<ChatCommand> = new Set(['start', 'pause', 'resume']);
 const named: Record<string, ChatCommand> = {
   help: 'help',
   rules: 'help',
   score: 'score',
+  streak: 'streak',
   top: 'top',
   start: 'start',
   pause: 'pause',
@@ -47,16 +57,21 @@ function nextRound(view: GameView) {
   return view.settings.auto ? ` Next round in ${seconds}s.` : '';
 }
 
-function finished(view: GameView): Announcement | null {
+function finished(view: GameView, streakBefore: number): Announcement | null {
   const result = view.result;
   if (!result) return null;
   const mission = view.mission;
   // The overlay projection keeps the word only for caught and escaped rounds.
   const word = result.word ? result.word.toUpperCase() : null;
+  // Skips and endings break a streak too; a rejected catch leaves it alone.
+  const ended =
+    streakBefore > 1 && ['escaped', 'skipped', 'ended'].includes(result.outcome)
+      ? ` That ends chat's ${streakBefore}-win streak.`
+      : '';
   const text = (() => {
     switch (result.outcome) {
       case 'caught': {
-        const streak = view.score.streak > 1 ? ` Streak ${view.score.streak}.` : '';
+        const streak = view.score.streak > 1 ? ` 🔥 ${view.score.streak} in a row!` : '';
         const progress = !mission
           ? ''
           : mission.status === 'complete'
@@ -66,14 +81,14 @@ function finished(view: GameView): Announcement | null {
       }
       case 'escaped':
         if (result.reason === 'guess')
-          return `🧠 The streamer called the bait${word ? `: it was ${word}` : ''}. The streamer escapes${mission ? ' the mission' : ''}.`;
+          return `🧠 The streamer called the bait${word ? `: it was ${word}` : ''}. The streamer escapes${mission ? ' the mission' : ''}.${ended}`;
         return `⏰ Time! The streamer got away.${word ? ` The word was ${word}.` : ''}${
           mission && mission.status !== 'active' ? ` Mission over: ${mission.completed} of 3.` : ''
-        }`;
+        }${ended}`;
       case 'skipped':
-        return '⏭ Word skipped. New bait next.';
+        return `⏭ Word skipped. New bait next.${ended}`;
       case 'ended':
-        return '⏹ The streamer ended the round.';
+        return `⏹ The streamer ended the round.${ended}`;
       case 'overturned':
         return "❌ Catch rejected. That one doesn't count.";
       case 'review':
@@ -81,6 +96,22 @@ function finished(view: GameView): Announcement | null {
     }
   })();
   return text ? { key: 'result', ttl: 30000, text: text + nextRound(view) } : null;
+}
+
+/** A win that lands on a badge tier gets its own post, after the result. */
+export function badgeAnnouncement(view: GameView): Announcement | null {
+  const result = view.result;
+  const tier = result?.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
+  if (!tier) return null;
+  const next = nextStreakTier(tier.count);
+  const after = next ? ` Next badge: ${next.name} at ${next.count}.` : ' That is the top badge.';
+  return {
+    key: 'badge',
+    ttl: 30000,
+    text: result!.newBadge
+      ? `🏅 New streak badge: ${tier.name}! Chat won ${tier.count} in a row.${after}`
+      : `🏅 ${tier.count} in a row: ${tier.name} again!${after}`,
+  };
 }
 
 export function eventAnnouncement(view: GameView, event: GameEvent): Announcement | null {
@@ -119,7 +150,7 @@ export function eventAnnouncement(view: GameView, event: GameEvent): Announcemen
         text: '👂 Did they say it? The streamer is checking the catch.',
       };
     case 'finish':
-      return finished(view);
+      return finished(view, event.streakBefore);
     case 'reverse':
       return {
         key: 'result',
@@ -178,12 +209,24 @@ export function finalAnnouncement(): Announcement {
 }
 
 export function helpText() {
-  return 'baited: chat gets a secret word and tries to make the streamer say it out loud. Find it in the baited panel or card on this channel, and never type it here. !skip votes for a new word · !bait score · !bait top';
+  return 'baited: chat gets a secret word and tries to make the streamer say it out loud. Find it in the baited panel or card on this channel, and never type it here. !skip votes for a new word · !bait score · !bait streak · !bait top';
 }
 
 export function scoreText(view: GameView) {
   const { wins, played, streak, best } = view.score;
   return `Chat has ${count(wins, 'win')} in ${count(played, 'round')}. Streak ${streak}, best ${best}.`;
+}
+
+export function streakText(view: GameView) {
+  const { streak, best } = view.score;
+  const next = nextStreakTier(streak);
+  const target = next ? ` Next badge: ${next.name} at ${next.count} in a row.` : '';
+  const badges = view.badges.length
+    ? ` Badges: ${view.badges.length} of ${streakTiers.length}.`
+    : '';
+  if (streak === 0) return `No streak running. Best: ${best}. Win a round to start one.${badges}`;
+  if (streak === 1) return `Chat won the last round. Best: ${best}.${target}${badges}`;
+  return `🔥 Chat is on a ${streak}-win streak. Best: ${best}.${target}${badges}`;
 }
 
 export function topText(view: GameView) {

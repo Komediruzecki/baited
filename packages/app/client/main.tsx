@@ -48,7 +48,14 @@ import { ResultCard } from './ResultCard';
 import { CardBack } from './CardBack';
 import { CatchDecision } from './CatchDecision';
 import { ObsHud } from './ObsHud';
-import { wordSize } from '../extension/presentation.js';
+import { nextStreakTier, streakMilestone, wordSize } from '../extension/presentation.js';
+import {
+  StreakBadge,
+  StreakBadges,
+  StreakCelebration,
+  StreakCount,
+  StreakRow,
+} from './streak';
 import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
@@ -75,6 +82,7 @@ import '../extension/tokens.css';
 import './studio-refresh.css';
 import './public-refresh.css';
 import './chat-bot.css';
+import './streak.css';
 
 const ProductReview = React.lazy(() => import('./ProductReview'));
 const CardDesignLab = React.lazy(() => import('./CardDesignLab'));

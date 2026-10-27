@@ -94,3 +94,52 @@ export function wordSize(word = '') {
 export function winLabel(wins) {
   return `${wins} ${wins === 1 ? 'WIN' : 'WINS'}`;
 }
+
+// Chat's win streak: consecutive community wins. Each tier is a badge, unlocked once
+// per room and celebrated whenever a streak lands on it again.
+export const streakTiers = Object.freeze(
+  [
+    { count: 2, name: 'Spark', art: 'flame', tone: 'ember' },
+    { count: 3, name: 'Lit fuse', art: 'bomb', tone: 'amber' },
+    { count: 5, name: 'On fire', art: 'blaze', tone: 'flame' },
+    { count: 10, name: 'Eruption', art: 'volcano', tone: 'magma' },
+    { count: 15, name: 'Dragonfire', art: 'dragon', tone: 'violet' },
+    { count: 25, name: 'Liftoff', art: 'rocket', tone: 'cosmic' },
+    { count: 50, name: 'Ultraviolet', art: 'ultraviolet', tone: 'gold' },
+  ].map((tier) => Object.freeze(tier)),
+);
+
+/** The tier a streak of exactly this length lands on, if any. */
+export function streakMilestone(count) {
+  return streakTiers.find((tier) => tier.count === count) ?? null;
+}
+
+/** The next badge a streak of this length is heading for. */
+export function nextStreakTier(count) {
+  return streakTiers.find((tier) => tier.count > count) ?? null;
+}
+
+/** Five consecutive positions around the current streak, like a streak calendar. */
+export function streakRow(count, size = 5) {
+  const start = Math.max(1, count - 2);
+  return Array.from({ length: size }, (_, i) => {
+    const n = start + i;
+    return {
+      n,
+      state: n < count ? 'won' : n === count ? 'current' : 'ahead',
+      tier: streakMilestone(n),
+    };
+  });
+}
+
+/** Image for a tier's art: an `assets/` file name in the Extension, a site path elsewhere. */
+export function streakArtFile(art, surface) {
+  const card = { volcano: 'volcano', dragon: 'dragon', rocket: 'rocket' }[art];
+  if (surface === 'extension')
+    return card ? `card-${card}.png` : art === 'bomb' ? 'bait-bomb.png' : `streak-${art === 'ultraviolet' ? 'flame-violet' : art}.svg`;
+  return card
+    ? `/cards/proofs/${card}.png`
+    : art === 'bomb'
+      ? '/brand/bait-bomb.png'
+      : `/brand/streak-${art === 'ultraviolet' ? 'flame-violet' : art}.svg`;
+}

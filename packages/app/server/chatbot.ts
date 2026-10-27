@@ -6,6 +6,7 @@ import type { Game, GameEvent } from './game.js';
 import type { ChatBotPost, ChatBotStatus } from '../shared/types.js';
 import { botKey, CHANNEL_BOT_SCOPE, type ChatMessage } from './twitch.js';
 import {
+  badgeAnnouncement,
   eventAnnouncement,
   finalAnnouncement,
   halfwayAnnouncement,
@@ -13,6 +14,7 @@ import {
   MOD_COMMANDS,
   parseCommand,
   scoreText,
+  streakText,
   topText,
   type Announcement,
   type ChatCommand,
@@ -36,6 +38,7 @@ export const LIMITS = Object.freeze({
 });
 const MAX_LENGTH = 500;
 const MODERATOR_BADGES = new Set(['broadcaster', 'moderator', 'lead_moderator']);
+const ROUND_KEYS = ['skip', 'nudge', 'round-state', 'guess'];
 
 interface Outgoing extends Announcement {
   id: string;
@@ -106,8 +109,14 @@ export class ChatBot {
   /** Game events become announcements only when the streamer opted in and the bot may post. */
   event(game: Game, event: GameEvent) {
     if (!this.wants(game)) return;
-    const announcement = eventAnnouncement(game.view('overlay'), event);
+    // A round that has ended or begun makes its skip tallies, nudges and state posts stale.
+    if (['start', 'review', 'finish', 'mission-timeout'].includes(event.type))
+      this.drop(game, ROUND_KEYS);
+    const view = game.view('overlay');
+    const announcement = eventAnnouncement(view, event);
     if (announcement) this.enqueue(game, announcement);
+    const badge = event.type === 'finish' ? badgeAnnouncement(view) : null;
+    if (badge) this.enqueue(game, badge);
   }
 
   /** Chat commands. Called for every accepted chat message, in any phase. */
@@ -134,7 +143,13 @@ export class ChatBot {
     this.reply(
       game,
       message,
-      command === 'help' ? helpText() : command === 'score' ? scoreText(view) : topText(view),
+      command === 'help'
+        ? helpText()
+        : command === 'score'
+          ? scoreText(view)
+          : command === 'streak'
+            ? streakText(view)
+            : topText(view),
       `command:${command}`,
     );
   }
@@ -248,6 +263,11 @@ export class ChatBot {
       room.nudges.final = true;
       if (round.remaining > 3000) this.enqueue(game, finalAnnouncement());
     }
+  }
+
+  private drop(game: Game, keys: string[]) {
+    const room = this.rooms.get(game.data.id);
+    if (room) room.queue = room.queue.filter((item) => !keys.includes(item.key));
   }
 
   private enqueue(game: Game, announcement: Announcement, replyTo?: string) {

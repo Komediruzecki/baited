@@ -24,6 +24,7 @@ The viewer reads a single secret word, its off-limits clues, and the clock while
 
 - The card lands face down. A viewer's card turns over to the word; the broadcaster's never does, because the broadcaster's projection carries no target. A decided round turns over for everyone and leaves after 12 seconds. Between rounds the frame is fully transparent.
 - A tab beside the card hides it; the choice is remembered per viewer when storage is available.
+- Chat's win streak is public. From two wins in a row, a flame chip replaces the front kicker and sits under the clock on the back. A win shows the last positions as coins (the newest ringed, the next ones dim); a win that lands on a badge tier swaps the art for that tier's medallion. The panel adds the streak to its header and result.
 - The frame keeps the default color scheme. Declaring `dark` would make browsers paint an opaque canvas behind the transparent overlay.
 
 The Extension ZIP must exclude preview fixtures and test code. Real Twitch authorization is required by the shipped entry points. Local preview state is labelled by its separate harness, not passed off as a live session.

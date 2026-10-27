@@ -81,3 +81,17 @@ export const proofWords: readonly [
 export function cardArtFile(word?: string): string | null;
 export function wordSize(word?: string): 'short' | 'medium' | 'long' | 'extended';
 export function winLabel(wins: number): string;
+export interface StreakTier {
+  readonly count: number;
+  readonly name: string;
+  readonly art: 'flame' | 'bomb' | 'blaze' | 'volcano' | 'dragon' | 'rocket' | 'ultraviolet';
+  readonly tone: 'ember' | 'amber' | 'flame' | 'magma' | 'violet' | 'cosmic' | 'gold';
+}
+export const streakTiers: readonly StreakTier[];
+export function streakMilestone(count: number): StreakTier | null;
+export function nextStreakTier(count: number): StreakTier | null;
+export function streakRow(
+  count: number,
+  size?: number,
+): { n: number; state: 'won' | 'current' | 'ahead'; tier: StreakTier | null }[];
+export function streakArtFile(art: StreakTier['art'], surface: 'client' | 'extension'): string;

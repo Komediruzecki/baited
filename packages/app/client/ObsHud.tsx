@@ -3,7 +3,8 @@ import type { GameView } from '../shared/types';
 import { productBrand } from './ui';
 import { Card, Pause } from './pixel-icons';
 import { MissionStatus } from './mechanics';
-import { winLabel } from '../extension/presentation.js';
+import { StreakFlame, StreakRow } from './streak';
+import { nextStreakTier, winLabel } from '../extension/presentation.js';
 
 export function ObsHud({
   game: g,
@@ -78,6 +79,8 @@ export function ObsHud({
         ? g.round.remaining / g.round.duration
         : 0;
   const urgent = !offline && g.phase === 'active' && !!g.round?.endsAt && g.round.endsAt - (now + offset) <= 15000;
+  const streak = g.score.streak;
+  const next = nextStreakTier(streak);
   return (
     <div
       className={`obs-hud${won ? ' obs-hud-win' : ''}${!offline && g.phase === 'paused' ? ' obs-hud-paused' : ''}${offline ? ' obs-hud-stale' : ''}${urgent ? ' obs-hud-urgent' : ''}`}
@@ -101,11 +104,28 @@ export function ObsHud({
         </div>
       </div>
       {!offline && <MissionStatus compact game={g} now={now} offset={offset} />}
+      {!offline && streak >= 2 && (
+        <div className="obs-streak">
+          <span className="obs-streak__count">
+            <strong>{streak}</strong>
+            <StreakFlame size={30} />
+          </span>
+          <span className="obs-streak__label">
+            IN A ROW
+            {next && (
+              <small>
+                NEXT BADGE · {next.name.toUpperCase()} AT {next.count}
+              </small>
+            )}
+          </span>
+          <StreakRow count={streak} />
+        </div>
+      )}
       <div className="obs-score">
         {offline && <span className="obs-score-status">Last known:</span>}
         {winLabel(g.score.wins).toLowerCase()}
         <span>·</span>
-        streak {g.score.streak}
+        {streak >= 2 && !offline ? `best ${g.score.best}` : `streak ${streak}`}
         {g.mode === 'demo' && <span className="obs-mode">Local demo</span>}
       </div>
     </div>

@@ -13,6 +13,7 @@ import type {
 } from '../shared/types.js';
 import { words } from './words.js';
 import { forbiddenClues } from './cards.js';
+import { streakMilestone, streakTiers } from '../extension/presentation.js';
 
 export const settingsSchema = z
   .object({
@@ -48,7 +49,7 @@ export type GameEvent =
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'review' }
-  | { type: 'finish' }
+  | { type: 'finish'; streakBefore: number }
   | { type: 'reverse' }
   | { type: 'wrong-guess' }
   | { type: 'award' }
@@ -125,6 +126,8 @@ export interface SavedGame {
   priorPlayed: number;
   priorBest: number;
   leaders: Record<string, { name: string; rounds: number; baits?: number }>;
+  /** First unlock of each streak badge, keyed by tier count, with the round that earned it. */
+  streakBadges?: Record<string, { at: number; round: string }>;
 }
 export class Game {
   phase: GameView['phase'] = 'idle';
@@ -349,8 +352,19 @@ export class Game {
       this.data.priorPlayed++;
       if (old.outcome === 'caught') this.data.priorWins++;
     }
+    const streakBefore = this.streak;
     this.streak =
       outcome === 'caught' ? this.streak + 1 : outcome === 'overturned' ? r.previousStreak : 0;
+    // Landing on a tier is celebrated every time; the badge itself unlocks once.
+    const tier = outcome === 'caught' ? streakMilestone(this.streak) : null;
+    if (tier) {
+      this.result.milestone = tier.count;
+      const badges = (this.data.streakBadges ??= {});
+      if (!badges[tier.count] && this.data.priorBest < tier.count) {
+        badges[tier.count] = { at: now, round: r.id };
+        this.result.newBadge = true;
+      }
+    }
     this.data.priorBest = Math.max(this.data.priorBest, this.streak);
     for (const [id, name] of r.participants) {
       const item = this.data.leaders[id] ?? { name, rounds: 0 };
@@ -368,7 +382,7 @@ export class Game {
     this.phase = 'cooldown';
     this.nextAt = now + this.data.settings.cooldown * 1000;
     this.changed();
-    this.emit({ type: 'finish' });
+    this.emit({ type: 'finish', streakBefore });
   }
   reverse() {
     if (
@@ -384,6 +398,14 @@ export class Game {
       this.data.leaders[awarded].baits = Math.max(0, (this.data.leaders[awarded].baits ?? 0) - 1);
     this.awardOwners.delete(this.result.id);
     delete this.result.award;
+    // A reversed win takes back the badge it unlocked.
+    if (this.result.milestone) {
+      const unlocked = this.data.streakBadges?.[this.result.milestone];
+      if (this.result.newBadge && unlocked?.round === this.result.id)
+        delete this.data.streakBadges![this.result.milestone];
+      delete this.result.milestone;
+      delete this.result.newBadge;
+    }
     if (this.review?.roundId === this.result.id) this.review.selectedHintId = null;
     if (this.mission) {
       this.mission.completed = Math.max(0, this.mission.completed - 1);
@@ -686,6 +708,10 @@ export class Game {
         .sort((a, b) => b.rounds - a.rounds || a.name.localeCompare(b.name))
         .slice(0, 8)
         .map((leader) => ({ ...leader, baits: leader.baits ?? 0 })),
+      // Badges reached before unlocks were recorded count as unlocked, without a date.
+      badges: streakTiers
+        .filter((tier) => this.data.streakBadges?.[tier.count] || this.score.best >= tier.count)
+        .map((tier) => ({ count: tier.count, at: this.data.streakBadges?.[tier.count]?.at ?? null })),
       mission: this.mission
         ? {
             ...this.mission,

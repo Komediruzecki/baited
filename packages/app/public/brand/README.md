@@ -11,3 +11,7 @@ Final edit prompt:
 > Precisely extract this existing flat logo onto a transparent background. Preserve its design and layout: angular lowercase bait in solid flat purple #9146ff, with the existing black rectangle and white &$!#% symbols below. Remove the white canvas and white holes inside b and a; keep the white symbols INSIDE the black rectangle. Crisp clean edges with no stray pixels, no colored fringe, no gradient, no lighting, no texture, no glow. Actual alpha transparency. Do not redraw, restyle or add anything. Keep the same square composition and proportions.
 
 The logo is user-supplied artwork, separate from the original code, illustration and sound covered by this project’s MIT license. No claim about the supplied logo’s authorship or license is made here.
+
+## Streak flames
+
+`streak-flame.svg`, `streak-blaze.svg` and `streak-flame-violet.svg` are original pixel flames for chat's win-streak badges, identical to the Extension copies. Their provenance is recorded in `extension/assets/PROVENANCE.md`.

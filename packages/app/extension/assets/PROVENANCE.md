@@ -16,4 +16,8 @@ The Extension ZIP includes this original mask and excludes the archived B varian
 
 The eighteen `card-*.png` files are byte-identical copies of the corresponding approved illustrations in `public/cards/proofs/`: banana, penguin, microwave, dragon, volcano, monocle, pizza, robot, rocket, pirate, cactus, jellyfish, telescope, saxophone, octopus, boomerang, narwhal and parachute. They were originally generated through ChatGPT image generation for this project and approved by the owner. The source images remain unchanged.
 
+## Streak flames, 2026-10-27
+
+`streak-flame.svg`, `streak-blaze.svg` and `streak-flame-violet.svg` are original pixel flames drawn for chat's win-streak badges. Each was generated from a hand-drawn silhouette (a 16 × 18 or 18 × 18 grid) with a one-pixel outline and heat layers in the volcano card's palette, written as crisp `<rect>` runs. The copies in `public/brand/` are identical. Higher badge tiers reuse the bomb and the volcano, dragon and rocket cards above; no new raster art was made.
+
 `extension/presentation.js` lists the exact supported artwork names. Unknown words receive no art. The viewer removes the image source when authorization or role changes because the filename itself can reveal the word. The packaged illustrations are a public artwork set; the active word is selected and authorized by the server.

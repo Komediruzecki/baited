@@ -25,12 +25,22 @@
             <div class="face face-front" id="face-front" aria-hidden="true">
               <div class="face-topline">
                 <span class="face-kicker" id="front-kicker">Chat's secret</span>
+                <span class="face-streak" id="front-streak" hidden
+                  ><img src="./assets/streak-flame.svg" alt="" width="12" height="14" /><b
+                    id="front-streak-count"
+                  ></b>
+                  in a row</span
+                >
                 <span class="face-clock" id="front-clock">0:00</span>
               </div>
               <div class="face-center">
                 <img class="face-art" id="front-art" alt="" width="160" height="126" hidden />
+                <span class="badge-medal" id="front-medal" hidden
+                  ><img id="front-medal-art" alt="" width="96" height="96"
+                /></span>
                 <h2 class="face-word" id="front-word"></h2>
                 <p class="face-detail" id="front-detail"></p>
+                <ol class="face-row" id="front-row" aria-label="Wins in a row" hidden></ol>
               </div>
               <ul class="face-clues" id="front-clues" aria-label="Off-limits clues" hidden></ul>
               <div class="face-baseline">
@@ -45,6 +55,11 @@
                 <span class="back-wordmark"><span class="baited-glyph"></span></span>
                 <p class="back-copy" id="back-copy">Chat has the word.</p>
                 <span class="face-clock back-clock" id="back-clock">0:00</span>
+                <p class="back-streak" id="back-streak" hidden>
+                  <img src="./assets/streak-flame.svg" alt="" width="12" height="14" /><span
+                    id="back-streak-copy"
+                  ></span>
+                </p>
               </div>
             </div>
           </div>

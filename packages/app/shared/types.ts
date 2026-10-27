@@ -27,6 +27,10 @@ export interface Result {
   at: number;
   award?: { name: string };
   reason?: 'guess' | 'timer';
+  /** This win landed chat's streak on a badge tier. */
+  milestone?: number;
+  /** ...and unlocked that badge for the first time in this room. */
+  newBadge?: boolean;
 }
 export type ResultView = Omit<Result, 'word'> & { word?: string };
 export interface Leader {
@@ -87,6 +91,8 @@ export interface GameView {
   voters: number;
   voteThreshold: number;
   leaders: Leader[];
+  /** Unlocked streak badges by tier count; `at` is null when reached before dates were kept. */
+  badges: { count: number; at: number | null }[];
   connection: {
     status: 'offline' | 'connecting' | 'connected' | 'reconnecting' | 'error';
     detail: string;

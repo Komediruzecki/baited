@@ -42,7 +42,8 @@ Keep `PUBLIC_URL` and the address you open identical, including `localhost` vers
 - A mobile viewer room that shows the word without an account or extension.
 - A transparent, read-only OBS browser source with a timer, scores, and success animation.
 - A native Twitch Extension: a viewer panel, and a video overlay that deals the card onto the stream. Viewers see the word; the broadcaster's own session sees the card's back.
-- An optional chat bot that announces rounds, nudges, results and the streamer's pick, answers `!bait help`, `!bait score` and `!bait top`, and lets moderators `!bait start`, `!bait pause` and `!bait resume`. It never posts a word while its round is live. See [Chat bot](docs/chat-bot.md).
+- An optional chat bot that announces rounds, nudges, results, streaks and the streamer's pick, answers `!bait help`, `!bait score`, `!bait streak` and `!bait top`, and lets moderators `!bait start`, `!bait pause` and `!bait resume`. It never posts a word while its round is live. See [Chat bot](docs/chat-bot.md).
+- Chat win streaks with seven badges, from Spark at two in a row to Ultraviolet at fifty, shown on OBS, the Extension, the viewer room and the studio.
 - An authoritative game engine with difficulty pools, pause/resume, deadlines, cooldowns, automatic rounds, shared streaks, participation records, and `!skip` votes.
 - Twitch authorization-code OAuth, encrypted server-side tokens, refresh deduplication, startup/hourly validation, and EventSub chat over WebSockets with recovery.
 - Microphone-only PCM capture through an AudioWorklet. Moonshine runs in a browser worker by default; its proposed catches require broadcaster confirmation. Deepgram remains an optional server-side adapter for automatic scoring.

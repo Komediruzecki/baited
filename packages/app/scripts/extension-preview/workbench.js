@@ -7,14 +7,15 @@ const overlayViewer = document.getElementById('overlay-viewer');
 const overlayBroadcaster = document.getElementById('overlay-broadcaster');
 const note = document.getElementById('fixture-note');
 const descriptions = {
-  active: 'The timer starts at 1:30. Change the state to inspect another moment.',
+  active:
+    'The timer starts at 1:30. Chat is on a four-win streak. Change the state to inspect another moment.',
   hard: 'Four off-limits clues, the word, and the clock in the native panel.',
   idle: 'No round has started. Viewers should understand where their word will appear.',
   paused: 'The round is paused at 0:26. The clock must stay still.',
   settling: 'The round has ended while the last speech segment is checked.',
   review: 'A catch is waiting for the broadcaster to confirm it. It is not a win yet.',
   caught:
-    'The broadcaster confirmed the catch. This is the result viewers see. The overlay card leaves after 12 seconds.',
+    'The broadcaster confirmed the catch: five in a row, and the On fire badge unlocks. The overlay card leaves after 12 seconds.',
   escaped:
     'The clock ran out before a confirmed catch. The overlay card leaves after 12 seconds.',
   broadcaster:

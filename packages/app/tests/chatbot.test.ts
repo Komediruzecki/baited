@@ -15,6 +15,7 @@ import {
   helpText,
   parseCommand,
   scoreText,
+  streakText,
   topText,
 } from '../server/chat-copy.js';
 import {
@@ -103,7 +104,7 @@ test('no announcement during a round contains its word, for every target', () =>
       const word = game.round!.word;
       const view = () => game.view('overlay');
       texts.push(halfwayAnnouncement(view())!.text, finalAnnouncement().text, helpText());
-      texts.push(scoreText(view()), topText(view()));
+      texts.push(scoreText(view()), topText(view()), streakText(view()));
       assert.equal(game.chat('m1', 'viewer-1', 'Viewer', '!skip', time), true);
       game.pause();
       game.resume();
