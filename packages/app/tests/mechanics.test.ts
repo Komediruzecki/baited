@@ -204,6 +204,21 @@ test('review expires after ten minutes and raw hints never enter saved game data
   assert.throws(() => f.game.award(board.roundId, board.candidates[0].id));
 });
 
+test('each reviewed hint keeps the time its chatter sent it', () => {
+  const f = fixture();
+  f.game.begin();
+  f.advance(6000);
+  // Twitch's message time, a little before the server receives it.
+  const first = f.now() - 4000;
+  f.game.chat('a', 'a', 'Alex', 'first clean hint', first);
+  f.advance(5000);
+  const second = f.now() - 1000;
+  f.game.chat('b', 'b', 'Blair', 'Look at that BIRD!', second);
+  f.game.transcript(f.transcript());
+  const sent = Object.fromEntries(f.game.awardBoard!.candidates.map((hint) => [hint.name, hint.at]));
+  assert.deepEqual(sent, { Alex: first, Blair: second });
+});
+
 test('non-winning rounds and commands cannot produce an award', () => {
   const f = fixture();
   f.game.begin();

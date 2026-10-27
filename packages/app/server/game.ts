@@ -637,7 +637,14 @@ export class Game {
     // Choosing another hint by the same chatter changes nothing public.
     if (old !== hint.userId) this.emit({ type: 'award' });
   }
-  private rememberHint(r: Round, userId: string, name: string, text: string, spoiled: boolean) {
+  private rememberHint(
+    r: Round,
+    userId: string,
+    name: string,
+    text: string,
+    spoiled: boolean,
+    at: number,
+  ) {
     if (text.trim().startsWith('!')) return;
     const blocked = r.clues.filter((clue) => spoils(text, clue));
     const reason = spoiled
@@ -656,6 +663,7 @@ export class Game {
       text: text.slice(0, 500),
       eligible,
       reason,
+      at,
     });
     const bucket = r.hints.filter((hint) => hint.eligible === eligible);
     if (bucket.length > (eligible ? 40 : 20))
@@ -745,7 +753,7 @@ export class Game {
     }
     if (now - (this.recentChat.get(userId) ?? -Infinity) < 3000) return false;
     const spoiled = spoils(text, r.word);
-    this.rememberHint(r, userId, name, text, spoiled);
+    this.rememberHint(r, userId, name, text, spoiled, at);
     // Spoiler text, however disguised, earns no participation credit and is never echoed by BAIT.
     if (spoiled) return false;
     this.recentChat.set(userId, now);

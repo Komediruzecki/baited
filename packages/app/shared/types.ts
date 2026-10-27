@@ -45,6 +45,8 @@ export interface HintCandidate {
   text: string;
   eligible: boolean;
   reason: string | null;
+  /** When the chatter sent it: Twitch's message time, in epoch milliseconds. */
+  at: number;
 }
 export interface AwardBoard {
   roundId: string;

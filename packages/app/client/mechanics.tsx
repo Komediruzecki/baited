@@ -176,8 +176,10 @@ export function AwardReview({
 }) {
   const [flagged, setFlagged] = useState(false),
     [busy, setBusy] = useState('');
-  const eligible = board.candidates.filter((hint) => hint.eligible),
-    blocked = board.candidates.filter((hint) => !hint.eligible),
+  // Newest first by send time. The sort is stable, so equal times keep the later arrival on top.
+  const ordered = [...board.candidates].reverse().sort((a, b) => b.at - a.at);
+  const eligible = ordered.filter((hint) => hint.eligible),
+    blocked = ordered.filter((hint) => !hint.eligible),
     list = flagged ? blocked : eligible;
   const selected = board.candidates.find((hint) => hint.id === board.selectedHintId);
   return (
@@ -203,6 +205,13 @@ export function AwardReview({
           <li key={hint.id} className={hint.id === board.selectedHintId ? 'hint-picked' : ''}>
             <div>
               <strong>@{hint.name}</strong>
+              <time className="hint-time" dateTime={new Date(hint.at).toISOString()}>
+                {new Date(hint.at).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </time>
               <p>{hint.text}</p>
               {hint.reason && <span className="hint-rule-flag">{hint.reason}</span>}
             </div>
