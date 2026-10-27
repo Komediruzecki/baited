@@ -35,9 +35,10 @@ export async function installSelectedCards({ environment, stagingSite }) {
   app = replaceOnce(app,
     "hand.addEventListener('lostpointercapture', (event) => endDrag(event))",
     "hand.addEventListener('lostpointercapture', (event) => {\n  if (event.target === hand) endDrag(event)\n})")
+  app = replaceOnce(app, '    if (!entries[0].isIntersecting) return\n', '    if (!entries.at(-1)?.isIntersecting) return\n')
   app = replaceOnce(app,
     "new IntersectionObserver((entries) => hand.classList.toggle('is-live', entries[0].isIntersecting), { threshold: 0.35 }).observe(hand)",
-    "new IntersectionObserver((entries) => {\n  hand.classList.toggle('is-live', entries[0].isIntersecting)\n  revealSelectedCard(items[wrapIndex(deck.target, items.length)])\n}, { threshold: 0.35 }).observe(hand)")
+    "new IntersectionObserver((entries) => {\n  const latest = entries.at(-1)\n  if (!latest) return\n  hand.classList.toggle('is-live', latest.isIntersecting)\n  revealSelectedCard(items[wrapIndex(deck.target, items.length)])\n}, { threshold: 0.35 }).observe(hand)")
   const target = join(stagingSite, 'card-lab/landing')
   await mkdir(target, { recursive: true })
   await Promise.all(['selected-cards.js', 'selected-cards.css'].map(file => copyFile(join(source, file), join(target, file))))
