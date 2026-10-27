@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import { runInNewContext } from 'node:vm'
 import { installSelectedCards } from '../scripts/selected-cards.mjs'
-import { cardFace, clueStyles, exactClues, glassOptics, glassRules, parseClueStyle, pauseSelectedReveal, revealSelectedCard, settleSelectedCard } from '../selected-cards/selected-cards.js'
+import { cardFace, clueStyles, exactClues, glassOptics, glassRules, parseClueStyle, pauseSelectedReveal, revealSelectedCard, settleSelectedCard, warmSelectedArt, previewArt } from '../selected-cards/selected-cards.js'
 import { cards } from '../site/data.js'
 import { wrapIndex } from '../site/deck.js'
 
@@ -32,8 +32,8 @@ test('selected presentation is installed only in the dev staging tree', async t 
   assert.match(app, /from '\/card-lab\/landing\/selected-cards\.js'/)
   assert.match(app, /selectedCardFace\(card, cards\.length\)/)
   assert.match(app, /prepareSelectedScenes\(cards\)/)
-  assert.match(app, /querySelector\('\.card-art img'\)/)
-  assert.match(app, /Math\.abs\(wrapOffset\(index, around, items\.length\)\) > 3/)
+  assert.match(app, /warmSelectedArt\(items, around\)/)
+  assert.doesNotMatch(app, /items\.forEach\(\(item, index\) => \{\n    if \(Math\.abs\(wrapOffset/)
   assert.match(app, /onSettle\(index, \{ deliberate \} = \{\}\) \{\n    settleSelectedCard\(items\[index\]\)/)
   assert.match(app, /pauseSelectedReveal\(\)\n    warmArt\(index\)/)
   assert.match(app, /if \(event.button !== 0 \|\| !event.isPrimary \|\| drag\) return\n  pauseSelectedReveal\(\)/)
@@ -178,7 +178,9 @@ test('all 78 native faces preserve exact 0/2/4 clues in every treatment and lazy
       assert.equal(face.dataset.clue, style)
       const art = nodes.find(item => item.className === 'card-art')
       const illustration = walk(art).find(item => item.tag === 'img')
-      assert.equal(illustration.dataset.src, card.art)
+      assert.equal(illustration.dataset.src, previewArt(card.art))
+      assert.equal(illustration.width, 640)
+      assert.equal(illustration.height, 640)
       assert.equal(illustration.src, undefined)
       const terms = nodes.filter(item => Object.hasOwn(item.dataset, 'clueWord'))
       assert.deepEqual(terms.map(item => item.textContent), exactClues(card))
@@ -210,6 +212,28 @@ test('all 78 native faces preserve exact 0/2/4 clues in every treatment and lazy
     if (previous === undefined) delete globalThis.document
     else globalThis.document = previous
   }
+})
+
+test('art windows release old images and reveal canvases across the full catalogue and wraparound', () => {
+  const items = Array.from({ length: 78 }, (_, index) => {
+    const image = { dataset: { src: `/art-${index}.webp` }, src: null, getAttribute() { return this.src }, removeAttribute() { this.src = null } }
+    const canvas = { width: 160, height: 160 }
+    return { image, canvas, querySelector: selector => selector === '.card-art img' ? image : canvas }
+  })
+  const held = () => items.flatMap((item, index) => item.image.src ? [index] : [])
+  warmSelectedArt(items, 0)
+  assert.deepEqual(held(), [0, 1, 2, 3, 75, 76, 77])
+  for (let index = 0; index < 156; index++) {
+    warmSelectedArt(items, index)
+    assert.equal(held().length, 7)
+  }
+  assert.equal(items[20].canvas.width, 1, 'eviction releases the pixel reveal buffer too')
+  warmSelectedArt(items, -1, 7, 8)
+  assert.equal(held().length, 16, 'ultrawide ribbon uses a larger but bounded window')
+  warmSelectedArt(items, -1)
+  assert.equal(held().length, 7, 'gathering releases the ribbon lookahead')
+  assert.equal(previewArt('/cards/proofs/marshmallow.png'), '/card-lab/landing/art/marshmallow.webp')
+  assert.equal(previewArt('/some-other-art.svg'), '/some-other-art.svg')
 })
 
 test('pixel reveal waits for settlement and plays only once per card per page', () => {

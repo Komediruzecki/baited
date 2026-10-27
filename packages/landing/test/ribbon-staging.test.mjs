@@ -60,6 +60,7 @@ test('ribbon staging adds only dev modules and passes existing deck dependencies
     createRibbonDeck: options => options, createDeck() {}, hand: {}, items: [{}], cards: [{ word: 'first', difficulty: 'easy' }],
     $: id => nodes.get(id), window: { gsap: {} }, reduced: { matches: false },
     pauseSelectedReveal: () => callbacks.push('pause'), settleSelectedCard: item => callbacks.push(item), warmArt: index => callbacks.push(index),
+    deckNear: false, warmSelectedArt: (...args) => callbacks.push(args),
   }
   runInNewContext(app.slice(start, end).replace('const deck =', 'globalThis.options ='), context)
   const options = context.options
@@ -72,6 +73,11 @@ test('ribbon staging adds only dev modules and passes existing deck dependencies
   options.onFront(0)
   options.onSettle(0)
   assert.deepEqual(callbacks, ['pause', 0, context.items[0]], 'the wrapper receives the existing front and settle callbacks')
+  options.warmArt(4, 2, 3)
+  assert.equal(callbacks.length, 3, 'the ribbon does not load artwork before the deck approaches')
+  context.deckNear = true
+  options.warmArt(4, 2, 3)
+  assert.deepEqual(callbacks.at(-1), [context.items, 4, 2, 3], 'fan and ribbon share the same resource window')
 })
 
 test('production is a no-op and missing, duplicate or reordered staging hooks fail before writes', async t => {

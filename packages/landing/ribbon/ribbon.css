@@ -5,7 +5,7 @@
   transition: none;
 }
 
-.deck-hand.is-ribbon-open.is-ribbon-changing .deck-card-item .bait-card {
+.deck-hand.is-ribbon-open.is-ribbon-changing .deck-card-item:not(.is-out) .bait-card {
   will-change: transform;
 }
 

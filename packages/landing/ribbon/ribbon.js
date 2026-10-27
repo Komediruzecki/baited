@@ -9,7 +9,7 @@ const easeInOut = t => t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
 
 // The original deck remains the sole writer of card transforms. This controller
 // lends it a pose, then hands back an exact integer position when the row folds.
-export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal, settleReveal, ...options }) {
+export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal, settleReveal, warmArt, ...options }) {
   const { hand, items, reduced } = options
   const state = { p: 0, t: 0 }
   let inner
@@ -98,13 +98,10 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     warmed = whole
     const pitch = .8 * metrics.width + (metrics.width <= 260 ? 12 : Math.round(metrics.width * .067))
     const side = Math.min(6, Math.ceil(metrics.room / (2 * pitch)))
-    for (let d = -side - 1; d <= side + 2; d++) {
-      const image = items[wrap(whole + d, items.length)].querySelector('.card-art img')
-      if (image && !image.getAttribute('src')) image.src = image.dataset.src
-    }
+    warmArt?.(whole, side + 1, side + 2)
   }
   function renderFaces({ position, metrics, visibleIndices }) {
-    if (!open) return
+    if (!open) { warmArt?.(Math.round(position)); return }
     if (Math.abs(position - lens) > .58) lens = Math.round(position)
     const visible = new Set(visibleIndices)
     for (let index = 0; index < items.length; index++) {

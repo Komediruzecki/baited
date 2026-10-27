@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { installSelectedCards } from './selected-cards.mjs'
 import { installPresentedDeck } from './presented-deck.mjs'
 import { installRibbon } from './ribbon.mjs'
+import { buildCardPreviews } from './card-previews.mjs'
 
 const landingRoot = fileURLToPath(new URL('..', import.meta.url))
 const appRoot = resolve(landingRoot, '../app')
@@ -191,6 +192,7 @@ async function buildSiteLocked(environment, destination) {
     if (mediaStat?.isSymbolicLink()) throw new Error('Card Lab media root must not be a symlink')
     if (mediaStat?.isDirectory()) await copyStaticTree(mediaRoot, labRoot, { mediaOnly: true })
     await installSelectedCards({ environment, stagingSite })
+    await buildCardPreviews({ source: resolve(stagingSite, 'cards/proofs'), destination: resolve(stagingSite, 'card-lab/landing/art') })
     await installPresentedDeck({ environment, stagingSite })
     await installRibbon({ environment, stagingSite })
   } })

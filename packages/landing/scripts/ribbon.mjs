@@ -38,7 +38,8 @@ export async function installRibbon({ environment, stagingSite }) {
   status: $('deck-status'),
   help: $('deck-help'),
   pauseReveal: pauseSelectedReveal,
-  settleReveal: settleSelectedCard,`)
+  settleReveal: settleSelectedCard,
+  warmArt: (around, before, after) => { if (deckNear) warmSelectedArt(items, around, before, after) },`)
   app = replaceOnce(app, 'let drag = null\n',
     `let drag = null
 hand.addEventListener('ribboncancelinput', () => {
