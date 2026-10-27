@@ -8,6 +8,9 @@ import { createBait } from '../server/app.js';
 import { loadConfig } from '../server/config.js';
 import { matches } from '../server/game.js';
 import type { Studio } from '../shared/types.js';
+import { defaults } from '../server/game.js';
+import { Store, type Credentials } from '../server/store.js';
+import { botKey } from '../server/twitch.js';
 
 async function serve(t: { after: (fn: () => Promise<void>) => void }, env: Record<string, string> = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'bait-bot-http-'));
@@ -113,4 +116,91 @@ test('demo studio previews bot posts and accepts moderator commands from simulat
   // Public projections never carry the bot's feed.
   const publicView = await (await json(`/api/rooms/${studio.room.id}/viewer`)).text();
   assert.doesNotMatch(publicView, /"recent"|clock is frozen/i);
+});
+
+const grant = (patch: Partial<Credentials> = {}): Credentials => ({
+  access_token: 'owner-access',
+  refresh_token: 'owner-refresh',
+  expiresAt: Date.now() + 3600000,
+  userId: '123',
+  login: 'bait_channel',
+  name: 'Bait_Channel',
+  scope: ['user:read:chat', 'channel:bot'],
+  ...patch,
+});
+
+test('a revoked streamer authorization forgets the bot feed and anything queued for that channel', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'bait-bot-revoke-'));
+  const seed = new Store(dir, twitchEnv.TOKEN_ENCRYPTION_KEY);
+  await seed.load();
+  await seed.setCredentials('123', grant());
+  await seed.setCredentials(
+    botKey('999'),
+    grant({ access_token: 'bot-access', userId: '999', login: 'baitedbot', name: 'BaitedBot', scope: ['user:write:chat', 'user:bot'] }),
+  );
+  seed.snapshot.rooms = [
+    {
+      id: 'room-revoked',
+      owner: '123',
+      channel: 'bait_channel',
+      mode: 'twitch',
+      overlayKey: 'overlay-secret',
+      settings: { ...defaults, chatBot: true },
+      history: [],
+      priorWins: 0,
+      priorPlayed: 0,
+      priorBest: 0,
+      leaders: {},
+    },
+  ];
+  await seed.save();
+  await seed.flush();
+  // Startup validation of the streamer waits until the test lets Twitch answer 401.
+  let revoke!: () => void;
+  const revoked = new Promise<void>((resolve) => (revoke = resolve));
+  const posts: string[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.startsWith('http://127.0.0.1')) return realFetch(input, init);
+    if (url.endsWith('/oauth2/validate')) {
+      const bot = (init?.headers as Record<string, string>).Authorization === 'OAuth bot-access';
+      if (!bot) {
+        await revoked;
+        return new Response('', { status: 401 });
+      }
+      return Response.json({ client_id: 'client-test', user_id: '999', login: 'baitedbot', expires_in: 3600, scopes: ['user:write:chat', 'user:bot'] });
+    }
+    if (url.endsWith('/oauth2/token')) return Response.json({ access_token: 'app-token', expires_in: 3600 });
+    if (url.endsWith('/helix/chat/messages')) {
+      posts.push(JSON.parse(String(init?.body)).message);
+      return Response.json({ data: [{ message_id: `m-${posts.length}`, is_sent: true, drop_reason: null }] });
+    }
+    return new Response('', { status: 200 });
+  }) as typeof fetch;
+  const config = loadConfig({ PORT: '0', DATA_DIR: dir, ...twitchEnv, TWITCH_BOT_USER_ID: '999' });
+  const bait = await createBait(config);
+  t.after(async () => {
+    revoke();
+    await bait.startupValidation.catch(() => {});
+    await bait.close();
+    globalThis.fetch = realFetch;
+    await rm(dir, { recursive: true, force: true });
+  });
+  const game = bait.rooms.get('room-revoked')!;
+  const chat = (id: string, userId: string, text: string) =>
+    bait.bot.chat(game, { id, userId, name: userId, text, badges: [], at: Date.now() });
+  chat('m1', 'viewer-1', '!bait help');
+  for (let i = 0; i < 20 && !bait.bot.status(game).recent.length; i++)
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(posts.length, 1);
+  assert.equal(bait.bot.status(game).recent.length, 1);
+  // Queued inside the per-channel gap, then the streamer's grant turns out to be revoked.
+  chat('m2', 'viewer-2', '!bait score');
+  revoke();
+  await bait.startupValidation;
+  assert.match(game.connection.detail ?? '', /Authorization revoked/);
+  assert.deepEqual(bait.bot.status(game).recent, [], 'the studio feed for that channel is forgotten');
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  assert.equal(posts.length, 1, 'nothing queued before the revocation goes out');
 });

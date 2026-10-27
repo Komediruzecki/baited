@@ -587,6 +587,34 @@ test('the bot stays silent until it is configured, authorized, allowed and switc
   for (const { calls } of [unconfigured, unauthorized, notAllowed, off]) assert.equal(calls.length, 0);
 });
 
+test('queued posts are dropped once the bot may no longer post in the channel', async (t) => {
+  for (const lose of ['setting', 'grant'] as const) {
+    const { bot, game, calls, store, advance } = await twitchBot(t, (url) =>
+      url.endsWith('/oauth2/token') ? tokenReply() : sent(),
+    );
+    const posts = () => calls.filter((call) => call.url.endsWith('/helix/chat/messages')).length;
+    game.begin();
+    await flush();
+    assert.equal(posts(), 1);
+    // Inside the per-channel gap, these wait in the queue.
+    game.pause();
+    bot.chat(game, message('!bait score', { id: 'parent' }));
+    if (lose === 'setting') game.data.settings.chatBot = false;
+    else await store.setCredentials('123', credentials({ scope: ['user:read:chat'] }));
+    advance(LIMITS.channelGap);
+    bot.tick(game);
+    await flush();
+    assert.equal(posts(), 1, `${lose}: nothing queued goes out`);
+    // Allowing the bot again does not post what was queued before.
+    if (lose === 'setting') game.data.settings.chatBot = true;
+    else await store.setCredentials('123', credentials());
+    advance(LIMITS.channelGap);
+    bot.tick(game);
+    await flush();
+    assert.equal(posts(), 1, `${lose}: the old queue is gone`);
+  }
+});
+
 test('moderator commands need the setting, a moderator and the studio readiness', async (t) => {
   const store = await tempStore(t);
   let now = 2_000_000,

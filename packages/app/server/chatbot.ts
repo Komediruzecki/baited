@@ -321,6 +321,12 @@ export class ChatBot {
   private drain(game: Game) {
     const room = this.room(game.data.id),
       now = this.clock();
+    // The streamer switched announcements off or took back channel:bot: nothing queued goes out.
+    if (!this.wants(game)) {
+      room.queue = [];
+      room.replies = [];
+      return;
+    }
     room.queue = room.queue.filter((item) => item.expiresAt > now);
     room.replies = room.replies.filter((item) => item.expiresAt > now);
     if (!(room.queue.length || room.replies.length) || room.sending || now < room.pausedUntil) return;

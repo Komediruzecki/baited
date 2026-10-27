@@ -171,6 +171,8 @@ export async function createBait(config: Config, developmentHmr = false) {
       if (game.data.owner === id) {
         twitch.get(game.data.id)?.stop();
         disarm(game.data.id);
+        // Posts queued under the old grant never go out, and the studio feed starts fresh.
+        bot.forget(game.data.id);
         if (['active', 'paused', 'settling'].includes(game.phase)) game.endIfRunning('ended');
         game.connection = {
           status: 'error',
@@ -859,6 +861,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     sessions,
     store,
     auth,
+    bot,
     startupValidation,
     async close() {
       closed = true;
