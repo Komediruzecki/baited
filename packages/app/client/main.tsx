@@ -55,7 +55,7 @@ import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
 import Landing from './Landing';
-import { productBrand as brand, botNotices, Button, Tag, CopyButton, Modal, HowTo } from './ui';
+import { productBrand as brand, botNotices, BotSignInLink, Button, Tag, CopyButton, Modal, HowTo } from './ui';
 import './brand.css';
 import {
   MissionStatus,
@@ -160,9 +160,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [notice, setNotice] = useState(() => {
       const code = new URLSearchParams(location.search).get('notice') ?? '';
       return code === 'bot-ready'
-        ? { text: botNotices.ready, ok: true }
+        ? { text: botNotices.ready, ok: true, code }
         : botNotices.errors[code]
-          ? { text: botNotices.errors[code], ok: false }
+          ? { text: botNotices.errors[code], ok: false, code }
           : null;
     });
   const [micStatus, setMicStatus] = useState('off'),
@@ -490,6 +490,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <div className={cx('error-banner', notice.ok && 'info-banner')} role="status">
               {notice.ok ? <Check size={17} /> : <AlertTriangle size={17} />}
               <span>{notice.text}</span>
+              <BotSignInLink notice={notice.code} />
               <button aria-label="Dismiss notice" onClick={() => setNotice(null)}>
                 <X size={16} />
               </button>

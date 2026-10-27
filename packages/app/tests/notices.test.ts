@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import Landing from '../client/Landing';
-import { botNotices } from '../client/ui';
+import { botNotices, BotSignInLink } from '../client/ui';
 import type { SessionInfo } from '../shared/types';
 
 const session = { authenticated: false, twitchReady: true, demoAvailable: false } as SessionInfo;
@@ -22,4 +22,19 @@ test('a sign-in that dropped the bot permission says so on the landing page and 
   assert.match(text, /Allow the bot in Stream setup/);
   assert.doesNotMatch(text, /—/);
   assert.match(landing('bot-declined'), /Allow the bot in Stream setup/);
+});
+
+test('a bot sign-in that did not finish links back to the bot sign-in, not only Connect Twitch', () => {
+  for (const notice of ['bot-oauth', 'bot-account']) {
+    const html = landing(notice);
+    assert.match(html, new RegExp(botNotices.errors[notice].slice(0, 30)));
+    assert.match(html, /href="\/auth\/twitch\/bot"[^>]*>Sign in as the bot account/);
+  }
+  assert.match(botNotices.errors['bot-oauth'], /bot account sign-in did not finish/i);
+  // A streamer's own failed sign-in offers no bot link.
+  assert.doesNotMatch(landing('oauth'), /auth\/twitch\/bot/);
+  // The studio shows the same link inside its notice banner.
+  const banner = renderToStaticMarkup(React.createElement(BotSignInLink, { notice: 'bot-oauth' }));
+  assert.match(banner, /href="\/auth\/twitch\/bot"/);
+  assert.equal(renderToStaticMarkup(React.createElement(BotSignInLink, { notice: 'oauth' })), '');
 });

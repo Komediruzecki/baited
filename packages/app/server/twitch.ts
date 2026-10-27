@@ -62,7 +62,7 @@ export class TwitchAuth {
     if (!response.ok) {
       if (params.grant_type === 'refresh_token' && [400, 401].includes(response.status))
         throw new AuthRevoked();
-      throw new Error('Twitch authorization failed. Reconnect your account.');
+      throw new TwitchHttpError('Twitch authorization failed. Reconnect your account.', 'token', response.status);
     }
     return tokenSchema.parse(await response.json());
   }
@@ -79,7 +79,7 @@ export class TwitchAuth {
       headers: { 'Client-Id': this.config.clientId, Authorization: `Bearer ${token.access_token}` },
       signal: AbortSignal.timeout(12000),
     });
-    if (!response.ok) throw new Error('Could not identify Twitch account.');
+    if (!response.ok) throw new TwitchHttpError('Could not identify Twitch account.', 'users', response.status);
     const users = z
       .object({
         data: z
@@ -88,11 +88,11 @@ export class TwitchAuth {
       })
       .parse(await response.json());
     const user = users.data[0];
-    if (user.id !== valid.user_id) throw new Error('Twitch identity mismatch.');
+    if (user.id !== valid.user_id) throw new IdentityMismatch();
     // Only the configured bot account may be stored as the bot. Anyone else's grant is discarded.
     if (kind === 'bot' && user.id !== this.config.botUserId) {
       await this.revokeToken(token.access_token);
-      throw new BotAccountMismatch();
+      throw new BotAccountMismatch(user.id, this.config.botUserId);
     }
     const key = kind === 'bot' ? botKey(user.id) : user.id;
     // What this account had granted before, read before the new grant replaces it.
@@ -116,7 +116,11 @@ export class TwitchAuth {
       throw new AuthSuperseded();
     }
     const generation = this.bump(key);
-    await this.store.setCredentials(key, c);
+    try {
+      await this.store.setCredentials(key, c);
+    } catch (error) {
+      throw new StoreFailed(error);
+    }
     this.assertCurrent(key, generation);
     return { ...c, previousScope };
   }
@@ -126,10 +130,10 @@ export class TwitchAuth {
       signal: AbortSignal.timeout(12000),
     });
     if (r.status === 401) throw new AuthRevoked();
-    if (!r.ok) throw new Error('Twitch validation temporarily unavailable.');
+    if (!r.ok) throw new TwitchHttpError('Twitch validation temporarily unavailable.', 'validate', r.status);
     const data = validationSchema.parse(await r.json());
-    if (data.client_id !== this.config.clientId || !required.every((s) => data.scopes.includes(s)))
-      throw new AuthRevoked();
+    if (data.client_id !== this.config.clientId) throw new AuthRevoked();
+    if (!required.every((s) => data.scopes.includes(s))) throw new ScopeMissing();
     return data;
   }
   async access(id: string, force = false): Promise<Credentials> {
@@ -244,8 +248,34 @@ export class RateLimited extends Error {
   }
 }
 export class BotAccountMismatch extends Error {
-  constructor() {
+  /** Numeric Twitch user IDs: the account that signed in, and the configured bot account. */
+  constructor(
+    public received = '',
+    public expected = '',
+  ) {
     super('That Twitch account is not the configured bot account.');
+  }
+}
+/** The token lacks a scope this flow needs. Treated as a revoked authorization by callers. */
+export class ScopeMissing extends AuthRevoked {}
+/** Twitch answered one step of an authorization with an HTTP error. */
+export class TwitchHttpError extends Error {
+  constructor(
+    message: string,
+    public step: 'token' | 'validate' | 'users',
+    public status: number,
+  ) {
+    super(message);
+  }
+}
+export class IdentityMismatch extends Error {
+  constructor() {
+    super('Twitch identity mismatch.');
+  }
+}
+export class StoreFailed extends Error {
+  constructor(public reason: unknown) {
+    super('The Twitch authorization could not be saved.');
   }
 }
 

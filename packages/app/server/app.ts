@@ -12,6 +12,10 @@ import {
   AuthRevoked,
   AuthSuperseded,
   BotAccountMismatch,
+  IdentityMismatch,
+  ScopeMissing,
+  StoreFailed,
+  TwitchHttpError,
   BOT_SCOPES,
   CHANNEL_BOT_SCOPE,
   SCOPES,
@@ -38,6 +42,35 @@ export function canUseDemo(config: Config, clientIp: string | undefined, socketA
     : isLoopback(clientIp);
 }
 
+type OAuthFlow = 'broadcaster' | 'bot';
+const errorClass = (error: unknown) =>
+  error instanceof Error ? error.constructor.name : typeof error;
+/**
+ * One line per failed sign-in, built only from fixed reason codes, HTTP statuses, numeric user IDs
+ * and error class names. Codes, states, cookies, tokens and Twitch's free text never reach it.
+ */
+function logOAuthFailure(flow: OAuthFlow, fields: string) {
+  console.warn(`OAuth sign-in failed: flow=${flow} ${fields}`);
+}
+function oauthErrorFields(error: unknown) {
+  const kind = `error=${errorClass(error)}`;
+  if (error instanceof BotAccountMismatch) {
+    const id = (value: string) => (/^\d{1,20}$/.test(value) ? value : 'invalid');
+    return `reason=bot_account_mismatch received=${id(error.received)} expected=${id(error.expected)} ${kind}`;
+  }
+  if (error instanceof AuthSuperseded) return `reason=superseded ${kind}`;
+  if (error instanceof ScopeMissing) return `reason=scope_missing ${kind}`;
+  if (error instanceof AuthRevoked) return `reason=token_invalid ${kind}`;
+  if (error instanceof TwitchHttpError) {
+    const reason = { token: 'token_exchange', validate: 'validate_unavailable', users: 'user_lookup' }[error.step];
+    return `reason=${reason} status=${error.status} ${kind}`;
+  }
+  if (error instanceof IdentityMismatch) return `reason=user_lookup ${kind}`;
+  if (error instanceof StoreFailed) return `reason=store_failed ${kind} cause=${errorClass(error.reason)}`;
+  if (error instanceof ZodError) return `reason=twitch_response_invalid ${kind}`;
+  return `reason=unexpected ${kind}`;
+}
+
 export async function createBait(
   config: Config,
   developmentHmr = false,
@@ -57,7 +90,7 @@ export async function createBait(
   const microphoneLeases = new Map<string, { session: Session; leaseId: string; expires: number }>();
   const pendingOAuth = new Map<
     string,
-    { cookie: string; expires: number; kind: 'broadcaster' | 'bot'; restore: boolean }
+    { cookie: string; expires: number; kind: OAuthFlow; restore: boolean }
   >();
   const bot = new ChatBot({
     config,
@@ -427,7 +460,7 @@ export async function createBait(
   function beginOAuth(
     req: Request,
     res: Response,
-    kind: 'broadcaster' | 'bot',
+    kind: OAuthFlow,
     scopes: string[],
     restore = false,
   ) {
@@ -440,7 +473,9 @@ export async function createBait(
       res.status(503).send('Try again shortly.');
       return;
     }
-    const state = randomKey(),
+    // The flow is readable from the state itself, so a callback whose pending entry was lost
+    // (the backend restarted mid-flow) still knows to send the operator back to the bot sign-in.
+    const state = kind === 'bot' ? `bot.${randomKey()}` : randomKey(),
       cookie = randomKey();
     pendingOAuth.set(state, { cookie, expires: Date.now() + 600000, kind, restore });
     res.cookie('bait_oauth', cookie, {
@@ -502,24 +537,30 @@ export async function createBait(
       secure: config.production,
       sameSite: 'lax',
     });
-    if (
-      !pending ||
-      pending.expires < Date.now() ||
-      !equal(cookies(req.headers.cookie).bait_oauth || '', pending.cookie)
-    ) {
-      res.redirect('/?notice=oauth');
-      return;
-    }
+    const flow: OAuthFlow = pending?.kind ?? (state.startsWith('bot.') ? 'bot' : 'broadcaster');
+    const failed = (fields: string, notice: string) => {
+      logOAuthFailure(flow, fields);
+      res.redirect(`/?notice=${flow === 'bot' && notice !== 'bot-account' ? 'bot-oauth' : notice}`);
+    };
+    const sent = cookies(req.headers.cookie).bait_oauth || '';
+    if (!pending) return failed('reason=state_missing', 'oauth');
+    if (pending.expires < Date.now()) return failed('reason=state_expired', 'oauth');
+    if (!sent) return failed('reason=cookie_missing', 'oauth');
+    if (!equal(sent, pending.cookie)) return failed('reason=cookie_mismatch', 'oauth');
     if (req.query.error || typeof req.query.code !== 'string') {
-      res.redirect(pending.restore ? '/?notice=bot-declined' : '/?notice=cancelled');
-      return;
+      const code = typeof req.query.error === 'string' ? req.query.error : '';
+      const twitchError = /^[a-z_]{1,40}$/.test(code) ? ` twitch_error=${code}` : code ? ' twitch_error=other' : '';
+      return failed(
+        req.query.error ? `reason=cancelled${twitchError}` : 'reason=code_missing',
+        pending.restore ? 'bot-declined' : 'cancelled',
+      );
     }
     if (pending.kind === 'bot') {
       try {
         await auth.exchange(req.query.code, 'bot');
         res.redirect('/?notice=bot-ready');
       } catch (e) {
-        res.redirect(e instanceof BotAccountMismatch ? '/?notice=bot-account' : '/?notice=oauth');
+        failed(oauthErrorFields(e), e instanceof BotAccountMismatch ? 'bot-account' : 'oauth');
       }
       return;
     }
@@ -562,8 +603,8 @@ export async function createBait(
       else if (config.botReady && botLost && c.previousScope.includes(CHANNEL_BOT_SCOPE))
         res.redirect('/auth/twitch?bot=1&restore=1');
       else res.redirect('/');
-    } catch {
-      res.redirect('/?notice=oauth');
+    } catch (e) {
+      failed(oauthErrorFields(e), 'oauth');
     }
   });
   app.get('/api/studio', session, (_req, res) => res.json(studio(gameFor(res))));

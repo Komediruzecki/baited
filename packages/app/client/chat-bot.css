@@ -85,3 +85,7 @@
     grid-column: 1 / -1;
   }
 }
+
+/* The way back to the bot account sign-in, under a notice on the landing page or in the studio. */
+.bot-signin-link { flex: none; text-decoration: none; }
+.signin-content > .bot-signin-link { margin-bottom: 10px; }

@@ -33,6 +33,8 @@ interface FakeTwitch {
   userId: string;
   tokenStatus: number;
   userStatus: number;
+  /** Runs while Twitch is answering the user lookup, before the grant is stored. */
+  duringLookup?: () => void;
 }
 
 async function oauthServer(
@@ -66,6 +68,7 @@ async function oauthServer(
         scopes: twitch.scopes,
       });
     if (url.endsWith('/helix/users')) {
+      twitch.duringLookup?.();
       if (twitch.userStatus !== 200) return new Response('', { status: twitch.userStatus });
       return Response.json({ data: [{ id: twitch.userId, login: `user${twitch.userId}`, display_name: `User${twitch.userId}` }] });
     }
@@ -150,4 +153,156 @@ test('a streamer who never allowed the bot signs in without a second prompt', as
   });
   const first = await begin('/auth/twitch');
   assert.equal((await callback({ state: first.state, code: 'code-1' }, first.oauth)).location, '/');
+});
+
+/** Every OAuth failure line the server logs while `run` executes, plus the run's result. */
+async function logged<T>(t: { mock: { method: typeof import('node:test').mock.method } }, run: () => Promise<T>) {
+  const lines: string[] = [];
+  const warn = t.mock.method(console, 'warn', (...args: unknown[]) => {
+    lines.push(args.map(String).join(' '));
+  });
+  try {
+    const result = await run();
+    return { result, lines };
+  } finally {
+    warn.mock.restore();
+  }
+}
+const never = ['code-', 'new-access', 'new-refresh', 'stored-access', 'secret-test', 'app-token'];
+
+test('every OAuth failure logs one fixed reason code and never a code, state, cookie or token', async (t) => {
+  const { twitch, begin, callback, bait } = await oauthServer(t);
+  const cases: { name: string; run: () => Promise<{ location: string }>; location: string; line: RegExp }[] = [];
+  const secrets: string[] = [];
+  const flow = async (path = '/auth/twitch') => {
+    const started = await begin(path);
+    secrets.push(started.state, started.oauth.split('=')[1]);
+    return started;
+  };
+  cases.push({
+    name: 'state missing',
+    run: async () => callback({ state: 'forged-state', code: 'code-a' }, ''),
+    location: '/?notice=oauth',
+    line: /^OAuth sign-in failed: flow=broadcaster reason=state_missing$/,
+  });
+  cases.push({
+    name: 'cookie missing',
+    run: async () => callback({ state: (await flow()).state, code: 'code-b' }, ''),
+    location: '/?notice=oauth',
+    line: /^OAuth sign-in failed: flow=broadcaster reason=cookie_missing$/,
+  });
+  cases.push({
+    name: 'cookie mismatch',
+    run: async () => callback({ state: (await flow()).state, code: 'code-c' }, 'bait_oauth=someone-else'),
+    location: '/?notice=oauth',
+    line: /^OAuth sign-in failed: flow=broadcaster reason=cookie_mismatch$/,
+  });
+  cases.push({
+    name: 'cancelled',
+    run: async () => {
+      const started = await flow();
+      return callback({ state: started.state, error: 'access_denied', error_description: 'denied code-x' }, started.oauth);
+    },
+    location: '/?notice=cancelled',
+    line: /^OAuth sign-in failed: flow=broadcaster reason=cancelled twitch_error=access_denied$/,
+  });
+  cases.push({
+    name: 'token exchange',
+    run: async () => {
+      twitch.tokenStatus = 400;
+      const started = await flow();
+      return callback({ state: started.state, code: 'code-d' }, started.oauth).finally(() => (twitch.tokenStatus = 200));
+    },
+    location: '/?notice=oauth',
+    line: /^OAuth sign-in failed: flow=broadcaster reason=token_exchange status=400 error=TwitchHttpError$/,
+  });
+  cases.push({
+    name: 'scope missing',
+    run: async () => {
+      twitch.scopes = [];
+      const started = await flow();
+      return callback({ state: started.state, code: 'code-e' }, started.oauth).finally(() => (twitch.scopes = ['user:read:chat']));
+    },
+    location: '/?notice=oauth',
+    line: /^OAuth sign-in failed: flow=broadcaster reason=scope_missing error=ScopeMissing$/,
+  });
+  cases.push({
+    name: 'user lookup',
+    run: async () => {
+      twitch.userStatus = 503;
+      const started = await flow();
+      return callback({ state: started.state, code: 'code-f' }, started.oauth).finally(() => (twitch.userStatus = 200));
+    },
+    location: '/?notice=oauth',
+    line: /^OAuth sign-in failed: flow=broadcaster reason=user_lookup status=503 error=TwitchHttpError$/,
+  });
+  cases.push({
+    name: 'superseded',
+    run: async () => {
+      // The account is disconnected while Twitch is still answering.
+      twitch.duringLookup = () => void bait.auth.invalidate('123');
+      const started = await flow();
+      return callback({ state: started.state, code: 'code-g' }, started.oauth).finally(() => (twitch.duringLookup = undefined));
+    },
+    location: '/?notice=oauth',
+    line: /^OAuth sign-in failed: flow=broadcaster reason=superseded error=AuthSuperseded$/,
+  });
+  cases.push({
+    name: 'store failure',
+    run: async () => {
+      const save = t.mock.method(bait.store, 'setCredentials', async () => {
+        throw new Error('disk full');
+      });
+      const started = await flow();
+      return callback({ state: started.state, code: 'code-h' }, started.oauth).finally(() => save.mock.restore());
+    },
+    location: '/?notice=oauth',
+    line: /^OAuth sign-in failed: flow=broadcaster reason=store_failed error=StoreFailed cause=Error$/,
+  });
+  cases.push({
+    name: 'bot account mismatch',
+    run: async () => {
+      twitch.userId = '555';
+      twitch.scopes = ['user:write:chat', 'user:bot'];
+      const started = await flow('/auth/twitch/bot');
+      return callback({ state: started.state, code: 'code-i' }, started.oauth).finally(() => {
+        twitch.userId = '123';
+        twitch.scopes = ['user:read:chat'];
+      });
+    },
+    location: '/?notice=bot-account',
+    line: /^OAuth sign-in failed: flow=bot reason=bot_account_mismatch received=555 expected=999 error=BotAccountMismatch$/,
+  });
+  for (const item of cases) {
+    const { result, lines } = await logged(t, item.run);
+    assert.equal(result.location, item.location, item.name);
+    assert.equal(lines.length, 1, `${item.name}: ${lines.join(' | ')}`);
+    assert.match(lines[0], item.line, item.name);
+    for (const secret of [...never, ...secrets]) assert.ok(!lines[0].includes(secret), `${item.name} logged ${secret}`);
+  }
+});
+
+test('an expired sign-in is logged as expired', async (t) => {
+  const { begin, callback } = await oauthServer(t);
+  const started = await begin('/auth/twitch');
+  const now = Date.now();
+  t.mock.method(Date, 'now', () => now + 601000);
+  const { result, lines } = await logged(t, () => callback({ state: started.state, code: 'code-1' }, started.oauth));
+  assert.equal(result.location, '/?notice=oauth');
+  assert.deepEqual(lines, ['OAuth sign-in failed: flow=broadcaster reason=state_expired']);
+});
+
+test('a bot sign-in that loses its pending state lands on the bot notice', async (t) => {
+  const { begin, callback } = await oauthServer(t);
+  const bot = await begin('/auth/twitch/bot');
+  assert.match(bot.state, /^bot\./, 'the bot flow is marked in its state');
+  assert.doesNotMatch((await begin('/auth/twitch')).state, /^bot\./);
+  // The backend restarted mid-flow, so the pending entry for this state is gone.
+  const { result, lines } = await logged(t, () => callback({ state: 'bot.lost-after-restart', code: 'code-1' }, bot.oauth));
+  assert.equal(result.location, '/?notice=bot-oauth');
+  assert.deepEqual(lines, ['OAuth sign-in failed: flow=bot reason=state_missing']);
+  // Other bot-flow failures send the operator back to the bot sign-in too.
+  const cancelled = await begin('/auth/twitch/bot');
+  const declined = await logged(t, () => callback({ state: cancelled.state, error: 'access_denied' }, cancelled.oauth));
+  assert.equal(declined.result.location, '/?notice=bot-oauth');
 });
