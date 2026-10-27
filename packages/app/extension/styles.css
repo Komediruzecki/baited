@@ -206,6 +206,49 @@ h3 {
 .secret-card .card-question:not([hidden]) ~ .cut-card__footer {
   margin-top: 2px;
 }
+/* The streamer's pick and the bait MVPs: public names, shown when no round is live. The
+   heading is the card's ruled label, as over the clues. */
+.card-award {
+  margin-top: calc(6 * var(--cut-u));
+  overflow: hidden;
+  color: var(--yellow);
+  font: 650 max(9.5px, calc(12 * var(--cut-u))) / 1.333 var(--b-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.secret-card .mvps {
+  margin-top: calc(8 * var(--cut-u));
+}
+.mvps .cut-card__rules-label {
+  margin-bottom: calc(4 * var(--cut-u));
+}
+.mvp-list {
+  display: grid;
+  gap: calc(2 * var(--cut-u));
+  margin: 0 auto;
+  padding: 0;
+  max-width: calc(220 * var(--cut-u));
+  list-style: none;
+}
+.mvp-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: calc(12 * var(--cut-u));
+  font: 400 max(9.5px, calc(12 * var(--cut-u))) / 1.333 var(--b-ui);
+}
+.mvp-list li span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--paper);
+  font-weight: 600;
+}
+.mvp-list li span:last-child {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
 /* The footer rule is the round's timer, as on the overlay card. */
 .clock-labels {
   display: flex;
@@ -277,6 +320,12 @@ code {
 }
 .secret-card:has(.clock:not([hidden])) .card-baseline {
   display: none;
+}
+/* A catch that names the streamer's pick over the MVP board keeps the signature footer
+   inside 500 px by giving up art height, as the reconnect notice does (measured at 318,
+   279 and 240 px). */
+.secret-card:has(.card-award:not([hidden])):has(.mvps:not([hidden])) {
+  --cut-art: calc(104 * var(--cut-u));
 }
 .secret-card[data-state='reconnecting'] .target {
   color: var(--copy) !important;

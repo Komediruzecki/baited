@@ -51,8 +51,12 @@ export function readState(value) {
     // Stays self-contained for the LAN harness; screens ignore counts that are not a tier.
     if (resultValue.milestone !== undefined && !(count(resultValue.milestone) && resultValue.milestone >= 2)) throw new Error('Invalid result.');
     if (resultValue.newBadge !== undefined && typeof resultValue.newBadge !== 'boolean') throw new Error('Invalid result.');
+    // The streamer's pick carries a chatter's name, never their hint. Only a confirmed catch shows one.
+    const award = resultValue.award;
+    if (award !== undefined && !(object(award) && string(award.name, 40) && (award.at === undefined || number(award.at)))) throw new Error('Invalid result.');
     result = { id: resultValue.id, word: resultValue.word, outcome: resultValue.outcome, ...(resultValue.reason ? { reason: resultValue.reason } : {}),
-      ...(resultValue.milestone ? { milestone: resultValue.milestone, newBadge: resultValue.newBadge === true } : {}) };
+      ...(resultValue.milestone ? { milestone: resultValue.milestone, newBadge: resultValue.newBadge === true } : {}),
+      ...(award && resultValue.outcome === 'caught' ? { award: { name: award.name, ...(award.at !== undefined ? { at: award.at } : {}) } } : {}) };
   }
   // Chat's streak is public. Older backends without a score read as no streak.
   let score = { streak: 0, best: 0 };
@@ -60,7 +64,13 @@ export function readState(value) {
     if (!object(r.score) || !count(r.score.streak) || !count(r.score.best)) throw new Error('Invalid score.');
     score = { streak: r.score.streak, best: r.score.best };
   }
-  return { configured: true, room: { phase: r.phase, channel: r.channel, serverTime: r.serverTime, round, result, score } };
+  // Bait MVPs are public too. Older backends without them read as none; the screens show three.
+  let mvps = [];
+  if (r.mvps !== undefined) {
+    if (!Array.isArray(r.mvps) || r.mvps.length > 10 || r.mvps.some((mvp) => !object(mvp) || !string(mvp.name, 40) || !count(mvp.baits) || mvp.baits < 1)) throw new Error('Invalid MVPs.');
+    mvps = r.mvps.slice(0, 3).map((mvp) => ({ name: mvp.name, baits: mvp.baits }));
+  }
+  return { configured: true, room: { phase: r.phase, channel: r.channel, serverTime: r.serverTime, round, result, score, mvps } };
 }
 
 export function readConfiguration(value, studioBaseUrl) {

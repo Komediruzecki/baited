@@ -147,6 +147,50 @@ body[data-surface='overlay'] {
 .face-question:empty {
   display: none;
 }
+/* The streamer's pick and the bait MVPs on a won card: names only, never hints. */
+.face-award {
+  flex: none;
+  margin-top: calc(6 * var(--cut-u));
+  overflow: hidden;
+  color: var(--b-urgent);
+  font: 650 max(9.5px, calc(12 * var(--cut-u))) / 1.35 var(--b-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.face-mvps {
+  margin-top: calc(8 * var(--cut-u));
+}
+.face-mvps .cut-card__rules-label {
+  margin-bottom: calc(4 * var(--cut-u));
+}
+.face-mvp-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(2 * var(--cut-u)) calc(12 * var(--cut-u));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.face-mvp-list li {
+  display: flex;
+  gap: calc(4 * var(--cut-u));
+  min-width: 0;
+  max-width: 100%;
+  font: 600 max(9px, calc(11 * var(--cut-u))) / 1.3 var(--b-ui);
+}
+.face-mvp-list li > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: calc(126 * var(--cut-u));
+  color: var(--b-paper);
+}
+.face-mvp-list li > span:nth-child(2) {
+  flex: none;
+  color: var(--b-urgent);
+  font-variant-numeric: tabular-nums;
+}
 .playing-card:is([data-state='result'], [data-state='review']) .face-note {
   color: var(--b-paper);
   font-weight: 600;
@@ -338,7 +382,8 @@ body[data-surface='overlay'] {
 
 /* Small cards keep the word, the clues and the clock. */
 @container (max-height: 340px) {
-  .face-question {
+  .face-question,
+  .face-mvps {
     display: none;
   }
 }
@@ -380,6 +425,11 @@ body[data-surface='overlay'] {
   }
   .face-top {
     display: none;
+  }
+  /* The pick wraps rather than cutting off the name. */
+  .face-award {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   /* A word without art gives its empty field to the copy. */
   .face-front:has(#front-art[hidden]):not(:has(.badge-medal:not([hidden]))) .face-art {

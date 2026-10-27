@@ -199,6 +199,22 @@ test('Extension API isolates channels and roles while preserving studio protecti
     assert.equal(hostPin, 200);
   });
 
+  await t.test('the streamer’s pick and bait MVPs reach both roles, without the hint text', async () => {
+    game.chat('ext-hint', 'chatter-1', 'Alex', 'a suspiciously fancy outfit', game.round!.startedAt);
+    game.transcript({
+      roundId: game.round!.id, epoch: game.round!.epoch, text: game.round!.word, final: true,
+      confidence: 0.99, capturedAt: game.round!.startedAt, id: 'ext-speech',
+    });
+    const board = game.awardBoard!;
+    game.award(board.roundId, board.candidates[0].id);
+    for (const jwt of [viewToken, hostToken]) {
+      const state = await (await fetch(`${base}/api/extension/state`, { headers: headers(jwt) })).json() as ExtensionState;
+      assert.equal(state.room?.result?.award?.name, 'Alex');
+      assert.deepEqual(state.room?.mvps.map((mvp) => [mvp.name, mvp.baits]), [['Alex', 1]]);
+      assert.equal(JSON.stringify(state).includes('suspiciously'), false);
+    }
+  });
+
   await t.test('authenticated polling is bounded', async () => {
     const busy = await token({ opaque_user_id: 'Ubusyviewer' });
     for (let i = 0; i < 180; i++) assert.equal((await fetch(`${base}/api/extension/state`, { headers: headers(busy) })).status, 200);
