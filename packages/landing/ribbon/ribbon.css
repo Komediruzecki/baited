@@ -1,0 +1,165 @@
+/* Dev-only ribbon presentation. The controller owns every item transform and
+   shade; these rules turn the card's face independently of the semantic front. */
+.deck-hand.is-ribbon-open .deck-card-item .bait-card {
+  transform: scaleX(var(--ribbon-flip, 1));
+  transition: none;
+}
+
+.deck-hand.is-ribbon-open.is-ribbon-changing .deck-card-item .bait-card {
+  will-change: transform;
+}
+
+/* Fan gates normally expose only .is-front. In the ribbon, a turned neighbour
+   may show its face too; an unturned semantic front must still show its back. */
+.deck-hand.is-ribbon-open .deck-card-item .bait-card > :not(.card-shade) {
+  opacity: 0;
+  transition: none;
+}
+
+.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .bait-card > :not(.card-shade, .selected-card__back) {
+  opacity: 1;
+}
+
+.deck-hand.is-ribbon-open .deck-card-item .selected-card > .selected-card__back {
+  opacity: 1;
+  visibility: visible;
+}
+
+.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .selected-card > .selected-card__back {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.deck-hand.is-ribbon-open .deck-card-item .selected-card > .card-art {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .selected-card > .card-art {
+  opacity: 1;
+  visibility: visible;
+}
+
+.deck-hand.is-ribbon-open .deck-card-item .selected-card > .selected-glass-field,
+.deck-hand.is-ribbon-open .deck-card-item .selected-glass {
+  display: none;
+}
+
+.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .selected-card > .selected-glass-field,
+.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .selected-glass {
+  display: block;
+}
+
+/* The flat window retains the approved lens light. Only the centre lens paints
+   its SVG displacement filter; neighbouring previews keep the same material. */
+.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .selected-glass {
+  background: linear-gradient(#8c43f9, #241050);
+}
+
+.deck-hand.is-ribbon-open .deck-card-item .selected-glass__bend {
+  display: none;
+}
+
+.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face.is-ribbon-lens .selected-glass__bend {
+  display: block;
+}
+
+/* A resolving image may have been interrupted by unfolding. The ribbon shows
+   the decoded illustration directly rather than a stale, half-resolved canvas. */
+.deck-hand.is-ribbon-open .deck-card-item .selected-card .card-art.is-resolving img {
+  opacity: 1;
+}
+
+.deck-hand.is-ribbon-open .deck-card-item .selected-card .selected-card__pixels {
+  display: none;
+}
+
+#deck-help .ribbon-help-prefix {
+  white-space: nowrap;
+}
+
+#deck-help .ribbon-help-separator {
+  margin-inline: 4px;
+  color: var(--rim);
+}
+
+#deck-help .ribbon-toggle,
+#deck-help .ribbon-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin-block: -12px;
+  padding: 12px 4px;
+  border: 0;
+  background: none;
+  color: var(--rim);
+  font: inherit;
+  line-height: 20px;
+  text-align: center;
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  touch-action: manipulation;
+}
+
+#deck-help .ribbon-toggle:hover,
+#deck-help .ribbon-play:hover {
+  color: var(--white);
+  text-decoration-thickness: 2px;
+}
+
+#deck-help .ribbon-toggle:focus-visible,
+#deck-help .ribbon-play:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 2px;
+}
+
+#deck-help .ribbon-toggle[hidden],
+#deck-help .ribbon-play[hidden],
+#deck-help .ribbon-help-prefix[hidden],
+#deck-help .ribbon-help-separator[hidden] {
+  display: none;
+}
+
+@media (max-width: 350px) {
+  #deck-help .ribbon-help-prefix {
+    display: none;
+  }
+}
+
+@media (min-width: 1800px) {
+  /* This 660px intro needs a local gutter. The site's full-width page gutter
+     grows on ultrawides and would squeeze its text into a narrow column. */
+  .deck-section .how-cards__intro {
+    padding-inline: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-hand.is-ribbon-open .bait-card,
+  .deck-hand.is-ribbon-open .bait-card *,
+  #deck-help .ribbon-toggle,
+  #deck-help .ribbon-play {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .deck-hand.is-ribbon-open.is-ribbon-changing .deck-card-item .bait-card {
+    will-change: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  #deck-help .ribbon-toggle,
+  #deck-help .ribbon-play {
+    color: LinkText;
+  }
+
+  #deck-help .ribbon-toggle:focus-visible,
+  #deck-help .ribbon-play:focus-visible {
+    outline-color: Highlight;
+  }
+}

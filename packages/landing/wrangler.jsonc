@@ -16,6 +16,9 @@
         "command": "node scripts/build-site.mjs --env dev",
         "watch_dir": [
           "site",
+          "selected-cards",
+          "ribbon",
+          "scripts",
           "../app/client",
           "../app/public/card-lab",
           "../app/card-lab.html",
