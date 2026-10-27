@@ -1,0 +1,148 @@
+/* The OBS overlay's boxes in Twitch's style: square and borderless, extruded down and to
+   the left like Twitch's logo, set in Baited Pixel (scripts/build-pixel-font.mjs). The
+   result cards keep the landing's design. Type sizes are whole multiples of 8px so the
+   pixel font stays crisp in a 1920 × 1080 browser source. */
+@font-face {
+  font-family: 'Baited Pixel';
+  src: url('/fonts/baited-pixel.ttf') format('truetype');
+  font-weight: 400;
+  font-display: block;
+}
+.obs-root {
+  --twitch: #9146ff;
+}
+.obs-root :is(.obs-hud, .streak-celebration),
+.obs-root > .public-award {
+  border: 0;
+  border-radius: 0;
+  font-family: 'Baited Pixel', var(--b-ui);
+  /* Older OBS browsers lack color-mix() and keep the first shadow. */
+  text-shadow: 2px 2px 0 #00000099;
+  text-shadow: 2px 2px 0 color-mix(in srgb, currentColor 22%, #000);
+  box-shadow:
+    -1px 1px 0 var(--twitch),
+    -2px 2px 0 var(--twitch),
+    -3px 3px 0 var(--twitch),
+    -4px 4px 0 var(--twitch),
+    -5px 5px 0 var(--twitch),
+    -6px 6px 0 var(--twitch),
+    -7px 7px 0 var(--twitch),
+    -8px 8px 0 var(--twitch);
+}
+.obs-root .obs-hud-stale {
+  --twitch: #8c4b58;
+}
+.obs-hud,
+.obs-hud .obs-widget,
+.obs-hud .obs-win {
+  background: #1a1522;
+}
+.obs-hud .obs-message > span {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-hud .obs-message > strong {
+  font: 400 24px/1.25 'Baited Pixel', var(--b-ui);
+}
+.obs-hud .obs-time {
+  font: 400 48px/1 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-hud .obs-score,
+.obs-hud .obs-score > .obs-mode {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-hud .obs-score {
+  background: #120d1a;
+}
+.obs-hud .mission-strip-label :is(span, strong),
+.obs-hud .mission-clock strong,
+.obs-hud .mission-pips > span {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+}
+.obs-hud .mission-pips > span {
+  border-radius: 0;
+}
+.obs-hud .mission-strip-label span {
+  max-width: none;
+}
+
+/* Fire streak strip: the count, the next badge and the coins. */
+.obs-hud .obs-streak {
+  border-top: 0;
+}
+.obs-streak__count strong {
+  font: 400 40px/1 'Baited Pixel', var(--b-ui);
+}
+.obs-streak__label,
+.obs-streak__label small {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-root :is(.obs-streak, .streak-celebration) .streak-row__n {
+  font: 400 16px/1 'Baited Pixel', var(--b-ui);
+}
+
+/* A badge win: the medallion arrives in a box of the same make. */
+.obs-root .streak-celebration {
+  background: radial-gradient(ellipse at 50% 30%, #4b2a1a 0, #1a1522 62%);
+}
+.streak-celebration__kicker,
+.streak-celebration__count,
+.streak-celebration__next {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.streak-celebration__name {
+  font: 400 24px/1.25 'Baited Pixel', var(--b-ui);
+}
+.obs-root > .public-award {
+  background: #1a1522;
+}
+.obs-root > .public-award :is(span, small) {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-root > .public-award strong {
+  font: 400 24px/1.25 'Baited Pixel', var(--b-ui);
+}
+
+/* The reveal follows the HUD in flow, so it always clears it: the result card, and
+   beside it the medallion on a badge win. */
+.obs-reveal {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;
+  margin-top: 36px;
+}
+.obs-reveal :is(.result-deal--broadcast, .streak-celebration) {
+  position: relative;
+  top: auto;
+  left: auto;
+}
+
+@media (max-width: 760px) {
+  .obs-reveal .streak-celebration {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .obs-hud .obs-time {
+    font-size: 32px;
+  }
+  .obs-hud .obs-message > strong,
+  .obs-root > .public-award strong {
+    font-size: 16px;
+  }
+  .obs-reveal {
+    margin-top: 24px;
+  }
+}
+@media (forced-colors: active) {
+  .obs-root :is(.obs-hud, .streak-celebration),
+  .obs-root > .public-award {
+    border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+}

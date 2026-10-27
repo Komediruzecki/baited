@@ -71,13 +71,13 @@ function finished(view: GameView, streakBefore: number): Announcement | null {
   const text = (() => {
     switch (result.outcome) {
       case 'caught': {
-        const streak = view.score.streak > 1 ? `, ${view.score.streak} in a row!` : '.';
+        const streak = view.score.streak > 1 ? ` 🔥 ${view.score.streak} in a row!` : '';
         const progress = !mission
           ? ''
           : mission.status === 'complete'
             ? ' Mission complete: 3 of 3!'
             : ` Mission: ${mission.completed} of 3.`;
-        return `🎣 Baited! The streamer said ${word ?? 'it'} after ${result.elapsed}s. Chat wins${streak}${progress}`;
+        return `🎣 Baited! The streamer said ${word ?? 'it'} after ${result.elapsed}s. Chat wins.${streak}${progress}`;
       }
       case 'escaped':
         if (result.reason === 'guess')
@@ -98,19 +98,19 @@ function finished(view: GameView, streakBefore: number): Announcement | null {
   return text ? { key: 'result', ttl: 30000, text: text + nextRound(view) } : null;
 }
 
-/** A win that lands on a streak card's tier gets its own post, after the result. */
+/** A win that lands on a badge tier gets its own post, after the result. */
 export function badgeAnnouncement(view: GameView): Announcement | null {
   const result = view.result;
   const tier = result?.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
   if (!tier) return null;
   const next = nextStreakTier(tier.count);
-  const after = next ? ` Next card: ${next.name} at ${next.count}.` : ' That is the rarest card.';
+  const after = next ? ` Next badge: ${next.name} at ${next.count}.` : ' That is the top badge.';
   return {
     key: 'badge',
     ttl: 30000,
     text: result!.newBadge
-      ? `🃏 New streak card: ${tier.name} edition! Chat won ${tier.count} in a row.${after}`
-      : `🃏 ${tier.count} in a row: the ${tier.name} card again!${after}`,
+      ? `🏅 New streak badge: ${tier.name}! Chat won ${tier.count} in a row.${after}`
+      : `🏅 ${tier.count} in a row: ${tier.name} again!${after}`,
   };
 }
 
@@ -220,13 +220,13 @@ export function scoreText(view: GameView) {
 export function streakText(view: GameView) {
   const { streak, best } = view.score;
   const next = nextStreakTier(streak);
-  const target = next ? ` Next card: ${next.name} at ${next.count} in a row.` : '';
+  const target = next ? ` Next badge: ${next.name} at ${next.count} in a row.` : '';
   const badges = view.badges.length
-    ? ` Streak cards: ${view.badges.length} of ${streakTiers.length}.`
+    ? ` Badges: ${view.badges.length} of ${streakTiers.length}.`
     : '';
   if (streak === 0) return `No streak running. Best: ${best}. Win a round to start one.${badges}`;
   if (streak === 1) return `Chat won the last round. Best: ${best}.${target}${badges}`;
-  return `🃏 Chat is on a ${streak}-win streak. Best: ${best}.${target}${badges}`;
+  return `🔥 Chat is on a ${streak}-win streak. Best: ${best}.${target}${badges}`;
 }
 
 export function topText(view: GameView) {

@@ -1,7 +1,7 @@
 import React, { useId } from 'react';
 import { glassOptics, glassRules } from './CardGlass';
 import { CardArt } from './CardArt';
-import { cardArtFile, finishArt, wordSize, type StreakFinish } from '../extension/presentation.js';
+import { cardArtFile, wordSize } from '../extension/presentation.js';
 import catalogue from '../shared/card-review-catalogue.json';
 
 // The landing's selected card (packages/landing/selected-cards): a Glass face whose
@@ -12,8 +12,7 @@ import catalogue from '../shared/card-review-catalogue.json';
 const optics = glassOptics.s;
 const rules = glassRules(optics.pitch);
 const inks = new Map(catalogue.map((card) => [card.word, card.ink]));
-const base = import.meta.env?.BASE_URL ?? '/';
-const cx = (...values: (string | false | null | undefined)[]) => values.filter(Boolean).join(' ');
+const cx =(...values: (string | false | null | undefined)[]) => values.filter(Boolean).join(' ');
 
 /** The printed ink of a word the caller may already show. Unknown words print in paper. */
 export const inkFor = (word?: string | null) => (word ? inks.get(word.toLowerCase()) : undefined);
@@ -76,8 +75,6 @@ export function GlassCard({
   question,
   footer,
   progress,
-  finish,
-  swatch = false,
   className,
   label,
   wordAs: Word = 'strong',
@@ -96,24 +93,18 @@ export function GlassCard({
   footer?: React.ReactNode;
   /** Time left, 0 to 1, drawn along the footer rule. */
   progress?: number | null;
-  /** A streak card's Card Lab finish instead of Glass. */
-  finish?: StreakFinish | null;
-  /** Small cards use the finish's swatch texture. */
-  swatch?: boolean;
   className?: string;
   label?: string;
 }) {
-  const texture = finish ? finishArt(finish, 'client', swatch) : null;
   return (
     <div
       className={cx('glass-card', className)}
-      data-finish={finish ?? undefined}
       data-art={cardArtFile(word) ? 'art' : 'word'}
       role={label ? 'img' : undefined}
       aria-label={label}
     >
       <div className="glass-card__face">
-        {finish ? texture && <img className="glass-card__finish" src={`${base}${texture.slice(1)}`} alt="" decoding="async" /> : <GlassField />}
+        <GlassField />
         <div className="glass-card__top">
           {chip && <span className="glass-card__chip">{chip}</span>}
           {level ? (
@@ -122,7 +113,7 @@ export function GlassCard({
         </div>
         <div className="glass-card__art">
           <span className="glass-card__square">
-            {!finish && <GlassLens />}
+            <GlassLens />
             <CardArt word={word} />
           </span>
         </div>

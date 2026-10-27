@@ -15,8 +15,7 @@
     watching the same channel sees its back. OWN-WORLD: The landing's selected
     card: a Glass face with the item in its own ink, and the Mosaic back.
     STORY: The card lands face down, turns over for chat, and turns over for
-    everyone when the round is decided. A streak milestone reprints it in a
-    Card Lab finish.
+    everyone when the round is decided. Chat's streak shows as fire.
     FIRST VIEWPORT: Transparent video. One card at the right edge, clear of the
     title and player controls, with a minimise tab.
     FORM: A 5:7 card sized from the player height. Nothing is drawn between rounds. -->
@@ -29,13 +28,12 @@
               <svg class="glass-field" viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
                 <path id="field-rules" fill="none" stroke="#fffdf7" stroke-opacity="0.22" stroke-width="1.5" />
               </svg>
-              <img class="face-finish" id="front-finish" alt="" width="720" height="1008" hidden />
               <div class="face-top">
                 <span class="chip" id="front-chip"></span>
                 <span class="chip chip-streak" id="front-streak" hidden
-                  ><svg viewBox="0 0 10 10" aria-hidden="true" focusable="false">
-                    <path d="M1 7h2v2H1zM3 5h2v4H3zM5 3h2v6H5zM7 1h2v8H7z" /></svg
-                  ><span id="front-streak-copy"></span
+                  ><img src="./assets/streak-flame.svg" alt="" width="16" height="18" /><span
+                    id="front-streak-copy"
+                  ></span
                 ></span>
                 <span class="chip pips" id="front-pips" aria-hidden="true" hidden><i></i><i></i><i></i></span>
               </div>
@@ -71,6 +69,9 @@
                     </svg>
                   </span>
                   <img class="face-art-image" id="front-art" alt="" width="1254" height="1254" hidden />
+                  <span class="badge-medal" id="front-medal" hidden
+                    ><img id="front-medal-art" alt="" width="96" height="96"
+                  /></span>
                 </span>
               </div>
               <div class="face-plate">
@@ -80,6 +81,7 @@
                   <ul class="face-clues" id="front-clues" aria-labelledby="front-rules-label"></ul>
                 </div>
                 <p class="face-note" id="front-note"></p>
+                <ol class="face-row" id="front-row" aria-label="Wins in a row" hidden></ol>
                 <p class="face-question" id="front-question"></p>
                 <div class="face-footer">
                   <span class="face-logo"><span class="baited-glyph"></span></span>
@@ -91,9 +93,9 @@
             <div class="face face-back" id="face-back" aria-hidden="true">
               <span class="back-mark"><span class="baited-glyph"></span></span>
               <span class="chip chip-streak back-streak" id="back-streak" hidden
-                ><svg viewBox="0 0 10 10" aria-hidden="true" focusable="false">
-                  <path d="M1 7h2v2H1zM3 5h2v4H3zM5 3h2v6H5zM7 1h2v8H7z" /></svg
-                ><span id="back-streak-copy"></span
+                ><img src="./assets/streak-flame.svg" alt="" width="16" height="18" /><span
+                  id="back-streak-copy"
+                ></span
               ></span>
               <div class="back-plate">
                 <span class="back-copy" id="back-copy">Chat has the word.</span>

@@ -140,7 +140,7 @@ export function fixtureState(mode, role, at, now = Date.now()) {
           : {}),
       }
     : null;
-  // A confirmed catch lands chat's streak on five, the Velvet card.
+  // A confirmed catch lands chat's streak on five, the On fire badge.
   const result =
     phase === 'cooldown'
       ? {

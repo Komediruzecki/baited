@@ -48,9 +48,9 @@ import { ResultCard } from './ResultCard';
 import { CardBack } from './CardBack';
 import { CatchDecision } from './CatchDecision';
 import { ObsHud } from './ObsHud';
-import { nextStreakTier } from '../extension/presentation.js';
+import { nextStreakTier, streakMilestone } from '../extension/presentation.js';
 import { GlassCard } from './GlassCard';
-import { StreakCards, StreakCelebration, StreakCount, StreakSlots } from './streak';
+import { StreakBadge, StreakBadges, StreakCelebration, StreakCount, StreakRow } from './streak';
 import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
@@ -80,6 +80,7 @@ import './public-refresh.css';
 import './landing-shell.css';
 import './chat-bot.css';
 import './streak.css';
+import './obs-twitch.css';
 
 const ProductReview = React.lazy(() => import('./ProductReview'));
 const CardDesignLab = React.lazy(() => import('./CardDesignLab'));
@@ -1447,7 +1448,7 @@ function Community({ game: g }: { game: GameView }) {
         <div><dt>Rounds played</dt><dd>{g.score.played}</dd></div>
         <div><dt>Chatting now</dt><dd>{g.participants}</dd></div>
       </dl>
-      <StreakCards game={g} />
+      <StreakBadges game={g} />
       <div className="bottom-grid">
         <section className="panel">
           <div className="section-heading">
@@ -1789,11 +1790,14 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
   const stale = offline;
   const showCard = !stale && finished && !!g.result && ['caught', 'escaped'].includes(g.result.outcome) && now + offset.current - g.result.at < 5500;
   if (overlay)
-    return <div className={cx('obs-root', !stale && g.score.streak >= 2 && 'obs-root--streak')}>
+    return <div className="obs-root">
       {!stale && <PublicAward award={g.history[0]?.award} />}
       <ObsHud game={g} timeLeft={fmt(ms)} now={now} offset={offset.current} offline={stale} showCard={showCard} />
-      {showCard && g.result && <ResultCard key={`${g.result.id}:${g.result.outcome}`} result={g.result} broadcast age={now + offset.current - g.result.at} />}
-      {showCard && g.result && <StreakCelebration key={`streak:${g.result.id}`} result={g.result} streak={g.score.streak} age={now + offset.current - g.result.at} />}
+      {/* In flow under the HUD, so the reveal clears it whatever the HUD's height. */}
+      {showCard && g.result && <div className="obs-reveal">
+        <ResultCard key={`${g.result.id}:${g.result.outcome}`} result={g.result} broadcast age={now + offset.current - g.result.at} />
+        <StreakCelebration key={`streak:${g.result.id}`} result={g.result} streak={g.score.streak} age={now + offset.current - g.result.at} />
+      </div>}
     </div>;
   const playing = active || paused || settling;
   const visibleWord = stale ? undefined : playing ? g.round?.target : finished ? g.result?.word : undefined;
@@ -1849,6 +1853,15 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
       <aside className="viewer-support" aria-label="Round status and how to play">
         <div className="viewer-state"><h1>{heading}</h1><p>{detail}</p>
           {won && !stale && <p className="viewer-next">{g.nextAt !== null && g.nextAt > now + offset.current ? `Next round in ${fmt(g.nextAt - (now + offset.current))}` : 'Waiting for the streamer.'}</p>}
+          {won && !stale && g.result?.milestone && streakMilestone(g.result.milestone) && (
+            <p className="viewer-badge">
+              <StreakBadge tier={streakMilestone(g.result.milestone)!} size={48} />
+              <span>
+                {g.result.newBadge ? 'New streak badge' : 'Streak badge'}:{' '}
+                <strong>{streakMilestone(g.result.milestone)!.name}</strong>, {g.result.milestone} in a row.
+              </span>
+            </p>
+          )}
         </div>
         <ul className="viewer-playbook">
           <li><MessageSquare size={20} /><span>Steer the conversation.</span></li>
@@ -1858,8 +1871,8 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
         {!stale && g.score.streak >= 2 && (
           <div className="viewer-streak">
             <StreakCount count={g.score.streak} />
-            <StreakSlots count={g.score.streak} />
-            <p>{nextStreakTier(g.score.streak) ? `Win ${nextStreakTier(g.score.streak)!.count} in a row to print the ${nextStreakTier(g.score.streak)!.name} card. Best so far: ${g.score.best}.` : `Every streak card is printed. Best so far: ${g.score.best}.`}</p>
+            <StreakRow count={g.score.streak} />
+            <p>{nextStreakTier(g.score.streak) ? `Win ${nextStreakTier(g.score.streak)!.count} in a row for the ${nextStreakTier(g.score.streak)!.name} badge. Best so far: ${g.score.best}.` : `Every streak badge is unlocked. Best so far: ${g.score.best}.`}</p>
           </div>
         )}
         <p className="viewer-scoreline">{stale && <span>Last known: </span>}<strong>{g.score.wins}</strong> {g.score.wins === 1 ? 'chat win' : 'chat wins'} <span aria-hidden="true">·</span> streak <strong>{g.score.streak}</strong></p>

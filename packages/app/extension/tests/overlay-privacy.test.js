@@ -97,21 +97,23 @@ test('overlay shows the face to viewers, only the back to the broadcaster, and c
     assert.equal(card().dataset.face, 'front');
     assert.equal(card().dataset.outcome, 'caught');
     assert.equal(elements.get('front-word').textContent, 'VOLCANO');
-    assert.equal(card().dataset.finish, undefined);
-    // A win that lands on a streak tier is reprinted in that tier's finish.
+    assert.equal(elements.get('front-medal').hidden, true);
+    // A win that lands on a badge shows fire coins and the badge's medallion.
     authorize(auth('broadcaster-streak-token'));
     await respond(3, { ...state(false, 'VOLCANO', 'cooldown', { id: 'round-two', word: 'VOLCANO', outcome: 'caught', milestone: 5, newBadge: true }),
       room: { ...state(false, 'VOLCANO', 'cooldown').room, result: { id: 'round-two', word: 'VOLCANO', outcome: 'caught', milestone: 5, newBadge: true }, score: { streak: 5, best: 5 } } });
-    assert.equal(card().dataset.finish, 'velvet');
-    assert.equal(elements.get('front-finish').attributes.get('src'), './assets/finish-velvet.webp');
-    assert.equal(elements.get('front-chip').textContent, 'New streak card');
-    assert.equal(elements.get('front-note').textContent, 'Velvet edition · 5 in a row');
-    assert.equal(elements.get('front-question').textContent, '5 more in a row for the Engraved card.');
+    assert.equal(elements.get('front-medal').hidden, false);
+    assert.equal(elements.get('front-medal-art').attributes.get('src'), './assets/streak-blaze.svg');
+    assert.equal(elements.get('front-row').children.length, 5);
+    assert.equal(elements.get('front-chip').textContent, 'New streak badge');
+    assert.equal(elements.get('front-note').textContent, 'On fire · 5 in a row');
+    assert.equal(elements.get('front-question').textContent, '5 more in a row for Eruption.');
 
     authorize(auth('viewer-again-private-token'));
     await respond(4, state(true, 'PENGUIN'));
     assert.match(allText(), /PENGUIN/);
-    assert.equal(card().dataset.finish, undefined);
+    assert.equal(elements.get('front-medal').hidden, true);
+    assert.equal(elements.get('front-medal-art').attributes.has('src'), false);
     helperError(new Error('Do not expose Helper details'));
     assert.doesNotMatch(allText(), /PENGUIN|Lava|never build|Helper details|private-token/);
     assert.equal(elements.get('front-word').style.color, '');

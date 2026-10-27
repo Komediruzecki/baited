@@ -16,19 +16,12 @@ The Extension ZIP includes this original mask and excludes the archived B varian
 
 The eighteen `card-*.png` files are byte-identical copies of the corresponding approved illustrations in `public/cards/proofs/`: banana, penguin, microwave, dragon, volcano, monocle, pizza, robot, rocket, pirate, cactus, jellyfish, telescope, saxophone, octopus, boomerang, narwhal and parachute. They were originally generated through ChatGPT image generation for this project and approved by the owner. The source images remain unchanged.
 
-## Card Lab materials, 2026-10-27
+## Mosaic back, 2026-10-27
 
-The overlay card is the landing's selected card: a code-drawn Glass face and the Mosaic back. These files are byte-identical copies of the Card Lab runtime textures in `public/card-lab/`, renamed for the package:
+The overlay card is the landing's selected card: a code-drawn Glass face and the Mosaic back. `back-mosaic.webp` is a byte-identical copy of the Card Lab texture `public/card-lab/backs/back-mosaic.webp`; its generation prompt, hashes, crop and encoder settings are recorded in `docs/card-surface-assets/`.
 
-| Extension file | Card Lab source | Use |
-| --- | --- | --- |
-| `back-mosaic.webp` | `backs/back-mosaic.webp` | The card's back, which the streamer sees |
-| `finish-dither.svg` | `finishes/dither.svg` | Dither streak card (3 in a row) |
-| `finish-velvet.webp` | `finishes/front-velvet.webp` | Velvet streak card (5) |
-| `finish-engraved.webp` | `finishes/front-engraved.webp` | Engraved streak card (10) |
-| `finish-spotlight.webp` | `finishes/front-spotlight.webp` | Spotlight streak card (15) |
-| `finish-prism.webp` | `finishes/front-prism.webp` | Prism streak card (25) |
+## Streak flames, 2026-10-27
 
-Their generation prompts, hashes, crops and encoder settings are recorded in `docs/card-surface-assets/`. The Stock streak card (2 in a row) is plain charcoal drawn in CSS and needs no texture. No new artwork was made for streaks.
+`streak-flame.svg`, `streak-twin.svg`, `streak-blaze.svg` and `streak-flame-violet.svg` are original pixel flames for chat's win-streak badges. Each was generated from a hand-drawn silhouette (a 16 × 18 or 18 × 18 grid) with a one-pixel outline and heat layers in the volcano card's palette, written as crisp `<rect>` runs. The twin flame replaced the bomb artwork on the third badge. The copies in `public/brand/` are identical. Higher badge tiers reuse the volcano, dragon and rocket cards above; no new raster art was made.
 
 `extension/presentation.js` lists the exact supported artwork names. Unknown words receive no art. The viewer removes the image source when authorization or role changes because the filename itself can reveal the word. The packaged illustrations are a public artwork set; the active word is selected and authorized by the server.

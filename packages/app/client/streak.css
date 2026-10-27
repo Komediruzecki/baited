@@ -1,268 +1,381 @@
-/* Chat's win streak in the landing's card language. Wins are small Glass cards, the
-   rounds ahead lie face down as Mosaic backs, and milestones are Card Lab finishes. */
+/* Chat win streak: flame counter, coin row and badge medallions.
+   Shared by OBS, the viewer room and the studio. OBS runs an older Chromium,
+   so this file avoids color-mix(), individual transform properties and
+   container queries. */
+.streak-flame {
+  display: inline-block;
+  height: auto;
+  image-rendering: pixelated;
+  vertical-align: -0.2em;
+}
+
+/* Medallion: a two-tone ring, a dark core with a glow, and pixel art that
+   breaks out of the top of the ring. */
+.streak-badge {
+  --badge-size: 96px;
+  --ring-a: #ffcf7a;
+  --ring-b: #c4561c;
+  --core: #3a1d12;
+  --glow: #8a3a16;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--badge-size);
+  height: var(--badge-size);
+  border: calc(var(--badge-size) * 0.07) solid transparent;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 40%, var(--glow) 0, var(--core) 64%) padding-box,
+    conic-gradient(
+        from 200deg,
+        var(--ring-a),
+        var(--ring-b) 25%,
+        var(--ring-a) 50%,
+        var(--ring-b) 75%,
+        var(--ring-a)
+      )
+      border-box;
+  box-shadow:
+    0 calc(var(--badge-size) * 0.05) 0 -1px #0b0710,
+    0 calc(var(--badge-size) * 0.1) calc(var(--badge-size) * 0.22) #00000080,
+    inset 0 0 0 1px #ffffff1f;
+}
+.streak-badge::after {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 1px solid #ffffff14;
+  pointer-events: none;
+}
+.streak-badge__art {
+  position: relative;
+  z-index: 1;
+  width: 84%;
+  height: 84%;
+  margin-top: -16%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 calc(var(--badge-size) * 0.03) 0 #0009);
+}
+.streak-badge--amber {
+  --ring-a: #fff3a6;
+  --ring-b: #f08a17;
+  --core: #3b2510;
+  --glow: #94591a;
+}
+.streak-badge--flame {
+  --ring-a: #ffb36b;
+  --ring-b: #d7261a;
+  --core: #3d1214;
+  --glow: #9a2a17;
+}
+.streak-badge--magma {
+  --ring-a: #ff8a5c;
+  --ring-b: #6e1730;
+  --core: #26090f;
+  --glow: #6a1c19;
+}
+.streak-badge--violet {
+  --ring-a: #e2ccff;
+  --ring-b: #6b2cc4;
+  --core: #22123a;
+  --glow: #4f2a86;
+}
+.streak-badge--cosmic {
+  --ring-a: #9de8ff;
+  --ring-b: #5b2bd6;
+  --core: #12173a;
+  --glow: #2c3c8a;
+}
+.streak-badge--gold {
+  --ring-a: #fffc79;
+  --ring-b: #c98a10;
+  --core: #2a1540;
+  --glow: #6b3aa8;
+}
+.streak-badge.is-locked {
+  filter: grayscale(1) brightness(0.55);
+  opacity: 0.7;
+}
+
+/* Coin row: wins so far, the newest ringed, the next ones dim. */
+.streak-row {
+  --coin: 34px;
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.streak-row > li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.streak-row__coin {
+  display: grid;
+  place-items: center;
+  width: var(--coin);
+  height: var(--coin);
+  border-radius: 50%;
+  background: #2f2a36;
+  box-shadow: inset 0 0 0 1px #4a4352;
+}
+.streak-row__coin img {
+  width: 58%;
+  height: auto;
+  image-rendering: pixelated;
+  opacity: 0.22;
+  filter: grayscale(1);
+}
+.streak-row > .is-won .streak-row__coin,
+.streak-row > .is-current .streak-row__coin {
+  background: radial-gradient(circle at 50% 35%, #ffc65a 0, #f07a1e 70%);
+  box-shadow:
+    inset 0 -2px 0 #b8481466,
+    0 2px 0 #00000059;
+}
+.streak-row > .is-won img,
+.streak-row > .is-current img {
+  opacity: 1;
+  filter: none;
+}
+.streak-row > .is-current .streak-row__coin {
+  box-shadow:
+    inset 0 -2px 0 #b8481466,
+    0 0 0 3px #242426,
+    0 0 0 5px #ffd23a;
+}
+.streak-row__n {
+  font: 650 11px/1 Inter, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: #8d8596;
+}
+.streak-row > .is-won .streak-row__n,
+.streak-row > .is-current .streak-row__n {
+  color: #ffae4a;
+}
+/* A tier ahead gets a small marker so chat can see the next badge coming. */
+.streak-row > .has-tier.is-ahead .streak-row__coin {
+  box-shadow:
+    inset 0 0 0 1px #4a4352,
+    0 0 0 2px #242426,
+    0 0 0 3px #c9a8ff99;
+}
+
+/* Big counter: 3 + flame + "in a row". */
 .streak-count {
   display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
-  color: var(--b-paper);
+  align-items: center;
+  gap: 8px;
 }
-.streak-count > strong {
-  font: 400 44px/1 var(--b-display);
-  font-variant-numeric: tabular-nums;
+.streak-count strong {
+  font: 400 52px/1 var(--bait-display, 'Russo One'), sans-serif;
+  color: #fffdf7;
   letter-spacing: -0.02em;
 }
 .streak-count > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--b-lilac);
-  font: 600 12px/1 var(--b-ui);
-  letter-spacing: 0.06em;
+  font: 650 13px/1.2 Inter, sans-serif;
+  color: #ffae4a;
   text-transform: uppercase;
-  white-space: nowrap;
+  letter-spacing: 0.06em;
 }
 
-.streak-slots {
-  display: flex;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* Studio achievements. */
+.streak-panel {
+  margin-top: 24px;
 }
-.streak-slots > li {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  color: var(--b-muted);
-  font: 600 11px/1 var(--b-ui);
-  font-variant-numeric: tabular-nums;
-}
-.streak-slots__card {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  aspect-ratio: 5 / 7;
-  overflow: hidden;
-  border: 1px solid var(--b-edge);
-  border-top-color: var(--b-edge-lit);
-  border-radius: 3px 5px 3px 3px;
-  background: #25113f url('/card-lab/backs/back-mosaic-swatch.webp') center / cover no-repeat;
-  color: var(--b-paper);
-}
-.streak-slots__card > img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.streak-slots__card > svg {
-  position: relative;
-}
-.streak-slots > li:is(.is-won, .is-current) {
-  color: var(--b-lilac);
-}
-.streak-slots > li:is(.is-won, .is-current) .streak-slots__card {
-  background:
-    radial-gradient(70% 36% at 100% 0, #c9a8ff59, #c9a8ff00),
-    linear-gradient(#9146ff, #5b25c2 30%, #2a1160 56%, #120d1a 82%);
-}
-.streak-slots > li[data-finish='stock']:is(.is-won, .is-current) .streak-slots__card {
-  background: var(--b-face);
-}
-.streak-slots > li.is-current {
-  color: var(--b-paper);
-}
-.streak-slots > li.is-current .streak-slots__card {
-  box-shadow:
-    0 0 0 2px #120d1a,
-    0 0 0 3.5px var(--b-lilac);
-  transform: translateY(-3px) rotate(-3deg);
-}
-.streak-slots > li.is-ahead .streak-slots__card {
-  opacity: 0.6;
-}
-/* A milestone still ahead is marked on its face-down card. */
-.streak-slots > li.has-tier.is-ahead .streak-slots__card {
-  opacity: 1;
-  box-shadow: 0 0 0 1px var(--b-lilac);
-}
-
-/* Studio: the collection of streak cards. */
 .streak-panel__now {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px 28px;
-  padding: 4px 0 22px;
-  border-bottom: 1px solid var(--b-line);
+  gap: 18px 28px;
+  padding: 6px 0 22px;
+  border-bottom: 1px solid #3c3444;
 }
-.streak-panel__now > p {
-  max-width: 46ch;
+.streak-panel__now .muted {
+  flex: 1 1 260px;
   margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
 }
-.streak-collection {
+.streak-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
   gap: 26px 16px;
-  margin: 22px 0 0;
-  padding: 0;
+  margin: 0;
+  padding: 30px 0 4px;
   list-style: none;
 }
-.streak-collection > li {
+.streak-grid > li {
   display: grid;
   justify-items: center;
-  gap: 4px;
+  gap: 3px;
   text-align: center;
 }
-.streak-collection > li > .streak-card {
-  margin-bottom: 12px;
+.streak-grid .streak-badge {
+  margin-bottom: 10px;
 }
-.streak-collection strong {
-  color: var(--b-paper);
-  font: 400 17px/1.2 var(--b-display);
-  letter-spacing: -0.01em;
+.streak-grid strong {
+  font-size: 14px;
+  font-weight: 650;
+  color: #fffdf7;
 }
-.streak-collection span {
-  color: var(--b-copy);
-  font: 500 12px/1.4 var(--b-ui);
+.streak-grid span {
+  font-size: 12px;
+  color: #ffae4a;
 }
-.streak-collection small {
-  color: var(--b-muted);
-  font: 500 11px/1.4 var(--b-ui);
+.streak-grid small {
+  font-size: 11px;
+  color: #9d8cab;
 }
-.streak-collection > li.is-locked strong {
-  color: var(--b-muted);
-}
-.streak-card {
-  position: relative;
-  display: block;
-  width: var(--glass-card-width);
-  aspect-ratio: 5 / 7;
-}
-.streak-card > .glass-card {
-  --glass-card-width: 100%;
-}
-.streak-card.is-locked {
-  opacity: 0.72;
+.streak-grid .is-locked strong,
+.streak-grid .is-locked span {
+  color: #9d8cab;
 }
 
-/* Viewer room: the streak beside the card. */
-.viewer-streak {
-  display: grid;
-  gap: 14px;
-  padding: 18px 0;
-  border-block: 1px solid #ffffff1f;
-}
-.viewer-streak > p {
-  margin: 0;
-  color: var(--b-copy);
-  font: 400 13px/1.5 var(--b-ui);
-}
-
-/* OBS: a streak row inside the HUD, and a note beside a reprinted card. */
+/* OBS HUD strip, between the round and the score. */
 .obs-hud .obs-streak {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 10px 22px;
-  background: #2c2336;
-  color: var(--b-copy);
+  gap: 14px;
+  padding: 12px 22px;
+  border-top: 1px solid #4a3530;
+  background: linear-gradient(90deg, #3a2318, #2a2026 70%);
 }
-.obs-hud .obs-streak .streak-count > strong {
-  font-size: 30px;
-}
-.obs-hud .obs-streak__next {
-  flex: 1;
-  min-width: 0;
-  color: var(--b-muted);
-  font: 500 11px/1.3 var(--b-ui);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.obs-hud .obs-streak .streak-slots {
-  gap: 7px;
-}
-.obs-hud .obs-streak .streak-slots__card {
-  width: 22px;
-}
-.obs-hud .obs-streak .streak-slots > li {
+.obs-streak__count {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
+}
+.obs-streak__count strong {
+  font: 400 40px/1 var(--bait-display, 'Russo One'), sans-serif;
+  color: #fffdf7;
+}
+.obs-streak__label {
+  display: grid;
+  gap: 4px;
+  font: 700 13px/1.2 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  color: #ffae4a;
+}
+.obs-streak__label small {
+  font-size: 10px;
+  font-weight: 650;
+  color: #c9a8ff;
+}
+.obs-hud .obs-streak .streak-row {
+  --coin: 26px;
+  gap: 6px;
+  margin-left: auto;
+}
+.obs-hud .obs-streak .streak-row > .is-current .streak-row__coin {
+  box-shadow:
+    inset 0 -2px 0 #b8481466,
+    0 0 0 2px #2c2124,
+    0 0 0 4px #ffd23a;
+}
+.obs-hud .obs-streak .streak-row__n {
   font-size: 10px;
 }
-.obs-root--streak .result-deal--broadcast {
-  top: 268px;
-}
-.streak-celebration {
-  position: absolute;
-  top: 196px;
-  left: 360px;
+
+/* Viewer room: the streak under the score, and a badge line on a winning reveal. */
+.viewer-streak {
   display: grid;
-  justify-items: start;
-  gap: 12px;
-  width: 270px;
-  padding: 20px 22px 22px;
-  border: 1px solid #68616f;
-  border-top-color: var(--b-lilac);
-  border-radius: 12px;
-  background: var(--b-face);
-  color: var(--b-paper);
-  box-shadow: 0 12px 28px -12px #0009;
-  animation: broadcast-deal 5500ms linear var(--result-age) both;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid #4a3a52;
+  border-radius: 6px;
+  background: linear-gradient(160deg, #33231c, #241f29 60%);
 }
-.obs-root--streak .streak-celebration {
-  top: 268px;
+.viewer-streak p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #c7b9d2;
 }
-.streak-celebration__kicker {
-  color: var(--b-lilac);
-  font: 600 12px/1.4 var(--b-ui);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.viewer-badge {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: #f2e9d8;
 }
-.streak-celebration__name {
-  font: 400 30px/1.05 var(--b-display);
-  letter-spacing: -0.02em;
+.viewer-badge strong {
+  color: #fffc79;
 }
-.streak-celebration__next {
-  color: var(--b-muted);
-  font: 500 12px/1.4 var(--b-ui);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+/* The viewer room styles every paragraph in its state block; keep the badge line's own look. */
+.viewer-room .viewer-state p.viewer-badge {
+  margin-top: 14px;
+  color: #f2e9d8;
+  font: 400 13px/1.5 var(--b-ui);
 }
 
-@media (max-width: 760px) {
-  .streak-panel__now {
-    grid-template-columns: 1fr;
-    justify-items: start;
-  }
-  .streak-celebration {
-    display: none;
-  }
+/* OBS: the medallion arrives beside the result card, then both leave. */
+.streak-celebration {
+  position: absolute;
+  top: 200px;
+  left: 362px;
+  width: 300px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 26px 22px 24px;
+  border: 1px solid #fffc79;
+  border-radius: 14px 24px 14px 14px;
+  background: radial-gradient(ellipse at 50% 30%, #4b2a1a 0, #242426 62%);
+  box-shadow:
+    0 6px 0 -2px #120d1a,
+    0 16px 32px #0007;
+  color: #fffdf7;
+  text-align: center;
+  animation: broadcast-deal 5500ms linear var(--result-age) both;
 }
-@media (max-width: 600px) {
-  .obs-root--streak .result-deal--broadcast {
-    top: 300px;
+.streak-celebration__kicker {
+  font: 700 14px/1.4 Inter, sans-serif;
+  letter-spacing: 0.08em;
+  color: #fffc79;
+}
+.streak-celebration .streak-badge {
+  margin: 14px 0 6px;
+  animation: badge-pop 700ms cubic-bezier(0.22, 1.4, 0.36, 1) calc(500ms + var(--result-age)) both;
+}
+.streak-celebration__name {
+  font: 400 34px/1.1 var(--bait-display, 'Russo One'), sans-serif;
+  color: #fffc79;
+  text-transform: uppercase;
+}
+.streak-celebration__count {
+  font: 700 16px/1.4 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  color: #ffae4a;
+}
+.streak-celebration .streak-row {
+  margin-top: 10px;
+}
+.streak-celebration__next {
+  margin-top: 6px;
+  font: 650 12px/1.4 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  color: #c9a8ff;
+}
+@keyframes badge-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-20deg);
   }
-  .obs-hud .obs-streak {
-    flex-wrap: wrap;
-    gap: 10px 14px;
-    padding: 10px 16px;
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .streak-celebration {
-    animation: none;
-  }
-  .streak-slots > li.is-current .streak-slots__card {
-    transform: none;
-  }
-}
-@media (forced-colors: active) {
-  .streak-slots__card,
-  .streak-celebration {
-    background: Canvas;
-    border-color: CanvasText;
-    forced-color-adjust: none;
+  .streak-celebration,
+  .streak-celebration .streak-badge {
+    animation: none !important;
   }
 }

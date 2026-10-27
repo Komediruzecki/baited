@@ -3,7 +3,7 @@ import type { GameView } from '../shared/types';
 import { productBrand } from './ui';
 import { Card, Pause } from './pixel-icons';
 import { MissionStatus } from './mechanics';
-import { StreakCount, StreakSlots } from './streak';
+import { StreakFlame, StreakRow } from './streak';
 import { nextStreakTier, winLabel } from '../extension/presentation.js';
 
 export function ObsHud({
@@ -106,11 +106,19 @@ export function ObsHud({
       {!offline && <MissionStatus compact game={g} now={now} offset={offset} />}
       {!offline && streak >= 2 && (
         <div className="obs-streak">
-          <StreakCount count={streak} />
-          <span className="obs-streak__next">
-            {next ? `Next card · ${next.name} at ${next.count}` : 'Every streak card printed'}
+          <span className="obs-streak__count">
+            <strong>{streak}</strong>
+            <StreakFlame size={30} />
           </span>
-          <StreakSlots count={streak} />
+          <span className="obs-streak__label">
+            IN A ROW
+            {next && (
+              <small>
+                NEXT · {next.name.toUpperCase()} AT {next.count}
+              </small>
+            )}
+          </span>
+          <StreakRow count={streak} />
         </div>
       )}
       <div className="obs-score">

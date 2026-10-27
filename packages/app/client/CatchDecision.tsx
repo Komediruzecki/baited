@@ -67,7 +67,7 @@ export function CatchDecision({
         </p>
         {tier && (
           <p className="studio-result__streak">
-            {result.newBadge ? 'New streak card' : 'Streak card'}: <strong>{tier.name} edition</strong>,{' '}
+            🔥 {result.newBadge ? 'New streak badge' : 'Streak badge'}: <strong>{tier.name}</strong>,{' '}
             {tier.count} in a row.
           </p>
         )}

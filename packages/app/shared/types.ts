@@ -27,7 +27,7 @@ export interface Result {
   at: number;
   award?: { name: string };
   reason?: 'guess' | 'timer';
-  /** This win landed chat's streak on a streak card's tier. */
+  /** This win landed chat's streak on a badge tier. */
   milestone?: number;
   /** ...and unlocked that badge for the first time in this room. */
   newBadge?: boolean;
@@ -94,11 +94,8 @@ export interface GameView {
   voters: number;
   voteThreshold: number;
   leaders: Leader[];
-  /**
-   * Unlocked streak cards by tier count, with the caught word printed on each. `at` and
-   * `word` are null when the card was reached before they were kept.
-   */
-  badges: { count: number; at: number | null; word: string | null }[];
+  /** Unlocked streak badges by tier count; `at` is null when reached before dates were kept. */
+  badges: { count: number; at: number | null }[];
   connection: {
     status: 'offline' | 'connecting' | 'connected' | 'reconnecting' | 'error';
     detail: string;

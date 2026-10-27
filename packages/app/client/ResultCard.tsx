@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import type { GameView } from '../shared/types';
 import { CardBack } from './CardBack';
 import { GlassCard } from './GlassCard';
-import { streakMilestone } from '../extension/presentation.js';
 
 // Only a server-authorized result belongs here. OBS must never render a review.
 export function ResultCard({
@@ -19,8 +18,6 @@ export function ResultCard({
   if (broadcast && !['caught', 'escaped'].includes(result.outcome)) return null;
   const caught = result.outcome === 'caught';
   const review = result.outcome === 'review';
-  // A win that lands on a streak tier is reprinted in that tier's finish.
-  const tier = caught && result.milestone ? streakMilestone(result.milestone) : null;
   const verdict = review
     ? 'Heard'
     : caught
@@ -48,13 +45,7 @@ export function ResultCard({
         <div className="result-card__back" aria-hidden="true">
           <CardBack />
         </div>
-        <GlassCard
-          className="result-card__face"
-          word={result.word}
-          finish={tier?.finish}
-          chip={tier ? (result.newBadge ? 'New streak card' : 'Streak card') : verdict}
-          note={tier ? `${tier.name} edition · ${tier.count} in a row` : outcome}
-        />
+        <GlassCard className="result-card__face" word={result.word} chip={verdict} note={outcome} />
       </div>
     </div>
   );

@@ -109,17 +109,17 @@ export function glassRules(pitch = 12) {
   return path;
 }
 
-// Chat's win streak: consecutive community wins. Each tier prints chat a card in one of
-// the Card Lab finishes, unlocked once per room and celebrated whenever a streak lands on
-// it again. Glass is every round's own face, so it is not a reward.
+// Chat's win streak: consecutive community wins. Each tier is a fire badge, unlocked once
+// per room and celebrated whenever a streak lands on it again.
 export const streakTiers = Object.freeze(
   [
-    { count: 2, name: 'Stock', finish: 'stock' },
-    { count: 3, name: 'Dither', finish: 'dither' },
-    { count: 5, name: 'Velvet', finish: 'velvet' },
-    { count: 10, name: 'Engraved', finish: 'engraved' },
-    { count: 15, name: 'Spotlight', finish: 'spotlight' },
-    { count: 25, name: 'Prism', finish: 'prism' },
+    { count: 2, name: 'Spark', art: 'flame', tone: 'ember' },
+    { count: 3, name: 'Heating up', art: 'twin', tone: 'amber' },
+    { count: 5, name: 'On fire', art: 'blaze', tone: 'flame' },
+    { count: 10, name: 'Eruption', art: 'volcano', tone: 'magma' },
+    { count: 15, name: 'Dragonfire', art: 'dragon', tone: 'violet' },
+    { count: 25, name: 'Liftoff', art: 'rocket', tone: 'cosmic' },
+    { count: 50, name: 'Ultraviolet', art: 'ultraviolet', tone: 'gold' },
   ].map((tier) => Object.freeze(tier)),
 );
 
@@ -128,7 +128,7 @@ export function streakMilestone(count) {
   return streakTiers.find((tier) => tier.count === count) ?? null;
 }
 
-/** The next card a streak of this length is heading for. */
+/** The next badge a streak of this length is heading for. */
 export function nextStreakTier(count) {
   return streakTiers.find((tier) => tier.count > count) ?? null;
 }
@@ -146,14 +146,14 @@ export function streakRow(count, size = 5) {
   });
 }
 
-/**
- * A finish's printed texture: an `assets/` file name in the Extension, which ships the
- * full textures, or a Card Lab path elsewhere. Stock is plain charcoal and has none.
- */
-export function finishArt(finish, surface, swatch = false) {
-  if (finish === 'stock' || !streakTiers.some((tier) => tier.finish === finish)) return null;
-  if (surface === 'extension') return finish === 'dither' ? 'finish-dither.svg' : `finish-${finish}.webp`;
-  return finish === 'dither'
-    ? '/card-lab/finishes/dither.svg'
-    : `/card-lab/finishes/front-${finish}${swatch ? '-swatch' : ''}.webp`;
+const flameFiles = { flame: 'streak-flame.svg', twin: 'streak-twin.svg', blaze: 'streak-blaze.svg', ultraviolet: 'streak-flame-violet.svg' };
+
+/** Image for a tier's art: an `assets/` file name in the Extension, a site path elsewhere. */
+export function streakArtFile(art, surface) {
+  const card = { volcano: 'volcano', dragon: 'dragon', rocket: 'rocket' }[art];
+  if (surface === 'extension') return card ? `card-${card}.png` : flameFiles[art];
+  return card ? `/cards/proofs/${card}.png` : `/brand/${flameFiles[art]}`;
 }
+
+/** Every flame the Extension ships. */
+export const streakFlameFiles = Object.freeze(Object.values(flameFiles));

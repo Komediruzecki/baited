@@ -1,7 +1,7 @@
 /* The landing's selected card for every revealed face: studio results, the OBS
-   reveal, the viewer room and streak cards. The card's width sets everything in
-   it; one container unit is 3px on a full-size 300 × 420 card. Keep in parity with
-   extension/overlay.css and packages/landing/selected-cards. */
+   reveal and the viewer room. The card's width sets everything in it; one
+   container unit is 3px on a full-size 300 × 420 card. Keep in parity with
+   packages/landing/selected-cards. */
 .glass-card {
   position: relative;
   width: var(--glass-card-width, 190px);
@@ -39,17 +39,7 @@
     radial-gradient(70% 36% at 100% 0, #c9a8ff59, #c9a8ff00),
     linear-gradient(#9146ff, #5b25c2 30%, #2a1160 56%, #120d1a 82%);
 }
-.glass-card__finish {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  object-fit: cover;
-  object-position: 50% 0;
-  pointer-events: none;
-}
+
 .glass-card__top {
   position: relative;
   z-index: 1;
@@ -66,7 +56,7 @@
   min-width: 0;
   padding: 1cqw 2cqw;
   border-radius: 1.333cqw;
-  background: var(--glass-plate, #1a1522);
+  background: #1a1522;
   color: var(--b-paper);
   font: 600 max(9px, 3.333cqw) / 1 var(--b-ui);
   font-variant-numeric: tabular-nums;
@@ -86,7 +76,7 @@
   margin-left: auto;
   padding: 1.333cqw 1.667cqw;
   border-radius: 3.333cqw;
-  background: var(--glass-plate, #1a1522);
+  background: #1a1522;
 }
 .glass-card__pips i {
   width: max(5px, 2cqw);
@@ -169,8 +159,7 @@
   margin: 0 -2cqw -2cqw;
   padding: 1cqw 2cqw 2cqw;
   border-radius: 1cqw 1cqw 2.333cqw 2.333cqw;
-  background: var(--glass-plate, #1a1522);
-  box-shadow: inset 0 1px 0 var(--glass-plate-edge, #1a1522);
+  background: #1a1522;
 }
 /* Sizes follow the word's length so a small card never breaks a word. */
 .glass-card__word {
@@ -285,98 +274,6 @@
   background: var(--b-lilac);
 }
 
-/* Streak cards: a milestone win is reprinted in a Card Lab finish. Windows and plates
-   are drawn in code; the material comes from the texture. */
-.glass-card__square::before {
-  position: absolute;
-  z-index: -1;
-  pointer-events: none;
-}
-.glass-card[data-finish='stock'] .glass-card__face {
-  background: var(--b-face);
-}
-.glass-card[data-finish='stock'] .glass-card__square::before {
-  content: '';
-  inset: -4% -12% -8%;
-  background: radial-gradient(ellipse at 50% 72%, #4f2878aa 0, #3b247033 42%, transparent 70%);
-}
-.glass-card[data-finish='dither'] {
-  --glass-plate: #16121c;
-  --glass-plate-edge: #3b1a7a;
-}
-.glass-card[data-finish='dither'] .glass-card__face {
-  background: #0d0a12;
-}
-.glass-card[data-finish='dither'] .glass-card__finish {
-  image-rendering: pixelated;
-}
-.glass-card[data-finish='dither'] .glass-card__square::before {
-  content: '';
-  inset: 0;
-  background: #0d0a12;
-  box-shadow: 0 0 0 1.333cqw #3b1a7a;
-}
-.glass-card[data-finish='velvet'] {
-  --glass-plate: #211d26;
-  --glass-plate-edge: #d9cfe826;
-}
-.glass-card[data-finish='velvet'] .glass-card__face {
-  background: #140c1f;
-}
-.glass-card[data-finish='velvet'] .glass-card__square::before {
-  content: '';
-  inset: -3% -3% 0;
-  border-radius: 50% 50% 2.667cqw 2.667cqw / 26% 26% 2.667cqw 2.667cqw;
-  background: #08040e61;
-  box-shadow:
-    inset 0 3.333cqw 4.667cqw -2cqw #000c,
-    inset 0 0 0 1px #c9a8ff26;
-}
-.glass-card[data-finish='engraved'] {
-  --glass-plate: #1a1422;
-  --glass-plate-edge: #c9a8ff4d;
-}
-.glass-card[data-finish='engraved'] .glass-card__face {
-  background: #1c1328;
-}
-.glass-card[data-finish='engraved'] .glass-card__square::before {
-  content: '';
-  inset: -4%;
-  border-radius: 50%;
-  background: #1c1328;
-  box-shadow: 0 0 0 1px #c9a8ff59;
-}
-.glass-card[data-finish='spotlight'] {
-  --glass-plate: #16121c;
-  --glass-plate-edge: #c9a8ff99;
-}
-.glass-card[data-finish='spotlight'] .glass-card__square::before {
-  content: '';
-  inset: -7%;
-  border-radius: 50%;
-  background: #100c17;
-  box-shadow:
-    0 0 0 0.667cqw #9146ff,
-    0 0 0 1.667cqw #100c17,
-    0 0 0 2cqw #c9a8ff66;
-}
-.glass-card[data-finish='prism'] {
-  --glass-plate: #1d1824;
-  --glass-plate-edge: #c9a8ff80;
-}
-.glass-card[data-finish='prism'] .glass-card__face {
-  background: #0e0a16;
-}
-.glass-card[data-finish='prism'] .glass-card__square::before {
-  content: '';
-  inset: -4% -4% 0;
-  border-radius: 1.333cqw 4cqw 1.333cqw 1.333cqw;
-  background: #120b1fe6;
-  box-shadow:
-    inset 1px 1px 0 #e9dcff59,
-    inset -1px -1px 0 #000;
-}
-
 /* A small card keeps its word and art; its secondary lines step aside. */
 @container (max-height: 300px) {
   .glass-card__question,
@@ -431,9 +328,7 @@
     border-color: CanvasText;
   }
   .glass-card__field,
-  .glass-card__lens,
-  .glass-card__finish,
-  .glass-card__square::before {
+  .glass-card__lens {
     display: none;
   }
   .glass-card__word {

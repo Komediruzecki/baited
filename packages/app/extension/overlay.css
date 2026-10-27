@@ -146,17 +146,6 @@ body[data-surface='overlay'] {
     radial-gradient(70% 36% at 100% 0, #c9a8ff59, #c9a8ff00),
     linear-gradient(#9146ff, #5b25c2 30%, #2a1160 56%, #120d1a 82%);
 }
-.face-finish {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 0;
-  pointer-events: none;
-}
-
 /* Front: a chip, the card's level, its art, then the word plate. */
 .face-top {
   position: relative;
@@ -173,7 +162,7 @@ body[data-surface='overlay'] {
   gap: 1.333cqw;
   padding: 1cqw 2cqw;
   border-radius: 1.333cqw;
-  background: var(--plate, #1a1522);
+  background: #1a1522;
   color: var(--b-paper);
   font: 600 max(9px, 3.333cqw) / 1 var(--b-ui);
   font-variant-numeric: tabular-nums;
@@ -184,15 +173,15 @@ body[data-surface='overlay'] {
 .chip:empty {
   display: none;
 }
+/* Chat's streak is fire, on both faces. */
 .chip-streak {
-  color: var(--b-lilac);
+  color: #ffae4a;
 }
-.chip-streak svg {
-  width: max(9px, 3.333cqw);
-  height: max(9px, 3.333cqw);
+.chip-streak img {
+  width: max(10px, 3.667cqw);
+  height: auto;
   flex: none;
-  fill: currentColor;
-  shape-rendering: crispEdges;
+  image-rendering: pixelated;
 }
 .pips {
   gap: 1cqw;
@@ -279,8 +268,7 @@ body[data-surface='overlay'] {
   margin: 0 -2cqw -2cqw;
   padding: 1cqw 2cqw 2cqw;
   border-radius: 1cqw 1cqw 2.333cqw 2.333cqw;
-  background: var(--plate, #1a1522);
-  box-shadow: inset 0 1px 0 var(--plate-edge, #1a1522);
+  background: #1a1522;
   text-align: center;
 }
 /* The word is printed in its item's own ink. */
@@ -442,99 +430,135 @@ body[data-surface='overlay'] {
   }
 }
 
-/* Streak cards: a milestone win is reprinted in a Card Lab finish. Windows and
-   plates are drawn in code; the material comes from the texture. */
-.playing-card[data-finish] :is(.glass-field, .glass-lens) {
-  display: none;
+/* Chat's win streak: fire coins on a win, and a medallion in the art's place when
+   the win lands on a badge. */
+.face-row {
+  display: flex;
+  justify-content: center;
+  gap: 2.4cqw;
+  margin: 2.667cqw 0 0;
+  padding: 0;
+  list-style: none;
 }
-.face-square::before {
-  position: absolute;
-  z-index: -1;
-  pointer-events: none;
+.face-row li {
+  display: grid;
+  justify-items: center;
+  gap: 0.8cqh;
+  color: #8d8596;
+  font: 650 max(9px, 3.6cqw) / 1 var(--b-ui);
+  font-variant-numeric: tabular-nums;
 }
-.playing-card[data-finish='stock'] .face-front {
-  background: var(--b-face);
+.face-row li > span:first-child {
+  display: grid;
+  place-items: center;
+  width: max(15px, 9cqw);
+  height: max(15px, 9cqw);
+  border-radius: 50%;
+  background: #2f2a36;
+  box-shadow: inset 0 0 0 1px #4a4352;
 }
-.playing-card[data-finish='stock'] .face-square::before {
-  content: '';
-  inset: -4% -12% -8%;
-  background: radial-gradient(ellipse at 50% 72%, #4f2878aa 0, #3b247033 42%, transparent 70%);
-}
-.playing-card[data-finish='dither'] {
-  --plate: #16121c;
-  --plate-edge: #3b1a7a;
-}
-.playing-card[data-finish='dither'] .face-front {
-  background: #0d0a12;
-}
-.playing-card[data-finish='dither'] .face-finish {
+.face-row img {
+  width: 58%;
+  height: auto;
   image-rendering: pixelated;
+  opacity: 0.22;
+  filter: grayscale(1);
 }
-.playing-card[data-finish='dither'] .face-square::before {
-  content: '';
-  inset: 0;
-  background: #0d0a12;
-  box-shadow: 0 0 0 1.333cqw #3b1a7a;
+.face-row li:is([data-state='won'], [data-state='current']) {
+  color: #ffae4a;
 }
-.playing-card[data-finish='velvet'] {
-  --plate: #211d26;
-  --plate-edge: #d9cfe826;
+.face-row li:is([data-state='won'], [data-state='current']) > span:first-child {
+  background: radial-gradient(circle at 50% 35%, #ffc65a 0, #f07a1e 70%);
+  box-shadow: inset 0 -1px 0 #b8481466;
 }
-.playing-card[data-finish='velvet'] .face-front {
-  background: #140c1f;
+.face-row li:is([data-state='won'], [data-state='current']) img {
+  opacity: 1;
+  filter: none;
 }
-.playing-card[data-finish='velvet'] .face-square::before {
-  content: '';
-  inset: -3% -3% 0;
-  border-radius: 50% 50% 2.667cqw 2.667cqw / 26% 26% 2.667cqw 2.667cqw;
-  background: #08040e61;
+.face-row li[data-state='current'] > span:first-child {
   box-shadow:
-    inset 0 3.333cqw 4.667cqw -2cqw #000c,
-    inset 0 0 0 1px #c9a8ff26;
+    0 0 0 2px #1a1522,
+    0 0 0 3.5px #ffd23a;
 }
-.playing-card[data-finish='engraved'] {
-  --plate: #1a1422;
-  --plate-edge: #c9a8ff4d;
-}
-.playing-card[data-finish='engraved'] .face-front {
-  background: #1c1328;
-}
-.playing-card[data-finish='engraved'] .face-square::before {
-  content: '';
-  inset: -4%;
+.badge-medal {
+  --ring-a: #ffcf7a;
+  --ring-b: #c4561c;
+  --core: #3a1d12;
+  --glow: #8a3a16;
+  position: absolute;
+  inset: 4%;
+  display: grid;
+  place-items: center;
+  border: 3.2cqw solid transparent;
   border-radius: 50%;
-  background: #1c1328;
-  box-shadow: 0 0 0 1px #c9a8ff59;
-}
-.playing-card[data-finish='spotlight'] {
-  --plate: #16121c;
-  --plate-edge: #c9a8ff99;
-}
-.playing-card[data-finish='spotlight'] .face-square::before {
-  content: '';
-  inset: -7%;
-  border-radius: 50%;
-  background: #100c17;
+  background:
+    radial-gradient(circle at 50% 40%, var(--glow) 0, var(--core) 64%) padding-box,
+    conic-gradient(
+        from 200deg,
+        var(--ring-a),
+        var(--ring-b) 25%,
+        var(--ring-a) 50%,
+        var(--ring-b) 75%,
+        var(--ring-a)
+      )
+      border-box;
   box-shadow:
-    0 0 0 0.667cqw #9146ff,
-    0 0 0 1.667cqw #100c17,
-    0 0 0 2cqw #c9a8ff66;
+    0 1.6cqw 0 -1px #0b0710,
+    0 3cqw 6cqw #00000080;
+  animation: medal-pop 640ms cubic-bezier(0.22, 1.4, 0.36, 1) 300ms both;
 }
-.playing-card[data-finish='prism'] {
-  --plate: #1d1824;
-  --plate-edge: #c9a8ff80;
+.badge-medal img {
+  width: 84%;
+  height: 84%;
+  margin-top: -16%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 1cqw 0 #0009);
 }
-.playing-card[data-finish='prism'] .face-front {
-  background: #0e0a16;
+.face-square:has(.badge-medal:not([hidden])) :is(.glass-lens, .face-art-image) {
+  visibility: hidden;
 }
-.playing-card[data-finish='prism'] .face-square::before {
-  content: '';
-  inset: -4% -4% 0;
-  border-radius: 1.333cqw 4cqw 1.333cqw 1.333cqw;
-  background: #120b1fe6;
-  box-shadow:
-    inset 1px 1px 0 #e9dcff59,
-    inset -1px -1px 0 #000;
+.badge-medal[data-tone='amber'] {
+  --ring-a: #fff3a6;
+  --ring-b: #f08a17;
+  --core: #3b2510;
+  --glow: #94591a;
+}
+.badge-medal[data-tone='flame'] {
+  --ring-a: #ffb36b;
+  --ring-b: #d7261a;
+  --core: #3d1214;
+  --glow: #9a2a17;
+}
+.badge-medal[data-tone='magma'] {
+  --ring-a: #ff8a5c;
+  --ring-b: #6e1730;
+  --core: #26090f;
+  --glow: #6a1c19;
+}
+.badge-medal[data-tone='violet'] {
+  --ring-a: #e2ccff;
+  --ring-b: #6b2cc4;
+  --core: #22123a;
+  --glow: #4f2a86;
+}
+.badge-medal[data-tone='cosmic'] {
+  --ring-a: #9de8ff;
+  --ring-b: #5b2bd6;
+  --core: #12173a;
+  --glow: #2c3c8a;
+}
+.badge-medal[data-tone='gold'] {
+  --ring-a: #fffc79;
+  --ring-b: #c98a10;
+  --core: #2a1540;
+  --glow: #6b3aa8;
+}
+@keyframes medal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-20deg);
+  }
 }
 
 /* Back: the landing's Mosaic. The streamer sees only this while chat plays. */
@@ -597,7 +621,8 @@ body[data-surface='overlay'] {
   }
 }
 @container (max-height: 210px) {
-  .back-copy {
+  .back-copy,
+  .face-row {
     display: none;
   }
 }
@@ -620,6 +645,9 @@ body[data-surface='overlay'] {
   .face-front::after {
     display: none;
   }
+  .badge-medal {
+    animation: none;
+  }
 }
 @media (forced-colors: active) {
   .face,
@@ -633,8 +661,6 @@ body[data-surface='overlay'] {
   }
   .glass-field,
   .glass-lens,
-  .face-finish,
-  .face-square::before,
   .face-front::after {
     display: none;
   }

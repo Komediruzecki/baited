@@ -1,135 +1,118 @@
 import React from 'react';
 import type { GameView } from '../shared/types';
-import { CardBack } from './CardBack';
-import { GlassCard } from './GlassCard';
-import { Check, Flame } from './pixel-icons';
 import {
-  finishArt,
   nextStreakTier,
+  streakArtFile,
   streakMilestone,
   streakRow,
   streakTiers,
   type StreakTier,
 } from '../extension/presentation.js';
 
-// Chat's win streak in the landing's card language: wins are dealt as small Glass
-// cards, the rounds ahead lie face down as Mosaic backs, and each milestone prints
-// chat a card in one of the Card Lab finishes.
+// Chat's win streak, drawn like a streak calendar: a flame counter, the last few
+// positions as coins, and one medallion per badge tier.
 const cx = (...values: (string | false | undefined)[]) => values.filter(Boolean).join(' ');
-const base = import.meta.env?.BASE_URL ?? '/';
+
+export function StreakFlame({ size = 20, className = '' }: { size?: number; className?: string }) {
+  return (
+    <img
+      className={cx('streak-flame', className)}
+      src="/brand/streak-flame.svg"
+      alt=""
+      width={size}
+      height={Math.round(size * 1.125)}
+    />
+  );
+}
+
+export function StreakBadge({
+  tier,
+  size = 96,
+  locked = false,
+}: {
+  tier: StreakTier;
+  size?: number;
+  locked?: boolean;
+}) {
+  return (
+    <span
+      className={cx('streak-badge', `streak-badge--${tier.tone}`, locked && 'is-locked')}
+      style={{ '--badge-size': `${size}px` } as React.CSSProperties}
+      aria-hidden="true"
+    >
+      <img className="streak-badge__art" src={streakArtFile(tier.art, 'client')} alt="" />
+    </span>
+  );
+}
+
+export function StreakRow({ count, className = '' }: { count: number; className?: string }) {
+  return (
+    <ol className={cx('streak-row', className)} aria-label={`${count} wins in a row`}>
+      {streakRow(count).map((slot) => (
+        <li key={slot.n} className={cx(`is-${slot.state}`, !!slot.tier && 'has-tier')}>
+          <span className="streak-row__coin">
+            <img src="/brand/streak-flame.svg" alt="" />
+          </span>
+          <span className="streak-row__n">{slot.n}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export function StreakCount({ count, label = 'in a row' }: { count: number; label?: string }) {
   return (
     <span className="streak-count">
       <strong>{count}</strong>
-      <span>
-        <Flame size={14} />
-        {label}
-      </span>
+      <StreakFlame size={34} />
+      <span>{label}</span>
     </span>
   );
 }
 
-/** Five positions around the current streak: dealt wins, this win, and cards still face down. */
-export function StreakSlots({ count, className = '' }: { count: number; className?: string }) {
-  return (
-    <ol className={cx('streak-slots', className)} aria-label={`${count} wins in a row`}>
-      {streakRow(count).map((slot) => {
-        const texture = slot.tier ? finishArt(slot.tier.finish, 'client', true) : null;
-        return (
-          <li
-            key={slot.n}
-            className={cx(`is-${slot.state}`, !!slot.tier && 'has-tier')}
-            data-finish={slot.tier?.finish}
-            title={slot.tier ? `${slot.tier.name} card at ${slot.tier.count}` : undefined}
-          >
-            <span className="streak-slots__card" aria-hidden="true">
-              {slot.state !== 'ahead' && texture && <img src={`${base}${texture.slice(1)}`} alt="" />}
-              {slot.state === 'won' && !slot.tier && <Check size={12} />}
-            </span>
-            <span className="streak-slots__n">{slot.n}</span>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-/** One streak card: printed in its finish once unlocked, face down until then. */
-export function StreakCard({
-  tier,
-  word,
-  unlocked,
-  width = 112,
-}: {
-  tier: StreakTier;
-  word?: string | null;
-  unlocked: boolean;
-  width?: number;
-}) {
-  const style = { '--glass-card-width': `${width}px`, '--card-r': `${width * 0.0467}px ${width * 0.08}px ${width * 0.0467}px ${width * 0.0467}px` } as React.CSSProperties;
-  if (!unlocked)
-    return (
-      <span className="streak-card is-locked" style={style} aria-hidden="true">
-        <CardBack />
-      </span>
-    );
-  return (
-    <span className="streak-card" style={style}>
-      <GlassCard
-        word={word ?? tier.name}
-        ink={word ? undefined : 'var(--b-paper)'}
-        finish={tier.finish}
-        swatch={width < 160}
-        label={`${tier.name} card${word ? `, printed with ${word}` : ''}`}
-      />
-    </span>
-  );
-}
-
-function unlockDate(at: number | null) {
+function badgeDate(at: number | null) {
   return at === null
     ? 'Unlocked'
     : new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** The studio's collection: every streak card, printed or still face down. */
-export function StreakCards({ game: g }: { game: GameView }) {
-  const unlocked = new Map(g.badges.map((badge) => [badge.count, badge]));
+/** The studio's achievements view: every tier, unlocked or with progress toward it. */
+export function StreakBadges({ game: g }: { game: GameView }) {
+  const unlocked = new Map(g.badges.map((badge) => [badge.count, badge.at]));
   const next = nextStreakTier(g.score.streak);
-  const toGo = next ? next.count - g.score.streak : 0;
   return (
     <section className="panel streak-panel">
       <div className="section-heading">
         <div>
           <span className="small-label">CHAT WIN STREAK</span>
-          <h3>Streak cards</h3>
+          <h3>Streak badges</h3>
         </div>
         <span className="small-label">
-          {unlocked.size} OF {streakTiers.length} PRINTED
+          {unlocked.size} OF {streakTiers.length} UNLOCKED
         </span>
       </div>
       <div className="streak-panel__now">
         <StreakCount count={g.score.streak} />
-        <StreakSlots count={g.score.streak} />
+        <StreakRow count={g.score.streak} />
         <p className="muted">
           Best {g.score.best}.{' '}
           {next
-            ? `${toGo} more ${toGo === 1 ? 'win' : 'wins'} in a row print the ${next.name} card.`
-            : 'Every streak card is printed.'}{' '}
+            ? `${next.count - g.score.streak} more ${next.count - g.score.streak === 1 ? 'win' : 'wins'} in a row unlock ${next.name}.`
+            : 'Every badge is unlocked.'}{' '}
           A round chat doesn’t win ends the streak; a rejected catch doesn’t.
         </p>
       </div>
-      <ul className="streak-collection">
+      <ul className="streak-grid">
         {streakTiers.map((tier) => {
-          const badge = unlocked.get(tier.count);
+          const at = unlocked.get(tier.count);
+          const locked = at === undefined;
           return (
-            <li key={tier.count} className={cx(!badge && 'is-locked')}>
-              <StreakCard tier={tier} word={badge?.word} unlocked={!!badge} />
+            <li key={tier.count} className={cx(locked && 'is-locked')}>
+              <StreakBadge tier={tier} size={92} locked={locked} />
               <strong>{tier.name}</strong>
               <span>{tier.count} in a row</span>
               <small>
-                {badge ? unlockDate(badge.at) : `Best ${Math.min(g.score.best, tier.count)}/${tier.count}`}
+                {locked ? `Best ${Math.min(g.score.best, tier.count)}/${tier.count}` : badgeDate(at)}
               </small>
             </li>
           );
@@ -139,7 +122,7 @@ export function StreakCards({ game: g }: { game: GameView }) {
   );
 }
 
-/** OBS: a win that lands on a tier gets a printed-card note beside the reprinted result card. */
+/** OBS: a win that lands on a tier gets a medallion beside the result card. */
 export function StreakCelebration({
   result,
   streak,
@@ -158,14 +141,15 @@ export function StreakCelebration({
       style={{ '--result-age': `${-Math.max(0, age)}ms` } as React.CSSProperties}
     >
       <span className="streak-celebration__kicker">
-        {result.newBadge ? 'New streak card' : 'Streak card'}
+        {result.newBadge ? 'NEW STREAK BADGE' : 'STREAK BADGE'}
       </span>
-      <strong className="streak-celebration__name">{tier.name} edition</strong>
-      <StreakCount count={streak} />
-      <StreakSlots count={streak} />
+      <StreakBadge tier={tier} size={176} />
+      <strong className="streak-celebration__name">{tier.name}</strong>
+      <span className="streak-celebration__count">{tier.count} IN A ROW</span>
+      <StreakRow count={streak} />
       {next && (
         <span className="streak-celebration__next">
-          Next card · {next.name} at {next.count}
+          NEXT · {next.name.toUpperCase()} AT {next.count}
         </span>
       )}
     </div>

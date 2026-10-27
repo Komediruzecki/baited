@@ -131,8 +131,8 @@ export interface SavedGame {
   priorPlayed: number;
   priorBest: number;
   leaders: Record<string, { name: string; rounds: number; baits?: number }>;
-  /** First unlock of each streak card, keyed by tier count, with the round and word that earned it. */
-  streakBadges?: Record<string, { at: number; round: string; word?: string }>;
+  /** First unlock of each streak badge, keyed by tier count, with the round that earned it. */
+  streakBadges?: Record<string, { at: number; round: string }>;
 }
 export class Game {
   phase: GameView['phase'] = 'idle';
@@ -366,8 +366,7 @@ export class Game {
       this.result.milestone = tier.count;
       const badges = (this.data.streakBadges ??= {});
       if (!badges[tier.count] && this.data.priorBest < tier.count) {
-        // Only a caught word is printed on a card, and it is public once caught.
-        badges[tier.count] = { at: now, round: r.id, word: r.word };
+        badges[tier.count] = { at: now, round: r.id };
         this.result.newBadge = true;
       }
     }
@@ -714,14 +713,10 @@ export class Game {
         .sort((a, b) => b.rounds - a.rounds || a.name.localeCompare(b.name))
         .slice(0, 8)
         .map((leader) => ({ ...leader, baits: leader.baits ?? 0 })),
-      // Cards reached before unlocks were recorded count as unlocked, without a date or word.
+      // Badges reached before unlocks were recorded count as unlocked, without a date.
       badges: streakTiers
         .filter((tier) => this.data.streakBadges?.[tier.count] || this.score.best >= tier.count)
-        .map((tier) => ({
-          count: tier.count,
-          at: this.data.streakBadges?.[tier.count]?.at ?? null,
-          word: this.data.streakBadges?.[tier.count]?.word ?? null,
-        })),
+        .map((tier) => ({ count: tier.count, at: this.data.streakBadges?.[tier.count]?.at ?? null })),
       mission: this.mission
         ? {
             ...this.mission,

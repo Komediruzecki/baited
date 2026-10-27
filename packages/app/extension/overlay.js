@@ -1,5 +1,13 @@
 import { clockValue, connectToTwitch, readState } from './client.js';
-import { cardArtFile, finishArt, glassRules, nextStreakTier, streakMilestone, wordSize } from './presentation.js';
+import {
+  cardArtFile,
+  glassRules,
+  nextStreakTier,
+  streakArtFile,
+  streakMilestone,
+  streakRow,
+  wordSize,
+} from './presentation.js';
 
 const byId = (id) => document.getElementById(id);
 // A finished card stays on the video briefly, then the overlay is transparent again.
@@ -97,16 +105,35 @@ function setStreak(streak) {
   byId('back-streak-copy').textContent = show ? copy : '';
 }
 
-/** A milestone win reprints the card in its streak finish; every other card is Glass. */
-function setFinish(tier) {
-  const card = byId('card');
-  const image = byId('front-finish');
-  const file = tier ? finishArt(tier.finish, 'extension') : null;
-  if (tier) card.dataset.finish = tier.finish;
-  else delete card.dataset.finish;
-  image.hidden = !file;
-  if (file) image.setAttribute('src', `./assets/${file}`);
-  else image.removeAttribute('src');
+/** A win shows the streak as fire coins, the newest ringed and the next ones dim. */
+function setRow(streak) {
+  const row = byId('front-row');
+  row.hidden = streak < 1;
+  row.replaceChildren(
+    ...(streak < 1 ? [] : streakRow(streak)).map((slot) => {
+      const item = document.createElement('li');
+      item.dataset.state = slot.state;
+      const coin = document.createElement('span');
+      const flame = document.createElement('img');
+      flame.setAttribute('src', './assets/streak-flame.svg');
+      flame.setAttribute('alt', '');
+      coin.replaceChildren(flame);
+      const n = document.createElement('span');
+      n.textContent = String(slot.n);
+      item.replaceChildren(coin, n);
+      return item;
+    }),
+  );
+}
+
+/** A win that lands on a badge shows its medallion in the art's place. */
+function setMedal(tier) {
+  const medal = byId('front-medal');
+  medal.hidden = !tier;
+  if (tier) {
+    medal.dataset.tone = tier.tone;
+    byId('front-medal-art').setAttribute('src', `./assets/${streakArtFile(tier.art, 'extension')}`);
+  } else byId('front-medal-art').removeAttribute('src');
 }
 
 /** Removes every secret the front face may hold: word, ink, artwork filename, clues and question. */
@@ -119,7 +146,8 @@ function clearFront() {
   setLevel(null);
   setArt(null);
   setRules([]);
-  setFinish(null);
+  setRow(0);
+  setMedal(null);
 }
 
 function setVisible(visible) {
@@ -193,7 +221,8 @@ function showRound(room) {
   setVisible(true);
   card.dataset.state = room.phase;
   delete card.dataset.outcome;
-  setFinish(null);
+  setRow(0);
+  setMedal(null);
   setStreak(room.score.streak);
   if (visible) {
     byId('front-chip').textContent =
@@ -250,24 +279,25 @@ function showResult(room) {
   setArt(result.word);
   setRules([]);
   setStreak(0);
-  // A win that lands on a streak tier is reprinted in that tier's finish.
+  // A win shows the streak as fire coins; one that lands on a badge shows its medallion.
   const caught = result.outcome === 'caught';
   const tier = caught && result.milestone ? streakMilestone(result.milestone) : null;
-  const next = caught ? nextStreakTier(tier?.count ?? streak) : null;
-  setFinish(tier);
-  byId('front-chip').textContent = tier ? (result.newBadge ? 'New streak card' : 'Streak card') : copy[0];
-  byId('front-note').textContent = tier ? `${tier.name} edition · ${tier.count} in a row` : copy[1];
-  byId('front-question').textContent = !caught
+  const next = caught ? nextStreakTier(streak) : null;
+  setRow(caught ? streak : 0);
+  setMedal(tier);
+  byId('front-chip').textContent = tier ? (result.newBadge ? 'New streak badge' : 'Streak badge') : copy[0];
+  byId('front-note').textContent = tier ? `${tier.name} · ${tier.count} in a row` : copy[1];
+  byId('front-question').textContent = !caught || streak < 1
     ? ''
     : next
-      ? `${next.count - streak} more in a row for the ${next.name} card.`
-      : 'Chat holds the rarest card.';
+      ? `${next.count - streak} more in a row for ${next.name}.`
+      : 'Every streak badge is unlocked.';
   // The decided card turns over for everyone, including the broadcaster.
   if (!dealtRound) dealtRound = result.id;
   setFace('front');
   announce(
     `result:${result.id}:${result.outcome}`,
-    `${copy[0]}. The word was ${result.word}.${tier ? ` New ${tier.name} streak card.` : ''}`,
+    `${copy[0]}. The word was ${result.word}.${tier ? ` Streak badge: ${tier.name}.` : ''}`,
   );
 }
 

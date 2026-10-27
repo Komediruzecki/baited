@@ -195,7 +195,7 @@ function render({ configured, room }) {
     const tier =
       result.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
     byId('card-detail').textContent = tier
-      ? `${copy[1]} ${result.newBadge ? 'New streak card' : 'Streak card'}: ${tier.name} edition, ${tier.count} in a row.`
+      ? `${copy[1]} 🔥 ${result.newBadge ? 'New streak badge' : 'Streak badge'}: ${tier.name}, ${tier.count} in a row.`
       : copy[1];
     byId('card-detail').hidden = false;
     byId('forbidden').hidden = true;

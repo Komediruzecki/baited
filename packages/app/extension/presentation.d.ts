@@ -82,11 +82,11 @@ export function cardArtFile(word?: string): string | null;
 export function wordSize(word?: string): 'short' | 'medium' | 'long' | 'extended';
 export function winLabel(wins: number): string;
 export function glassRules(pitch?: number): string;
-export type StreakFinish = 'stock' | 'dither' | 'velvet' | 'engraved' | 'spotlight' | 'prism';
 export interface StreakTier {
   readonly count: number;
   readonly name: string;
-  readonly finish: StreakFinish;
+  readonly art: 'flame' | 'twin' | 'blaze' | 'volcano' | 'dragon' | 'rocket' | 'ultraviolet';
+  readonly tone: 'ember' | 'amber' | 'flame' | 'magma' | 'violet' | 'cosmic' | 'gold';
 }
 export const streakTiers: readonly StreakTier[];
 export function streakMilestone(count: number): StreakTier | null;
@@ -95,8 +95,5 @@ export function streakRow(
   count: number,
   size?: number,
 ): { n: number; state: 'won' | 'current' | 'ahead'; tier: StreakTier | null }[];
-export function finishArt(
-  finish: StreakFinish,
-  surface: 'client' | 'extension',
-  swatch?: boolean,
-): string | null;
+export function streakArtFile(art: StreakTier['art'], surface: 'client' | 'extension'): string;
+export const streakFlameFiles: readonly string[];
