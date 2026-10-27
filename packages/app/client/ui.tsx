@@ -14,6 +14,16 @@ export const brand = (
     <span className="baited-glyph" aria-hidden="true" style={{ height: '100%' }} />
   </span>
 );
+/** Outcomes of the operator's one-time bot account sign-in, shown on return from Twitch. */
+export const botNotices = {
+  ready: 'The bot account is connected. Streamers can now turn on chat announcements in Game settings.',
+  errors: {
+    'bot-account':
+      'That Twitch account is not the bot account this server expects. Sign in as the bot account, in a private window if you are signed in as a streamer.',
+    'bot-setup':
+      'This server has no bot account configured. Set TWITCH_BOT_USER_ID, then sign in as the bot.',
+  } as Record<string, string>,
+};
 export function Button({
   children,
   className = '',

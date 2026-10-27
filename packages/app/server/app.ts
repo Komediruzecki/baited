@@ -6,10 +6,22 @@ import { WebSocketServer } from 'ws';
 import { Game, defaults } from './game.js';
 import { Store } from './store.js';
 import { Sessions, Limiter, cookies, equal, isLoopback, randomKey } from './security.js';
-import { TwitchAuth, TwitchConnection, AuthRevoked, AuthSuperseded } from './twitch.js';
+import {
+  TwitchAuth,
+  TwitchConnection,
+  AuthRevoked,
+  AuthSuperseded,
+  BotAccountMismatch,
+  BOT_SCOPES,
+  CHANNEL_BOT_SCOPE,
+  SCOPES,
+  botKey,
+} from './twitch.js';
 import { SpeechBridge } from './speech.js';
 import { LocalSpeechBridge } from './local-speech.js';
 import { extensionRouter } from './extension.js';
+import { ChatBot } from './chatbot.js';
+import { parseCommand } from './chat-copy.js';
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
 import { isPrivateIPv4, type Config } from './config.js';
@@ -38,7 +50,24 @@ export async function createBait(config: Config, developmentHmr = false) {
     speech = new Map<string, SpeechBridge | LocalSpeechBridge>();
   const speechReady = () => config.speechProvider === 'moonshine' || !!config.speechKey;
   const microphoneLeases = new Map<string, { session: Session; leaseId: string; expires: number }>();
-  const pendingOAuth = new Map<string, { cookie: string; expires: number }>();
+  const pendingOAuth = new Map<
+    string,
+    { cookie: string; expires: number; kind: 'broadcaster' | 'bot' }
+  >();
+  const bot = new ChatBot({
+    config,
+    store,
+    // Moderator commands obey the same readiness as the studio's own buttons.
+    ready: (game) =>
+      game.data.mode === 'demo'
+        ? null
+        : game.connection.status !== 'connected'
+          ? 'Twitch chat is not connected in the studio.'
+          : !microphoneReady(game)
+            ? "The streamer's microphone is off. Turn it on in the studio first."
+            : null,
+    onUpdate: (game) => broadcast(game),
+  });
   type Subscriber = {
     roomId: string;
     role: 'studio' | 'viewer' | 'overlay';
@@ -76,6 +105,7 @@ export async function createBait(config: Config, developmentHmr = false) {
       speechReady: speechReady(),
       speechProvider: config.speechProvider,
       awardBoard: game.awardBoard,
+      chatBot: bot.status(game),
     };
   }
   function send(s: Subscriber) {
@@ -109,22 +139,26 @@ export async function createBait(config: Config, developmentHmr = false) {
     if (game?.phase === 'active') game.pauseIfActive();
     speech.get(roomId)?.close();
   }
+  function broadcast(game: Game) {
+    if (!broadcasts.has(game.data.id))
+      broadcasts.set(
+        game.data.id,
+        setTimeout(() => {
+          broadcasts.delete(game.data.id);
+          for (const s of subscribers) if (s.roomId === game.data.id) send(s);
+        }, 100),
+      );
+  }
   function register(game: Game) {
     rooms.set(game.data.id, game);
     game.canRun = () => microphoneReady(game);
     game.onChange = () => {
       const bridge = speech.get(game.data.id);
       bridge?.sync();
-      if (!broadcasts.has(game.data.id))
-        broadcasts.set(
-          game.data.id,
-          setTimeout(() => {
-            broadcasts.delete(game.data.id);
-            for (const s of subscribers) if (s.roomId === game.data.id) send(s);
-          }, 100),
-        );
+      broadcast(game);
       persist();
     };
+    game.onEvent = (event) => bot.event(game, event);
   }
   for (const saved of store.snapshot.rooms) register(new Game(saved));
   function invalidate(id: string, generation?: number) {
@@ -148,11 +182,28 @@ export async function createBait(config: Config, developmentHmr = false) {
   function connect(game: Game) {
     twitch.get(game.data.id)?.stop();
     const connection = new TwitchConnection(game, auth, (generation) => invalidate(game.data.owner, generation));
+    connection.ignoreUserId = config.botUserId;
+    connection.onMessage = (message) => bot.chat(game, message);
     twitch.set(game.data.id, connection);
     connection.start();
   }
+  async function validateBot() {
+    const key = botKey(config.botUserId);
+    if (!config.botReady || !store.snapshot.vault[key]) return;
+    const generation = auth.generation(key);
+    try {
+      await auth.validate(key);
+    } catch (e) {
+      // A revoked bot grant is forgotten; the studio then asks the operator to authorize again.
+      if (e instanceof AuthRevoked && auth.isCurrent(key, generation))
+        await auth.invalidate(key).catch(() => {
+          storageError = true;
+        });
+    }
+  }
   // Every stored Twitch authorization is validated at startup, and hourly thereafter.
   async function validateAll(start = false) {
+    const botCheck = validateBot();
     for (const game of rooms.values())
       if (game.data.mode === 'twitch' && store.snapshot.vault[game.data.owner]) {
         const generation = auth.generation(game.data.owner);
@@ -171,6 +222,7 @@ export async function createBait(config: Config, developmentHmr = false) {
           }
         }
       }
+    await botCheck;
   }
   const validation = setInterval(() => void validateAll(), 3600000);
   const startupValidation = validateAll(true);
@@ -328,6 +380,7 @@ export async function createBait(config: Config, developmentHmr = false) {
       if (old.mode === 'demo') {
         speech.get(old.roomId)?.close();
         rooms.delete(old.roomId);
+        bot.forget(old.roomId);
         for (const sub of subscribers)
           if (sub.roomId === old.roomId) {
             sub.res.end();
@@ -359,11 +412,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     });
     res.json({ csrf: s.csrf });
   });
-  app.get('/auth/twitch', (req, res) => {
-    if (!config.twitchReady) {
-      res.redirect('/?notice=setup');
-      return;
-    }
+  function beginOAuth(req: Request, res: Response, kind: 'broadcaster' | 'bot', scopes: string[]) {
     if (!limiter.hit(`oauth:${req.ip}`, 20)) {
       res.status(429).send('Try again shortly.');
       return;
@@ -375,7 +424,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     }
     const state = randomKey(),
       cookie = randomKey();
-    pendingOAuth.set(state, { cookie, expires: Date.now() + 600000 });
+    pendingOAuth.set(state, { cookie, expires: Date.now() + 600000, kind });
     res.cookie('bait_oauth', cookie, {
       httpOnly: true,
       secure: config.production,
@@ -387,11 +436,36 @@ export async function createBait(config: Config, developmentHmr = false) {
       client_id: config.clientId,
       redirect_uri: config.callback,
       response_type: 'code',
-      scope: 'user:read:chat',
+      scope: scopes.join(' '),
       state,
       force_verify: 'true',
     });
     res.redirect(`https://id.twitch.tv/oauth2/authorize?${query}`);
+  }
+  app.get('/auth/twitch', (req, res) => {
+    if (!config.twitchReady) {
+      res.redirect('/?notice=setup');
+      return;
+    }
+    // channel:bot is asked for only when the streamer allows the bot, then kept on reconnects.
+    const s = sessions.get(req.headers.cookie);
+    let keepBot = false;
+    try {
+      keepBot =
+        s?.mode === 'twitch' && !!store.credentials(s.userId)?.scope.includes(CHANNEL_BOT_SCOPE);
+    } catch {
+      keepBot = false;
+    }
+    const withBot = config.botReady && (req.query.bot === '1' || keepBot);
+    beginOAuth(req, res, 'broadcaster', withBot ? [...SCOPES, CHANNEL_BOT_SCOPE] : SCOPES);
+  });
+  // The operator signs in once as the configured bot account. No studio session is created.
+  app.get('/auth/twitch/bot', (req, res) => {
+    if (!config.botReady) {
+      res.redirect('/?notice=bot-setup');
+      return;
+    }
+    beginOAuth(req, res, 'bot', BOT_SCOPES);
   });
   app.get('/auth/twitch/callback', async (req, res) => {
     const state = typeof req.query.state === 'string' ? req.query.state : '',
@@ -413,6 +487,15 @@ export async function createBait(config: Config, developmentHmr = false) {
     }
     if (req.query.error || typeof req.query.code !== 'string') {
       res.redirect('/?notice=cancelled');
+      return;
+    }
+    if (pending.kind === 'bot') {
+      try {
+        await auth.exchange(req.query.code, 'bot');
+        res.redirect('/?notice=bot-ready');
+      } catch (e) {
+        res.redirect(e instanceof BotAccountMismatch ? '/?notice=bot-account' : '/?notice=oauth');
+      }
       return;
     }
     try {
@@ -610,6 +693,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     const revoking = auth.revoke(s.userId);
     sessions.deleteUser(s.userId);
     rooms.delete(s.roomId);
+    bot.forget(s.roomId);
     for (const sub of subscribers)
       if (sub.roomId === s.roomId) {
         sub.res.end();
@@ -670,15 +754,21 @@ export async function createBait(config: Config, developmentHmr = false) {
       });
       res.json({ matched });
     } else if (req.params.kind === 'chat') {
-      const { name, text } = z
+      const { name, text, moderator } = z
         .object({
           name: z.string().regex(/^[a-zA-Z0-9_]{1,25}$/),
           text: z.string().min(1).max(500),
+          moderator: z.boolean().default(false),
         })
         .strict()
         .parse(req.body);
-      const accepted = game.chat(randomKey(), `demo:${name.toLowerCase()}`, name, text, Date.now());
-      res.json({ accepted });
+      const id = randomKey(),
+        userId = `demo:${name.toLowerCase()}`,
+        at = Date.now();
+      const accepted = game.chat(id, userId, name, text, at);
+      // Simulated chat reaches commands the same way Twitch chat does.
+      bot.chat(game, { id, userId, name, text, badges: moderator ? ['moderator'] : [], at });
+      res.json({ accepted, command: parseCommand(text) !== null });
     } else res.status(404).end();
   });
   const wss = new WebSocketServer({ noServer: true, maxPayload: 32768 });
@@ -754,6 +844,7 @@ export async function createBait(config: Config, developmentHmr = false) {
         disarm(game.data.id);
       game.tick();
       speech.get(game.data.id)?.sync();
+      bot.tick(game);
     }
   }, 250);
   const heartbeat = setInterval(() => {

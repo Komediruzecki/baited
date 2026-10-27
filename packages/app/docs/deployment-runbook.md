@@ -32,10 +32,11 @@ For a persistent data directory, preserve its existing encryption key across dep
 | `TOKEN_ENCRYPTION_KEY` | Vault reference to the persistent 32-byte key, encoded as 64 hex characters |
 | `SPEECH_PROVIDER` | `moonshine` for local browser recognition, or `deepgram` for the optional cloud adapter |
 | `DEEPGRAM_API_KEY` | Required only for Deepgram; omit its reference for Moonshine |
+| `TWITCH_BOT_USER_ID` | Optional. Numeric user ID of the chat bot account; not a secret. See [Chat bot](chat-bot.md) |
 
 The current proxy configuration accepts an explicit IP/CIDR allowlist. Do not use `true`, a hop count, `/0`, or an unbounded network range. Trust a loopback address only when the actual proxy connects from that address. The proxy must overwrite incoming forwarding headers and prevent clients reaching the app directly while spoofing a trusted path. Verify the resulting client identity through the real deployment before a large audience joins.
 
-Register `${PUBLIC_URL}/auth/twitch/callback` exactly in the Twitch Developer Console. The app requests `user:read:chat` for the broadcaster's own channel. It does not require a separate bot account or a published Twitch Extension.
+Register `${PUBLIC_URL}/auth/twitch/callback` exactly in the Twitch Developer Console. The app requests `user:read:chat` for the broadcaster's own channel. It does not require a published Twitch Extension. A separate bot account is needed only for the optional [chat bot](chat-bot.md); its sign-in reuses the same callback.
 
 ## Build and release sequence, after approval
 

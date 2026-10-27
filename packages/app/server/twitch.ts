@@ -5,6 +5,12 @@ import { Store, type Credentials } from './store.js';
 import type { Game } from './game.js';
 
 export const SCOPES = ['user:read:chat'];
+/** The bot account's own consent: post chat messages and appear as a bot. */
+export const BOT_SCOPES = ['user:write:chat', 'user:bot'];
+/** Optional broadcaster consent that lets the bot account speak in this channel with the Chat Bot badge. */
+export const CHANNEL_BOT_SCOPE = 'channel:bot';
+/** Vault key for the bot account, kept apart from broadcaster credentials keyed by user ID. */
+export const botKey = (id: string) => `bot:${id}`;
 const tokenSchema = z.object({
   access_token: z.string(),
   refresh_token: z.string(),
@@ -60,7 +66,7 @@ export class TwitchAuth {
     }
     return tokenSchema.parse(await response.json());
   }
-  async exchange(code: string) {
+  async exchange(code: string, kind: 'broadcaster' | 'bot' = 'broadcaster') {
     // An authorization begun before a disconnect must not recreate that account.
     const generations = new Map(this.generations);
     const token = await this.token({
@@ -68,7 +74,7 @@ export class TwitchAuth {
       code,
       redirect_uri: this.config.callback,
     });
-    const valid = await this.validateAccess(token.access_token);
+    const valid = await this.validateAccess(token.access_token, kind === 'bot' ? BOT_SCOPES : SCOPES);
     const response = await this.fetcher('https://api.twitch.tv/helix/users', {
       headers: { 'Client-Id': this.config.clientId, Authorization: `Bearer ${token.access_token}` },
       signal: AbortSignal.timeout(12000),
@@ -83,6 +89,12 @@ export class TwitchAuth {
       .parse(await response.json());
     const user = users.data[0];
     if (user.id !== valid.user_id) throw new Error('Twitch identity mismatch.');
+    // Only the configured bot account may be stored as the bot. Anyone else's grant is discarded.
+    if (kind === 'bot' && user.id !== this.config.botUserId) {
+      await this.revokeToken(token.access_token);
+      throw new BotAccountMismatch();
+    }
+    const key = kind === 'bot' ? botKey(user.id) : user.id;
     const c: Credentials = {
       access_token: token.access_token,
       refresh_token: token.refresh_token,
@@ -92,16 +104,16 @@ export class TwitchAuth {
       name: user.display_name,
       scope: valid.scopes,
     };
-    if ((this.generations.get(c.userId) ?? 0) !== (generations.get(c.userId) ?? 0)) {
+    if ((this.generations.get(key) ?? 0) !== (generations.get(key) ?? 0)) {
       await this.revokeToken(c.access_token);
       throw new AuthSuperseded();
     }
-    const generation = this.bump(c.userId);
-    await this.store.setCredentials(c.userId, c);
-    this.assertCurrent(c.userId, generation);
+    const generation = this.bump(key);
+    await this.store.setCredentials(key, c);
+    this.assertCurrent(key, generation);
     return c;
   }
-  async validateAccess(access: string) {
+  async validateAccess(access: string, required = SCOPES) {
     const r = await this.fetcher('https://id.twitch.tv/oauth2/validate', {
       headers: { Authorization: `OAuth ${access}` },
       signal: AbortSignal.timeout(12000),
@@ -109,7 +121,7 @@ export class TwitchAuth {
     if (r.status === 401) throw new AuthRevoked();
     if (!r.ok) throw new Error('Twitch validation temporarily unavailable.');
     const data = validationSchema.parse(await r.json());
-    if (data.client_id !== this.config.clientId || !SCOPES.every((s) => data.scopes.includes(s)))
+    if (data.client_id !== this.config.clientId || !required.every((s) => data.scopes.includes(s)))
       throw new AuthRevoked();
     return data;
   }
@@ -146,8 +158,11 @@ export class TwitchAuth {
     return this.scoped(id, async (generation) => {
       const c = await this.access(id);
       this.assertCurrent(id, generation);
-      const v = await this.validateAccess(c.access_token);
-      if (v.user_id !== id) throw new AuthRevoked(generation);
+      const v = await this.validateAccess(
+        c.access_token,
+        id.startsWith('bot:') ? BOT_SCOPES : SCOPES,
+      );
+      if (v.user_id !== c.userId) throw new AuthRevoked(generation);
       return c;
     });
   }
@@ -221,6 +236,11 @@ export class RateLimited extends Error {
     super('Twitch rate limit reached. Retrying shortly.');
   }
 }
+export class BotAccountMismatch extends Error {
+  constructor() {
+    super('That Twitch account is not the configured bot account.');
+  }
+}
 
 const envelope = z.object({
   metadata: z.object({
@@ -237,9 +257,23 @@ const chatEvent = z.object({
   chatter_user_name: z.string(),
   message_id: z.string(),
   message: z.object({ text: z.string().max(2000) }),
+  badges: z.array(z.object({ set_id: z.string().max(64) })).max(64).optional(),
 });
+/** A validated chat message, handed to chat commands after the game has seen it. */
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  name: string;
+  text: string;
+  badges: string[];
+  at: number;
+}
 type SocketFactory = (url: string) => WebSocket;
 export class TwitchConnection {
+  /** Receives every accepted message, in any phase. Errors never interrupt chat delivery. */
+  onMessage: ((message: ChatMessage) => void) | undefined;
+  /** The bot's own messages arrive here too. They are neither hints nor commands. */
+  ignoreUserId = '';
   private sockets = new Set<WebSocket>();
   private current: WebSocket | undefined;
   private stopped = true;
@@ -391,7 +425,33 @@ export class TwitchConnection {
     if (this.seen.size > 10000)
       for (const [id, t] of this.seen) if (now - t > 60000) this.seen.delete(id);
     const e = event.data;
-    return this.game.chat(e.message_id, e.chatter_user_id, e.chatter_user_name, e.message.text, at);
+    // A streamer who uses their own account as the bot still needs their own commands.
+    if (
+      this.ignoreUserId &&
+      e.chatter_user_id === this.ignoreUserId &&
+      e.chatter_user_id !== this.game.data.owner
+    )
+      return false;
+    const accepted = this.game.chat(
+      e.message_id,
+      e.chatter_user_id,
+      e.chatter_user_name,
+      e.message.text,
+      at,
+    );
+    try {
+      this.onMessage?.({
+        id: e.message_id,
+        userId: e.chatter_user_id,
+        name: e.chatter_user_name,
+        text: e.message.text,
+        badges: (e.badges ?? []).map((badge) => badge.set_id),
+        at,
+      });
+    } catch {
+      /* A failing command must not look like a broken chat connection. */
+    }
+    return accepted;
   }
   private schedule(delay?: number) {
     if (this.stopped || this.retry) return;

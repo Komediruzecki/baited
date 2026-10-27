@@ -12,6 +12,10 @@ export interface Settings {
   mission: 'single' | 'three';
   missionDuration: number;
   callBait: boolean;
+  /** The bot announces rounds in Twitch chat. Off until the streamer opts in. */
+  chatBot: boolean;
+  /** Moderators can type !bait start, !bait pause and !bait resume. */
+  modCommands: boolean;
 }
 export interface Result {
   id: string;
@@ -92,6 +96,24 @@ export interface GameView {
   mission: MissionView | null;
   violations: number;
 }
+export interface ChatBotPost {
+  id: string;
+  at: number;
+  text: string;
+  /** `preview`: a demo room, never sent to Twitch. `dropped`: Twitch accepted the request but held or refused the message. */
+  status: 'sent' | 'preview' | 'dropped' | 'failed';
+}
+export interface ChatBotStatus {
+  /** `demo` previews in the studio; `unconfigured` has no bot account on this server. */
+  mode: 'demo' | 'unconfigured' | 'unauthorized' | 'twitch';
+  /** Bot account display name once its owner has authorized it. */
+  name: string | null;
+  /** The broadcaster granted channel:bot, so the bot can post here with the Chat Bot badge. */
+  channelAllowed: boolean;
+  /** The latest delivery problem, if any. Cleared by the next successful message. */
+  problem: string | null;
+  recent: ChatBotPost[];
+}
 export interface Studio {
   room: GameView;
   viewerUrl: string;
@@ -99,6 +121,7 @@ export interface Studio {
   speechReady: boolean;
   speechProvider: SpeechProvider;
   awardBoard: AwardBoard | null;
+  chatBot: ChatBotStatus;
 }
 export interface SessionInfo {
   authenticated: boolean;

@@ -25,6 +25,8 @@ export const settingsSchema = z
     mission: z.enum(['single', 'three']).default('single'),
     missionDuration: z.number().int().min(60).max(900).default(180),
     callBait: z.boolean().default(false),
+    chatBot: z.boolean().default(false),
+    modCommands: z.boolean().default(false),
   })
   .strict();
 export const defaults: Settings = {
@@ -37,7 +39,21 @@ export const defaults: Settings = {
   mission: 'single',
   missionDuration: 180,
   callBait: false,
+  chatBot: false,
+  modCommands: false,
 };
+/** Moments the chat bot may announce. Listeners read public state from the overlay projection. */
+export type GameEvent =
+  | { type: 'start' }
+  | { type: 'pause' }
+  | { type: 'resume' }
+  | { type: 'review' }
+  | { type: 'finish' }
+  | { type: 'reverse' }
+  | { type: 'wrong-guess' }
+  | { type: 'award' }
+  | { type: 'skip-vote' }
+  | { type: 'mission-timeout' };
 export const SPEECH_SETTLE_MS = 1500;
 export const tokens = (s: string): string[] =>
   s
@@ -134,6 +150,7 @@ export class Game {
   private chatIds = new Set<string>();
   private skipUsed = false;
   onChange: () => void = () => {};
+  onEvent: (event: GameEvent) => void = () => {};
   canRun: () => boolean = () => true;
   constructor(
     public data: SavedGame,
@@ -223,6 +240,7 @@ export class Game {
     this.recentChat.clear();
     this.chatIds.clear();
     this.changed();
+    this.emit({ type: 'start' });
   }
   pause() {
     if (!this.pauseIfActive()) throw new Error('No live round to pause.');
@@ -235,6 +253,7 @@ export class Game {
     this.round.epoch++;
     this.phase = 'paused';
     this.changed();
+    this.emit({ type: 'pause' });
     return true;
   }
   resume() {
@@ -245,6 +264,7 @@ export class Game {
     this.round.epoch++;
     this.phase = 'active';
     this.changed();
+    this.emit({ type: 'resume' });
   }
   end(outcome: Outcome) {
     if (!this.endIfRunning(outcome)) throw new Error('No round is running.');
@@ -274,6 +294,7 @@ export class Game {
     this.nextAt = null;
     this.review = null;
     this.changed();
+    this.emit({ type: 'review' });
   }
   decideCatch(roundId: string, decision: 'confirm' | 'reject') {
     if (!this.pendingCatch || !this.round || this.result?.id !== roundId)
@@ -347,6 +368,7 @@ export class Game {
     this.phase = 'cooldown';
     this.nextAt = now + this.data.settings.cooldown * 1000;
     this.changed();
+    this.emit({ type: 'finish' });
   }
   reverse() {
     if (
@@ -378,6 +400,7 @@ export class Game {
     // Historical best is tracked before each round so an overturned win cannot inflate it.
     this.data.priorBest = Math.max(this.streak, this.bestBeforeRound);
     this.changed();
+    this.emit({ type: 'reverse' });
   }
   private bestBeforeRound = 0;
   begin() {
@@ -418,6 +441,7 @@ export class Game {
       this.phase = this.data.settings.auto ? 'cooldown' : 'idle';
       this.nextAt = this.data.settings.auto ? now + this.data.settings.cooldown * 1000 : null;
       this.changed();
+      this.emit({ type: 'mission-timeout' });
       return;
     }
     if (this.phase === 'cooldown' && this.nextAt !== null && now >= this.nextAt) {
@@ -457,6 +481,7 @@ export class Game {
       this.mission.remaining += bonus;
     }
     this.changed();
+    this.emit({ type: 'wrong-guess' });
     return { correct: false, bonus: bonus / 1000 };
   }
   get awardBoard(): AwardBoard | null {
@@ -498,6 +523,8 @@ export class Game {
     board.selectedHintId = hintId;
     result.award = { name: hint.name };
     this.changed();
+    // Choosing another hint by the same chatter changes nothing public.
+    if (old !== hint.userId) this.emit({ type: 'award' });
   }
   private rememberHint(r: Round, userId: string, name: string, text: string) {
     if (text.trim().startsWith('!')) return;
@@ -597,11 +624,15 @@ export class Game {
     if (matches(text, r.word)) return false;
     this.recentChat.set(userId, now);
     r.participants.set(userId, name.slice(0, 40));
-    if (text.trim().toLowerCase() === '!skip') r.votes.add(userId);
+    const voted = text.trim().toLowerCase() === '!skip' && !r.votes.has(userId);
+    if (voted) r.votes.add(userId);
     if (r.votes.size >= this.data.settings.skipVotes && !this.skipUsed) {
       this.skipUsed = true;
       this.finish('skipped');
-    } else this.changed();
+    } else {
+      this.changed();
+      if (voted) this.emit({ type: 'skip-vote' });
+    }
     return true;
   }
   view(role: 'studio' | 'viewer' | 'overlay'): GameView {
@@ -676,5 +707,12 @@ export class Game {
   }
   private changed() {
     this.onChange();
+  }
+  private emit(event: GameEvent) {
+    try {
+      this.onEvent(event);
+    } catch {
+      /* Announcements are a side channel. The game has already moved on. */
+    }
   }
 }

@@ -31,7 +31,15 @@ import {
   MessageSquare,
   NoChat,
 } from './icons';
-import type { GameView, Studio, SessionInfo, Settings, Result } from '../shared/types';
+import type {
+  GameView,
+  Studio,
+  SessionInfo,
+  Settings,
+  Result,
+  ChatBotPost,
+  ChatBotStatus,
+} from '../shared/types';
 import { request } from './api';
 import { Microphone } from './microphone';
 import { SpeechLab } from './SpeechLab';
@@ -45,7 +53,7 @@ import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
 import Landing from './Landing';
-import { productBrand as brand, Button, Tag, CopyButton, Modal, HowTo } from './ui';
+import { productBrand as brand, botNotices, Button, Tag, CopyButton, Modal, HowTo } from './ui';
 import './brand.css';
 import { MissionStatus, GuessForm, AwardReview, ForbiddenClueCard, PublicAward } from './mechanics';
 import './mechanics.css';
@@ -66,6 +74,7 @@ import './result-card.css';
 import '../extension/tokens.css';
 import './studio-refresh.css';
 import './public-refresh.css';
+import './chat-bot.css';
 
 const ProductReview = React.lazy(() => import('./ProductReview'));
 const CardDesignLab = React.lazy(() => import('./CardDesignLab'));
@@ -129,7 +138,16 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [modal, setModal] = useState(''),
-    [tab, setTab] = useState('studio');
+    [tab, setTab] = useState('studio'),
+    // The operator may finish the bot account sign-in while signed in here as a streamer.
+    [notice, setNotice] = useState(() => {
+      const code = new URLSearchParams(location.search).get('notice') ?? '';
+      return code === 'bot-ready'
+        ? { text: botNotices.ready, ok: true }
+        : botNotices.errors[code]
+          ? { text: botNotices.errors[code], ok: false }
+          : null;
+    });
   const [micStatus, setMicStatus] = useState('off'),
     [level, setLevel] = useState(0),
     [consent, setConsent] = useState(false);
@@ -447,6 +465,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               <AlertTriangle size={17} />
               <span>{error}</span>
               <button aria-label="Dismiss error" onClick={() => setError('')}>
+                <X size={16} />
+              </button>
+            </div>
+          )}
+          {notice && (
+            <div className={cx('error-banner', notice.ok && 'info-banner')} role="status">
+              {notice.ok ? <Check size={17} /> : <AlertTriangle size={17} />}
+              <span>{notice.text}</span>
+              <button aria-label="Dismiss notice" onClick={() => setNotice(null)}>
                 <X size={16} />
               </button>
             </div>
@@ -897,7 +924,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   onError={setError}
                 />
               )}
-              {demo && <Rehearsal game={g} csrf={session.csrf!} onError={setError} />}
+              {demo && (
+                <Rehearsal game={g} bot={studio.chatBot} csrf={session.csrf!} onError={setError} />
+              )}
             </>
           )}
           {tab === 'community' && <Community game={g} />}
@@ -956,7 +985,12 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           onClose={() => setModal('')}
         >
           {modal === 'settings' ? (
-            <SettingsForm settings={g.settings} busy={busy || settling} onSave={save} />
+            <SettingsForm
+              settings={g.settings}
+              chatBot={studio.chatBot}
+              busy={busy || settling}
+              onSave={save}
+            />
           ) : modal === 'how' ? (
             <HowTo />
           ) : modal === 'guess' ? (
@@ -1029,8 +1063,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                 reference template in the README.
               </p>
               <p className="muted">
-                Only chat-read permission is requested. baited does not post target words or
-                announcements.
+                baited asks to read your chat. Announcements are optional and post through a
+                separate bot account; they never include the secret word while a round is live.
               </p>
             </>
           ) : (
@@ -1080,12 +1114,23 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
     </div>
   );
 }
+function chatBotHint(bot: ChatBotStatus) {
+  const what = 'Posts round starts, halfway, the last 10 seconds and results. Never the word while a round is live.';
+  if (bot.mode === 'demo') return `${what} In this demo, posts appear under Demo controls.`;
+  if (bot.mode === 'unconfigured') return `${what} This server has no bot account yet, so nothing is posted.`;
+  if (bot.mode === 'unauthorized')
+    return `${what} The bot account still needs to sign in on this server, so nothing is posted.`;
+  if (!bot.channelAllowed) return `${what} Allow the bot in Stream setup first.`;
+  return `${what} Posts as ${bot.name} with Twitch’s Chat Bot badge.`;
+}
 function SettingsForm({
   settings,
+  chatBot,
   busy,
   onSave,
 }: {
   settings: Settings;
+  chatBot: ChatBotStatus;
   busy: boolean;
   onSave: (s: Settings) => void;
 }) {
@@ -1211,6 +1256,32 @@ function SettingsForm({
           onChange={(e) => set({ ...s, callBait: e.target.checked })}
         />
       </label>
+      <p className="field-label">Chat bot</p>
+      <label className="toggle-row">
+        <span>
+          <strong>Announce rounds in chat</strong>
+          <small>{chatBotHint(chatBot)}</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={s.chatBot}
+          onChange={(e) => set({ ...s, chatBot: e.target.checked })}
+        />
+      </label>
+      <label className="toggle-row">
+        <span>
+          <strong>Moderator commands</strong>
+          <small>
+            Your moderators can type !bait start, !bait pause and !bait resume. Starting still
+            needs your microphone on in this studio.
+          </small>
+        </span>
+        <input
+          type="checkbox"
+          checked={s.modCommands}
+          onChange={(e) => set({ ...s, modCommands: e.target.checked })}
+        />
+      </label>
       <div className="modal-actions">
         <Button type="submit" className="primary" disabled={busy}>
           Save game settings <Check size={16} />
@@ -1221,26 +1292,36 @@ function SettingsForm({
 }
 function Rehearsal({
   game,
+  bot,
   csrf,
   onError,
 }: {
   game: GameView;
+  bot: ChatBotStatus;
   csrf: string;
   onError: (e: string) => void;
 }) {
   const [open, setOpen] = useState(false),
     [name, setName] = useState('friendly_viewer'),
     [text, setText] = useState(''),
+    [moderator, setModerator] = useState(false),
     [transcript, setTranscript] = useState(''),
     [feedback, setFeedback] = useState('');
+  const command = text.trim().toLowerCase().startsWith('!bait ');
   const send = async (kind: string) => {
     try {
       if (kind === 'chat') {
-        const r = await request<{ accepted: boolean }>('/api/demo/chat', { name, text }, csrf);
+        const r = await request<{ accepted: boolean; command: boolean }>(
+          '/api/demo/chat',
+          { name, text, moderator },
+          csrf,
+        );
         setFeedback(
-          r.accepted
-            ? 'Test chatter counted.'
-            : 'Not counted: inactive, cooldown, duplicate chatter, or secret word spoiler.',
+          r.command
+            ? 'Command received. Bot replies appear below when announcements are on.'
+            : r.accepted
+              ? 'Test chatter counted.'
+              : 'Not counted: inactive, cooldown, duplicate chatter, or secret word spoiler.',
         );
         setText('');
       } else {
@@ -1295,12 +1376,20 @@ function Rehearsal({
                 Simulated chat
                 <input
                   required
-                  placeholder="A subtle nudge, or !skip"
+                  placeholder="A subtle nudge, !skip, or !bait help"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                 />
               </label>
-              <Button className="secondary" disabled={game.phase !== 'active'}>
+              <label className="rehearsal-check">
+                <input
+                  type="checkbox"
+                  checked={moderator}
+                  onChange={(e) => setModerator(e.target.checked)}
+                />
+                Send as a moderator
+              </label>
+              <Button className="secondary" disabled={game.phase !== 'active' && !command}>
                 Send test chat
               </Button>
             </form>
@@ -1327,6 +1416,18 @@ function Rehearsal({
           <p role="status" className="test-feedback">
             {feedback}
           </p>
+          <div className="bot-preview">
+            <h3>Chat bot preview</h3>
+            {game.settings.chatBot ? (
+              bot.recent.length ? (
+                <BotPosts posts={bot.recent} />
+              ) : (
+                <p>Start a round. The bot’s posts appear here instead of Twitch chat.</p>
+              )
+            ) : (
+              <p>Turn on Announce rounds in chat in Game settings to preview the bot here.</p>
+            )}
+          </div>
         </div>
       )}
     </section>
@@ -1518,6 +1619,9 @@ function Setup({
             </div>
           </section>
         </li>
+        <li>
+          <ChatBotStep bot={studio.chatBot} game={game} />
+        </li>
       </ol>
       <section className="privacy-panel">
         <ShieldCheck size={22} />
@@ -1534,6 +1638,94 @@ function Setup({
         </Button>
       </section>
     </div>
+  );
+}
+
+const postStatus: Record<ChatBotPost['status'], string> = {
+  sent: 'Sent',
+  preview: 'Preview',
+  dropped: 'Held by Twitch',
+  failed: 'Not sent',
+};
+function BotPosts({ posts }: { posts: ChatBotPost[] }) {
+  return (
+    <ul className="bot-posts" aria-label="Recent bot posts">
+      {posts.map((post) => (
+        <li key={post.id} className={cx('bot-post', `bot-post--${post.status}`)}>
+          <time dateTime={new Date(post.at).toISOString()}>
+            {new Date(post.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </time>
+          <span className="bot-post__text">{post.text}</span>
+          <span className="bot-post__status">{postStatus[post.status]}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
+  const on = game.settings.chatBot;
+  const live = bot.mode === 'twitch' && bot.channelAllowed;
+  const tag =
+    bot.mode === 'demo'
+      ? on
+        ? 'Previewing'
+        : 'Off'
+      : bot.mode !== 'twitch'
+        ? 'Not set up'
+        : !bot.channelAllowed
+          ? 'Needs permission'
+          : on
+            ? 'Posting'
+            : 'Off';
+  const tone =
+    on && (live || bot.mode === 'demo')
+      ? 'lime'
+      : bot.mode === 'twitch' && !bot.channelAllowed
+        ? 'amber'
+        : 'muted';
+  return (
+    <section className="setup-step">
+      <span className="setup-step-index" aria-hidden="true">
+        05
+      </span>
+      <div className="setup-step-body">
+        <div className="setup-step-heading">
+          <h2>Add the chat bot</h2>
+          <Tag tone={tone}>{tag}</Tag>
+        </div>
+        <p className="muted">
+          {bot.mode === 'demo'
+            ? 'The bot announces rounds, the last 10 seconds and results. In this demo its posts appear under Demo controls instead of Twitch chat.'
+            : bot.mode === 'unconfigured'
+              ? 'This server has no bot account. Its operator sets one up first; until then baited stays read-only in chat.'
+              : bot.mode === 'unauthorized'
+                ? 'The bot account is configured but has not signed in on this server yet.'
+                : bot.channelAllowed
+                  ? `${bot.name} posts in your chat with Twitch’s Chat Bot badge. Turn announcements on in Game settings.`
+                  : `Allow ${bot.name} to post in your chat. Twitch asks you once; baited keeps reading chat as before.`}{' '}
+          It never posts the word while a round is live, because you read your chat too.
+        </p>
+        {game.mode === 'twitch' && bot.mode === 'twitch' && !bot.channelAllowed && (
+          <div className="connection-buttons">
+            <Button className="primary" onClick={() => location.assign('/auth/twitch?bot=1')}>
+              Allow the bot in your chat <ArrowUpRight size={16} />
+            </Button>
+          </div>
+        )}
+        <p className="setup-commands">
+          Chat can type <code>!bait help</code>, <code>!bait score</code> and <code>!bait top</code>.
+          With moderator commands on, mods can type <code>!bait start</code>,{' '}
+          <code>!bait pause</code> and <code>!bait resume</code>.
+        </p>
+        {bot.problem && (
+          <div className="notice">
+            <AlertTriangle size={18} />
+            <p>{bot.problem}</p>
+          </div>
+        )}
+        {bot.recent.length > 0 && <BotPosts posts={bot.recent} />}
+      </div>
+    </section>
   );
 }
 
@@ -1697,7 +1889,8 @@ function Privacy() {
         </p>
         <h2>Twitch and participation</h2>
         <p>
-          The streamer authorizes baited to read their channel’s chat. For each word, baited keeps
+          The streamer authorizes baited to read their channel’s chat, and optionally lets its bot
+          account post there. For each word, baited keeps
           up to 40 eligible hints and 20 flagged hints in memory for a post-round award. The current
           word and the previous review can coexist. Each chatter has at most three clean hints and
           one flagged hint in that set. Raw text clears when the next round ends or ten minutes
@@ -1709,6 +1902,16 @@ function Privacy() {
           1,000 participant IDs and display names are retained per room; leading totals and the
           streamer’s selected award name appear publicly. Awards are manual picks. baited does not
           infer which hint caused a win or delete messages from Twitch.
+        </p>
+        <h2>Chat bot</h2>
+        <p>
+          If the streamer turns announcements on and allows the bot in their channel, a bot
+          account run by this server’s operator posts round starts, timer reminders, results,
+          scores and the streamer’s award pick in Twitch chat. It names chatters only in that award,
+          in the top-baiters list the room already shows, and when replying to their own command.
+          It never posts a word while its round is live, and it
+          does not store what it posts beyond the last few messages shown in the streamer’s
+          studio, which are kept in memory only.
         </p>
         <h2>Private guesses</h2>
         <p>
@@ -1735,7 +1938,7 @@ function Privacy() {
           streamer who opens it. OBS links provide read-only game information. Keep studio sessions
           and server credentials private.
         </p>
-        <p className="muted">Updated October 24, 2026.</p>
+        <p className="muted">Updated October 27, 2026.</p>
       </main>
     </div>
   );
