@@ -115,6 +115,7 @@ for (const width of [320, 768, 1440]) {
     const geometryPath = testInfo.outputPath('clue-geometry.json')
     writeFileSync(geometryPath, JSON.stringify(measurements, null, 2))
     await testInfo.attach('clue-geometry.json', { path: geometryPath, contentType: 'application/json' })
+    await expect(studies(page).locator('.cl-pixel-art[data-resolving="true"]')).toHaveCount(0)
     await page.screenshot({ path: testInfo.outputPath(`clue-studies-${width}.png`), fullPage: true })
   })
 }
