@@ -1,6 +1,7 @@
-// Native landing projection of app/client/CardGlass.tsx. Keep these small optics
-// values and ruled geometry in parity; no game session or Lab controls are loaded.
-export const glassOptics = { pitch: 12, line: 1.5, scale: 40, frequency: '0.012 0.017', blur: 0.9 }
+// Approved Cut Open / Glass / Prism, projected without the Lab or game session.
+// The open face keeps the small Glass rules, without an inner lens or filter.
+export const selectedCardStyle = Object.freeze({ edition: 'cut-open', finish: 'glass', back: 'prism', artFrame: 'open' })
+export const glassOptics = { pitch: 12, line: 1.5 }
 export function glassRules(pitch) {
   if (!Number.isFinite(pitch) || pitch < 1) throw new RangeError('Glass line pitch must be at least one pixel.')
   const [nx, ny, reach] = [Math.sin(Math.PI / 3), Math.cos(Math.PI / 3), 1200]
@@ -30,25 +31,11 @@ function rules(opacity) {
   return svg('path', { d: ruledLight, fill: 'none', stroke: '#fffdf7', 'stroke-opacity': opacity, 'stroke-width': glassOptics.line })
 }
 function glass() {
-  const id = `landing-glass-${++serial}`
-  const field = svg('svg', { class: 'selected-glass-field', 'aria-hidden': true, focusable: false }, [rules(0.22)])
-  const lens = node('span', 'selected-glass')
-  lens.setAttribute('aria-hidden', 'true')
-  const light = svg('linearGradient', { id: `${id}-light`, x1: 0, y1: 0, x2: 0, y2: 1 }, [
-    svg('stop', { offset: 0, 'stop-color': '#8c43f9' }), svg('stop', { offset: 1, 'stop-color': '#241050' }),
-  ])
-  const filter = svg('filter', { id: `${id}-bend`, filterUnits: 'userSpaceOnUse', primitiveUnits: 'userSpaceOnUse', x: 0, y: 0, width: '100%', height: '100%', 'color-interpolation-filters': 'sRGB' }, [
-    svg('feTurbulence', { type: 'fractalNoise', baseFrequency: glassOptics.frequency, numOctaves: 1, seed: 5, result: 'n' }),
-    svg('feDisplacementMap', { in: 'SourceGraphic', in2: 'n', scale: glassOptics.scale, xChannelSelector: 'A', yChannelSelector: 'A', result: 'bent' }),
-    svg('feGaussianBlur', { in: 'bent', stdDeviation: glassOptics.blur, result: 'frost' }),
-    svg('feColorMatrix', { in: 'frost', type: 'saturate', values: 1.8 }),
-  ])
-  lens.append(svg('svg', { class: 'selected-glass__bend', focusable: false }, [svg('defs', {}, [light, filter]), svg('g', { filter: `url(#${id}-bend)` }, [svg('rect', { width: '100%', height: '100%', fill: `url(#${id}-light)` }), rules(0.3)])]))
-  return { field, lens }
+  return svg('svg', { class: 'selected-glass-field', 'aria-hidden': true, focusable: false }, [rules(0.22)])
 }
-function logo() {
+function logo(ink = 'white') {
   const mark = node('img')
-  Object.assign(mark, { src: '/assets/brand/baited-logo-white.webp', alt: 'BAITED', width: 764, height: 225, draggable: false, decoding: 'async' })
+  Object.assign(mark, { src: `/assets/brand/baited-logo-${ink}.webp`, alt: 'BAITED', width: 764, height: 225, draggable: false, decoding: 'async' })
   return mark
 }
 
@@ -82,11 +69,11 @@ export function warmSelectedArt(items, around, before = 3, after = 3) {
 
 export function previewArt(path) {
   const name = /^\/cards\/proofs\/([a-z0-9-]+)\.png$/.exec(path)?.[1]
-  return name ? `/card-lab/landing/art/${name}.webp` : path
+  return name ? `/assets/card-deck/art/${name}.webp` : path
 }
 
 export const clueStyles = ['baseline', 'rail', 'pills', 'tokens', 'quiet']
-// Ruled is Opus's provisional proposal, not an owner-selected final clue style.
+// Ruled matches the approved Cut Open reference. Other studies remain linkable.
 export function parseClueStyle(search) {
   const value = new URLSearchParams(typeof search === 'string' ? search : '').get('clue')
   return clueStyles.includes(value) ? value : 'rail'
@@ -128,15 +115,17 @@ function restrictions(card, style) {
 }
 
 export function cardFace(card, total, style = parseClueStyle(globalThis.location?.search ?? '')) {
+  serial++
   const face = node('div', 'bait-card selected-card')
+  Object.assign(face.dataset, selectedCardStyle)
   face.dataset.clue = clueStyles.includes(style) ? style : 'rail'
   face.setAttribute('role', 'group')
   face.setAttribute('aria-roledescription', 'card')
   face.setAttribute('aria-label', `${card.word.toUpperCase()}, ${card.difficulty}`)
-  const { field, lens } = glass()
+  const field = glass()
   const back = node('span', 'selected-card__back')
   back.setAttribute('aria-hidden', 'true')
-  back.append(logo())
+  back.append(logo('black'))
   const top = node('span', 'card-top')
   const number = node('span', '', String(card.index + 1).padStart(2, '0'))
   number.append(node('small', '', `/ ${total}`))
@@ -153,17 +142,20 @@ export function cardFace(card, total, style = parseClueStyle(globalThis.location
   canvas.setAttribute('aria-hidden', 'true')
   image.addEventListener('load', () => revealSelectedCard(face.closest('.deck-card-item')))
   const square = node('span', 'selected-card__square')
-  square.append(lens, image, canvas)
-  art.append(square)
+  square.append(image, canvas)
+  art.append(field, square)
   const plate = node('div', 'selected-card__plate')
   const word = node('span', `card-word card-word--${card.word}${card.word.length > 10 ? ' card-word--long' : ''}`, card.word.toUpperCase())
   const forbidden = restrictions(card, face.dataset.clue)
   const footer = node('span', 'card-footer')
-  footer.append(logo())
+  const signature = node('span', 'selected-card__signature', 'BAITED')
+  signature.setAttribute('role', 'img')
+  signature.setAttribute('aria-label', 'BAITED')
+  footer.append(signature)
   plate.append(word, forbidden, node('span', 'card-question', card.question), footer)
   const shade = node('span', 'card-shade')
   shade.setAttribute('aria-hidden', 'true')
-  face.append(field, back, top, art, plate, shade)
+  face.append(back, top, art, plate, shade)
   return face
 }
 
@@ -235,5 +227,5 @@ export function prepareSelectedScenes(cards) {
     image.src = image.dataset.src
     old.replaceWith(face)
   }
-  for (const back of document.querySelectorAll('.why-deal__back, .why-stream__back')) back.classList.add('selected-mosaic')
+  for (const back of document.querySelectorAll('.why-deal__back, .why-stream__back')) back.classList.add('selected-prism')
 }

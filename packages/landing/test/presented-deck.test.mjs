@@ -13,17 +13,17 @@ async function fixture(t, environment = 'dev', selected = true) {
   t.after(() => rm(root, { recursive: true, force: true }))
   await writeFile(join(root, 'package.json'), '{"type":"module"}')
   const stagingSite = join(root, `site-${environment}`)
-  await mkdir(join(stagingSite, 'card-lab/backs'), { recursive: true })
-  await writeFile(join(stagingSite, 'card-lab/backs/back-mosaic.webp'), 'Mosaic fixture')
+  await mkdir(join(stagingSite, 'assets/card-deck'), { recursive: true })
+  await writeFile(join(stagingSite, 'assets/card-deck/back-prism.webp'), 'Prism fixture')
   for (const file of ['app.js', 'index.html', 'styles.css', 'deck.js']) await copyFile(new URL(`../site/${file}`, import.meta.url), join(stagingSite, file))
-  if (selected && environment === 'dev') await installSelectedCards({ environment, stagingSite })
+  if (selected) await installSelectedCards({ environment, stagingSite })
   return stagingSite
 }
 
 async function installed(t) {
   const stagingSite = await fixture(t)
   await installPresentedDeck({ environment: 'dev', stagingSite })
-  return import(pathToFileURL(join(stagingSite, 'card-lab/landing/presented-deck.js')).href)
+  return import(pathToFileURL(join(stagingSite, 'assets/card-deck/presented-deck.js')).href)
 }
 
 function scene({ width = 300, height = 420, room = 1440, zoom = 1, count = 9 } = {}) {
@@ -68,25 +68,24 @@ function clock() {
   }
 }
 
-test('presented installer changes only dev import and adds its module after selected staging', async t => {
+test('presented installer replaces the deck import after selected staging', async t => {
   const stagingSite = await fixture(t)
   const files = ['app.js', 'deck.js', 'styles.css', 'index.html']
   const source = await Promise.all(files.map(file => readFile(new URL(`../site/${file}`, import.meta.url), 'utf8')))
   const before = await Promise.all(files.map(file => readFile(join(stagingSite, file), 'utf8')))
   assert.equal(await installPresentedDeck({ environment: 'dev', stagingSite }), true)
   const after = await Promise.all(files.map(file => readFile(join(stagingSite, file), 'utf8')))
-  assert.equal(after[0], before[0].replace("from './deck.js'", "from '/card-lab/landing/presented-deck.js'"))
+  assert.equal(after[0], before[0].replace("from './deck.js'", "from '/assets/card-deck/presented-deck.js'"))
   assert.deepEqual(after.slice(1), before.slice(1), 'original staged deck and static files stay byte-identical')
   assert.deepEqual(await Promise.all(files.map(file => readFile(new URL(`../site/${file}`, import.meta.url), 'utf8'))), source)
-  assert.deepEqual((await readdir(join(stagingSite, 'card-lab/landing'))).sort(), ['presented-deck.js', 'selected-cards.css', 'selected-cards.js'])
+  assert.deepEqual((await readdir(join(stagingSite, 'assets/card-deck'))).sort(), ['back-prism.webp', 'presented-deck.js', 'selected-cards.css', 'selected-cards.js'])
 })
 
-test('production is a no-op and missing, duplicate or reordered hooks fail before writing', async t => {
+test('production gets the same presentation seam; missing, duplicate or reordered hooks fail before writing', async t => {
   const prod = await fixture(t, 'prod')
-  const before = await readFile(join(prod, 'app.js'), 'utf8')
-  assert.equal(await installPresentedDeck({ environment: 'prod', stagingSite: prod }), false)
-  assert.equal(await readFile(join(prod, 'app.js'), 'utf8'), before)
-  assert.deepEqual(await readdir(join(prod, 'card-lab')), ['backs'])
+  assert.equal(await installPresentedDeck({ environment: 'prod', stagingSite: prod }), true)
+  assert.ok((await readFile(join(prod, 'app.js'), 'utf8')).includes("from '/assets/card-deck/presented-deck.js'"))
+  assert.ok(!(await readdir(prod)).includes('card-lab'))
   await assert.rejects(installPresentedDeck({ environment: 'dev', stagingSite: prod }), /site-dev/)
   const unselected = await fixture(t, 'dev', false)
   await assert.rejects(installPresentedDeck({ environment: 'dev', stagingSite: unselected }))
@@ -101,7 +100,7 @@ test('production is a no-op and missing, duplicate or reordered hooks fail befor
     await assert.rejects(installPresentedDeck({ environment: 'dev', stagingSite }), /hook changed/)
     assert.equal(await readFile(join(stagingSite, 'app.js'), 'utf8'), beforeApp)
     assert.equal(await readFile(join(stagingSite, 'deck.js'), 'utf8'), beforeDeck)
-    assert.deepEqual((await readdir(join(stagingSite, 'card-lab/landing'))).sort(), ['selected-cards.css', 'selected-cards.js'])
+    assert.deepEqual((await readdir(join(stagingSite, 'assets/card-deck'))).sort(), ['back-prism.webp', 'selected-cards.css', 'selected-cards.js'])
   }
 })
 

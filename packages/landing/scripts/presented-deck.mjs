@@ -59,20 +59,19 @@ function withPresentation(source) {
   return source
 }
 
-// Opt-in dev staging seam. No motion controller is created here, and the copied
+// Build-time presentation seam. No motion controller is created here, and the copied
 // fan retains its original behavior when no presentation callback is supplied.
 export async function installPresentedDeck({ environment, stagingSite }) {
-  if (environment === 'prod') return false
-  if (environment !== 'dev' || basename(stagingSite) !== 'site-dev') throw new Error('Presented deck requires a site-dev staging tree')
-  const directory = join(stagingSite, 'card-lab/landing')
+  if (!['dev', 'prod'].includes(environment) || basename(stagingSite) !== `site-${environment}`) throw new Error('Presented deck requires a matching site-dev or site-prod staging tree')
+  const directory = join(stagingSite, 'assets/card-deck')
   const selected = await lstat(join(directory, 'selected-cards.js'))
   if (!selected.isFile() || selected.isSymbolicLink()) throw new Error('Presented deck requires the selected-card staging installer first')
   const appPath = join(stagingSite, 'app.js')
   const [app, deck] = await Promise.all([readFile(appPath, 'utf8'), readFile(join(stagingSite, 'deck.js'), 'utf8')])
   const nextApp = replaceOnce(app,
     "import { createDeck, wrapIndex, wrapOffset } from './deck.js'",
-    "import { createDeck, wrapIndex, wrapOffset } from '/card-lab/landing/presented-deck.js'")
-  if (!app.includes("from '/card-lab/landing/selected-cards.js'")) throw new Error('Presented deck requires the selected-card staging installer first')
+    "import { createDeck, wrapIndex, wrapOffset } from '/assets/card-deck/presented-deck.js'")
+  if (!app.includes("from '/assets/card-deck/selected-cards.js'")) throw new Error('Presented deck requires the selected-card staging installer first')
   const nextDeck = withPresentation(deck)
   // Resolve and validate every hook before changing the unpublished staging tree.
   await writeFile(join(directory, 'presented-deck.js'), nextDeck)

@@ -174,25 +174,33 @@ export async function buildSite(environment) {
 
 async function buildSiteLocked(environment, destination) {
   await stageAndPublishSite({ environment, source: resolve(landingRoot, 'site'), destination, build: async stagingSite => {
-    if (environment !== 'dev') return
-    const labRoot = resolve(stagingSite, 'card-lab')
-    const result = spawnSync(process.execPath, [
-      resolve(appRoot, 'node_modules/vite/bin/vite.js'), 'build', '--config',
-      resolve(appRoot, 'vite.card-lab.config.ts'), '--outDir', labRoot,
-    ], { cwd: appRoot, stdio: 'inherit', timeout: 120_000 })
-    if (result.error) throw result.error
-    if (result.status !== 0) throw new Error(`Card Lab build failed (${result.status})`)
-    await rename(resolve(labRoot, 'card-lab.html'), resolve(labRoot, 'index.html'))
-    await copyStaticTree(resolve(appRoot, 'public/cards/proofs'), resolve(labRoot, 'cards/proofs'), { mediaOnly: true })
-    const mediaRoot = resolve(appRoot, 'public/card-lab')
-    const mediaStat = await lstat(mediaRoot).catch(error => {
-      if (error.code === 'ENOENT') return null
-      throw error
-    })
-    if (mediaStat?.isSymbolicLink()) throw new Error('Card Lab media root must not be a symlink')
-    if (mediaStat?.isDirectory()) await copyStaticTree(mediaRoot, labRoot, { mediaOnly: true })
+    if (environment === 'dev') {
+      const labRoot = resolve(stagingSite, 'card-lab')
+      const result = spawnSync(process.execPath, [
+        resolve(appRoot, 'node_modules/vite/bin/vite.js'), 'build', '--config',
+        resolve(appRoot, 'vite.card-lab.config.ts'), '--outDir', labRoot,
+      ], { cwd: appRoot, stdio: 'inherit', timeout: 120_000 })
+      if (result.error) throw result.error
+      if (result.status !== 0) throw new Error(`Card Lab build failed (${result.status})`)
+      await rename(resolve(labRoot, 'card-lab.html'), resolve(labRoot, 'index.html'))
+      await copyStaticTree(resolve(appRoot, 'public/cards/proofs'), resolve(labRoot, 'cards/proofs'), { mediaOnly: true })
+      const mediaRoot = resolve(appRoot, 'public/card-lab')
+      const mediaStat = await lstat(mediaRoot).catch(error => {
+        if (error.code === 'ENOENT') return null
+        throw error
+      })
+      if (mediaStat?.isSymbolicLink()) throw new Error('Card Lab media root must not be a symlink')
+      if (mediaStat?.isDirectory()) await copyStaticTree(mediaRoot, labRoot, { mediaOnly: true })
+    }
+    // The approved deck ships independently of the dev-only comparison lab.
+    const deckRoot = resolve(stagingSite, 'assets/card-deck')
+    const back = resolve(appRoot, 'public/card-lab/backs/back-prism.webp')
+    const backStat = await lstat(back)
+    if (!backStat.isFile() || backStat.isSymbolicLink()) throw new Error('Prism back must be a regular asset')
+    await mkdir(deckRoot, { recursive: true })
+    await copyFile(back, resolve(deckRoot, 'back-prism.webp'))
+    await buildCardPreviews({ source: resolve(stagingSite, 'cards/proofs'), destination: resolve(deckRoot, 'art') })
     await installSelectedCards({ environment, stagingSite })
-    await buildCardPreviews({ source: resolve(stagingSite, 'cards/proofs'), destination: resolve(stagingSite, 'card-lab/landing/art') })
     await installPresentedDeck({ environment, stagingSite })
     await installRibbon({ environment, stagingSite })
   } })

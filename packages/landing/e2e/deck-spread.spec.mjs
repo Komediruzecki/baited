@@ -135,7 +135,7 @@ test('390px: a deliberate trusted touch opens the ribbon without descendant capt
     await expect.poll(() => mode(page)).toBe('paused')
     await decodeFaces(page)
     const state = await inspectSpread(page)
-    expect(state).toMatchObject({ glass: 1, reveals: 0, total: 78, overflow: false })
+    expect(state).toMatchObject({ glass: 0, reveals: 0, total: 78, overflow: false })
     expect(state.images).toBeLessThanOrEqual(state.cards.length + 6)
     expect(state.events).toContainEqual(expect.objectContaining({ type: 'lostpointercapture', target: 'word', trusted: true }))
     expect(state.events.filter(event => event.type === 'pointerup')).toHaveLength(1)
@@ -236,13 +236,13 @@ test('keyboard opens paused, arrows announce once, and Escape gathers the neares
 })
 
 for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [1440, 900], [3440, 1440]]) {
-  test(`${width}x${height}: paused faces fit between help and difficulty key with one Glass lens`, async ({ browser }, testInfo) => {
+  test(`${width}x${height}: paused Cut Open faces fit between help and difficulty key without inner lenses`, async ({ browser }, testInfo) => {
     const { context, page, errors } = await prepareDeck(browser, testInfo.project.use.baseURL, { width, height })
     try {
       await openPaused(page)
       await decodeFaces(page)
       const state = await inspectSpread(page)
-      expect(state).toMatchObject({ mode: 'paused', openness: 1, glass: 1, total: 78, reveals: 0, overflow: false })
+      expect(state).toMatchObject({ mode: 'paused', openness: 1, glass: 0, total: 78, reveals: 0, overflow: false })
       expect(state.faces).toBe(state.cards.length)
       expect(state.cards.length).toBeGreaterThanOrEqual(3)
       expect(state.cards.length).toBeLessThanOrEqual(13)
@@ -281,7 +281,7 @@ test('responsive resizing gathers an offscreen phone spread safely and reopening
     const desktop = await inspectSpread(page)
     expect(desktop.position).toBe(phone.position)
     expect(desktop.faces).toBeGreaterThan(phone.faces)
-    expect(desktop).toMatchObject({ glass: 1, overflow: false, reveals: 0 })
+    expect(desktop).toMatchObject({ glass: 0, overflow: false, reveals: 0 })
     expect(await page.locator('.deck-card-item.is-ribbon-face:not(.is-out) .card-art img').evaluateAll(images => images.every(image => !!image.getAttribute('src') && image.complete && image.naturalWidth > 0))).toBe(true)
     expect(errors).toEqual([])
   } finally { await context.close() }
