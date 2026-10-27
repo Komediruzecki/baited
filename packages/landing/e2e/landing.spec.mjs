@@ -22,7 +22,7 @@ test('keyboard browsing loads nearby art when the proximity observer is delayed'
     }
   })
   await page.goto(`${testInfo.project.use.baseURL}/#cards`)
-  await expect(page.locator('.deck-card-item')).toHaveCount(78)
+  await expect(page.locator('.deck-card-item')).toHaveCount(10)
   await expect(page.locator('.deck-card-item .card-art img[src]')).toHaveCount(0)
   await page.locator('#deck-hand').focus()
   await page.locator('#deck-hand').press('ArrowRight')

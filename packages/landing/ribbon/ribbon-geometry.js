@@ -7,6 +7,14 @@ const smooth = value => { const t = clamp(value); return t * t * (3 - 2 * t) }
 const mix = (from, to, t) => from + (to - from) * t
 const positive = value => Number.isFinite(value) && value > 0
 
+// Vertical visibility, independent of the row's width. The rising footer can
+// cover the pinned cards without moving their rectangles out of the viewport.
+export function visibleCardFraction(card, { top = 0, bottom, coverTop = bottom }) {
+  const height = card.bottom - card.top
+  if (![card.top, card.bottom, top, bottom, coverTop].every(Number.isFinite) || height <= 0) return 0
+  return clamp((Math.min(card.bottom, bottom, coverTop) - Math.max(card.top, top)) / height)
+}
+
 export function ribbonPose(offset, metrics) {
   const { room, width, height } = metrics
   if (!Number.isFinite(offset) || ![room, width, height].every(positive)) throw new RangeError('Ribbon geometry requires finite offsets and positive dimensions.')

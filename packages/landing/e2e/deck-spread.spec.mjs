@@ -135,7 +135,7 @@ test('390px: a deliberate trusted touch opens the ribbon without descendant capt
     await expect.poll(() => mode(page)).toBe('paused')
     await decodeFaces(page)
     const state = await inspectSpread(page)
-    expect(state).toMatchObject({ glass: 0, reveals: 0, total: 78, overflow: false })
+    expect(state).toMatchObject({ glass: 0, reveals: 0, total: 10, overflow: false })
     expect(state.images).toBeLessThanOrEqual(state.cards.length + 6)
     expect(state.events).toContainEqual(expect.objectContaining({ type: 'lostpointercapture', target: 'word', trusted: true }))
     expect(state.events.filter(event => event.type === 'pointerup')).toHaveLength(1)
@@ -167,18 +167,101 @@ test('390px: a fast large trusted swipe stays an ordinary fan flick', async ({ b
   } finally { await context.close() }
 })
 
-test('390px: trusted pointer cancellation folds the ribbon and leaves no drift running', async ({ browser }, testInfo) => {
+test('390px: trusted pointer cancellation pauses the ribbon without gathering or leaving drift running', async ({ browser }, testInfo) => {
   const { context, page, errors, client } = await prepareDeck(browser, testInfo.project.use.baseURL, { width: 390, height: 844, touch: true })
   try {
     await dragTouch(page, client, { end: false })
     await expect(page.locator('#deck-hand')).toHaveClass(/is-ribbon-open/)
     await touch(client, 'touchCancel')
-    await expect.poll(() => mode(page)).toBe('fan')
-    await expect(page.locator('#deck-hand')).not.toHaveClass(/is-ribbon-open|is-dragging/)
+    await expect.poll(() => mode(page)).toBe('paused')
+    await expect(page.locator('#deck-hand')).toHaveClass(/is-ribbon-open/)
+    await expect(page.locator('#deck-hand')).not.toHaveClass(/is-dragging/)
+    await expect.poll(() => page.evaluate(() => window.__baitedSpread.openness)).toBe(1)
+    await expect.poll(() => page.evaluate(() => window.__baitedSpread.moving)).toBe(false)
     const before = (await inspectSpread(page)).transforms
     await page.waitForTimeout(1000)
     expect((await inspectSpread(page)).transforms).toEqual(before)
     expect((await inspectSpread(page)).events).toContainEqual(expect.objectContaining({ type: 'pointercancel', trusted: true }))
+    expect(errors).toEqual([])
+  } finally { await context.close() }
+})
+
+test('390px: a small vertical touch scroll keeps the spread open and leaves page scrolling native', async ({ browser }, testInfo) => {
+  const { context, page, errors, client } = await prepareDeck(browser, testInfo.project.use.baseURL, { width: 390, height: 844, touch: true })
+  try {
+    await openPaused(page)
+    const word = await page.locator('.deck-card-item.is-ribbon-lens .card-word').boundingBox()
+    const start = { x: word.x + word.width / 2, y: word.y + word.height / 2 }
+    const before = await page.evaluate(() => scrollY)
+    await touch(client, 'touchStart', start)
+    for (let step = 1; step <= 8; step++) {
+      // These intervals author a normal vertical finger gesture.
+      await page.waitForTimeout(20)
+      await touch(client, 'touchMove', { x: start.x + step * .5, y: start.y - step * 12 })
+    }
+    await touch(client, 'touchEnd')
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(before + 30)
+    await expect.poll(() => mode(page)).toBe('paused')
+    await expect(page.locator('#deck-hand')).toHaveClass(/is-ribbon-open/)
+    await expect(page.locator('#deck-hand')).not.toHaveClass(/is-dragging/)
+    const events = (await inspectSpread(page)).events
+    expect(events).toContainEqual(expect.objectContaining({ type: 'pointercancel', trusted: true }))
+    expect(events.filter(event => event.type === 'pointermove').every(event => !event.defaultPrevented)).toBe(true)
+    expect(errors).toEqual([])
+  } finally { await context.close() }
+})
+
+test('the footer can enter without gathering until it covers half the spread card', async ({ browser }, testInfo) => {
+  const { context, page, errors } = await prepareDeck(browser, testInfo.project.use.baseURL)
+  try {
+    await openPaused(page)
+    const cover = fraction => page.evaluate(fraction => {
+      const card = document.querySelector('.deck-card-item.is-ribbon-lens').getBoundingClientRect()
+      const footer = document.querySelector('.site-footer').getBoundingClientRect()
+      scrollBy({ top: footer.top - (card.top + card.height * fraction), behavior: 'instant' })
+    }, fraction)
+    await cover(.8)
+    await expect.poll(() => page.evaluate(() => document.querySelector('.site-footer').getBoundingClientRect().top)).toBeLessThan(900)
+    // The observer has had a paint to deliver the entering-footer event.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    expect(await mode(page)).toBe('paused')
+    await cover(.4)
+    await expect.poll(() => mode(page)).toBe('fan')
+    await expect.poll(() => page.evaluate(() => window.__baitedSpread.moving)).toBe(false)
+    expect(errors).toEqual([])
+  } finally { await context.close() }
+})
+
+test('a static spread stays open above half visibility and gathers below it while scrolling upward', async ({ browser }, testInfo) => {
+  const { context, page, errors } = await prepareDeck(browser, testInfo.project.use.baseURL, { width: 390, height: 844, reduced: true })
+  try {
+    await openPaused(page)
+    const show = fraction => page.evaluate(fraction => {
+      const card = document.querySelector('.deck-card-item.is-ribbon-lens').getBoundingClientRect()
+      scrollBy({ top: card.top - (innerHeight - card.height * fraction), behavior: 'instant' })
+    }, fraction)
+    await show(.6)
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    expect(await mode(page)).toBe('paused')
+    await show(.4)
+    await expect.poll(() => mode(page)).toBe('fan')
+    expect(errors).toEqual([])
+  } finally { await context.close() }
+})
+
+test('moving the mouse away during a small wheel scroll does not dismiss a visible spread', async ({ browser }, testInfo) => {
+  const { context, page, errors } = await prepareDeck(browser, testInfo.project.use.baseURL)
+  try {
+    await openPaused(page)
+    const before = await page.evaluate(() => scrollY)
+    await page.mouse.move(20, 100)
+    await page.mouse.wheel(0, -50)
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(before - 30)
+    // Outlast the old 700ms mouse-leave dismissal, rather than only checking
+    // before that erroneous timeout could have fired.
+    await page.waitForTimeout(800)
+    expect(await mode(page)).toBe('paused')
+    await expect(page.locator('#deck-hand')).toHaveClass(/is-ribbon-open/)
     expect(errors).toEqual([])
   } finally { await context.close() }
 })
@@ -222,7 +305,7 @@ test('keyboard opens paused, arrows announce once, and Escape gathers the neares
     await toggle.press('ArrowRight')
     await expect.poll(() => mode(page)).toBe('paused')
     await expect.poll(() => position(page)).toBe(1)
-    await expect(page.locator('#deck-status')).toHaveText('BANANA, easy. Card 2 of 78.')
+    await expect(page.locator('#deck-status')).toHaveText('BANANA, easy. Card 2 of 10.')
     expect((await inspectSpread(page)).announcements).toHaveLength(1)
     const nearest = Math.round(await position(page))
     await page.evaluate(() => { window.__ribbonProbe.status.length = 0 })
@@ -242,7 +325,7 @@ for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [1440, 900],
       await openPaused(page)
       await decodeFaces(page)
       const state = await inspectSpread(page)
-      expect(state).toMatchObject({ mode: 'paused', openness: 1, glass: 0, total: 78, reveals: 0, overflow: false })
+      expect(state).toMatchObject({ mode: 'paused', openness: 1, glass: 0, total: 10, reveals: 0, overflow: false })
       expect(state.faces).toBe(state.cards.length)
       expect(state.cards.length).toBeGreaterThanOrEqual(3)
       expect(state.cards.length).toBeLessThanOrEqual(13)

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { fanPose, fanSpread } from '../site/deck.js'
-import { blendPose, openingDistance, qualifiesSpread, ribbonPose } from '../ribbon/ribbon-geometry.js'
+import { blendPose, openingDistance, qualifiesSpread, ribbonPose, visibleCardFraction } from '../ribbon/ribbon-geometry.js'
 
 const near = (value, expected, tolerance = 1e-9) => assert.ok(Math.abs(value - expected) <= tolerance, `${value} differs from ${expected}`)
 const fixtures = [
@@ -12,6 +12,20 @@ const fixtures = [
   { viewportWidth: 1440, width: 300, height: 420, room: 1440 / 0.68, zoom: 0.68 },
   { viewportWidth: 3440, width: 330, height: 462, room: 3440, zoom: 1 },
 ]
+
+test('gather visibility uses the card height, viewport clipping and footer coverage', () => {
+  const card = { top: 200, bottom: 600 }
+  near(visibleCardFraction(card, { bottom: 900, coverTop: 850 }), 1)
+  near(visibleCardFraction(card, { bottom: 900, coverTop: 520 }), .8)
+  near(visibleCardFraction(card, { bottom: 900, coverTop: 400 }), .5)
+  assert.ok(visibleCardFraction(card, { bottom: 900, coverTop: 399 }) < .5)
+  near(visibleCardFraction({ top: -160, bottom: 240 }, { bottom: 844 }), .6)
+  near(visibleCardFraction({ top: 644, bottom: 1044 }, { bottom: 844 }), .5)
+  near(visibleCardFraction(card, { top: 400, bottom: 844 }), .5)
+  assert.equal(visibleCardFraction(card, { bottom: 900, coverTop: 100 }), 0)
+  assert.equal(visibleCardFraction({ top: 1000, bottom: 1400 }, { bottom: 900 }), 0)
+  assert.equal(visibleCardFraction({ top: 0, bottom: 0 }, { bottom: 900 }), 0)
+})
 
 test('ribbon keeps the center full-size and upright, with symmetric bounded side poses', () => {
   for (const metrics of fixtures) {

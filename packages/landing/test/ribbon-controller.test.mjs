@@ -43,9 +43,11 @@ function platform() {
   document.activeElement = null
   document.createElement = () => new Node()
   const footer = new Node()
+  footer.getBoundingClientRect = () => ({ top: 1200, bottom: 2000 })
   document.querySelector = selector => selector === '.site-footer' ? footer : null
   const window = new Node()
   window.innerWidth = 1440
+  window.innerHeight = 900
   window.location = { search: '' }
   const observers = []
   class IntersectionObserver {
@@ -62,7 +64,7 @@ function platform() {
   install('setTimeout', (callback, delay) => { timers.set(++id, { callback, at: now + delay }); return id })
   install('clearTimeout', key => timers.delete(key))
   return {
-    Node, document, window, observers,
+    Node, document, window, footer, observers,
     restore() {
       for (const [name, descriptor] of previous) {
         if (descriptor) Object.defineProperty(globalThis, name, descriptor)
@@ -249,6 +251,30 @@ test('a paused ribbon refresh warms its expanded art window without advancing th
   assert.equal(newlyVisible.src, newlyVisible.dataset.src)
   assert.equal(view.api.position, 0)
   assert.equal(view.api.mode, 'paused')
+  view.clock.advance(16) // One queued visibility check, not a continuous loop.
+  assert.equal(view.clock.frames, 0)
+  assert.equal(view.clock.timers, 0)
+})
+
+test('scroll visibility is coalesced and gathers only below half a card, including footer coverage', t => {
+  const view = scene(t)
+  view.items.forEach(item => { item.getBoundingClientRect = () => ({ top: 200, bottom: 600 }) })
+  view.api.spread({ paused: true })
+  view.clock.advance(700)
+  view.clock.footer.getBoundingClientRect = () => ({ top: 520, bottom: 1500 })
+  for (let count = 0; count < 10; count++) view.clock.window.dispatchEvent(new Event('scroll'))
+  assert.equal(view.clock.frames, 1, 'many scroll events share one visibility read')
+  view.clock.advance(16)
+  assert.equal(view.api.mode, 'paused')
+  assert.equal(view.clock.frames, 0)
+  view.clock.footer.getBoundingClientRect = () => ({ top: 400, bottom: 1500 })
+  view.clock.window.dispatchEvent(new Event('scroll'))
+  view.clock.advance(16)
+  assert.equal(view.api.mode, 'paused', 'exactly half the card remains available')
+  view.clock.footer.getBoundingClientRect = () => ({ top: 399, bottom: 1500 })
+  view.clock.window.dispatchEvent(new Event('scroll'))
+  view.clock.advance(16)
+  assert.equal(view.api.mode, 'fan')
   assert.equal(view.clock.frames, 0)
   assert.equal(view.clock.timers, 0)
 })

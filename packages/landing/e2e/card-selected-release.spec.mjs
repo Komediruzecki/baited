@@ -8,7 +8,7 @@ for (const width of [320, 390, 768, 1440]) {
     page.on('pageerror', error => errors.push(error.message))
     await page.goto('/?spread-debug#cards')
     await page.evaluate(() => document.fonts.ready)
-    await expect(page.locator('.deck-card-item .selected-card')).toHaveCount(78)
+    await expect(page.locator('.deck-card-item .selected-card')).toHaveCount(10)
     await expect(page.locator('.selected-card:not([data-edition="cut-open"][data-finish="glass"][data-back="prism"][data-art-frame="open"])')).toHaveCount(0)
     await expect(page.locator('.selected-glass, .selected-card filter')).toHaveCount(0)
     await expect.poll(() => page.evaluate(() => !!window.__baitedSpread)).toBe(true)

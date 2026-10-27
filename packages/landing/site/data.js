@@ -1,6 +1,7 @@
 import { expansion } from './card-expansion.js'
 
-// The showcase deck. Targets and clue order mirror server/cards.ts.
+// The complete authored catalogue. Builds publish ten fixed examples through
+// scripts/public-samples.mjs. Targets and clue order mirror server/cards.ts.
 // Questions are editorial examples, not dialogue sent to Twitch.
 export const cards = [
   ['volcano', 'medium', ['lava', 'eruption'], 'Where would you definitely not build a house?'],
