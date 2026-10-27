@@ -22,6 +22,8 @@ export const botNotices = {
       'That Twitch account is not the bot account this server expects. Sign in as the bot account, in a private window if you are signed in as a streamer.',
     'bot-setup':
       'This server has no bot account configured. Set TWITCH_BOT_USER_ID, then sign in as the bot.',
+    'bot-declined':
+      'Baity stopped posting in your chat: you signed in without the bot permission. Allow the bot in Stream setup to bring Baity back.',
   } as Record<string, string>,
 };
 export function Button({

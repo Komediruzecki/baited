@@ -16,6 +16,7 @@ import {
   CHANNEL_BOT_SCOPE,
   SCOPES,
   botKey,
+  type SocketFactory,
 } from './twitch.js';
 import { SpeechBridge } from './speech.js';
 import { LocalSpeechBridge } from './local-speech.js';
@@ -37,7 +38,11 @@ export function canUseDemo(config: Config, clientIp: string | undefined, socketA
     : isLoopback(clientIp);
 }
 
-export async function createBait(config: Config, developmentHmr = false) {
+export async function createBait(
+  config: Config,
+  developmentHmr = false,
+  options: { socketFactory?: SocketFactory } = {},
+) {
   const app = express(),
     server = createServer(app),
     store = new Store(config.dataDir, config.key);
@@ -52,7 +57,7 @@ export async function createBait(config: Config, developmentHmr = false) {
   const microphoneLeases = new Map<string, { session: Session; leaseId: string; expires: number }>();
   const pendingOAuth = new Map<
     string,
-    { cookie: string; expires: number; kind: 'broadcaster' | 'bot' }
+    { cookie: string; expires: number; kind: 'broadcaster' | 'bot'; restore: boolean }
   >();
   const bot = new ChatBot({
     config,
@@ -183,7 +188,12 @@ export async function createBait(config: Config, developmentHmr = false) {
   }
   function connect(game: Game) {
     twitch.get(game.data.id)?.stop();
-    const connection = new TwitchConnection(game, auth, (generation) => invalidate(game.data.owner, generation));
+    const connection = new TwitchConnection(
+      game,
+      auth,
+      (generation) => invalidate(game.data.owner, generation),
+      options.socketFactory,
+    );
     connection.ignoreUserId = config.botUserId;
     connection.onMessage = (message) => bot.chat(game, message);
     twitch.set(game.data.id, connection);
@@ -414,7 +424,13 @@ export async function createBait(config: Config, developmentHmr = false) {
     });
     res.json({ csrf: s.csrf });
   });
-  function beginOAuth(req: Request, res: Response, kind: 'broadcaster' | 'bot', scopes: string[]) {
+  function beginOAuth(
+    req: Request,
+    res: Response,
+    kind: 'broadcaster' | 'bot',
+    scopes: string[],
+    restore = false,
+  ) {
     if (!limiter.hit(`oauth:${req.ip}`, 20)) {
       res.status(429).send('Try again shortly.');
       return;
@@ -426,7 +442,7 @@ export async function createBait(config: Config, developmentHmr = false) {
     }
     const state = randomKey(),
       cookie = randomKey();
-    pendingOAuth.set(state, { cookie, expires: Date.now() + 600000, kind });
+    pendingOAuth.set(state, { cookie, expires: Date.now() + 600000, kind, restore });
     res.cookie('bait_oauth', cookie, {
       httpOnly: true,
       secure: config.production,
@@ -459,7 +475,14 @@ export async function createBait(config: Config, developmentHmr = false) {
       keepBot = false;
     }
     const withBot = config.botReady && (req.query.bot === '1' || keepBot);
-    beginOAuth(req, res, 'broadcaster', withBot ? [...SCOPES, CHANNEL_BOT_SCOPE] : SCOPES);
+    // restore=1 marks the one automatic second step after a sign-in dropped channel:bot.
+    beginOAuth(
+      req,
+      res,
+      'broadcaster',
+      withBot ? [...SCOPES, CHANNEL_BOT_SCOPE] : SCOPES,
+      withBot && req.query.restore === '1',
+    );
   });
   // The operator signs in once as the configured bot account. No studio session is created.
   app.get('/auth/twitch/bot', (req, res) => {
@@ -488,7 +511,7 @@ export async function createBait(config: Config, developmentHmr = false) {
       return;
     }
     if (req.query.error || typeof req.query.code !== 'string') {
-      res.redirect('/?notice=cancelled');
+      res.redirect(pending.restore ? '/?notice=bot-declined' : '/?notice=cancelled');
       return;
     }
     if (pending.kind === 'bot') {
@@ -532,7 +555,13 @@ export async function createBait(config: Config, developmentHmr = false) {
       });
       connect(game);
       persist();
-      res.redirect('/');
+      // Signing in from the landing page after the session expired asks only for chat reading,
+      // which replaced a grant that let the bot post. Ask for channel:bot once more, never twice.
+      const botLost = !c.scope.includes(CHANNEL_BOT_SCOPE);
+      if (config.botReady && botLost && pending.restore) res.redirect('/?notice=bot-declined');
+      else if (config.botReady && botLost && c.previousScope.includes(CHANNEL_BOT_SCOPE))
+        res.redirect('/auth/twitch?bot=1&restore=1');
+      else res.redirect('/');
     } catch {
       res.redirect('/?notice=oauth');
     }

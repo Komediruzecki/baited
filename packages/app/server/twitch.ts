@@ -95,6 +95,13 @@ export class TwitchAuth {
       throw new BotAccountMismatch();
     }
     const key = kind === 'bot' ? botKey(user.id) : user.id;
+    // What this account had granted before, read before the new grant replaces it.
+    let previousScope: string[] = [];
+    try {
+      previousScope = this.store.credentials(key)?.scope ?? [];
+    } catch {
+      previousScope = [];
+    }
     const c: Credentials = {
       access_token: token.access_token,
       refresh_token: token.refresh_token,
@@ -111,7 +118,7 @@ export class TwitchAuth {
     const generation = this.bump(key);
     await this.store.setCredentials(key, c);
     this.assertCurrent(key, generation);
-    return c;
+    return { ...c, previousScope };
   }
   async validateAccess(access: string, required = SCOPES) {
     const r = await this.fetcher('https://id.twitch.tv/oauth2/validate', {
@@ -281,7 +288,7 @@ export interface ChatMessage {
   badges: string[];
   at: number;
 }
-type SocketFactory = (url: string) => WebSocket;
+export type SocketFactory = (url: string) => WebSocket;
 export class TwitchConnection {
   /** Receives every accepted message, in any phase. Errors never interrupt chat delivery. */
   onMessage: ((message: ChatMessage) => void) | undefined;
