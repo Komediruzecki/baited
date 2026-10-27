@@ -2,6 +2,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { installSelectedCards } from './selected-cards.mjs'
 
 const landingRoot = fileURLToPath(new URL('..', import.meta.url))
 const appRoot = resolve(landingRoot, '../app')
@@ -187,6 +188,7 @@ async function buildSiteLocked(environment, destination) {
     })
     if (mediaStat?.isSymbolicLink()) throw new Error('Card Lab media root must not be a symlink')
     if (mediaStat?.isDirectory()) await copyStaticTree(mediaRoot, labRoot, { mediaOnly: true })
+    await installSelectedCards({ environment, stagingSite })
   } })
   console.log(`Built landing ${environment}: ${destination}`)
 }
