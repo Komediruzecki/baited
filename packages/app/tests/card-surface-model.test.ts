@@ -15,7 +15,7 @@ test('the catalogue contains exactly the approved materials and same-origin asse
 });
 
 test('finish hosts preserve own-stock editions, the Cut slab and all full-card editions', () => {
-  for (const edition of editions) assert.equal(finishHost(edition.id), edition.id === 'cut' ? 'slab' : ['baseline', 'pixel', 'wide'].includes(edition.id) ? 'own' : 'full');
+  for (const edition of editions) assert.equal(finishHost(edition.id), ['cut', 'cut-reveal', 'cut-open'].includes(edition.id) ? 'slab' : ['baseline', 'pixel', 'wide'].includes(edition.id) ? 'own' : 'full');
   for (const back of backs) {
     assert.equal(backShowsLogo(back.id, 'designed'), back.id !== 'seal');
     assert.equal(backShowsLogo(back.id, 'on'), true);

@@ -1,4 +1,4 @@
-import type { Edition } from './card-lab-model';
+import { isCutEdition, type Edition } from './card-lab-model';
 
 // Lab-only materials. Asset URLs come from this catalogue, never saved preferences.
 export const finishes = [
@@ -34,7 +34,7 @@ export const isBackId = (value: unknown): value is BackId => backs.some(item => 
 export const isLogoMode = (value: unknown): value is LogoMode => logoModes.some(item => item.id === value);
 
 export function finishHost(edition: Edition): FinishHost {
-  return edition === 'cut' ? 'slab' : ['baseline', 'pixel', 'wide'].includes(edition) ? 'own' : 'full';
+  return isCutEdition(edition) ? 'slab' : ['baseline', 'pixel', 'wide'].includes(edition) ? 'own' : 'full';
 }
 
 export function backShowsLogo(back: BackId, logo: LogoMode): boolean {

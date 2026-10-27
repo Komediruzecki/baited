@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { exactClues, generic, emptyPicks, parsePicks, reviewDeck, editions, type Picks } from '../client/card-lab-model';
+import { exactClues, generic, emptyPicks, parsePicks, parseCompared, reviewDeck, editions, type Picks } from '../client/card-lab-model';
 import { words } from '../server/words';
 import { forbiddenClues } from '../server/cards';
 import type { Difficulty } from '../shared/types';
@@ -46,7 +46,7 @@ test('exported picks round-trip without losing preferred edition, empty notes or
 });
 
 test('version-one choices preserve previous picks alongside the reveal studies and open frame', () => {
-  for (const preferred of ['table-reveal', 'glance-reveal', 'table-open'] as const) {
+  for (const preferred of ['table-reveal', 'glance-reveal', 'table-open', 'cut-reveal', 'cut-open'] as const) {
     const saved: Picks = {
       version: 1,
       preferred,
@@ -56,11 +56,21 @@ test('version-one choices preserve previous picks alongside the reveal studies a
         'table-reveal': { note: '', reviewed: ['panel', 'desktop'], experimental: false },
         'glance-reveal': { note: 'Compare the larger symbols.', reviewed: ['phone', 'panel'], experimental: false },
         'table-open': { note: 'No inner frame.', reviewed: ['deck', 'panel'], experimental: false },
+        'cut-reveal': { note: 'Keep the angled slab.', reviewed: ['deck', 'panel'], experimental: false },
+        'cut-open': { note: 'Angled and open.', reviewed: ['phone'], experimental: false },
       },
       updatedAt: '2026-10-26T22:50:00.000Z',
     };
     assert.deepEqual(parsePicks(JSON.stringify(saved)), saved);
   }
+});
+
+test('shared comparison links restore distinct valid editions, cap at four and preserve an empty selection', () => {
+  assert.deepEqual(parseCompared(null), ['table-reveal', 'table-open']);
+  assert.deepEqual(parseCompared('table-reveal,table-open,cut-reveal,cut-open'), ['table-reveal', 'table-open', 'cut-reveal', 'cut-open']);
+  assert.deepEqual(parseCompared('cut-open,cut-open,unknown,cut-reveal'), ['cut-open', 'cut-reveal']);
+  assert.deepEqual(parseCompared('cut-open,cut-reveal,table-open,table-reveal,pixel'), ['cut-open', 'cut-reveal', 'table-open', 'table-reveal']);
+  assert.deepEqual(parseCompared(''), []);
 });
 
 test('malformed or incompatible stored values reset to empty choices', () => {
