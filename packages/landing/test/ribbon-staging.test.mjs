@@ -17,9 +17,9 @@ async function fixture(t, { environment = 'dev', presentation = 'presented' } = 
   const stagingSite = join(root, `site-${environment}`)
   await mkdir(stagingSite, { recursive: true })
   for (const file of sourceFiles) await copyFile(new URL(`../site/${file}`, import.meta.url), join(stagingSite, file))
-  if (environment === 'dev' && presentation !== 'none') {
-    await mkdir(join(stagingSite, 'card-lab/backs'), { recursive: true })
-    await writeFile(join(stagingSite, 'card-lab/backs/back-mosaic.webp'), 'Mosaic fixture')
+  if (presentation !== 'none') {
+    await mkdir(join(stagingSite, 'assets/card-deck'), { recursive: true })
+    await writeFile(join(stagingSite, 'assets/card-deck/back-prism.webp'), 'Prism fixture')
     await installSelectedCards({ environment, stagingSite })
     if (presentation === 'presented') await installPresentedDeck({ environment, stagingSite })
   }
@@ -32,7 +32,7 @@ async function installed(t) {
   return { stagingSite, app: await readFile(join(stagingSite, 'app.js'), 'utf8') }
 }
 
-test('ribbon staging adds only dev modules and passes existing deck dependencies through its wrapper', async t => {
+test('ribbon staging adds public modules and passes existing deck dependencies through its wrapper', async t => {
   const stagingSite = await fixture(t)
   const original = await Promise.all(sourceFiles.map(file => readFile(new URL(`../site/${file}`, import.meta.url), 'utf8')))
   const stagedDeck = await readFile(join(stagingSite, 'deck.js'), 'utf8')
@@ -40,13 +40,13 @@ test('ribbon staging adds only dev modules and passes existing deck dependencies
   assert.equal(await installRibbon({ environment: 'dev', stagingSite }), true)
   const html = await readFile(join(stagingSite, 'index.html'), 'utf8')
   const app = await readFile(join(stagingSite, 'app.js'), 'utf8')
-  assert.equal(html.split('href="/card-lab/landing/ribbon.css"').length - 1, 1)
+  assert.equal(html.split('href="/assets/card-deck/ribbon.css"').length - 1, 1)
   assert.ok(html.indexOf('selected-cards.css') < html.indexOf('ribbon.css'), 'ribbon styles follow the selected presentation')
-  assert.ok(app.startsWith("import { createRibbonDeck } from '/card-lab/landing/ribbon.js'\n"))
-  assert.ok(app.includes("from '/card-lab/landing/presented-deck.js'"))
+  assert.ok(app.startsWith("import { createRibbonDeck } from '/assets/card-deck/ribbon.js'\n"))
+  assert.ok(app.includes("from '/assets/card-deck/presented-deck.js'"))
   assert.ok(!app.includes('const deck = createDeck({'), 'the original constructor is replaced, not duplicated')
-  for (const file of ribbonFiles) assert.deepEqual(await readFile(join(stagingSite, 'card-lab/landing', file)), await readFile(new URL(`../ribbon/${file}`, import.meta.url)))
-  assert.deepEqual((await readdir(join(stagingSite, 'card-lab/landing'))).sort(), ['presented-deck.js', ...ribbonFiles, 'selected-cards.css', 'selected-cards.js'].sort())
+  for (const file of ribbonFiles) assert.deepEqual(await readFile(join(stagingSite, 'assets/card-deck', file)), await readFile(new URL(`../ribbon/${file}`, import.meta.url)))
+  assert.deepEqual((await readdir(join(stagingSite, 'assets/card-deck'))).sort(), ['back-prism.webp', 'presented-deck.js', ...ribbonFiles, 'selected-cards.css', 'selected-cards.js'].sort())
   assert.equal(await readFile(join(stagingSite, 'deck.js'), 'utf8'), stagedDeck)
   assert.equal(await readFile(join(stagingSite, 'styles.css'), 'utf8'), stagedStyles)
   assert.deepEqual(await Promise.all(sourceFiles.map(file => readFile(new URL(`../site/${file}`, import.meta.url), 'utf8'))), original, 'production source stays byte-identical')
@@ -80,12 +80,13 @@ test('ribbon staging adds only dev modules and passes existing deck dependencies
   assert.deepEqual(callbacks.at(-1), [context.items, 4, 2, 3], 'fan and ribbon share the same resource window')
 })
 
-test('production is a no-op and missing, duplicate or reordered staging hooks fail before writes', async t => {
+test('production gets the approved ribbon; missing, duplicate or reordered staging hooks fail before writes', async t => {
   const prod = await fixture(t, { environment: 'prod' })
-  const beforeProd = await Promise.all(sourceFiles.map(file => readFile(join(prod, file), 'utf8')))
-  assert.equal(await installRibbon({ environment: 'prod', stagingSite: prod }), false)
-  assert.deepEqual(await Promise.all(sourceFiles.map(file => readFile(join(prod, file), 'utf8'))), beforeProd)
-  assert.deepEqual((await readdir(prod)).sort(), sourceFiles.toSorted())
+  assert.equal(await installRibbon({ environment: 'prod', stagingSite: prod }), true)
+  const prodApp = await readFile(join(prod, 'app.js'), 'utf8')
+  assert.ok(prodApp.includes("from '/assets/card-deck/ribbon.js'"))
+  assert.doesNotMatch(prodApp, /\/card-lab\//)
+  assert.ok(!(await readdir(prod)).includes('card-lab'))
   await assert.rejects(installRibbon({ environment: 'dev', stagingSite: prod }), /site-dev/)
   await assert.rejects(installRibbon({ environment: 'unknown', stagingSite: prod }), /site-dev/)
   for (const presentation of ['none', 'selected']) {
@@ -97,15 +98,15 @@ test('production is a no-op and missing, duplicate or reordered staging hooks fa
   for (const [file, mutate] of [
     ['app.js', text => text + '\nconst deck = createDeck({\n  hand,\n  items,\n})\n'],
     ['app.js', text => text.replace('  if (event.target === hand) endDrag(event)\n', '  endDrag(event)\n')],
-    ['index.html', text => text.replace('href="/card-lab/landing/selected-cards.css"', 'href="/changed.css"')],
+    ['index.html', text => text.replace('href="/assets/card-deck/selected-cards.css"', 'href="/changed.css"')],
   ]) {
     const stagingSite = await fixture(t)
     await writeFile(join(stagingSite, file), mutate(await readFile(join(stagingSite, file), 'utf8')))
     const before = await Promise.all(['app.js', 'index.html'].map(name => readFile(join(stagingSite, name), 'utf8')))
-    const assets = (await readdir(join(stagingSite, 'card-lab/landing'))).sort()
+    const assets = (await readdir(join(stagingSite, 'assets/card-deck'))).sort()
     await assert.rejects(installRibbon({ environment: 'dev', stagingSite }), /hook changed/)
     assert.deepEqual(await Promise.all(['app.js', 'index.html'].map(name => readFile(join(stagingSite, name), 'utf8'))), before)
-    assert.deepEqual((await readdir(join(stagingSite, 'card-lab/landing'))).sort(), assets, 'a broken hook must not publish ribbon assets')
+    assert.deepEqual((await readdir(join(stagingSite, 'assets/card-deck'))).sort(), assets, 'a broken hook must not publish ribbon assets')
   }
 })
 

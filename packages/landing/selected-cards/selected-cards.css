@@ -1,23 +1,20 @@
-/* Selected Table Reveal / Glass / Mosaic. Dev staging only; original landing
-   geometry, production styling and fan controls remain in site/. */
-.selected-card { --selected-art:176px; --clue-ink:#fffdf7; --clue-mark:#c9a8ff; --clue-rule:#fffdf747; --clue-rule-soft:#fffdf724; padding:16px 18px 14px; background:#120d1a; color:#fffdf7; }
+/* Approved Cut Open / Glass / Prism. The angled field follows the actual art
+   window, including when long copy shrinks it. No second frame or inner lens. */
+.selected-card { --selected-art:176px; --selected-pad-top:16px; --selected-pad-x:18px; --selected-top:20px; --selected-height:420px; --clue-ink:#fffdf7; --clue-mark:#c9a8ff; --clue-rule:#fffdf747; --clue-rule-soft:#fffdf724; padding:var(--selected-pad-top) var(--selected-pad-x) 14px; background:#242426; color:#fffdf7; border-radius:12px 20px 12px 12px; }
 .selected-card::after { display:none; }
-.selected-card .selected-glass-field { position:absolute; inset:0; width:100%; height:100%; z-index:-1; pointer-events:none; background:radial-gradient(70% 36% at 100% 0,#c9a8ff59,#c9a8ff00),linear-gradient(#9146ff,#5b25c2 30%,#2a1160 56%,#120d1a 82%); }
-.selected-card .card-top { position:relative; min-height:20px; flex:none; z-index:1; }
+.selected-card .selected-glass-field { position:absolute; top:calc(0px - var(--selected-pad-top) - var(--selected-top) - 4px); left:calc(0px - var(--selected-pad-x)); width:calc(100% + var(--selected-pad-x) * 2); height:calc(100% + var(--selected-pad-top) + var(--selected-top) + 12px); z-index:-1; pointer-events:none; background:radial-gradient(70% 36% at 100% 0,#c9a8ff59,#c9a8ff00),linear-gradient(#9146ff,#5b25c2 30%,#2a1160 56%,#120d1a 82%); background-size:100% var(--selected-height); clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),0 100%); }
+.selected-card .card-top { position:relative; min-height:var(--selected-top); flex:none; z-index:1; }
 .selected-card .card-top>span:first-child { padding:3px 6px; background:#1a1522; border-radius:4px; font-size:10px; }
 .selected-card .card-pips { padding:4px 5px; background:#1a1522; border-radius:10px; gap:3px; }
 .selected-card .card-pips i { width:6px; height:6px; }
 .selected-card .card-art { flex:0 1 var(--selected-art); width:100%; height:var(--selected-art); min-height:80px; margin:4px auto 8px; background:none; isolation:isolate; }
 .selected-card__square { display:block; position:relative; height:100%; aspect-ratio:1; max-width:100%; }
-.selected-card .card-art::after { display:none; }
-.selected-card .card-art img,.selected-card__pixels { position:absolute; inset:0; width:100%; height:100%; max-height:none; object-fit:contain; image-rendering:pixelated; pointer-events:none; }
-.selected-glass { position:absolute; inset:0 -10% -10%; z-index:-1; overflow:clip; border-radius:12px 20px 12px 12px; pointer-events:none; box-shadow:0 0 0 1px #0d0a12b3,0 10px 18px -10px #05030a; }
-.selected-glass__bend { position:absolute; top:-28px; left:-28px; width:calc(100% + 56px); height:calc(100% + 56px); }
-.selected-glass::after { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(closest-side at 50% 46%,#0d0a12a6,#0d0a124d 72%,#0d0a121a); box-shadow:inset 0 1px 0 #fffdf75c,inset 1px 0 0 #fffdf71f,inset 0 0 0 4px #c9a8ff12; }
+.selected-card .card-art::after { content:''; position:absolute; left:calc(0px - var(--selected-pad-x)); right:calc(0px - var(--selected-pad-x)); bottom:-8px; height:14px; background:#c9a8ff8c; border-radius:0; filter:none; clip-path:polygon(0 calc(100% - 2px),100% 0,100% 2px,0 100%); pointer-events:none; }
+.selected-card .card-art img,.selected-card__pixels { position:absolute; inset:4px; margin:0; width:calc(100% - 8px); height:calc(100% - 8px); max-height:none; object-fit:contain; image-rendering:pixelated; pointer-events:none; }
 .selected-card__pixels { display:none; }
 .selected-card .card-art.is-resolving img { opacity:0; }
 .selected-card .card-art.is-resolving .selected-card__pixels { display:block; }
-.selected-card__plate { display:flex; flex-direction:column; flex:1 0 auto; min-height:min-content; position:relative; z-index:1; margin:0 -6px -6px; padding:3px 6px 6px; background:#1a1522; border-radius:3px 3px 7px 7px; }
+.selected-card__plate { display:flex; flex-direction:column; flex:1 0 auto; min-height:min-content; position:relative; z-index:1; margin:0 -6px -6px; padding:3px 6px 6px; background:none; }
 .selected-card .card-word { margin:0; font-size:30px; line-height:1.1; letter-spacing:-.025em; }
 .selected-card .card-word--long { font-size:25px; }
 .selected-card .card-forbidden { display:block; flex:none; margin-top:10px; text-align:center; }
@@ -50,20 +47,20 @@
 .selected-card .card-question { flex:none; margin:8px 0; min-height:0; color:#dedce3; font-size:13px; line-height:18px; }
 .selected-card .card-footer { margin-top:auto; padding-top:9px; min-height:25px; border-color:#5a4e66; }
 .selected-card .card-footer img { width:52px; }
-.selected-card__back,.selected-mosaic { background:#25113f url('/card-lab/backs/back-mosaic.webp') center/cover no-repeat; }
+.selected-card__signature { display:block; flex:none; width:52px; height:16px; font-size:0; background:#bca4d6; -webkit-mask:url('/assets/brand/baited-logo-white.webp') center/contain no-repeat; mask:url('/assets/brand/baited-logo-white.webp') center/contain no-repeat; }
+.selected-card__back,.selected-prism { background:#b8a0ec url('/assets/card-deck/back-prism.webp') center/cover no-repeat; }
 .selected-card__back { position:absolute; inset:0; display:grid; place-items:center; z-index:3; border-radius:inherit; pointer-events:none; }
-.selected-card__back img { width:64%; height:auto; filter:drop-shadow(0 2px 0 #160b26); }
+.selected-card__back::after { content:''; position:absolute; inset:7%; border:2px solid #130d1d; border-radius:5px; }
+.selected-card__back img { width:72%; height:auto; }
 .selected-card .card-shade { z-index:4; }
-.deck-card-item .selected-card>.selected-glass-field { opacity:1; }
 .deck-card-item .selected-card>.selected-card__back { opacity:1; visibility:visible; }
 .deck-card-item .selected-card>.card-art { opacity:0; visibility:hidden; }
-.deck-card-item:not(.is-front) .selected-card>.selected-glass-field,.deck-card-item:not(.is-front) .selected-glass { display:none; }
+.deck-card-item:not(.is-front) .selected-glass-field { display:none; }
 .deck-card-item.is-front .selected-card>.selected-card__back,.why-deal__face>.selected-card__back { opacity:0; visibility:hidden; }
 .deck-card-item.is-front .selected-card>.card-art { opacity:1; visibility:visible; }
-.why-deal__back.selected-mosaic img,.why-stream__back.selected-mosaic img { width:64%; rotate:0deg; }
+.why-deal__back.selected-prism img,.why-stream__back.selected-prism img { width:72%; rotate:0deg; filter:brightness(0); }
 @media(max-width:700px) {
-  .deck-card-item .selected-card { --selected-art:150px; padding:14px 16px 12px; }
-  .deck-card-item .selected-card .card-top { min-height:18px; }
+  .deck-card-item .selected-card { --selected-art:150px; --selected-pad-top:14px; --selected-pad-x:16px; --selected-top:18px; --selected-height:364px; padding-bottom:12px; }
   .deck-card-item .selected-card .card-art { margin:4px auto 6px; }
   .deck-card-item .selected-card .card-word { font-size:28px; }
   .deck-card-item .selected-card .card-word--long { font-size:22px; }
@@ -76,13 +73,13 @@
   .deck-card-item .selected-card[data-clue=pills] .card-clues li { padding:0 7px 0 6px; }
 }
 @media(max-width:350px) {
-  .deck-card-item .selected-card { --selected-art:136px; padding:12px 15px; }
+  .deck-card-item .selected-card { --selected-art:136px; --selected-pad-top:12px; --selected-pad-x:15px; --selected-height:350px; }
   .deck-card-item .selected-card .card-word { font-size:26px; }
   .deck-card-item .selected-card .card-word--long { font-size:21px; }
   .deck-card-item .selected-card .card-question { font-size:12px; line-height:16px; }
 }
 @media(min-width:1800px) {
-  .deck-card-item .selected-card { --selected-art:196px; padding:18px 20px 16px; }
+  .deck-card-item .selected-card { --selected-art:196px; --selected-pad-top:18px; --selected-pad-x:20px; padding-bottom:16px; }
   .deck-card-item .selected-card .card-word { font-size:32px; }
   .deck-card-item .selected-card .card-word--long { font-size:27px; }
 }
@@ -91,8 +88,8 @@
   .selected-card .selected-card__pixels { display:none; }
 }
 @media(forced-colors:active) {
-  .selected-card,.selected-card__plate,.selected-card__back,.selected-mosaic { background:Canvas; color:CanvasText; }
-  .selected-glass,.selected-glass-field,.selected-card__pixels { display:none!important; }
+  .selected-card,.selected-card__plate,.selected-card__back,.selected-prism { background:Canvas; color:CanvasText; }
+  .selected-glass-field,.selected-card__pixels { display:none!important; }
   .selected-card .card-art.is-resolving img { opacity:1; }
   .selected-card .card-word,.selected-card .card-forbidden__label,.selected-card .card-question { color:CanvasText; }
   .selected-card { --clue-ink:CanvasText; --clue-mark:CanvasText; --clue-rule:CanvasText; --clue-rule-soft:CanvasText; }

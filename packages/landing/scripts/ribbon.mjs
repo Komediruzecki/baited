@@ -10,12 +10,11 @@ function replaceOnce(source, before, after) {
   return source.replace(before, after)
 }
 
-// The ribbon is a dev-only presentation layered after both selected-card and
-// presented-deck staging. Shared site/ and production assets stay unchanged.
+// The approved ribbon is layered after selected-card and presented-deck staging
+// in both environments. It does not depend on the dev-only Card Lab.
 export async function installRibbon({ environment, stagingSite }) {
-  if (environment === 'prod') return false
-  if (environment !== 'dev' || basename(stagingSite) !== 'site-dev') throw new Error('Ribbon requires a site-dev staging tree')
-  const target = join(stagingSite, 'card-lab/landing')
+  if (!['dev', 'prod'].includes(environment) || basename(stagingSite) !== `site-${environment}`) throw new Error('Ribbon requires a matching site-dev or site-prod staging tree')
+  const target = join(stagingSite, 'assets/card-deck')
   for (const file of ['selected-cards.js', 'presented-deck.js']) {
     const stat = await lstat(join(target, file))
     if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('Ribbon requires selected-card and presented-deck staging first')
@@ -23,12 +22,12 @@ export async function installRibbon({ environment, stagingSite }) {
   const appPath = join(stagingSite, 'app.js')
   const htmlPath = join(stagingSite, 'index.html')
   let [app, html] = await Promise.all([readFile(appPath, 'utf8'), readFile(htmlPath, 'utf8')])
-  if (!app.includes("from '/card-lab/landing/selected-cards.js'") || !app.includes("from '/card-lab/landing/presented-deck.js'")) {
+  if (!app.includes("from '/assets/card-deck/selected-cards.js'") || !app.includes("from '/assets/card-deck/presented-deck.js'")) {
     throw new Error('Ribbon requires selected-card and presented-deck staging first')
   }
   html = replaceOnce(html,
-    '<link rel="stylesheet" href="/card-lab/landing/selected-cards.css" />',
-    '<link rel="stylesheet" href="/card-lab/landing/selected-cards.css" />\n    <link rel="stylesheet" href="/card-lab/landing/ribbon.css" />')
+    '<link rel="stylesheet" href="/assets/card-deck/selected-cards.css" />',
+    '<link rel="stylesheet" href="/assets/card-deck/selected-cards.css" />\n    <link rel="stylesheet" href="/assets/card-deck/ribbon.css" />')
   app = replaceOnce(app, 'const deck = createDeck({\n  hand,\n  items,',
     `const deck = createRibbonDeck({
   createDeck,
@@ -55,7 +54,7 @@ hand.addEventListener('ribboncancelinput', () => {
 `)
   app = replaceOnce(app, '  if (event.target === hand) endDrag(event)\n',
     '  if (event.target === hand) endDrag(event, true)\n')
-  app = "import { createRibbonDeck } from '/card-lab/landing/ribbon.js'\n" + app
+  app = "import { createRibbonDeck } from '/assets/card-deck/ribbon.js'\n" + app
 
   // Read every module only after all hooks validate, and write nothing unless
   // the complete controller, geometry and stylesheet are ordinary source files.

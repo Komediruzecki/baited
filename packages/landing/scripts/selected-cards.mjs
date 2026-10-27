@@ -9,19 +9,18 @@ function replaceOnce(text, before, after) {
   return text.replace(before, after)
 }
 
-// This runs only on the private staging tree. Shared site/ remains the production
-// baseline, and all new presentation files live under the production-blocked lab.
+// Install the approved presentation into either unpublished build tree. Card
+// Lab stays dev-only; these public modules never load its React app or controls.
 export async function installSelectedCards({ environment, stagingSite }) {
-  if (environment === 'prod') return false
-  if (environment !== 'dev' || basename(stagingSite) !== 'site-dev') throw new Error('Selected cards require a site-dev staging tree')
+  if (!['dev', 'prod'].includes(environment) || basename(stagingSite) !== `site-${environment}`) throw new Error('Selected cards require a matching site-dev or site-prod staging tree')
   const indexPath = join(stagingSite, 'index.html')
   const appPath = join(stagingSite, 'app.js')
   let [html, app] = await Promise.all([readFile(indexPath, 'utf8'), readFile(appPath, 'utf8')])
-  const mosaic = await lstat(join(stagingSite, 'card-lab/backs/back-mosaic.webp'))
-  if (!mosaic.isFile() || mosaic.isSymbolicLink()) throw new Error('The selected Mosaic back is missing from the dev build')
+  const prism = await lstat(join(stagingSite, 'assets/card-deck/back-prism.webp'))
+  if (!prism.isFile() || prism.isSymbolicLink()) throw new Error('The selected Prism back is missing from the build')
 
-  html = replaceOnce(html, '<script type="module" src="/app.js"></script>', '<link rel="stylesheet" href="/card-lab/landing/selected-cards.css" />\n    <script type="module" src="/app.js"></script>')
-  app = "import { cardFace as selectedCardFace, prepareSelectedScenes, revealSelectedCard, pauseSelectedReveal, settleSelectedCard, warmSelectedArt } from '/card-lab/landing/selected-cards.js'\n" + app
+  html = replaceOnce(html, '<script type="module" src="/app.js"></script>', '<link rel="stylesheet" href="/assets/card-deck/selected-cards.css" />\n    <script type="module" src="/app.js"></script>')
+  app = "import { cardFace as selectedCardFace, prepareSelectedScenes, revealSelectedCard, pauseSelectedReveal, settleSelectedCard, warmSelectedArt } from '/assets/card-deck/selected-cards.js'\n" + app
   app = replaceOnce(app, 'initNav()\n', 'prepareSelectedScenes(cards)\ninitNav()\n')
   const first = app.indexOf('function cardFace(card) {')
   const last = app.indexOf("\nconst hand = $('deck-hand')", first)
@@ -45,7 +44,7 @@ export async function installSelectedCards({ environment, stagingSite }) {
   app = replaceOnce(app,
     "new IntersectionObserver((entries) => hand.classList.toggle('is-live', entries[0].isIntersecting), { threshold: 0.35 }).observe(hand)",
     "new IntersectionObserver((entries) => {\n  const latest = entries.at(-1)\n  if (!latest) return\n  hand.classList.toggle('is-live', latest.isIntersecting)\n  revealSelectedCard(items[wrapIndex(deck.target, items.length)])\n}, { threshold: 0.35 }).observe(hand)")
-  const target = join(stagingSite, 'card-lab/landing')
+  const target = join(stagingSite, 'assets/card-deck')
   await mkdir(target, { recursive: true })
   await Promise.all(['selected-cards.js', 'selected-cards.css'].map(file => copyFile(join(source, file), join(target, file))))
   await Promise.all([writeFile(appPath, app), writeFile(indexPath, html)])

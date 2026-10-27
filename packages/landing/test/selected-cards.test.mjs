@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import { runInNewContext } from 'node:vm'
 import { installSelectedCards } from '../scripts/selected-cards.mjs'
-import { cardFace, clueStyles, exactClues, glassOptics, glassRules, parseClueStyle, pauseSelectedReveal, revealSelectedCard, settleSelectedCard, warmSelectedArt, previewArt } from '../selected-cards/selected-cards.js'
+import { cardFace, selectedCardStyle, clueStyles, exactClues, glassOptics, glassRules, parseClueStyle, pauseSelectedReveal, revealSelectedCard, settleSelectedCard, warmSelectedArt, previewArt } from '../selected-cards/selected-cards.js'
 import { cards } from '../site/data.js'
 import { wrapIndex } from '../site/deck.js'
 
@@ -15,21 +15,21 @@ async function fixture(t, environment = 'dev') {
   const root = await mkdtemp(join(tmpdir(), 'baited-selected-cards-'))
   t.after(() => rm(root, { recursive: true, force: true }))
   const stagingSite = join(root, `site-${environment}`)
-  await mkdir(join(stagingSite, 'card-lab/backs'), { recursive: true })
-  await writeFile(join(stagingSite, 'card-lab/backs/back-mosaic.webp'), 'Mosaic fixture')
+  await mkdir(join(stagingSite, 'assets/card-deck'), { recursive: true })
+  await writeFile(join(stagingSite, 'assets/card-deck/back-prism.webp'), 'Prism fixture')
   for (const file of ['app.js', 'index.html', 'styles.css', 'deck.js']) await copyFile(new URL(`../site/${file}`, import.meta.url), join(stagingSite, file))
   return stagingSite
 }
 
-test('selected presentation is installed only in the dev staging tree', async t => {
+test('selected presentation is installed without changing source artwork or the base deck', async t => {
   const stagingSite = await fixture(t)
   const sourceFiles = ['app.js', 'index.html', 'styles.css', 'deck.js']
   const before = await Promise.all(sourceFiles.map(file => readFile(new URL(`../site/${file}`, import.meta.url)).then(digest)))
   assert.equal(await installSelectedCards({ environment: 'dev', stagingSite }), true)
   const html = await readFile(join(stagingSite, 'index.html'), 'utf8')
   const app = await readFile(join(stagingSite, 'app.js'), 'utf8')
-  assert.match(html, /href="\/card-lab\/landing\/selected-cards\.css"/)
-  assert.match(app, /from '\/card-lab\/landing\/selected-cards\.js'/)
+  assert.match(html, /href="\/assets\/card-deck\/selected-cards\.css"/)
+  assert.match(app, /from '\/assets\/card-deck\/selected-cards\.js'/)
   assert.match(app, /selectedCardFace\(card, cards\.length\)/)
   assert.match(app, /prepareSelectedScenes\(cards\)/)
   assert.match(app, /warmSelectedArt\(items, around\)/)
@@ -38,23 +38,26 @@ test('selected presentation is installed only in the dev staging tree', async t 
   assert.match(app, /pauseSelectedReveal\(\)\n    warmArt\(index\)/)
   assert.match(app, /if \(event.button !== 0 \|\| !event.isPrimary \|\| drag\) return\n  pauseSelectedReveal\(\)/)
   assert.doesNotMatch(app, /function cardFace\(/)
-  assert.deepEqual((await readdir(join(stagingSite, 'card-lab/landing'))).sort(), ['selected-cards.css', 'selected-cards.js'])
+  assert.deepEqual((await readdir(join(stagingSite, 'assets/card-deck'))).sort(), ['back-prism.webp', 'selected-cards.css', 'selected-cards.js'])
   assert.deepEqual(await Promise.all(sourceFiles.map(file => readFile(new URL(`../site/${file}`, import.meta.url)).then(digest))), before)
   for (const file of ['styles.css', 'deck.js']) assert.equal(digest(await readFile(join(stagingSite, file))), digest(await readFile(new URL(`../site/${file}`, import.meta.url))))
 })
 
-test('production installer is a no-op and a dev hook mismatch fails before publication', async t => {
+test('production gets the approved public modules without publishing Card Lab; wrong trees and hooks fail closed', async t => {
   const prod = await fixture(t, 'prod')
-  const before = await Promise.all(['index.html', 'app.js'].map(file => readFile(join(prod, file), 'utf8')))
-  assert.equal(await installSelectedCards({ environment: 'prod', stagingSite: prod }), false)
-  assert.deepEqual(await Promise.all(['index.html', 'app.js'].map(file => readFile(join(prod, file), 'utf8'))), before)
-  assert.deepEqual(await readdir(join(prod, 'card-lab')), ['backs'])
+  assert.equal(await installSelectedCards({ environment: 'prod', stagingSite: prod }), true)
+  const html = await readFile(join(prod, 'index.html'), 'utf8')
+  const app = await readFile(join(prod, 'app.js'), 'utf8')
+  assert.ok(html.includes('href="/assets/card-deck/selected-cards.css"'))
+  assert.ok(app.includes("from '/assets/card-deck/selected-cards.js'"))
+  assert.doesNotMatch(app + html, /\/card-lab\//)
+  assert.ok(!(await readdir(prod)).includes('card-lab'))
   await assert.rejects(installSelectedCards({ environment: 'dev', stagingSite: prod }), /site-dev/)
   const dev = await fixture(t)
   await writeFile(join(dev, 'app.js'), 'Unexpected landing factory')
-  const html = await readFile(join(dev, 'index.html'), 'utf8')
+  const devHtml = await readFile(join(dev, 'index.html'), 'utf8')
   await assert.rejects(installSelectedCards({ environment: 'dev', stagingSite: dev }), /hook changed/)
-  assert.equal(await readFile(join(dev, 'index.html'), 'utf8'), html)
+  assert.equal(await readFile(join(dev, 'index.html'), 'utf8'), devHtml)
 })
 
 test('staged capture-loss handler ignores descendant losses and still ends a hand capture loss', async t => {
@@ -146,26 +149,28 @@ test('native Glass geometry matches the approved small Card Lab optics', async (
   const source = await readFile(new URL('../../app/client/CardGlass.tsx', import.meta.url), 'utf8')
   const small = source.match(/^\s+s:\s*\{ pitch: (\d+), line: ([\d.]+), scale: (\d+), frequency: '([^']+)', blur: ([\d.]+) \}/m)
   assert.ok(small)
-  assert.deepEqual(glassOptics, { pitch: Number(small[1]), line: Number(small[2]), scale: Number(small[3]), frequency: small[4], blur: Number(small[5]) })
+  assert.deepEqual(glassOptics, { pitch: Number(small[1]), line: Number(small[2]) })
   assert.ok(glassRules(glassOptics.pitch).startsWith('M-600.00 1039.23L600.00 -1039.23'))
   assert.doesNotMatch(glassRules(glassOptics.pitch), /NaN|Infinity/)
   assert.throws(() => glassRules(0), RangeError)
 })
 
-test('only the front fan card paints Glass while side cards retain their Mosaic backs', async () => {
+test('only the front fan card paints the angled Glass field while side cards retain Prism backs', async () => {
   const css = await readFile(new URL('../selected-cards/selected-cards.css', import.meta.url), 'utf8')
-  assert.match(css, /\.deck-card-item:not\(\.is-front\) \.selected-card>\.selected-glass-field,\.deck-card-item:not\(\.is-front\) \.selected-glass \{ display:none; \}/)
+  assert.match(css, /\.deck-card-item:not\(\.is-front\) \.selected-glass-field \{ display:none; \}/)
+  assert.ok(css.includes("url('/assets/card-deck/back-prism.webp')"))
+  assert.ok(css.includes('clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),0 100%)'))
   assert.match(css, /\.deck-card-item \.selected-card>\.card-art \{ opacity:0; visibility:hidden; \}/)
   assert.match(css, /\.deck-card-item\.is-front \.selected-card>\.card-art \{ opacity:1; visibility:visible; \}/)
   assert.match(css, /\.deck-card-item \.selected-card>\.selected-card__back \{ opacity:1; visibility:visible; \}/)
 })
 
-test('clue query accepts only stable IDs and defaults to the provisional Ruled row', () => {
+test('clue query accepts only stable IDs and defaults to the approved Ruled row', () => {
   for (const id of clueStyles) assert.equal(parseClueStyle(`?clue=${id}`), id)
   for (const search of ['', '?clue=__proto__', '?clue=constructor', '?clue=/external.css', '?clue=RAIL', '?clues=pills', null]) assert.equal(parseClueStyle(search), 'rail')
 })
 
-test('all 78 native faces preserve exact 0/2/4 clues in every treatment and lazy art with unique local filters', () => {
+test('all 78 Cut Open faces preserve exact clues, lazy art and unique accessible labels without inner lenses', () => {
   const previous = globalThis.document
   const create = tag => ({ tag, dataset: {}, attributes: {}, children: [], textContent: '', setAttribute(key, value) { this.attributes[key] = String(value) }, append(...items) { this.children.push(...items) }, addEventListener() {} })
   globalThis.document = { createElement: create, createElementNS: (_, tag) => create(tag) }
@@ -175,6 +180,7 @@ test('all 78 native faces preserve exact 0/2/4 clues in every treatment and lazy
     for (const card of cards) for (const style of clueStyles) {
       const face = cardFace(card, cards.length, style)
       const nodes = walk(face)
+      for (const [name, value] of Object.entries(selectedCardStyle)) assert.equal(face.dataset[name], value)
       assert.equal(face.dataset.clue, style)
       const art = nodes.find(item => item.className === 'card-art')
       const illustration = walk(art).find(item => item.tag === 'img')
@@ -197,17 +203,17 @@ test('all 78 native faces preserve exact 0/2/4 clues in every treatment and lazy
         assert.equal(sentence.tag, 'p')
         assert.equal(sentence.children.map(item => item.textContent).join(''), expected)
       } else assert.equal(nodes.find(item => item.className === 'card-easy').textContent, 'Only this word is off limits.')
-      const own = new Set(nodes.flatMap(item => item.attributes.id ? [item.attributes.id] : []))
-      assert.equal(own.size, 2)
+      const own = new Set(nodes.flatMap(item => item.id ? [item.id] : []))
+      assert.equal(own.size, terms.length && style !== 'quiet' ? 1 : 0)
       for (const id of own) { assert.ok(!ids.has(id)); ids.add(id) }
       for (const item of nodes) for (const value of Object.values(item.attributes)) {
         const reference = value.match(/^url\(#(.+)\)$/)
         if (reference) assert.ok(own.has(reference[1]))
       }
       assert.ok(!nodes.some(item => item.attributes.style))
-      assert.equal(nodes.filter(item => item.tag === 'g' && item.attributes.filter).length, 1)
+      assert.ok(!nodes.some(item => item.tag === 'filter' || item.className === 'selected-glass'), 'Cut Open has no second art rectangle or displacement filter')
     }
-    assert.equal(ids.size, 780)
+    assert.equal(ids.size, cards.filter(card => exactClues(card).length).length * (clueStyles.length - 1))
   } finally {
     if (previous === undefined) delete globalThis.document
     else globalThis.document = previous
@@ -232,7 +238,7 @@ test('art windows release old images and reveal canvases across the full catalog
   assert.equal(held().length, 16, 'ultrawide ribbon uses a larger but bounded window')
   warmSelectedArt(items, -1)
   assert.equal(held().length, 7, 'gathering releases the ribbon lookahead')
-  assert.equal(previewArt('/cards/proofs/marshmallow.png'), '/card-lab/landing/art/marshmallow.webp')
+  assert.equal(previewArt('/cards/proofs/marshmallow.png'), '/assets/card-deck/art/marshmallow.webp')
   assert.equal(previewArt('/some-other-art.svg'), '/some-other-art.svg')
 })
 

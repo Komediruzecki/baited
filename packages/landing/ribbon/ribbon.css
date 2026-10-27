@@ -40,27 +40,11 @@
   visibility: visible;
 }
 
-.deck-hand.is-ribbon-open .deck-card-item .selected-card > .selected-glass-field,
-.deck-hand.is-ribbon-open .deck-card-item .selected-glass {
+.deck-hand.is-ribbon-open .deck-card-item .selected-glass-field {
   display: none;
 }
 
-.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .selected-card > .selected-glass-field,
-.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .selected-glass {
-  display: block;
-}
-
-/* The flat window retains the approved lens light. Only the centre lens paints
-   its SVG displacement filter; neighbouring previews keep the same material. */
-.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .selected-glass {
-  background: linear-gradient(#8c43f9, #241050);
-}
-
-.deck-hand.is-ribbon-open .deck-card-item .selected-glass__bend {
-  display: none;
-}
-
-.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face.is-ribbon-lens .selected-glass__bend {
+.deck-hand.is-ribbon-open .deck-card-item.is-ribbon-face .selected-glass-field {
   display: block;
 }
 

@@ -43,7 +43,7 @@
       "vars": { "ENVIRONMENT": "prod" },
       "build": {
         "command": "node scripts/build-site.mjs --env prod",
-        "watch_dir": ["site"],
+        "watch_dir": ["site", "selected-cards", "ribbon", "scripts"],
       },
       "assets": {
         "directory": "dist/site-prod",

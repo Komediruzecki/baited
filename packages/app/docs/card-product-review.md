@@ -2,6 +2,14 @@
 
 Updated 27 October 2026. Card Lab is a development-only design review. The native Extension v0.0.2 has separately been uploaded to Twitch Hosted Test; see the release receipt below.
 
+## Approved landing card
+
+On 27 October the owner selected **Cut Open / Glass / Prism**, with the pixel reveal and Ruled clues, for the landing release. The angled purple face has no inner illustration frame, and the complete sprite uses a four-pixel inset. The landing gallery and its “How it works” card share that presentation. Both landing builds include the approved gallery motion and display-sized artwork under `/assets/card-deck/`; the comparison Lab and its alternate materials remain excluded from production.
+
+This selection supersedes the earlier provisional Table Reveal / Mosaic landing choice. All Lab editions and existing browser review choices remain available. Updating the landing does not replace the card renderer in an installed Twitch Extension or restart the hosted game; those are separate releases.
+
+The following sections retain the earlier design and Hosted Test inspection record.
+
 ## What is ready to review
 
 The earlier **78-card collection is already on main and development at `d93edb9`**. This pass adds ten Card Lab directions and updates the local standalone viewer, native Twitch viewer/configuration, streamer Studio and OBS presentation. The product keeps the current card edition until the owner chooses a replacement. Selecting a preference in the lab does not change the game.
