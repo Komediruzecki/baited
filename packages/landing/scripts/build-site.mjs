@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process'
-import { copyFile, lstat, mkdir, readdir, rename, rm } from 'node:fs/promises'
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -98,21 +98,86 @@ export async function prepareStaticSite({ environment, source, destination }) {
   })
 }
 
+export async function publishStaticSite({ environment, source, destination }) {
+  if (!['dev', 'prod'].includes(environment) || basename(destination) !== `site-${environment}` || resolve(source) === resolve(destination)) {
+    throw new Error('Static publication destination must match site-dev or site-prod')
+  }
+  const existing = await lstat(destination).catch(error => {
+    if (error.code === 'ENOENT') return null
+    throw error
+  })
+  if (existing && !existing.isDirectory()) throw new Error('Static publication destination must be a directory')
+
+  if (environment === 'prod') {
+    // Production assets are uploaded only after this build exits. Start from the
+    // complete staged tree so no old lab files can survive a production build.
+    await rm(destination, { recursive: true, force: true })
+    await rename(source, destination)
+    return
+  }
+
+  // Wrangler enumerates and then stats live assets during hot reload. Keep its
+  // directory and existing paths intact: atomic file replacement never exposes
+  // a missing app.js or a half-written module. Previous hashed chunks remain
+  // usable by snapshots and tabs that read an older index during publication.
+  const files = []
+  async function collect(directory, relative = '') {
+    await mkdir(join(destination, relative), { recursive: true })
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = join(relative, entry.name)
+      if (entry.isSymbolicLink()) throw new Error('Staged static publication must not contain symlinks')
+      if (entry.isDirectory()) await collect(join(directory, entry.name), path)
+      else if (entry.isFile()) files.push(path)
+    }
+  }
+  await collect(source)
+  // Publish documents after their referenced scripts, styles and artwork exist.
+  files.sort((left, right) => Number(extname(left) === '.html') - Number(extname(right) === '.html') || left.localeCompare(right))
+  for (const file of files) {
+    const input = join(source, file)
+    const output = join(destination, file)
+    const current = await lstat(output).catch(error => {
+      if (error.code === 'ENOENT') return null
+      throw error
+    })
+    if (current && !current.isFile()) throw new Error(`Published static asset must be a regular file: ${output}`)
+    if (current && current.size === (await lstat(input)).size && (await readFile(input)).equals(await readFile(output))) continue
+    await rename(input, output)
+  }
+}
+
+export async function stageAndPublishSite({ environment, source, destination, build = async () => {} }) {
+  if (!['dev', 'prod'].includes(environment) || basename(destination) !== `site-${environment}`) {
+    throw new Error('Static build destination must match site-dev or site-prod')
+  }
+  await mkdir(dirname(destination), { recursive: true })
+  const stagingRoot = await mkdtemp(join(dirname(destination), `.${basename(destination)}.stage-`))
+  const stagingSite = join(stagingRoot, basename(destination))
+  try {
+    await prepareStaticSite({ environment, source, destination: stagingSite })
+    await build(stagingSite)
+    await publishStaticSite({ environment, source: stagingSite, destination })
+  } finally {
+    // This exact directory was allocated by this invocation, never a live tree.
+    await rm(stagingRoot, { recursive: true, force: true })
+  }
+}
+
 export async function buildSite(environment) {
   const destination = resolve(landingRoot, 'dist', `site-${environment}`)
   await withBuildLock(destination, () => buildSiteLocked(environment, destination))
 }
 
 async function buildSiteLocked(environment, destination) {
-  await prepareStaticSite({ environment, source: resolve(landingRoot, 'site'), destination })
-  if (environment === 'dev') {
+  await stageAndPublishSite({ environment, source: resolve(landingRoot, 'site'), destination, build: async stagingSite => {
+    if (environment !== 'dev') return
+    const labRoot = resolve(stagingSite, 'card-lab')
     const result = spawnSync(process.execPath, [
       resolve(appRoot, 'node_modules/vite/bin/vite.js'), 'build', '--config',
-      resolve(appRoot, 'vite.card-lab.config.ts'),
+      resolve(appRoot, 'vite.card-lab.config.ts'), '--outDir', labRoot,
     ], { cwd: appRoot, stdio: 'inherit', timeout: 120_000 })
     if (result.error) throw result.error
     if (result.status !== 0) throw new Error(`Card Lab build failed (${result.status})`)
-    const labRoot = resolve(destination, 'card-lab')
     await rename(resolve(labRoot, 'card-lab.html'), resolve(labRoot, 'index.html'))
     await copyStaticTree(resolve(appRoot, 'public/cards/proofs'), resolve(labRoot, 'cards/proofs'), { mediaOnly: true })
     const mediaRoot = resolve(appRoot, 'public/card-lab')
@@ -122,7 +187,7 @@ async function buildSiteLocked(environment, destination) {
     })
     if (mediaStat?.isSymbolicLink()) throw new Error('Card Lab media root must not be a symlink')
     if (mediaStat?.isDirectory()) await copyStaticTree(mediaRoot, labRoot, { mediaOnly: true })
-  }
+  } })
   console.log(`Built landing ${environment}: ${destination}`)
 }
 

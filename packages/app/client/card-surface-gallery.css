@@ -1,0 +1,59 @@
+/* Materials are another review axis, separate from edition and live gameplay. */
+.cl-stage-area[hidden] { display:none; }
+.cl-top :focus-visible { outline-color:#17131e; }
+.cl-surfaces { display:grid; gap:24px; margin-top:28px; padding-top:22px; border-top:1px solid #51465d; }
+.cl-swatches { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.cl-swatch { position:relative; display:flex; align-items:center; gap:8px; min-width:0; min-height:70px; padding:8px; border:1px solid #51465d; border-radius:5px; cursor:pointer; }
+.cl-swatch:hover { background:#201928; }
+.cl-swatch[data-selected=true] { background:#2b2038; border-color:#c9a8ff; }
+.cl-swatch:focus-within { outline:3px solid #fffdf7; outline-offset:3px; }
+.cl-swatch input { position:absolute; top:5px; right:5px; width:12px; height:12px; margin:0; accent-color:#9146ff; }
+.cl-swatch__image { position:relative; flex:none; width:28px; height:42px; overflow:clip; border:1px solid #80718d; border-radius:2px; background:#242426; }
+.cl-swatch__image img { display:block; width:100%; height:100%; object-fit:cover; }
+.cl-swatch__image[data-material=current] { background:repeating-linear-gradient(45deg,#242426 0 3px,#2a2830 3px 6px); }
+.cl-swatch>span:last-child { min-width:0; padding-top:8px; }
+.cl-swatch strong,.cl-swatch small { display:block; }
+.cl-swatch strong { font-size:12px; font-weight:600; }
+.cl-swatch small { margin-top:2px; font-size:9px; color:#bfb6c9; }
+.cl-logo-modes { display:flex; gap:12px; flex-wrap:wrap; }
+.cl-logo-modes label { display:flex; align-items:center; gap:6px; min-height:44px; cursor:pointer; font-size:12px; }
+.cl-logo-modes input { width:16px; height:16px; accent-color:#9146ff; }
+.cl-gallery-area { min-width:0; }
+.cl-gallery { --b-motion:1; min-width:0; }
+.cl-gallery[data-motion=reduced] { --b-motion:0; }
+.cl-gallery__intro { margin-bottom:28px; }
+.cl-gallery__intro h2 { font:400 26px/1.15 'Russo One',sans-serif; margin-bottom:10px; }
+.cl-gallery__intro p,.cl-gallery__note { max-width:65ch; font-size:13px; color:#bfb6c9; }
+.cl-gallery__intro p+p { margin-top:7px; }
+.cl-gallery>section+section { margin-top:44px; padding-top:24px; border-top:1px solid #51465d; }
+.cl-gallery h3 { font:400 21px/1.2 'Russo One',sans-serif; margin-bottom:14px; }
+.cl-gallery__grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,286px),1fr)); align-items:start; gap:28px 18px; padding:0; margin:20px 0 0; list-style:none; }
+.cl-gallery__grid>li { min-width:0; }
+.cl-gallery figure { margin:0; padding:18px 12px; border:1px solid #51465d; border-radius:6px; background:#1b1523; }
+.cl-gallery figure[data-selected=true] { border-color:#c9a8ff; background:#261b33; }
+.cl-gallery__card { width:min(100%,300px); margin:0 auto; }
+.cl-gallery__card .cl-card { animation-delay:var(--deal-delay,0ms); box-shadow:0 7px 0 -3px #120d1a; }
+.cl-gallery figcaption { max-width:300px; margin:18px auto 0; }
+.cl-gallery figcaption>strong { font:400 18px/1.2 'Russo One',sans-serif; }
+.cl-gallery figcaption>small { display:block; margin-top:5px; color:#c9a8ff; font-size:10px; }
+.cl-gallery figcaption>p { margin-top:9px; min-height:3em; color:#c9c0d1; font-size:12px; line-height:1.5; }
+.cl-gallery__actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+.cl-gallery__actions button { flex:1; font-size:11px; padding:8px; }
+.cl-surface-picks .cl-export+label { margin-top:20px; }
+.cl-pairing-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.cl-pairing-actions button { font-size:12px; }
+@media(max-width:1100px) { .cl-top { flex-wrap:wrap; } .cl-top nav { flex:1; } }
+@media(max-width:760px) {
+  .cl-gallery-area { order:0; }
+  .cl-surfaces { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 16px; }
+  .cl-logo-modes { grid-column:1/-1; }
+  .cl-swatches { grid-template-columns:1fr; }
+  .cl-gallery__grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,286px),1fr)); }
+}
+@media(max-width:420px) {
+  .cl-top nav { flex-basis:100%; gap:2px; }
+  .cl-top nav button,.cl-top nav a { padding:8px 10px; font-size:12px; }
+  .cl-gallery figure { padding:15px 8px; }
+  .cl-gallery__intro h2 { font-size:23px; }
+}
+@media(forced-colors:active) { .cl-swatch[data-selected=true],.cl-gallery figure[data-selected=true] { border:2px solid Highlight; } }

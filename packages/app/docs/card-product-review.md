@@ -1,14 +1,26 @@
 # Baited card and product review
 
-Updated 27 October 2026. Card Lab is a local review handoff. The native Extension v0.0.2 has separately been uploaded to Twitch Hosted Test; see the release receipt below.
+Updated 27 October 2026. Card Lab is a development-only design review. The native Extension v0.0.2 has separately been uploaded to Twitch Hosted Test; see the release receipt below.
 
 ## What is ready to review
 
 The earlier **78-card collection is already on main and development at `d93edb9`**. This pass adds ten Card Lab directions and updates the local standalone viewer, native Twitch viewer/configuration, streamer Studio and OBS presentation. The product keeps the current card edition until the owner chooses a replacement. Selecting a preference in the lab does not change the game.
 
-The new design work is private feature-branch review work, and its previews run locally. It awaits owner review. Saving or pushing the branch is a source checkpoint, not a deployment. The landing and production have not been updated. Twitch accepted the redesigned native viewer/configuration ZIP as v0.0.2 in Hosted Test on 27 October; Studio is a separate backend update. The repository remains private.
+The Card Lab changes are authorized for main and the development domain only. Production excludes the lab and its assets; there is no production release tag in this pass. Twitch accepted the redesigned native viewer/configuration ZIP as v0.0.2 in Hosted Test on 27 October. The hosted Studio was rebuilt and restarted separately; signing in and checking the microphone again remain user steps. Activation of v0.0.2 on the channel has not been verified. The repository remains private.
 
 Opus 5.5 completed its design inspection in **26m59s** through the owner-authorized personal login. **Max effort and a 45-minute limit were requested; the CLI did not attest the effective effort level.** Its specification is a design plan, not proof of browser measurements or visual acceptance.
+
+A second Opus 5.5 lead-design pass completed in **23m36s**, again with Max effort requested and a 45-minute bound. It defined the materials, composition rules and all seven image prompts. Read the [material design](card-surfaces-opus-design.md), [exact prompts](card-surface-prompts.json) and [asset provenance](card-surface-assets/README.md). Table Reveal × Engraved × Mosaic is its suggested first pairing, not an applied product choice.
+
+## Materials and backs
+
+The lab preserves all ten editions and adds six front finishes (Stock, Dither, Prism, Engraved, Velvet and Spotlight) and five back choices (Current, Dither, Mosaic, Prism and Seal). Seven generated textures are separate from the word, clues and original BAITED wordmark, which remain in code. Dither is generated deterministically in code. No generated lettering, hooks or bombs were introduced.
+
+Use **Gallery** to compare the finishes, backs and six gameplay states. **Stage** keeps the exact panel, phone, desktop and Studio studies. Current, Pixel and Wide retain their own front stock; selecting a material from their gallery uses Table so the result matches its preview. Back choices work across editions. **As designed / On / Off** controls the wordmark on backs.
+
+Finish/back preferences and up to twelve saved pairings use a separate browser-storage key. Existing edition picks and their export are preserved. **Download full review** includes both sets. None changes the live game.
+
+The development route is [dev.baited.maff.app/card-lab/](https://dev.baited.maff.app/card-lab/?view=gallery). It is unlinked and marked noindex; an unlinked URL is not access control. Production must return 404 for this route and every material asset.
 
 ## Open the previews
 
@@ -17,6 +29,7 @@ Connect to the same local network as the Linux computer.
 | Preview | Link | Purpose |
 | --- | --- | --- |
 | Card Lab | [192.168.178.33:3335/card-lab](http://192.168.178.33:3335/card-lab) | Compare the ten editions using the same word and state. Synthetic examples only. |
+| Standalone materials | [192.168.178.33:4374/card-lab/](http://192.168.178.33:4374/card-lab/?view=gallery) | Latest editions, front finishes and backs, using the same static build as development. |
 | Product review | [192.168.178.33:3335/product-review](http://192.168.178.33:3335/product-review) | Switch between local Studio, viewer, OBS and card views at different sizes. |
 | Studio | [192.168.178.33:3335/studio](http://192.168.178.33:3335/studio) | Use the local demo controls and inspect the operating layout directly. |
 | Native Extension | [192.168.178.33:3334](http://192.168.178.33:3334/) | Viewer/configuration fixture harness, including waiting, hard-word, review and reconnect states. No Twitch connection. |
@@ -80,6 +93,12 @@ Landing:
 
 ```sh
 rtk proxy timeout --signal=TERM --kill-after=10s 10800s pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60/packages/landing exec wrangler dev --env dev --local --ip 192.168.178.33 --port 4373 --inspector-port 9373 --compatibility-date 2026-08-08
+```
+
+Latest standalone Card Lab and landing:
+
+```sh
+rtk proxy timeout --signal=TERM --kill-after=10s 10800s pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60/packages/landing exec wrangler dev --env dev --local --ip 192.168.178.33 --port 4374 --inspector-port 9374 --compatibility-date 2026-08-08
 ```
 
 Each session is bounded to **three hours**. **Ctrl+C** stops that terminal's preview sooner. The app and native scripts use strict ports; keep the landing and inspector on their explicit ports too. If a requested port is occupied, inspect the terminal/process owner and reuse the intended preview or stop that exact session. Do not kill unrelated processes or silently accept another port.

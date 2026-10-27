@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { copyStaticTree, parseEnvironment, prepareStaticSite, withBuildLock } from '../scripts/build-site.mjs'
+import { copyStaticTree, parseEnvironment, prepareStaticSite, publishStaticSite, stageAndPublishSite, withBuildLock } from '../scripts/build-site.mjs'
 
 const buildModule = new URL('../scripts/build-site.mjs', import.meta.url).href
 
@@ -185,4 +185,87 @@ test('lock paths reject symlinks and invalid waits without touching their target
     await assert.rejects(withBuildLock(destination, async () => assert.fail('must not run'), { waitMs }), /valid site build destination/)
   }
   assert.equal(await readFile(unrelated, 'utf8'), 'Keep this file')
+})
+
+test('dev publication preserves existing reader paths and publishes each complete document last', { timeout: 10_000 }, async t => {
+  const { root, source } = await fixture(t)
+  const destination = join(root, 'site-dev')
+  await mkdir(join(source, 'card-lab/assets'), { recursive: true })
+  // A reader can still be using the old index and chunk while the next build is
+  // published. Neither root files nor previous content hashes may disappear.
+  await writeFile(join(source, 'index.html'), 'app.js')
+  await writeFile(join(source, 'app.js'), 'first')
+  await prepareStaticSite({ environment: 'dev', source, destination })
+  await mkdir(join(destination, 'card-lab/assets'), { recursive: true })
+  await writeFile(join(destination, 'card-lab/assets/old.js'), 'Old chunk')
+  const stable = [destination, join(destination, 'index.html'), join(destination, 'app.js'), join(destination, 'cards/proofs/banana.png'), join(destination, 'card-lab/assets/old.js')]
+  let reading = true
+  let reads = 0
+  const errors = []
+  const reader = (async () => {
+    while (reading) {
+      try {
+        await Promise.all(stable.map(path => stat(path)))
+        const referenced = await readFile(join(destination, 'index.html'), 'utf8')
+        await stat(join(destination, referenced))
+        reads++
+      } catch (error) { errors.push(error) }
+      await new Promise(resolve => setImmediate(resolve))
+    }
+  })()
+  try {
+    for (let generation = 1; generation <= 3; generation++) {
+      await stageAndPublishSite({ environment: 'dev', source, destination, build: async staged => {
+        await mkdir(join(staged, 'card-lab/assets'), { recursive: true })
+        for (let index = 0; index < 40; index++) {
+          await writeFile(join(staged, `card-lab/assets/chunk-${generation}-${index}.js`), `Generation ${generation}`)
+        }
+        await writeFile(join(staged, 'app.js'), `Generation ${generation}`)
+        await writeFile(join(staged, 'index.html'), `card-lab/assets/chunk-${generation}-39.js`)
+      } })
+    }
+  } finally {
+    reading = false
+    await reader
+  }
+  assert.ok(reads > 0, 'reader must overlap publication')
+  assert.deepEqual(errors, [], 'a live reader must never observe missing or incomplete assets')
+  assert.equal(await readFile(join(destination, 'app.js'), 'utf8'), 'Generation 3')
+  assert.equal(await readFile(join(destination, 'card-lab/assets/old.js'), 'utf8'), 'Old chunk')
+  assert.deepEqual((await readdir(root)).filter(path => path.includes('.stage-')), [])
+})
+
+test('a failed staged build leaves the published tree unchanged and removes only its own staging tree', async t => {
+  const { root, source } = await fixture(t)
+  const destination = join(root, 'site-dev')
+  await prepareStaticSite({ environment: 'dev', source, destination })
+  await writeFile(join(source, 'index.html'), 'Changed source')
+  await assert.rejects(stageAndPublishSite({ environment: 'dev', source, destination, build: async () => {
+    assert.equal(await readFile(join(destination, 'index.html'), 'utf8'), 'Landing')
+    throw new Error('Compilation failed')
+  } }), /Compilation failed/)
+  assert.equal(await readFile(join(destination, 'index.html'), 'utf8'), 'Landing')
+  assert.deepEqual((await readdir(root)).filter(path => path.includes('.stage-')), [])
+})
+
+test('production publication replaces stale output without retaining either lab tree', async t => {
+  const { root, source } = await fixture(t)
+  const destination = join(root, 'site-prod')
+  await mkdir(join(destination, 'card-lab/assets'), { recursive: true })
+  await mkdir(join(destination, 'lab/brand'), { recursive: true })
+  await writeFile(join(destination, 'card-lab/assets/old.js'), 'Old lab')
+  await writeFile(join(destination, 'lab/brand/old.png'), 'Old proof')
+  await writeFile(join(destination, 'deleted.js'), 'Deleted source')
+  await stageAndPublishSite({ environment: 'prod', source, destination })
+  assert.deepEqual((await readdir(destination)).sort(), ['cards', 'index.html', 'terms'])
+})
+
+test('unchanged dev assets keep their inode to avoid redundant hot reloads', async t => {
+  const { root, source } = await fixture(t)
+  const destination = join(root, 'site-dev')
+  await prepareStaticSite({ environment: 'dev', source, destination })
+  const previous = await stat(join(destination, 'index.html'))
+  await stageAndPublishSite({ environment: 'dev', source, destination })
+  assert.equal((await stat(join(destination, 'index.html'))).ino, previous.ino)
+  await assert.rejects(publishStaticSite({ environment: 'dev', source, destination: source }), /publication destination/)
 })

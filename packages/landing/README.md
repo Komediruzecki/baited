@@ -66,6 +66,8 @@ The deck tests cover the fan's slot geometry, wraparound, the release rules, the
 
 Landing builds require Linux `flock` from util-linux, available on this workstation and the Ubuntu CI runners. Collaborators on Windows or macOS can run these builds in WSL/Linux. Each environment has its own bounded build lock, so multiple previews cannot delete and rebuild the same output simultaneously. Kernel ownership ends when a builder exits; retained lock files do not need stale-lock deletion.
 
+Compilation happens in a private staging directory. Development publishes complete files atomically and publishes HTML last, so Wrangler can read the current output throughout a rebuild. Unchanged files keep their inode. Previous generated files, including old hashed chunks, remain for tabs and asset snapshots that still reference them. To clear that local history, stop the previews first, remove only `packages/landing/dist/site-dev`, then build again. Production always publishes a fresh staged tree and retains no previous lab assets.
+
 The development build includes a standalone Card Lab at `/card-lab/`. It uses synthetic state without connecting to the game or Twitch. Gallery code, fonts and artwork stay beneath that path. The production build physically omits the gallery and the brand proof lab, and the Worker returns 404 for both prefixes.
 
 Local review on this workstation (the installed local workerd currently supports 2026-08-08):
