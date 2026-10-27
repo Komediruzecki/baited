@@ -10,6 +10,7 @@
 .cl-card[data-size=xs] { --surface-frame:6px; --surface-pad-top:10px; --surface-pixel:3px; --gem-cell:1px; }
 .cl-card[data-edition=foil] { --surface-pad-top:18px; }
 .cl-context--panel .cl-card { --surface-art:164px; }
+.cl-context--panel .cl-card[data-layout=table]:has(.cl-card__verdict) { --surface-art:120px; }
 .cl-context--panel .cl-card[data-edition=foil] { --surface-pad-top:14px; }
 .cl-context--panel .cl-card[data-edition=glance-reveal] { --card-pad:16px; }
 .cl-card[data-finish=dither] { --finish-base:#0d0a12; --plate:#16121c; --plate-edge:#3b1a7a; }
@@ -38,10 +39,6 @@
 .cl-card[data-edition=foil]:not([data-finish=stock]) { transform:none; transition:none; }
 .cl-card:not([data-finish=stock])[data-face=front] .cl-card__art {
   isolation:isolate; z-index:0; background:none;
-}
-.cl-card:not([data-finish=stock])[data-face=front] .cl-card__art>:is(.bait-card-art,.cl-pixel-art) {
-  /* The PNG margin can extend sideways, but never over the rail or word plate. */
-  clip-path:inset(8.333% 0);
 }
 .cl-card:not([data-finish=stock]) .cl-card__rail>* {
   background:var(--plate); border-radius:2px; box-shadow:0 0 0 3px var(--plate);
@@ -114,24 +111,24 @@
 }
 .cl-card[data-host=slab] .cl-glass { bottom:12px; }
 
-/* Table Open keeps the full-card material, without a second frame around the art. */
-.cl-card[data-edition=table-open] .cl-card__art::before,
-.cl-card[data-edition=table-open] .cl-card__aperture { display:none; }
-.cl-card[data-edition=table-open] .cl-card__generic { border:0; background:none; }
+/* Open editions keep their material, without a second frame around the art. */
+.cl-card[data-art-frame=open] .cl-card__art::before,
+.cl-card[data-art-frame=open] .cl-card__aperture { display:none; }
+.cl-card[data-art-frame=open] .cl-card__generic { border:0; background:none; }
 
 /* Cut's material ends above the word even when its card grows for a result. */
-.cl-card[data-host=slab]:not([data-finish=stock]) {
+.cl-card[data-host=slab] {
   --cut-edge:calc(var(--surface-pad-top) + 26px + var(--surface-art));
 }
-.cl-card[data-host=slab]:not([data-finish=stock]) .cl-card__cut {
-  background:var(--finish-base);
+.cl-card[data-host=slab] .cl-card__cut {
+  background:var(--finish-base,linear-gradient(172deg,#48218f,#1d0b45 80%));
   clip-path:polygon(0 0,100% 0,100% calc(var(--cut-edge) - 12px),0 var(--cut-edge));
 }
-.cl-card[data-host=slab]:not([data-finish=stock]) .cl-card__cut::after {
+.cl-card[data-host=slab] .cl-card__cut::after {
   content:''; position:absolute; inset:0; background:#c9a8ff8c;
   clip-path:polygon(0 calc(var(--cut-edge) - 2px),100% calc(var(--cut-edge) - 14px),100% calc(var(--cut-edge) - 12px),0 var(--cut-edge));
 }
-.cl-card[data-host=slab]:not([data-finish=stock]) .cl-card__sheen {
+.cl-card[data-host=slab] .cl-card__sheen {
   clip-path:polygon(0 0,100% 0,100% calc(var(--cut-edge) - 12px),0 var(--cut-edge));
 }
 .cl-card[data-host=slab] .cl-card__gem[data-corner='2'],

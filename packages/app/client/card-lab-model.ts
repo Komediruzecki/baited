@@ -12,9 +12,19 @@ export const editions = [
   { id: 'table-reveal', name: 'Table Reveal', note: 'The house card, revealed from pixels.' },
   { id: 'glance-reveal', name: 'Glance Plus', note: 'Larger icons and art that resolves into focus.' },
   { id: 'table-open', name: 'Table Open', note: 'Pixel reveal. Artwork without an inner frame.' },
+  { id: 'cut-reveal', name: 'Cut Reveal', note: 'The angled slab with Table clues and a pixel reveal.' },
+  { id: 'cut-open', name: 'Cut Open', note: 'The angled slab and pixel reveal, without an inner frame.' },
 ] as const;
 export type Edition = typeof editions[number]['id'];
 export const isTableEdition = (edition: Edition) => ['table', 'table-reveal', 'table-open'].includes(edition);
+export const isCutEdition = (edition: Edition) => ['cut', 'cut-reveal', 'cut-open'].includes(edition);
+export const isOpenEdition = (edition: Edition) => ['table-open', 'cut-open'].includes(edition);
+export const usesTableLayout = (edition: Edition) => isTableEdition(edition) || edition === 'cut-reveal' || edition === 'cut-open';
+export const hasPixelReveal = (edition: Edition) => ['table-reveal', 'table-open', 'glance-reveal', 'cut-reveal', 'cut-open'].includes(edition);
+export function parseCompared(source: string | null): Edition[] {
+  if (source === null) return ['table-reveal', 'table-open'];
+  return [...new Set(source.split(',').filter(isEdition))].slice(0, 4);
+}
 export type ReviewEntry = { word: string; difficulty: string; clues: string[]; example: string; ink: string; synthetic?: boolean };
 export const reviewDeck: ReviewEntry[] = catalogue;
 export const generic: ReviewEntry = { word: 'network', difficulty: 'medium', clues: ['connection', 'computers'], example: 'A synthetic example without an illustration.', ink: '#c9a8ff', synthetic: true };
