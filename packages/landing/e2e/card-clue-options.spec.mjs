@@ -204,17 +204,19 @@ test('reduced motion and forced colors preserve clue readability and hide words 
   }
 })
 
-test('all 78 native landing cards fit all four proposed clue styles at phone and desktop sizes', async ({ page }, testInfo) => {
-  test.setTimeout(120_000)
-  const catalogue = JSON.parse(readFileSync(new URL('../../app/shared/card-review-catalogue.json', import.meta.url), 'utf8'))
-  expect(catalogue).toHaveLength(78)
-  const expected = Object.fromEntries(catalogue.map((card) => [card.word, {
-    clues: card.clues.slice(0, card.difficulty === 'hard' ? 4 : card.difficulty === 'medium' ? 2 : 0),
-    question: card.example,
-  }]))
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  const measurements = []
-  for (const width of [320, 390, 1440, 1920]) {
+// Each width gets its own page/trace and the normal 45-second test budget. The
+// complete 78-card × four-style matrix is unchanged; one 16-navigation test made
+// tens of thousands of traced assertions share a single CI deadline.
+for (const width of [320, 390, 1440, 1920]) {
+  test(`${width}px: all 78 native landing cards fit all four proposed clue styles`, async ({ page }, testInfo) => {
+    const catalogue = JSON.parse(readFileSync(new URL('../../app/shared/card-review-catalogue.json', import.meta.url), 'utf8'))
+    expect(catalogue).toHaveLength(78)
+    const expected = Object.fromEntries(catalogue.map((card) => [card.word, {
+      clues: card.clues.slice(0, card.difficulty === 'hard' ? 4 : card.difficulty === 'medium' ? 2 : 0),
+      question: card.example,
+    }]))
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const measurements = []
     await page.setViewportSize({ width, height: 1000 })
     for (const treatment of ['rail', 'pills', 'tokens', 'quiet']) {
       await page.goto(`/?clue=${treatment}#cards`)
@@ -301,8 +303,8 @@ test('all 78 native landing cards fit all four proposed clue styles at phone and
         await page.screenshot({ path: testInfo.outputPath(`native-cards-${width}-${treatment}.png`) })
       }
     }
-  }
-  const geometryPath = testInfo.outputPath('native-all-78-clue-geometry.json')
-  writeFileSync(geometryPath, JSON.stringify(measurements))
-  await testInfo.attach('native-all-78-clue-geometry.json', { path: geometryPath, contentType: 'application/json' })
-})
+    const geometryPath = testInfo.outputPath('native-all-78-clue-geometry.json')
+    writeFileSync(geometryPath, JSON.stringify(measurements))
+    await testInfo.attach('native-all-78-clue-geometry.json', { path: geometryPath, contentType: 'application/json' })
+  })
+}
