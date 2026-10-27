@@ -1,5 +1,5 @@
 import { clockValue, connectToTwitch, connectionView, readState } from './client.js';
-import { cardArtFile, streakMilestone, wordSize } from './presentation.js';
+import { cardArtFile, glassRules, streakMilestone, wordSize } from './presentation.js';
 
 const byId = (id) => document.getElementById(id);
 let current = null;
@@ -8,6 +8,11 @@ let connected = false;
 let announcementKey = '';
 let dealtRound = '';
 let dealAnimation;
+// The ink this viewer's card was dealt with, kept for the same card's reveal.
+let dealtInk = { id: '', ink: '' };
+const rules = glassRules();
+byId('field-rules').setAttribute('d', rules);
+byId('lens-rules').setAttribute('d', rules);
 
 function announce(key, text) {
   if (key === announcementKey) return;
@@ -15,9 +20,16 @@ function announce(key, text) {
   byId('announcement').textContent = text;
 }
 
-function setTitle(value, secret = false) {
+function setTitle(value, secret = false, ink = '') {
   byId('card-title').textContent = value;
   byId('card-title').dataset.wordSize = secret ? wordSize(value) : 'message';
+  // The ink names the word as surely as the word does; it is cleared with it.
+  byId('card-title').style.color = secret ? ink : '';
+}
+
+function setQuestion(text) {
+  byId('card-question').textContent = text ?? '';
+  byId('card-question').hidden = !text;
 }
 
 function setArt(word) {
@@ -65,8 +77,10 @@ function deal(roundId) {
 function clearCard(title, detail, label = 'Waiting', resetAnnouncement = true) {
   current = null;
   dealAnimation?.cancel();
+  dealtInk = { id: '', ink: '' };
   setArt(null);
   setDifficulty(null);
+  setQuestion(null);
   if (resetAnnouncement) {
     announcementKey = '';
     byId('announcement').textContent = '';
@@ -112,9 +126,11 @@ function render({ configured, room }) {
     byId('card').dataset.state = room.phase === 'active' ? 'active' : 'paused';
     byId('card-kicker').textContent = visible ? 'Secret word' : 'Broadcaster';
     byId('phase-label').textContent = phase;
-    setTitle(visible ? room.round.target : 'Your viewers have the word.', visible);
+    setTitle(visible ? room.round.target : 'Your viewers have the word.', visible, room.round.ink);
     setArt(visible ? room.round.target : null);
     setDifficulty(visible ? room.round.difficulty : null);
+    setQuestion(visible ? room.round.example : null);
+    dealtInk = visible ? { id: room.round.id, ink: room.round.ink ?? '' } : { id: '', ink: '' };
     byId('card-detail').hidden = visible;
     byId('card-detail').textContent = !visible
       ? 'Run the round and confirm catches in your studio.'
@@ -172,13 +188,14 @@ function render({ configured, room }) {
     byId('card-kicker').textContent = copy[0];
     byId('phase-label').textContent =
       result.outcome === 'review' ? 'Streamer’s call' : 'Complete';
-    setTitle(result.word, true);
+    setTitle(result.word, true, dealtInk.id === result.id ? dealtInk.ink : '');
     setArt(result.word);
     setDifficulty(null);
+    setQuestion(null);
     const tier =
       result.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
     byId('card-detail').textContent = tier
-      ? `${copy[1]} ${result.newBadge ? 'New streak badge' : 'Streak badge'}: ${tier.name}, ${tier.count} in a row.`
+      ? `${copy[1]} ${result.newBadge ? 'New streak card' : 'Streak card'}: ${tier.name} edition, ${tier.count} in a row.`
       : copy[1];
     byId('card-detail').hidden = false;
     byId('forbidden').hidden = true;

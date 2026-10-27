@@ -1,4 +1,4 @@
-/* Viewer and broadcast hosts. Card edition stays unchanged until selected in the lab. */
+/* Viewer and broadcast hosts. Cards are the landing's selected Glass face and Mosaic back. */
 .viewer-room { width: 100%; max-width: 1168px; min-height: 100vh; margin: 0 auto; padding: 0 24px; background: var(--b-night); color: var(--b-copy); font-family: var(--b-ui); }
 .viewer-room * { box-sizing: border-box; }
 .viewer-room .viewer-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 72px; padding: 14px 0; border-bottom: 1px solid var(--b-line); }
@@ -6,21 +6,19 @@
 .viewer-room .viewer-header .product-brand { width: 104px; color: var(--b-lilac); }
 .viewer-room .viewer-header .tag { display: inline-flex; align-items: center; gap: 6px; max-width: 60%; padding: 6px 0; border: 0; background: transparent; color: var(--b-muted); font: 500 12px/1.4 var(--b-ui); letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
 .viewer-room .viewer-header .tag .dot { color: var(--b-lilac); }
-.viewer-room .viewer-main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px 48px; margin: 32px 0 0; padding: 0; }
+.viewer-room .viewer-main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px 48px; max-width: none; margin: 32px 0 0; padding: 0; }
 .viewer-room .viewer-game, .viewer-room .viewer-support { min-width: 0; }
 .viewer-room .viewer-table { display: grid; place-items: center; min-height: 620px; padding: 40px 24px; border-radius: 10px; background: var(--b-table-night); box-shadow: inset 0 0 0 1px #4a2a8a; }
-.viewer-room .target-card { position: relative; display: flex; flex-direction: column; width: min(360px, 100%); min-height: 504px; margin: 0; overflow: clip; padding: 0; border: 1px solid var(--b-edge); border-top-color: var(--b-edge-lit); border-radius: var(--b-r-card); background: var(--b-face); color: var(--b-copy); clip-path: none; box-shadow: 0 8px 0 -3px #120d1a, 0 24px 48px #0d052466; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.viewer-room .target-card > .card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; padding: 20px 22px 0; }
-.viewer-room .card-heading .small-label { color: var(--b-muted); font: 500 12px/1.4 var(--b-ui); text-transform: none; letter-spacing: 0; }
-.viewer-room .card-heading .tag { padding: 4px 6px; border: 1px solid var(--b-edge); border-radius: 4px; background: var(--b-face-2); color: var(--b-copy); font: 600 10px/1.4 var(--b-ui); letter-spacing: 0; text-transform: none; }
-.viewer-room .card-heading .tag.lime { color: var(--b-lilac); border-color: #75559b; background: #30223f; }
-.viewer-room .target-display, .viewer-room .target-card:has(> .clue-card) .target-display { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 0; padding: 14px 22px 20px; text-align: center; }
-.viewer-room .target-display > .bait-card-art { display: block; width: 216px; max-width: 100%; height: 184px; margin: 0 auto 12px; object-fit: contain; image-rendering: pixelated; }
-.viewer-room .target-display h2, .viewer-room .target-display:has(> .bait-card-art) h2 { max-width: 100%; margin: 0; color: var(--b-paper); font: 400 36px/1.1 var(--b-display); letter-spacing: -.025em; text-align: center; text-transform: uppercase; overflow-wrap: anywhere; }
-.viewer-room .target-display h2[data-word-size='medium'] { font-size: 30px; }
-.viewer-room .target-display h2[data-word-size='long'] { font-size: 26px; }
-.viewer-room .target-display h2[data-word-size='extended'] { font-size: 22px; }
-.viewer-room .target-card > .clue-card { margin: 0 22px 20px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+/* The secret is the landing's Glass card (glass-card.css), as on the stream overlay. */
+.viewer-room .target-card { position: relative; display: grid; justify-items: center; gap: 16px; width: min(360px, 100%); margin: 0; padding: 0; border: 0; background: none; clip-path: none; box-shadow: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.viewer-room .viewer-glass { --glass-card-width: min(360px, 100%); }
+.viewer-room .viewer-card-clock { display: inline-flex; align-items: center; gap: 1.667cqw; color: var(--b-paper); }
+.viewer-room .viewer-card-clock > svg { width: max(12px, 4cqw); height: max(12px, 4cqw); color: var(--b-lilac); }
+.viewer-room .viewer-card-clock > span { font: 600 max(13px, 5cqw)/1 var(--b-ui); font-variant-numeric: tabular-nums; }
+.viewer-room .viewer-card-clock > small { color: var(--b-muted); font: 400 max(9px, 3cqw)/1.4 var(--b-ui); }
+.viewer-room.viewer-urgent .viewer-card-clock > span { color: var(--b-urgent); }
+.viewer-room.viewer-urgent .glass-card__timer { background: var(--b-urgent); }
+.viewer-room .target-card > .clue-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .viewer-room .clue-card > div { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--b-muted); }
 .viewer-room .clue-card > div > svg, .viewer-room .clue-card > div > span { display: none; }
 .viewer-room .clue-card h3 { margin: 0; color: var(--b-muted); font: 500 12px/1.4 var(--b-ui); text-align: center; }
@@ -31,17 +29,6 @@
 .viewer-room .clue-card .clue-chips li::before { content: ''; flex: 0 0 6px; height: 2px; background: var(--b-clue-mark); }
 .viewer-room .clue-card .clue-chips li::after { display: none; }
 .viewer-room .clue-card > p.clue-flags { display: block; color: var(--b-muted); text-align: center; font: 400 11px/1.5 var(--b-ui); margin: 10px 0 0; }
-.viewer-room .viewer-timer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: auto; padding: 16px 22px; border-top: 1px solid #514b59; background: transparent; }
-.viewer-room .viewer-timer > .baited-glyph { width: 64px; height: auto; flex: none; color: var(--b-lilac); }
-.viewer-room .viewer-timer > div { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; color: var(--b-paper); }
-.viewer-room .viewer-timer > div > svg { color: var(--b-lilac); }
-.viewer-room .viewer-timer > div > span { color: var(--b-paper); font: 600 20px/1 var(--b-ui); font-variant-numeric: tabular-nums; letter-spacing: 0; }
-.viewer-room .viewer-timer small { color: var(--b-muted); font: 400 10px/1.4 var(--b-ui); letter-spacing: 0; text-transform: none; }
-.viewer-room .viewer-progress { height: 3px; background: #443a50; }
-.viewer-room .viewer-progress > i { height: 100%; max-width: 100%; background: var(--b-violet); transition: width 150ms linear; }
-.viewer-room.viewer-urgent .viewer-progress > i { background: var(--b-urgent); }
-.viewer-room.viewer-urgent .viewer-timer > div > span { color: var(--b-urgent); }
-.viewer-room .target-win { border-color: var(--b-lilac); }
 .viewer-room .viewer-card-waiting { display: flex; flex-direction: column; align-items: center; width: 100%; text-align: center; }
 .viewer-room .viewer-back { position: relative; width: min(260px, 100%); aspect-ratio: 5/7; margin: 0 auto; transform: rotate(-2deg); }
 .viewer-room .viewer-card-waiting > p { margin: 26px 0 0; font: 500 14px/1.5 var(--b-ui); color: var(--b-copy); }
@@ -144,22 +131,7 @@
   .viewer-room .viewer-header .tag { font-size: 11px; }
   .viewer-room .viewer-main { margin-top: 0; gap: 24px; }
   .viewer-room .viewer-table { min-height: 0; margin-inline: -16px; padding: 24px 16px 28px; border-radius: 0; box-shadow: none; }
-  .viewer-room .target-card { width: min(320px, 100%); min-height: 403px; border-radius: var(--b-r-card-s); }
-  .viewer-room .target-card > .card-heading { padding: 16px 18px 0; }
-  .viewer-room .card-heading .small-label { font-size: 11px; }
-  .viewer-room .target-display, .viewer-room .target-card:has(> .clue-card) .target-display { padding: 12px 18px 16px; }
-  .viewer-room .target-display > .bait-card-art { width: 184px; height: 154px; margin-bottom: 10px; }
-  .viewer-room .target-display h2, .viewer-room .target-display:has(> .bait-card-art) h2 { font-size: 30px; }
-  .viewer-room .target-display h2[data-word-size='medium'] { font-size: 26px; }
-  .viewer-room .target-display h2[data-word-size='long'] { font-size: 22px; }
-  .viewer-room .target-display h2[data-word-size='extended'] { font-size: 18px; }
-  .viewer-room .target-card > .clue-card { margin: 0 18px 16px; }
-  .viewer-room .clue-card h3 { font-size: 11px; }
-  .viewer-room .clue-card .clue-chips { gap: 5px; }
-  .viewer-room .clue-card .clue-chips li { padding: 4px 6px; font-size: 11px; }
-  .viewer-room .viewer-timer { padding: 14px 18px; }
-  .viewer-room .viewer-timer > .baited-glyph { width: 52px; }
-  .viewer-room .viewer-timer > div > span { font-size: 18px; }
+  .viewer-room .target-card, .viewer-room .viewer-glass { --glass-card-width: min(320px, 100%); width: min(320px, 100%); }
   .viewer-room .viewer-back { width: min(220px, 100%); }
   .viewer-room .viewer-card-waiting > p { font-size: 13px; margin-top: 22px; }
   .viewer-room .viewer-state h1 { font-size: 28px; }

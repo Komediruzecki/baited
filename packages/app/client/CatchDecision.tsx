@@ -3,7 +3,7 @@ import type { ResultView } from '../shared/types';
 import { Button } from './ui';
 import { ChevronDown, RotateCcw } from './icons';
 import { PublicAward } from './mechanics';
-import { wordSize } from '../extension/presentation.js';
+import { streakMilestone, wordSize } from '../extension/presentation.js';
 
 export function CatchDecision({
   result,
@@ -21,6 +21,7 @@ export function CatchDecision({
   const decision = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const pending = result.outcome === 'review';
+  const tier = result.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
   useEffect(() => {
     if (!pending) return;
     const focus = document.activeElement;
@@ -64,6 +65,12 @@ export function CatchDecision({
                   ? 'Correct guess. You escaped.'
                   : 'A new word is ready when you are.'}
         </p>
+        {tier && (
+          <p className="studio-result__streak">
+            {result.newBadge ? 'New streak card' : 'Streak card'}: <strong>{tier.name} edition</strong>,{' '}
+            {tier.count} in a row.
+          </p>
+        )}
       </div>
       {pending && (
         <div className="round-actions catch-actions" aria-label="Confirm speech result">

@@ -1,8 +1,8 @@
 # Viewer room and OBS source
 
-Mode: Operate. This extends the approved landing's charcoal playing cards, Russo One targets, pixel artwork, violet and small yellow accents. The audience needs to recognize the secret word immediately; the broadcaster needs a readable clock without seeing that word.
+Mode: Operate. This extends the landing's selected card (Glass face, Mosaic back), Russo One targets in each item's ink, pixel artwork, the violet ground and small yellow accents. The audience needs to recognize the secret word immediately; the broadcaster needs a readable clock without seeing that word.
 
-The web viewer uses one actual game card. On desktop, instructions and session scores sit beside it; below 860px they follow it. Off-limits words have a struck label and remain readable. Yellow marks the target and confirmed win, while violet identifies a live round and links. Support information stays on the page without another stack of containers.
+The web viewer uses one actual game card, the same Glass card as the Extension overlay, with its clues on the landing's rail and the clock in its footer. On desktop, instructions and session scores sit beside it; below 860px they follow it. Off-limits words have a struck label and remain readable. Yellow marks the target and confirmed win, while violet identifies a live round and links. Support information stays on the page without another stack of containers.
 
 The OBS source retains its existing upper-left position for scene compatibility. Its opaque HUD sits on a transparent canvas, with 14 px state labels, 20 px headlines and a 44 px clock. Mission progress is a compact row inside the same frame. Only caught and escaped results get the large reveal below the HUD. Pending, overturned, skipped and ended words are removed at the API boundary and independently guarded in the UI. Paused, reconnecting and winning states have text labels in addition to color.
 

@@ -48,14 +48,9 @@ import { ResultCard } from './ResultCard';
 import { CardBack } from './CardBack';
 import { CatchDecision } from './CatchDecision';
 import { ObsHud } from './ObsHud';
-import { nextStreakTier, streakMilestone, wordSize } from '../extension/presentation.js';
-import {
-  StreakBadge,
-  StreakBadges,
-  StreakCelebration,
-  StreakCount,
-  StreakRow,
-} from './streak';
+import { nextStreakTier } from '../extension/presentation.js';
+import { GlassCard } from './GlassCard';
+import { StreakCards, StreakCelebration, StreakCount, StreakSlots } from './streak';
 import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
@@ -77,10 +72,12 @@ import {
 } from './transcript-preview';
 import './transcript-preview.css';
 import './product-brand.css';
+import './glass-card.css';
 import './result-card.css';
 import '../extension/tokens.css';
 import './studio-refresh.css';
 import './public-refresh.css';
+import './landing-shell.css';
 import './chat-bot.css';
 import './streak.css';
 
@@ -1450,6 +1447,7 @@ function Community({ game: g }: { game: GameView }) {
         <div><dt>Rounds played</dt><dd>{g.score.played}</dd></div>
         <div><dt>Chatting now</dt><dd>{g.participants}</dd></div>
       </dl>
+      <StreakCards game={g} />
       <div className="bottom-grid">
         <section className="panel">
           <div className="section-heading">
@@ -1791,10 +1789,11 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
   const stale = offline;
   const showCard = !stale && finished && !!g.result && ['caught', 'escaped'].includes(g.result.outcome) && now + offset.current - g.result.at < 5500;
   if (overlay)
-    return <div className="obs-root">
+    return <div className={cx('obs-root', !stale && g.score.streak >= 2 && 'obs-root--streak')}>
       {!stale && <PublicAward award={g.history[0]?.award} />}
       <ObsHud game={g} timeLeft={fmt(ms)} now={now} offset={offset.current} offline={stale} showCard={showCard} />
       {showCard && g.result && <ResultCard key={`${g.result.id}:${g.result.outcome}`} result={g.result} broadcast age={now + offset.current - g.result.at} />}
+      {showCard && g.result && <StreakCelebration key={`streak:${g.result.id}`} result={g.result} streak={g.score.streak} age={now + offset.current - g.result.at} />}
     </div>;
   const playing = active || paused || settling;
   const visibleWord = stale ? undefined : playing ? g.round?.target : finished ? g.result?.word : undefined;
@@ -1830,14 +1829,19 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
       <div className="viewer-game">
         <div className="viewer-table">
           {visibleWord ? <section className={cx('target-card', won && 'target-win')} aria-label="Secret card">
-            <div className="card-heading"><span className="small-label">{playing ? `Round ${g.round?.number}` : 'The reveal'}</span><Tag tone={active ? 'lime' : 'muted'}>{stateLabel}</Tag></div>
-            <div className="target-display"><CardArt word={visibleWord} /><h2 data-word-size={wordSize(visibleWord)}>{visibleWord}</h2></div>
-            {!stale && <ForbiddenClueCard game={g} />}
-            <div className="viewer-timer">
-              <span className="baited-glyph" aria-hidden="true" />
-              <div><Timer size={16} /><span role={playing && !stale ? 'timer' : undefined} aria-label={playing && !stale ? spokenTime(ms, paused) : undefined}>{playing ? fmt(ms) : pendingCatch ? '—:—' : g.nextAt !== null ? fmt(Math.max(0, g.nextAt - (now + offset.current))) : '—:—'}</span><small>{settling ? 'Checking' : paused ? 'Paused' : pendingCatch ? 'Not scored yet' : finished ? g.nextAt !== null ? 'Next round' : 'Waiting' : 'Left'}</small></div>
-            </div>
-            <div className="viewer-progress"><i style={{ width: `${g.round ? Math.min(1, Math.max(0, ms / g.round.duration)) * 100 : 0}%` }} /></div>
+            <GlassCard
+              className="viewer-glass"
+              word={visibleWord}
+              wordAs="h2"
+              chip={active && !stale ? `Round ${g.round?.number}` : stateLabel}
+              level={playing && g.round ? { easy: 1, medium: 2, hard: 3 }[g.round.difficulty] : null}
+              clues={playing && !stale ? g.round?.forbiddenClues ?? [] : null}
+              note={!playing ? (won ? 'Chat wins' : pendingCatch ? 'Not scored yet' : 'Round complete') : null}
+              question={playing && !stale ? g.round?.example : null}
+              progress={playing && g.round ? ms / g.round.duration : null}
+              footer={<span className="viewer-card-clock"><Timer size={14} /><span role={playing && !stale ? 'timer' : undefined} aria-label={playing && !stale ? spokenTime(ms, paused) : undefined}>{playing ? fmt(ms) : pendingCatch ? '—:—' : g.nextAt !== null ? fmt(Math.max(0, g.nextAt - (now + offset.current))) : '—:—'}</span><small>{settling ? 'Checking' : paused ? 'Paused' : pendingCatch ? 'Not scored yet' : finished ? g.nextAt !== null ? 'Next round' : 'Waiting' : 'Left'}</small></span>}
+            />
+            {!stale && <ForbiddenClueCard game={g} rulesOnly />}
           </section> : <div className="viewer-card-waiting"><div className="viewer-back"><CardBack /></div><p>{stale ? 'Waiting for updates.' : 'The word is coming.'}</p>{stale && <span className="viewer-stale-clock" aria-label="Timer unavailable while reconnecting">—:—</span>}</div>}
         </div>
         {!stale && <PublicAward award={g.history[0]?.award} />}
@@ -1851,6 +1855,13 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
           <li><NoChat size={20} /><span>Keep the word and clues out of chat.</span></li>
           <li><Mic size={20} /><span>Only the streamer’s voice counts.</span></li>
         </ul>
+        {!stale && g.score.streak >= 2 && (
+          <div className="viewer-streak">
+            <StreakCount count={g.score.streak} />
+            <StreakSlots count={g.score.streak} />
+            <p>{nextStreakTier(g.score.streak) ? `Win ${nextStreakTier(g.score.streak)!.count} in a row to print the ${nextStreakTier(g.score.streak)!.name} card. Best so far: ${g.score.best}.` : `Every streak card is printed. Best so far: ${g.score.best}.`}</p>
+          </div>
+        )}
         <p className="viewer-scoreline">{stale && <span>Last known: </span>}<strong>{g.score.wins}</strong> {g.score.wins === 1 ? 'chat win' : 'chat wins'} <span aria-hidden="true">·</span> streak <strong>{g.score.streak}</strong></p>
         <p className="viewer-skip">Skip <strong>{g.voters}/{g.voteThreshold}</strong><span>Type <code>!skip</code> in Twitch chat.</span></p>
         {g.mode === 'twitch' && <a className="button primary twitch-chat-link" href={`https://www.twitch.tv/${encodeURIComponent(g.channel)}`} target="_blank" rel="noreferrer"><MessageSquare size={18} />Back to Twitch chat<ArrowUpRight size={16} /></a>}

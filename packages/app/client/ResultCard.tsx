@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import type { GameView } from '../shared/types';
-import { CardArt } from './CardArt';
 import { CardBack } from './CardBack';
-import { cardArtFile, wordSize } from '../extension/presentation.js';
+import { GlassCard } from './GlassCard';
+import { streakMilestone } from '../extension/presentation.js';
 
 // Only a server-authorized result belongs here. OBS must never render a review.
 export function ResultCard({
@@ -19,6 +19,26 @@ export function ResultCard({
   if (broadcast && !['caught', 'escaped'].includes(result.outcome)) return null;
   const caught = result.outcome === 'caught';
   const review = result.outcome === 'review';
+  // A win that lands on a streak tier is reprinted in that tier's finish.
+  const tier = caught && result.milestone ? streakMilestone(result.milestone) : null;
+  const verdict = review
+    ? 'Heard'
+    : caught
+      ? 'They said it'
+      : result.outcome === 'escaped'
+        ? 'The streamer escaped'
+        : result.outcome === 'overturned'
+          ? 'Catch rejected'
+          : 'Round ended';
+  const outcome = review
+    ? 'Not scored yet'
+    : caught
+      ? 'Chat wins'
+      : result.reason === 'guess'
+        ? 'Bait called'
+        : result.outcome === 'escaped'
+          ? 'Time’s up'
+          : 'New word next';
   return (
     <div
       className={`result-deal${broadcast ? ' result-deal--broadcast' : ''}`}
@@ -28,37 +48,13 @@ export function ResultCard({
         <div className="result-card__back" aria-hidden="true">
           <CardBack />
         </div>
-        <div className="result-card__face" data-art={cardArtFile(result.word) ? 'art' : 'word'}>
-          <span className="result-card__verdict">
-            {review
-              ? 'HEARD'
-              : caught
-                ? 'THEY SAID IT.'
-                : result.outcome === 'escaped'
-                  ? 'THE STREAMER ESCAPED.'
-                  : result.outcome === 'overturned'
-                    ? 'CATCH REJECTED'
-                    : 'ROUND ENDED'}
-          </span>
-          <CardArt word={result.word} />
-          <strong className="result-card__word" data-word-size={wordSize(result.word)}>
-            {result.word}
-          </strong>
-          <span className="result-card__outcome">
-            {review
-              ? 'NOT SCORED YET'
-              : caught
-                ? 'CHAT WINS'
-                : result.reason === 'guess'
-                  ? 'BAIT CALLED'
-                  : result.outcome === 'escaped'
-                    ? 'TIME’S UP'
-                    : 'NEW WORD NEXT'}
-          </span>
-          <span className="result-card__signature" aria-hidden="true">
-            <span className="baited-glyph" />
-          </span>
-        </div>
+        <GlassCard
+          className="result-card__face"
+          word={result.word}
+          finish={tier?.finish}
+          chip={tier ? (result.newBadge ? 'New streak card' : 'Streak card') : verdict}
+          note={tier ? `${tier.name} edition · ${tier.count} in a row` : outcome}
+        />
       </div>
     </div>
   );

@@ -37,7 +37,11 @@ export function readState(value) {
     if (q.target !== undefined && !string(q.target)) throw new Error('Invalid target.');
     if (q.difficulty !== undefined && !difficulties.has(q.difficulty)) throw new Error('Invalid difficulty.');
     if (q.forbiddenClues !== undefined && (!Array.isArray(q.forbiddenClues) || q.forbiddenClues.length > 10 || q.forbiddenClues.some((x) => !string(x, 80)))) throw new Error('Invalid clues.');
-    round = { id: q.id, number: q.number, duration: q.duration, remaining: q.remaining, endsAt: q.endsAt, difficulty: q.difficulty, target: q.target, forbiddenClues: q.forbiddenClues ?? [] };
+    // The printed ink lands in a style property, so only a plain hex colour is accepted.
+    if (q.ink !== undefined && !(typeof q.ink === 'string' && /^#[0-9a-f]{6}$/i.test(q.ink))) throw new Error('Invalid ink.');
+    if (q.example !== undefined && !string(q.example, 160)) throw new Error('Invalid example.');
+    round = { id: q.id, number: q.number, duration: q.duration, remaining: q.remaining, endsAt: q.endsAt, difficulty: q.difficulty, target: q.target, forbiddenClues: q.forbiddenClues ?? [],
+      ...(q.target !== undefined && q.ink ? { ink: q.ink } : {}), ...(q.target !== undefined && q.example ? { example: q.example } : {}) };
   }
   let result = null;
   if (r.result !== null) {

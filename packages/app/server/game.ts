@@ -14,6 +14,11 @@ import type {
 import { words } from './words.js';
 import { forbiddenClues } from './cards.js';
 import { streakMilestone, streakTiers } from '../extension/presentation.js';
+import catalogue from '../shared/card-review-catalogue.json';
+
+// Each card's printed ink and example question. Both identify the word, so they
+// travel only beside a viewer's target.
+const printed = new Map(catalogue.map((card) => [card.word, { ink: card.ink, example: card.example }]));
 
 export const settingsSchema = z
   .object({
@@ -126,8 +131,8 @@ export interface SavedGame {
   priorPlayed: number;
   priorBest: number;
   leaders: Record<string, { name: string; rounds: number; baits?: number }>;
-  /** First unlock of each streak badge, keyed by tier count, with the round that earned it. */
-  streakBadges?: Record<string, { at: number; round: string }>;
+  /** First unlock of each streak card, keyed by tier count, with the round and word that earned it. */
+  streakBadges?: Record<string, { at: number; round: string; word?: string }>;
 }
 export class Game {
   phase: GameView['phase'] = 'idle';
@@ -361,7 +366,8 @@ export class Game {
       this.result.milestone = tier.count;
       const badges = (this.data.streakBadges ??= {});
       if (!badges[tier.count] && this.data.priorBest < tier.count) {
-        badges[tier.count] = { at: now, round: r.id };
+        // Only a caught word is printed on a card, and it is public once caught.
+        badges[tier.count] = { at: now, round: r.id, word: r.word };
         this.result.newBadge = true;
       }
     }
@@ -689,7 +695,7 @@ export class Game {
             guessUsed: r.guessUsed,
             wrongGuessBonus: r.wrongGuessBonus,
             ...(role === 'viewer' && ['active', 'paused', 'settling'].includes(this.phase)
-              ? { target: r.word, forbiddenClues: [...r.clues] }
+              ? { target: r.word, forbiddenClues: [...r.clues], ...printed.get(r.word) }
               : {}),
           }
         : null,
@@ -708,10 +714,14 @@ export class Game {
         .sort((a, b) => b.rounds - a.rounds || a.name.localeCompare(b.name))
         .slice(0, 8)
         .map((leader) => ({ ...leader, baits: leader.baits ?? 0 })),
-      // Badges reached before unlocks were recorded count as unlocked, without a date.
+      // Cards reached before unlocks were recorded count as unlocked, without a date or word.
       badges: streakTiers
         .filter((tier) => this.data.streakBadges?.[tier.count] || this.score.best >= tier.count)
-        .map((tier) => ({ count: tier.count, at: this.data.streakBadges?.[tier.count]?.at ?? null })),
+        .map((tier) => ({
+          count: tier.count,
+          at: this.data.streakBadges?.[tier.count]?.at ?? null,
+          word: this.data.streakBadges?.[tier.count]?.word ?? null,
+        })),
       mission: this.mission
         ? {
             ...this.mission,

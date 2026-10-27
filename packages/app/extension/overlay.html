@@ -6,64 +6,102 @@
     <title>baited · Card on the stream</title>
     <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
     <script src="./runtime-config.js"></script>
+    <link rel="stylesheet" href="./tokens.css" />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./overlay.css" />
   </head>
   <body data-surface="overlay">
     <!-- THESIS: One card dealt onto the video. Chat sees its face; the streamer
-    watching the same channel sees its back. OWN-WORLD: The panel's charcoal card
-    stock, violet edge and yellow word, at playing-card proportions.
+    watching the same channel sees its back. OWN-WORLD: The landing's selected
+    card: a Glass face with the item in its own ink, and the Mosaic back.
     STORY: The card lands face down, turns over for chat, and turns over for
-    everyone when the round is decided.
+    everyone when the round is decided. A streak milestone reprints it in a
+    Card Lab finish.
     FIRST VIEWPORT: Transparent video. One card at the right edge, clear of the
     title and player controls, with a minimise tab.
     FORM: A 5:7 card sized from the player height. Nothing is drawn between rounds. -->
     <main class="table" id="table" data-visible="false" aria-label="baited card">
       <section class="deal" id="deal" data-collapsed="false">
         <div class="playing-card" id="card" data-face="back" data-state="waiting">
-          <div class="card-turn" id="card-turn">
+          <div class="card-turn">
             <div class="face face-front" id="face-front" aria-hidden="true">
-              <div class="face-topline">
-                <span class="face-kicker" id="front-kicker">Chat's secret</span>
-                <span class="face-streak" id="front-streak" hidden
-                  ><img src="./assets/streak-flame.svg" alt="" width="12" height="14" /><b
-                    id="front-streak-count"
-                  ></b>
-                  in a row</span
-                >
-                <span class="face-clock" id="front-clock">0:00</span>
+              <!-- Both view boxes are the full-size card in CSS pixels, so the glass scales with the card. -->
+              <svg class="glass-field" viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+                <path id="field-rules" fill="none" stroke="#fffdf7" stroke-opacity="0.22" stroke-width="1.5" />
+              </svg>
+              <img class="face-finish" id="front-finish" alt="" width="720" height="1008" hidden />
+              <div class="face-top">
+                <span class="chip" id="front-chip"></span>
+                <span class="chip chip-streak" id="front-streak" hidden
+                  ><svg viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+                    <path d="M1 7h2v2H1zM3 5h2v4H3zM5 3h2v6H5zM7 1h2v8H7z" /></svg
+                  ><span id="front-streak-copy"></span
+                ></span>
+                <span class="chip pips" id="front-pips" aria-hidden="true" hidden><i></i><i></i><i></i></span>
               </div>
-              <div class="face-center">
-                <img class="face-art" id="front-art" alt="" width="160" height="126" hidden />
-                <span class="badge-medal" id="front-medal" hidden
-                  ><img id="front-medal-art" alt="" width="96" height="96"
-                /></span>
+              <div class="face-art">
+                <span class="face-square">
+                  <span class="glass-lens" aria-hidden="true">
+                    <svg class="glass-bend" viewBox="0 0 267.2 249.6" preserveAspectRatio="xMidYMid slice" focusable="false">
+                      <defs>
+                        <linearGradient id="glass-light" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0" stop-color="#8c43f9" />
+                          <stop offset="1" stop-color="#241050" />
+                        </linearGradient>
+                        <filter
+                          id="glass-bend"
+                          filterUnits="userSpaceOnUse"
+                          primitiveUnits="userSpaceOnUse"
+                          x="0"
+                          y="0"
+                          width="100%"
+                          height="100%"
+                          color-interpolation-filters="sRGB"
+                        >
+                          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.017" numOctaves="1" seed="5" result="n" />
+                          <feDisplacementMap in="SourceGraphic" in2="n" scale="40" xChannelSelector="A" yChannelSelector="A" result="bent" />
+                          <feGaussianBlur in="bent" stdDeviation="0.9" result="frost" />
+                          <feColorMatrix in="frost" type="saturate" values="1.8" />
+                        </filter>
+                      </defs>
+                      <g filter="url(#glass-bend)">
+                        <rect width="100%" height="100%" fill="url(#glass-light)" />
+                        <path id="lens-rules" fill="none" stroke="#fffdf7" stroke-opacity="0.3" stroke-width="1.5" />
+                      </g>
+                    </svg>
+                  </span>
+                  <img class="face-art-image" id="front-art" alt="" width="1254" height="1254" hidden />
+                </span>
+              </div>
+              <div class="face-plate">
                 <h2 class="face-word" id="front-word"></h2>
-                <p class="face-detail" id="front-detail"></p>
-                <ol class="face-row" id="front-row" aria-label="Wins in a row" hidden></ol>
-              </div>
-              <ul class="face-clues" id="front-clues" aria-label="Off-limits clues" hidden></ul>
-              <div class="face-baseline">
-                <span class="card-tagline"><b>bait</b> them.</span
-                ><span class="face-stamp" id="front-stamp">Only chat knows</span>
+                <div class="face-rules" id="front-rules" hidden>
+                  <p class="face-rules-label" id="front-rules-label">Keep out of chat</p>
+                  <ul class="face-clues" id="front-clues" aria-labelledby="front-rules-label"></ul>
+                </div>
+                <p class="face-note" id="front-note"></p>
+                <p class="face-question" id="front-question"></p>
+                <div class="face-footer">
+                  <span class="face-logo"><span class="baited-glyph"></span></span>
+                  <span class="face-clock" id="front-clock"></span>
+                  <i class="timer-rule" aria-hidden="true"></i>
+                </div>
               </div>
             </div>
             <div class="face face-back" id="face-back" aria-hidden="true">
-              <div class="back-pattern" aria-hidden="true"></div>
-              <div class="back-center">
-                <img class="back-bomb" src="./assets/bait-bomb.png" alt="" width="80" height="80" />
-                <span class="back-wordmark"><span class="baited-glyph"></span></span>
-                <p class="back-copy" id="back-copy">Chat has the word.</p>
-                <span class="face-clock back-clock" id="back-clock">0:00</span>
-                <p class="back-streak" id="back-streak" hidden>
-                  <img src="./assets/streak-flame.svg" alt="" width="12" height="14" /><span
-                    id="back-streak-copy"
-                  ></span>
-                </p>
+              <span class="back-mark"><span class="baited-glyph"></span></span>
+              <span class="chip chip-streak back-streak" id="back-streak" hidden
+                ><svg viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+                  <path d="M1 7h2v2H1zM3 5h2v4H3zM5 3h2v6H5zM7 1h2v8H7z" /></svg
+                ><span id="back-streak-copy"></span
+              ></span>
+              <div class="back-plate">
+                <span class="back-copy" id="back-copy">Chat has the word.</span>
+                <span class="face-clock" id="back-clock"></span>
+                <i class="timer-rule" aria-hidden="true"></i>
               </div>
             </div>
           </div>
-          <div class="card-progress" aria-hidden="true"><i id="card-progress"></i></div>
         </div>
         <button class="collapse" id="collapse" type="button" aria-expanded="true">
           <span class="collapse-glyph" aria-hidden="true"></span>

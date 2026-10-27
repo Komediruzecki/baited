@@ -8,7 +8,7 @@ class Element extends EventTarget {
   hidden = false;
   children = [];
   attributes = new Map();
-  style = {};
+  style = { setProperty(name, value) { this[name] = value; } };
   content = '';
   set textContent(value) { this.content = String(value); this.children = []; }
   get textContent() { return this.content + this.children.map((child) => child.textContent).join(''); }
@@ -49,7 +49,7 @@ test('overlay shows the face to viewers, only the back to the broadcaster, and c
     version: '0.0.1', configured: true, room: {
       phase, channel: 'streamer', serverTime: 10000, result,
       round: phase === 'cooldown' ? null : { id: 'round-one', number: 1, duration: 60000, remaining: 45000, endsAt: 55000,
-        ...(secret ? { target: word, forbiddenClues: ['Lava', 'Eruption'] } : {}) },
+        ...(secret ? { target: word, forbiddenClues: ['Lava', 'Eruption'], ink: '#ff743c', example: 'Where would you never build a house?' } : {}) },
     },
   });
   const respond = async (index, value) => {
@@ -66,6 +66,8 @@ test('overlay shows the face to viewers, only the back to the broadcaster, and c
     await respond(0, state());
     assert.equal(elements.get('table').dataset.visible, 'true');
     assert.equal(elements.get('front-word').textContent, 'VOLCANO');
+    assert.equal(elements.get('front-word').style.color, '#ff743c');
+    assert.equal(elements.get('front-question').textContent, 'Where would you never build a house?');
     assert.equal(elements.get('front-art').attributes.get('src'), './assets/card-volcano.png');
     assert.match(allText(), /Lava/);
     assert.doesNotMatch(allText(), /private-token/);
@@ -76,7 +78,8 @@ test('overlay shows the face to viewers, only the back to the broadcaster, and c
 
     // A fresh Helper JWT can change account or role. Clear the face before awaiting its response.
     authorize(auth('broadcaster-private-token'));
-    assert.doesNotMatch(allText(), /VOLCANO|Lava|Eruption/);
+    assert.doesNotMatch(allText(), /VOLCANO|Lava|Eruption|never build/);
+    assert.equal(elements.get('front-word').style.color, '');
     assert.equal(elements.get('front-art').attributes.has('src'), false);
     assert.equal(elements.get('table').dataset.visible, 'false');
     await respond(1, state(false));
@@ -85,7 +88,8 @@ test('overlay shows the face to viewers, only the back to the broadcaster, and c
     assert.equal(card().dataset.face, 'back');
     assert.equal(elements.get('face-front').attributes.get('aria-hidden'), 'true');
     assert.equal(elements.get('back-copy').textContent, 'Chat has the word.');
-    assert.doesNotMatch(allText(), /VOLCANO|Lava|Eruption|private-token/);
+    assert.doesNotMatch(allText(), /VOLCANO|Lava|Eruption|never build|private-token/);
+    assert.equal(elements.get('front-word').style.color, '');
 
     // A decided round turns over for everyone, the broadcaster included.
     authorize(auth('broadcaster-result-token'));
@@ -93,12 +97,24 @@ test('overlay shows the face to viewers, only the back to the broadcaster, and c
     assert.equal(card().dataset.face, 'front');
     assert.equal(card().dataset.outcome, 'caught');
     assert.equal(elements.get('front-word').textContent, 'VOLCANO');
+    assert.equal(card().dataset.finish, undefined);
+    // A win that lands on a streak tier is reprinted in that tier's finish.
+    authorize(auth('broadcaster-streak-token'));
+    await respond(3, { ...state(false, 'VOLCANO', 'cooldown', { id: 'round-two', word: 'VOLCANO', outcome: 'caught', milestone: 5, newBadge: true }),
+      room: { ...state(false, 'VOLCANO', 'cooldown').room, result: { id: 'round-two', word: 'VOLCANO', outcome: 'caught', milestone: 5, newBadge: true }, score: { streak: 5, best: 5 } } });
+    assert.equal(card().dataset.finish, 'velvet');
+    assert.equal(elements.get('front-finish').attributes.get('src'), './assets/finish-velvet.webp');
+    assert.equal(elements.get('front-chip').textContent, 'New streak card');
+    assert.equal(elements.get('front-note').textContent, 'Velvet edition · 5 in a row');
+    assert.equal(elements.get('front-question').textContent, '5 more in a row for the Engraved card.');
 
     authorize(auth('viewer-again-private-token'));
-    await respond(3, state(true, 'PENGUIN'));
+    await respond(4, state(true, 'PENGUIN'));
     assert.match(allText(), /PENGUIN/);
+    assert.equal(card().dataset.finish, undefined);
     helperError(new Error('Do not expose Helper details'));
-    assert.doesNotMatch(allText(), /PENGUIN|Lava|Helper details|private-token/);
+    assert.doesNotMatch(allText(), /PENGUIN|Lava|never build|Helper details|private-token/);
+    assert.equal(elements.get('front-word').style.color, '');
     assert.equal(elements.get('front-art').attributes.has('src'), false);
     assert.equal(elements.get('table').dataset.visible, 'false');
   } finally {

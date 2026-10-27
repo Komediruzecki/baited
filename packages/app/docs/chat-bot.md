@@ -16,8 +16,8 @@ The streamer reads their own chat, so the bot must never know more than the stre
 | Last 10 seconds | 🔥 10 seconds left. Make them say it! |
 | Pause, resume | ⏸ Round paused. The clock is frozen. / ▶ Back on. 1:46 left. |
 | Catch pending | 👂 Did they say it? The streamer is checking the catch. |
-| Chat wins | 🎣 Baited! The streamer said OCTOPUS after 16s. Chat wins. 🔥 3 in a row! |
-| A streak badge | 🏅 New streak badge: Lit fuse! Chat won 3 in a row. Next badge: On fire at 5. |
+| Chat wins | 🎣 Baited! The streamer said OCTOPUS after 16s. Chat wins, 3 in a row! |
+| A streak card | 🃏 New streak card: Dither edition! Chat won 3 in a row. Next card: Velvet at 5. |
 | Time runs out | ⏰ Time! The streamer got away. The word was VOLCANO. That ends chat's 3-win streak. |
 | Call the bait | 🧠 The streamer called the bait: it was VOLCANO. / 🎯 …guessed wrong. Chat gets +15s! |
 | Skip votes, skipped | ⏭ Skip votes: 2/3. Type !skip to vote for a new word. / ⏭ Word skipped. New bait next. |
@@ -28,11 +28,11 @@ With automatic rounds or a mission running, results end with “Next round in 10
 
 Run `pnpm bot:transcript` to print every message from a scripted demo session, driven by the real game and bot.
 
-## Win streak and badges
+## Win streak and streak cards
 
-Chat's streak counts community wins in a row. Any other finished round ends it (time out, a correct Call the bait, a skip or an ended round); a rejected catch leaves it alone. Landing on a tier earns its badge: Spark (2), Lit fuse (3), On fire (5), Eruption (10), Dragonfire (15), Liftoff (25) and Ultraviolet (50). Each badge unlocks once per room, with its date; landing on a tier again is still celebrated, and reversing the win that unlocked a badge takes it back. The streak itself starts at zero after a restart, as before; best streak and unlocks are saved.
+Chat's streak counts community wins in a row. Any other finished round ends it (time out, a correct Call the bait, a skip or an ended round); a rejected catch leaves it alone. Landing on a tier prints chat a streak card in one of the Card Lab finishes: Stock (2), Dither (3), Velvet (5), Engraved (10), Spotlight (15) and Prism (25). Glass is every round's own face, so it is not a reward. Each card is printed once per room with the word that earned it and the date; landing on a tier again is still celebrated, and reversing the win that printed a card takes it back. The streak itself starts at zero after a restart, as before; best streak and printed cards are saved.
 
-The streak shows on the OBS overlay (a strip with the count, coins and the next badge, and a medallion beside the result card on a tier), on the Extension card and panel, in the viewer room, and in the studio's Community tab, which lists every badge with its date or progress.
+The streak shows on the OBS overlay (a row in the HUD with the count, the last wins as small cards and the next card, and the winning card reprinted in its finish on a tier), on the Extension card and panel, in the viewer room, and in the studio's Community tab, which lays out every streak card: printed, or face down with progress.
 
 ## Commands
 

@@ -139,7 +139,7 @@ catchWord(false);
 settle();
 game.reverse();
 settle(12000);
-step('Five wins in a row: a streak, two badges and a streak command');
+step('Five wins in a row: a streak, two streak cards and a streak command');
 for (let i = 0; i < 5; i++) {
   say('ModName', '!bait start', true);
   settle();

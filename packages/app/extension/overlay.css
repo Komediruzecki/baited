@@ -1,6 +1,8 @@
-/* The video overlay draws one card over the live video and nothing else.
-   Sizes come from the player height so the card reads the same in a small
-   player, theatre mode and fullscreen. Card content scales with the card. */
+/* The video overlay draws one card over the live video and nothing else. It is the
+   landing's selected card (packages/landing/selected-cards): a Glass face and the
+   Mosaic back. The player height sets the card's size and the card's width sets its
+   type, so it reads the same in a small player, theatre mode and fullscreen.
+   One container unit is 3px on a full-size 300 × 420 card. */
 :root {
   /* Browsers paint an opaque canvas behind a frame whose color scheme differs
      from its embedder's, which would cover the video. Keep the default scheme. */
@@ -46,17 +48,19 @@ body[data-surface='overlay'] {
   width: 30px;
   height: 30px;
   padding: 0;
-  border: 1px solid #71627f;
-  border-radius: 4px 9px 4px 4px;
-  background: #121016e6;
-  color: var(--paper);
+  border: 1px solid var(--b-edge);
+  border-top-color: var(--b-edge-lit);
+  border-radius: 4px 8px 4px 4px;
+  background: #1a1522;
+  color: var(--b-paper);
+  box-shadow: 0 4px 0 -2px #120d1a;
   transition:
-    background 150ms ease-out,
-    border-color 150ms ease-out;
+    background var(--b-t-state) ease-out,
+    border-color var(--b-t-state) ease-out;
 }
 .collapse:hover {
-  background: #2b2435;
-  border-color: #b988ff;
+  background: #2a1160;
+  border-color: var(--b-lilac);
 }
 .collapse-glyph {
   width: 8px;
@@ -68,7 +72,7 @@ body[data-surface='overlay'] {
 }
 .deal[data-collapsed='true'] .collapse {
   height: 72px;
-  border-color: #9c7fbd;
+  border-color: var(--b-lilac);
 }
 .deal[data-collapsed='true'] .collapse-glyph {
   margin: 0 0 0 3px;
@@ -83,7 +87,7 @@ body[data-surface='overlay'] {
   white-space: nowrap;
 }
 
-/* A 5:7 playing card. Container units keep type proportional to the card. */
+/* The card: 5:7, turned with the faces back to back. */
 .playing-card {
   --card-h: clamp(150px, 54vh, 420px);
   position: relative;
@@ -102,7 +106,7 @@ body[data-surface='overlay'] {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  transition: transform 520ms cubic-bezier(0.3, 0.7, 0.2, 1);
+  transition: transform var(--b-t-turn) var(--b-ease-turn);
 }
 .playing-card[data-face='back'] .card-turn {
   transform: rotateY(180deg);
@@ -113,12 +117,16 @@ body[data-surface='overlay'] {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #9c7fbd;
-  border-radius: 2.6cqw 9cqw 2.6cqw 2.6cqw;
-  background: var(--card);
+  isolation: isolate;
+  padding: 5.333cqw 6cqw 4.667cqw;
+  border: 1px solid var(--b-edge);
+  border-top-color: var(--b-edge-lit);
+  border-radius: 4.667cqw 8cqw 4.667cqw 4.667cqw;
+  background: #120d1a;
+  color: var(--b-paper);
   box-shadow:
-    0 1.4cqh 0 -0.4cqh #09080c,
-    0 3cqh 7cqh #00000066;
+    0 2.667cqw 0 -1cqw #120d1a,
+    0 8cqw 16cqw #1d0b4573;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -126,379 +134,470 @@ body[data-surface='overlay'] {
   transform: rotateY(180deg);
 }
 
-/* Front: the word, its art, and the clues chat must avoid. */
-.face-topline {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 4cqw;
-  padding: 6cqw 7cqw 0;
+/* Glass: ruled light behind the card and a bent copy behind the art. */
+.glass-field {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 36% at 100% 0, #c9a8ff59, #c9a8ff00),
+    linear-gradient(#9146ff, #5b25c2 30%, #2a1160 56%, #120d1a 82%);
 }
-/* Each size has a floor so a default-size player still reads; small cards
-   drop their secondary lines below instead of shrinking past the floor. */
-.face-kicker {
-  font-size: max(10px, 5.2cqw);
-  font-weight: 650;
-  color: var(--copy);
-}
-.face-clock {
-  font-size: max(12px, 7.4cqw);
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  color: var(--paper);
-}
-.playing-card[data-urgent='true'] .face-clock {
-  color: var(--yellow);
-}
-.face-center {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2.2cqh;
-  padding: 2cqh 7cqw;
-  text-align: center;
-}
-.face-art {
-  width: 70cqw;
-  height: auto;
-  max-height: 30cqh;
-  object-fit: contain;
-}
-.face-word {
-  max-width: 100%;
-  font:
-    400 max(18px, 15cqw) / 1.04 Russo,
-    Impact,
-    sans-serif;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-  color: var(--paper);
-}
-.face-word[data-word-size='medium'] {
-  font-size: max(16px, 12cqw);
-}
-.face-word[data-word-size='long'] {
-  font-size: max(14px, 9.6cqw);
-}
-.face-word[data-word-size='extended'] {
-  font-size: max(13px, 8cqw);
-  line-height: 1.12;
-}
-.face-word[data-word-size='message'] {
-  font-size: max(15px, 10cqw);
-  text-transform: none;
-}
-.playing-card:is([data-state='active'], [data-state='result']) .face-word {
-  color: var(--yellow);
-}
-.face-detail {
-  max-width: 30ch;
-  font-size: max(10px, 4.6cqw);
-  line-height: 1.45;
-  color: var(--copy);
-}
-.face-clues {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1.6cqw;
-  margin: 0;
-  padding: 0 7cqw 3cqh;
-  list-style: none;
-}
-.face-clues li {
-  max-width: 100%;
-  padding: 0.6cqh 2cqw;
-  border: 1px solid #746585;
-  border-radius: 2px;
-  font-size: max(10px, 4.2cqw);
-  font-weight: 550;
-  line-height: 1.3;
-  text-transform: uppercase;
-  text-decoration: line-through;
-  text-decoration-color: var(--lit);
-  text-decoration-thickness: 2px;
-  color: var(--copy);
-  overflow-wrap: anywhere;
-}
-.face-baseline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 3cqw;
-  margin: 0 7cqw;
-  padding: 2.6cqh 0 4.4cqh;
-  border-top: 1px solid var(--line);
-}
-.face-baseline .card-tagline {
-  font-size: max(10px, 4.6cqw);
-}
-.face-baseline .card-tagline b {
-  font-size: max(12px, 6cqw);
-}
-.face-stamp {
-  font-size: max(9px, 3.9cqw);
-  color: var(--muted);
-  text-align: right;
-}
-.playing-card[data-outcome='caught'] .face-front {
-  border-color: var(--yellow);
-  box-shadow:
-    0 1.4cqh 0 -0.4cqh #09080c,
-    0 0 0 0.8cqw #fffc7926,
-    0 3cqh 7cqh #00000066;
-}
-.playing-card:is([data-state='result'], [data-state='review']) .face-front .face-clock {
-  visibility: hidden;
+.face-finish {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0;
+  pointer-events: none;
 }
 
-/* Chat's win streak: a chip on both faces, coins and a medallion on a win. */
-.face-streak,
-.back-streak {
+/* Front: a chip, the card's level, its art, then the word plate. */
+.face-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1.333cqw;
+  flex: none;
+  min-height: 6.667cqw;
+}
+.chip {
   display: inline-flex;
   align-items: center;
-  gap: 1.6cqw;
-  font-weight: 650;
-  color: #ffae4a;
+  gap: 1.333cqw;
+  padding: 1cqw 2cqw;
+  border-radius: 1.333cqw;
+  background: var(--plate, #1a1522);
+  color: var(--b-paper);
+  font: 600 max(9px, 3.333cqw) / 1 var(--b-ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
-.face-streak {
-  font-size: max(10px, 5.2cqw);
+.chip:empty {
+  display: none;
 }
-.back-streak {
-  font-size: max(10px, 4.6cqw);
+.chip-streak {
+  color: var(--b-lilac);
 }
-.face-streak img,
-.back-streak img {
-  width: max(10px, 4.2cqw);
-  height: auto;
+.chip-streak svg {
+  width: max(9px, 3.333cqw);
+  height: max(9px, 3.333cqw);
+  flex: none;
+  fill: currentColor;
+  shape-rendering: crispEdges;
+}
+.pips {
+  gap: 1cqw;
+  margin-left: auto;
+  padding: 1.333cqw 1.667cqw;
+  border-radius: 3.333cqw;
+}
+.pips i {
+  width: max(5px, 2cqw);
+  height: max(5px, 2cqw);
+  border: max(1px, 0.5cqw) solid #8f84a0;
+  border-radius: 50%;
+}
+.pips[data-level='1'] i:first-child,
+.pips[data-level='2'] i:not(:last-child),
+.pips[data-level='3'] i {
+  border-color: var(--b-lilac);
+  background: var(--b-lilac);
+  box-shadow: 0 0 0 0.833cqw #c9a8ff2e;
+}
+.face-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 1 58.667cqw;
+  height: 58.667cqw;
+  min-height: 20cqw;
+  margin: 1.333cqw 0 2.667cqw;
+  isolation: isolate;
+}
+.face-square {
+  position: relative;
+  display: block;
+  height: 100%;
+  aspect-ratio: 1;
+  max-width: 100%;
+}
+.glass-lens {
+  position: absolute;
+  inset: 0 -10% -10%;
+  z-index: -1;
+  overflow: clip;
+  border-radius: 4cqw 6.667cqw 4cqw 4cqw;
+  box-shadow:
+    0 0 0 1px #0d0a12b3,
+    0 3.333cqw 6cqw -3.333cqw #05030a;
+  pointer-events: none;
+}
+/* The bleed keeps the displaced copy underneath the rim. */
+.glass-bend {
+  position: absolute;
+  top: -9.333cqw;
+  left: -9.333cqw;
+  width: calc(100% + 18.667cqw);
+  height: calc(100% + 18.667cqw);
+}
+.glass-lens::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(closest-side at 50% 46%, #0d0a12a6, #0d0a124d 72%, #0d0a121a);
+  box-shadow:
+    inset 0 1px 0 #fffdf75c,
+    inset 1px 0 0 #fffdf71f,
+    inset 0 0 0 1.333cqw #c9a8ff12;
+}
+.face-art-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   image-rendering: pixelated;
+  pointer-events: none;
 }
-.face-row {
+.face-plate {
+  position: relative;
+  z-index: 1;
   display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  min-height: min-content;
+  margin: 0 -2cqw -2cqw;
+  padding: 1cqw 2cqw 2cqw;
+  border-radius: 1cqw 1cqw 2.333cqw 2.333cqw;
+  background: var(--plate, #1a1522);
+  box-shadow: inset 0 1px 0 var(--plate-edge, #1a1522);
+  text-align: center;
+}
+/* The word is printed in its item's own ink. */
+/* Sizes follow the word's length so a small card never breaks a word. */
+.face-word {
+  color: var(--b-paper);
+  font: 400 max(12px, 10cqw) / 1.1 var(--b-display);
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.face-word[data-word-size='medium'] {
+  font-size: max(11px, 8.333cqw);
+}
+.face-word[data-word-size='long'] {
+  font-size: max(10px, 7cqw);
+}
+.face-word[data-word-size='extended'] {
+  font-size: max(9px, 5.667cqw);
+  line-height: 1.15;
+}
+.face-rules {
+  flex: none;
+  margin-top: 3.333cqw;
+}
+.face-rules-label {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 2.4cqw;
+  gap: 2.667cqw;
+  margin-bottom: 2.667cqw;
+  color: #c9c0d1;
+  font: 400 max(9px, 3.667cqw) / 1.27 var(--b-ui);
+}
+.face-rules-label::before,
+.face-rules-label::after {
+  content: '';
+  flex: none;
+  width: 8cqw;
+  border-top: 1px solid #fffdf747;
+}
+.face-clues {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: center;
+  justify-items: start;
+  gap: 1.333cqw 6.667cqw;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.face-row li {
-  display: grid;
-  justify-items: center;
-  gap: 0.8cqh;
-  font-size: max(9px, 3.6cqw);
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  color: #8d8596;
-}
-.face-row li > span:first-child {
-  display: grid;
-  place-items: center;
-  width: max(15px, 11cqw);
-  height: max(15px, 11cqw);
-  border-radius: 50%;
-  background: #2f2a36;
-  box-shadow: inset 0 0 0 1px #4a4352;
-}
-.face-row img {
-  width: 58%;
-  height: auto;
-  image-rendering: pixelated;
-  opacity: 0.22;
-  filter: grayscale(1);
-}
-.face-row li:is([data-state='won'], [data-state='current']) {
-  color: #ffae4a;
-}
-.face-row li:is([data-state='won'], [data-state='current']) > span:first-child {
-  background: radial-gradient(circle at 50% 35%, #ffc65a 0, #f07a1e 70%);
-  box-shadow: inset 0 -1px 0 #b8481466;
-}
-.face-row li:is([data-state='won'], [data-state='current']) img {
-  opacity: 1;
-  filter: none;
-}
-.face-row li[data-state='current'] > span:first-child {
-  box-shadow:
-    0 0 0 2px var(--card),
-    0 0 0 3.5px #ffd23a;
-}
-.badge-medal {
-  --ring-a: #ffcf7a;
-  --ring-b: #c4561c;
-  --core: #3a1d12;
-  --glow: #8a3a16;
-  display: grid;
-  place-items: center;
-  width: 46cqw;
-  height: 46cqw;
-  margin-top: 3cqw;
-  border: 3.2cqw solid transparent;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 40%, var(--glow) 0, var(--core) 64%) padding-box,
-    conic-gradient(
-        from 200deg,
-        var(--ring-a),
-        var(--ring-b) 25%,
-        var(--ring-a) 50%,
-        var(--ring-b) 75%,
-        var(--ring-a)
-      )
-      border-box;
-  box-shadow:
-    0 1.6cqw 0 -1px #0b0710,
-    0 3cqw 6cqw #00000080;
-  animation: medal-pop 640ms cubic-bezier(0.22, 1.4, 0.36, 1) 300ms both;
-}
-.badge-medal img {
-  width: 84%;
-  height: 84%;
-  margin-top: -16%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 1cqw 0 #0009);
-}
-.badge-medal[data-tone='amber'] {
-  --ring-a: #fff3a6;
-  --ring-b: #f08a17;
-  --core: #3b2510;
-  --glow: #94591a;
-}
-.badge-medal[data-tone='flame'] {
-  --ring-a: #ffb36b;
-  --ring-b: #d7261a;
-  --core: #3d1214;
-  --glow: #9a2a17;
-}
-.badge-medal[data-tone='magma'] {
-  --ring-a: #ff8a5c;
-  --ring-b: #6e1730;
-  --core: #26090f;
-  --glow: #6a1c19;
-}
-.badge-medal[data-tone='violet'] {
-  --ring-a: #e2ccff;
-  --ring-b: #6b2cc4;
-  --core: #22123a;
-  --glow: #4f2a86;
-}
-.badge-medal[data-tone='cosmic'] {
-  --ring-a: #9de8ff;
-  --ring-b: #5b2bd6;
-  --core: #12173a;
-  --glow: #2c3c8a;
-}
-.badge-medal[data-tone='gold'] {
-  --ring-a: #fffc79;
-  --ring-b: #c98a10;
-  --core: #2a1540;
-  --glow: #6b3aa8;
-}
-@keyframes medal-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.3) rotate(-20deg);
-  }
-}
-
-/* Back: the same card stock, face down. The streamer sees only this. */
-.back-pattern {
-  position: absolute;
-  inset: 4.4cqw;
-  border: 1px solid #9146ff55;
-  border-radius: 1.6cqw 6.4cqw 1.6cqw 1.6cqw;
-  background:
-    radial-gradient(circle at 50% 44%, #242426 0 31%, transparent 31.5%),
-    repeating-linear-gradient(45deg, #9146ff1c 0 1.8cqw, transparent 1.8cqw 3.6cqw),
-    repeating-linear-gradient(-45deg, #9146ff12 0 1.8cqw, transparent 1.8cqw 3.6cqw);
-}
-.back-center {
-  position: relative;
-  flex: 1;
+.face-clues li {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2.4cqh;
-  padding: 8cqw;
-  text-align: center;
+  gap: 1cqw;
+  color: var(--b-paper);
+  font: 600 max(9.5px, 4cqw) / 1.333 var(--b-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
-.back-bomb {
-  width: 34cqw;
-  height: 34cqw;
-  object-fit: contain;
-  image-rendering: pixelated;
+.face-clues li::before {
+  content: '';
+  flex: none;
+  width: 2.333cqw;
+  border-top: 2px solid var(--b-lilac);
 }
-.back-wordmark {
-  width: 50cqw;
-  color: var(--lit);
+.face-note {
+  flex: none;
+  margin-top: 3.333cqw;
+  color: #c9c0d1;
+  font: 400 max(9.5px, 4cqw) / 1.42 var(--b-ui);
+  text-wrap: balance;
 }
-.back-copy {
-  font-size: max(10px, 5.4cqw);
-  font-weight: 650;
-  color: var(--paper);
+.playing-card:is([data-state='result'], [data-state='review']) .face-note {
+  margin-top: 2.667cqw;
+  color: var(--b-paper);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.back-clock {
-  font-size: max(13px, 9cqw);
+.face-question {
+  flex: none;
+  margin: 2.667cqw 0;
+  color: var(--b-copy);
+  font: 400 max(10px, 4.333cqw) / 1.385 var(--b-ui);
+  text-wrap: balance;
 }
-.playing-card[data-urgent='true'] .back-clock {
-  color: var(--yellow);
+.face-note:empty,
+.face-question:empty {
+  display: none;
 }
-
-/* Time left runs along the bottom edge on both faces. */
-.card-progress {
+.face-footer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2.667cqw;
+  margin-top: auto;
+  padding-top: 3cqw;
+  min-height: 8.333cqw;
+  border-top: 1px solid #5a4e66;
+}
+.face-logo {
+  width: 17.333cqw;
+  min-width: 40px;
+  color: var(--b-paper);
+}
+.face-clock {
+  color: var(--b-paper);
+  font: 600 max(11px, 4.667cqw) / 1 var(--b-ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+/* The footer rule is the round's timer, on both faces. */
+.timer-rule {
   position: absolute;
-  right: 6cqw;
-  bottom: 1.6cqh;
-  left: 6cqw;
-  height: max(3px, 0.8cqh);
-  overflow: hidden;
-  background: #48414f;
-  pointer-events: none;
+  top: -1px;
+  left: 0;
+  width: calc(var(--progress, 0) * 100%);
+  height: 2px;
+  background: var(--b-lilac);
 }
-.card-progress i {
-  display: block;
-  width: 0;
-  height: 100%;
-  background: var(--violet);
+.playing-card[data-urgent='true'] .face-clock {
+  color: var(--b-urgent);
 }
-.playing-card[data-urgent='true'] .card-progress i {
-  background: var(--yellow);
+.playing-card[data-urgent='true'] .timer-rule {
+  background: var(--b-urgent);
 }
-.playing-card:is([data-state='result'], [data-state='review'], [data-state='waiting'])
-  .card-progress {
+.playing-card:is([data-state='result'], [data-state='review']) :is(.face-clock, .timer-rule) {
   visibility: hidden;
 }
 
-/* Small cards keep the word, the clues and the clock. */
-@container (max-height: 300px) {
-  .playing-card:not([data-state='result']) .face-detail,
-  .face-baseline,
-  .back-copy {
-    display: none;
+/* A decided win catches the light once, like the landing's front card. */
+.face-front::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: linear-gradient(
+    105deg,
+    transparent 34%,
+    rgb(255 255 255 / 16%) 46%,
+    rgb(213 186 255 / 20%) 50%,
+    rgb(255 255 255 / 0%) 60%
+  );
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.playing-card[data-outcome='caught'] .face-front::after {
+  animation: card-glint 1.1s cubic-bezier(0.3, 0.6, 0.2, 1) 0.25s both;
+}
+@keyframes card-glint {
+  from {
+    transform: translateX(-120%);
   }
-  .badge-medal {
-    width: 38cqw;
-    height: 38cqw;
-  }
-  .face-center {
-    gap: 1.4cqh;
-  }
-  .face-clues {
-    padding-bottom: 6cqh;
+  to {
+    transform: translateX(120%);
   }
 }
-@container (max-height: 230px) {
-  .face-art,
-  .back-wordmark,
-  .face-row {
+
+/* Streak cards: a milestone win is reprinted in a Card Lab finish. Windows and
+   plates are drawn in code; the material comes from the texture. */
+.playing-card[data-finish] :is(.glass-field, .glass-lens) {
+  display: none;
+}
+.face-square::before {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+.playing-card[data-finish='stock'] .face-front {
+  background: var(--b-face);
+}
+.playing-card[data-finish='stock'] .face-square::before {
+  content: '';
+  inset: -4% -12% -8%;
+  background: radial-gradient(ellipse at 50% 72%, #4f2878aa 0, #3b247033 42%, transparent 70%);
+}
+.playing-card[data-finish='dither'] {
+  --plate: #16121c;
+  --plate-edge: #3b1a7a;
+}
+.playing-card[data-finish='dither'] .face-front {
+  background: #0d0a12;
+}
+.playing-card[data-finish='dither'] .face-finish {
+  image-rendering: pixelated;
+}
+.playing-card[data-finish='dither'] .face-square::before {
+  content: '';
+  inset: 0;
+  background: #0d0a12;
+  box-shadow: 0 0 0 1.333cqw #3b1a7a;
+}
+.playing-card[data-finish='velvet'] {
+  --plate: #211d26;
+  --plate-edge: #d9cfe826;
+}
+.playing-card[data-finish='velvet'] .face-front {
+  background: #140c1f;
+}
+.playing-card[data-finish='velvet'] .face-square::before {
+  content: '';
+  inset: -3% -3% 0;
+  border-radius: 50% 50% 2.667cqw 2.667cqw / 26% 26% 2.667cqw 2.667cqw;
+  background: #08040e61;
+  box-shadow:
+    inset 0 3.333cqw 4.667cqw -2cqw #000c,
+    inset 0 0 0 1px #c9a8ff26;
+}
+.playing-card[data-finish='engraved'] {
+  --plate: #1a1422;
+  --plate-edge: #c9a8ff4d;
+}
+.playing-card[data-finish='engraved'] .face-front {
+  background: #1c1328;
+}
+.playing-card[data-finish='engraved'] .face-square::before {
+  content: '';
+  inset: -4%;
+  border-radius: 50%;
+  background: #1c1328;
+  box-shadow: 0 0 0 1px #c9a8ff59;
+}
+.playing-card[data-finish='spotlight'] {
+  --plate: #16121c;
+  --plate-edge: #c9a8ff99;
+}
+.playing-card[data-finish='spotlight'] .face-square::before {
+  content: '';
+  inset: -7%;
+  border-radius: 50%;
+  background: #100c17;
+  box-shadow:
+    0 0 0 0.667cqw #9146ff,
+    0 0 0 1.667cqw #100c17,
+    0 0 0 2cqw #c9a8ff66;
+}
+.playing-card[data-finish='prism'] {
+  --plate: #1d1824;
+  --plate-edge: #c9a8ff80;
+}
+.playing-card[data-finish='prism'] .face-front {
+  background: #0e0a16;
+}
+.playing-card[data-finish='prism'] .face-square::before {
+  content: '';
+  inset: -4% -4% 0;
+  border-radius: 1.333cqw 4cqw 1.333cqw 1.333cqw;
+  background: #120b1fe6;
+  box-shadow:
+    inset 1px 1px 0 #e9dcff59,
+    inset -1px -1px 0 #000;
+}
+
+/* Back: the landing's Mosaic. The streamer sees only this while chat plays. */
+.face-back {
+  padding: 0;
+  background: #25113f url('./assets/back-mosaic.webp') center / cover no-repeat;
+}
+.back-mark {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.back-mark .baited-glyph {
+  width: 64%;
+  color: var(--b-paper);
+  filter: drop-shadow(0 0.667cqw 0 #160b26);
+}
+.back-streak {
+  position: absolute;
+  top: 5.333cqw;
+  left: 6cqw;
+}
+.back-plate {
+  position: absolute;
+  right: 4cqw;
+  bottom: 4cqw;
+  left: 4cqw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2.667cqw;
+  padding: 2.667cqw 3.333cqw;
+  border-radius: 1cqw 1cqw 2.333cqw 2.333cqw;
+  background: #1a1522;
+  box-shadow:
+    inset 0 1px 0 #fffdf747,
+    0 0 0 1px #0d0a12b3;
+}
+.back-copy {
+  color: var(--b-paper);
+  font: 600 max(10px, 4cqw) / 1.3 var(--b-ui);
+  text-align: left;
+}
+
+/* Small cards keep the word, the clues and the clock. */
+@container (max-height: 340px) {
+  .face-question {
+    display: none;
+  }
+}
+@container (max-height: 270px) {
+  .face-rules-label,
+  #front-chip:has(+ .chip-streak:not([hidden])) {
+    display: none;
+  }
+  .face-rules {
+    margin-top: 2cqw;
+  }
+}
+@container (max-height: 210px) {
+  .back-copy {
     display: none;
   }
 }
@@ -514,12 +613,32 @@ body[data-surface='overlay'] {
     display: none;
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  .card-turn {
+    transition: none;
+  }
+  .face-front::after {
+    display: none;
+  }
+}
 @media (forced-colors: active) {
   .face,
-  .collapse {
+  .face-back,
+  .face-plate,
+  .back-plate,
+  .chip {
+    background: Canvas;
+    color: CanvasText;
     border-color: CanvasText;
   }
-  .back-pattern {
-    background: none;
+  .glass-field,
+  .glass-lens,
+  .face-finish,
+  .face-square::before,
+  .face-front::after {
+    display: none;
+  }
+  .face-word {
+    color: CanvasText !important;
   }
 }

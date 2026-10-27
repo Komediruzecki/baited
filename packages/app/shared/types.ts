@@ -27,7 +27,7 @@ export interface Result {
   at: number;
   award?: { name: string };
   reason?: 'guess' | 'timer';
-  /** This win landed chat's streak on a badge tier. */
+  /** This win landed chat's streak on a streak card's tier. */
   milestone?: number;
   /** ...and unlocked that badge for the first time in this room. */
   newBadge?: boolean;
@@ -77,6 +77,9 @@ export interface GameView {
     epoch: number;
     target?: string;
     forbiddenClues?: string[];
+    /** The card's printed word colour and example question; sent only with `target`. */
+    ink?: string;
+    example?: string;
     difficulty: Difficulty;
     guessEnabled: boolean;
     guessUsed: boolean;
@@ -91,8 +94,11 @@ export interface GameView {
   voters: number;
   voteThreshold: number;
   leaders: Leader[];
-  /** Unlocked streak badges by tier count; `at` is null when reached before dates were kept. */
-  badges: { count: number; at: number | null }[];
+  /**
+   * Unlocked streak cards by tier count, with the caught word printed on each. `at` and
+   * `word` are null when the card was reached before they were kept.
+   */
+  badges: { count: number; at: number | null; word: string | null }[];
   connection: {
     status: 'offline' | 'connecting' | 'connected' | 'reconnecting' | 'error';
     detail: string;

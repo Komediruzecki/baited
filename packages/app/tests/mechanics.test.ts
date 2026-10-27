@@ -22,10 +22,14 @@ test('live clue lists and hint text remain outside studio and overlay projection
   const f = fixture();
   f.game.begin();
   assert.deepEqual(f.game.view('viewer').round?.forbiddenClues, ['bird', 'ice']);
+  // The printed ink and example question name the word as surely as the word does.
+  assert.equal(f.game.view('viewer').round?.ink, '#d9e3f2');
+  assert.equal(f.game.view('viewer').round?.example, 'Who would win a belly-slide race?');
   f.game.chat('hint', 'a', 'Alex', 'a suspiciously fancy outfit', f.now());
   for (const role of ['studio', 'overlay'] as const) {
     assert.equal(f.game.view(role).round?.forbiddenClues, undefined);
     assert.ok(!JSON.stringify(f.game.view(role)).includes('suspiciously'));
+    assert.ok(!/belly-slide|#d9e3f2|"ink"|"example"/.test(JSON.stringify(f.game.view(role))));
   }
   assert.equal(f.game.awardBoard, null);
   assert.ok(!JSON.stringify(f.game.data).includes('suspiciously'));

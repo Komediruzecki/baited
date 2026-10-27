@@ -147,108 +147,178 @@ h3 {
 .retry:active {
   background: #ffffff24;
 }
+/* The landing's selected card (packages/landing/selected-cards), fitted to the
+   panel: a Glass face, the art in a bent-glass window, the word in its item's ink
+   on a dark plate. Keep in parity with overlay.css. */
 .secret-card {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   position: relative;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 5px 19px 5px 5px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 14px;
   overflow: clip;
+  isolation: isolate;
   container-type: inline-size;
+  border: 1px solid var(--line);
+  border-top-color: var(--b-edge-lit);
+  border-radius: var(--b-r-card);
+  background: #120d1a;
+  color: var(--paper);
   box-shadow:
-    0 5px 0 -1px #09080c,
-    0 12px 24px #00000020;
-  transition: border-color 180ms ease-out;
+    0 8px 0 -3px #120d1a,
+    0 24px 48px #1d0b4573;
 }
-.secret-card[data-state='active'] {
-  border-color: #9c7fbd;
+.glass-field {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 36% at 100% 0, #c9a8ff59, #c9a8ff00),
+    linear-gradient(#9146ff, #5b25c2 30%, #2a1160 56%, #120d1a 82%);
 }
 .card-topline {
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px 16px 0;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
 }
-.card-kicker {
-  font-size: 11px;
-  font-weight: 650;
-  color: var(--copy);
+.card-kicker,
+.phase-label {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #1a1522;
+  color: var(--paper);
+  font: 600 10px/1 var(--b-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 .phase-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--lit);
-  text-align: right;
   margin-left: auto;
+  color: var(--lit);
 }
 .difficulty {
   display: inline-flex;
-  gap: 3px;
-  align-self: center;
   flex: none;
+  gap: 3px;
+  padding: 4px 5px;
+  border-radius: 10px;
+  background: #1a1522;
 }
 .difficulty i {
-  width: 5px;
-  height: 5px;
-  border: 1px solid var(--lit);
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid #8f84a0;
+  border-radius: 50%;
 }
 .difficulty i[data-filled='true'] {
+  border-color: var(--lit);
   background: var(--lit);
+  box-shadow: 0 0 0 2.5px #c9a8ff2e;
 }
 .card-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  padding: 18px 16px;
-  gap: 10px;
-  text-align: center;
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 6px 0 8px;
+  isolation: isolate;
 }
+.card-center:has(.word-art[hidden]) .art-square {
+  display: none;
+}
+.card-center:has(.word-art[hidden]):has(.waiting-card[hidden]) {
+  display: none;
+}
+.art-square {
+  position: relative;
+  display: block;
+  width: min(150px, 51cqi);
+  aspect-ratio: 1;
+}
+.glass-lens {
+  position: absolute;
+  inset: 0 -10% -10%;
+  z-index: -1;
+  overflow: clip;
+  border-radius: 12px 20px 12px 12px;
+  box-shadow:
+    0 0 0 1px #0d0a12b3,
+    0 10px 18px -10px #05030a;
+  pointer-events: none;
+}
+/* The bleed keeps the displaced copy underneath the rim. */
+.glass-bend {
+  position: absolute;
+  top: -28px;
+  left: -28px;
+  width: calc(100% + 56px);
+  height: calc(100% + 56px);
+}
+.glass-lens::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(closest-side at 50% 46%, #0d0a12a6, #0d0a124d 72%, #0d0a121a);
+  box-shadow:
+    inset 0 1px 0 #fffdf75c,
+    inset 1px 0 0 #fffdf71f,
+    inset 0 0 0 4px #c9a8ff12;
+}
+.word-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+/* The streamer's card and the card between rounds: the landing's Mosaic back. */
 .waiting-card {
   display: grid;
   place-items: center;
-  flex: none;
-  width: 112px;
-  height: 156px;
-  margin: 2px auto 8px;
-  border: 1px solid #796388;
-  border-top-color: var(--lit);
-  border-radius: 6px 14px 6px 6px;
-  background: var(--b-table-night);
-  box-shadow: 0 5px 0 -1px #120d1a;
+  width: 104px;
+  aspect-ratio: 5 / 7;
+  border: 1px solid var(--line);
+  border-top-color: var(--b-edge-lit);
+  border-radius: 5px 9px 5px 5px;
+  background: #25113f url('./assets/back-mosaic.webp') center / cover no-repeat;
+  box-shadow: 0 5px 0 -2px #120d1a;
+  transform: rotate(-3deg);
 }
 .waiting-mark {
-  width: 76%;
-  color: var(--lit);
+  width: 64%;
+  color: var(--paper);
+  filter: drop-shadow(0 1px 0 #160b26);
+}
+.card-plate {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0 -6px -6px;
+  padding: 3px 6px 6px;
+  border-radius: 3px 3px 7px 7px;
+  background: #1a1522;
+  text-align: center;
 }
 .target {
+  max-width: 100%;
   font:
-    400 34px/1.08 Russo,
+    400 30px/1.1 Russo,
     Impact,
     sans-serif;
   letter-spacing: -0.025em;
   overflow-wrap: anywhere;
   text-wrap: balance;
-  max-width: 100%;
   color: var(--paper);
-}
-.target[data-word-size='medium'] {
-  font-size: clamp(14px, 8.8cqi, 27px);
-}
-.target[data-word-size='long'] {
-  font-size: clamp(14px, 6.4cqi, 20px);
-}
-.target[data-word-size='extended'] {
-  font-size: 19px;
-  line-height: 1.15;
-}
-.target[data-word-size='message'] {
-  font-size: 28px;
-  line-height: 1.14;
 }
 .target[data-word-size]:not([data-word-size='message']) {
   text-transform: uppercase;
@@ -258,118 +328,135 @@ h3 {
   overflow-wrap: normal;
 }
 .target[data-word-size='short'] {
-  font-size: clamp(14px, 10cqi, 32px);
+  font-size: clamp(14px, 10cqi, 30px);
 }
-.word-art {
-  width: 132px;
-  height: 132px;
-  max-width: 100%;
-  margin-inline: auto;
-  object-fit: contain;
-  image-rendering: pixelated;
+.target[data-word-size='medium'] {
+  font-size: clamp(14px, 8.4cqi, 25px);
 }
-.card-center:has(.word-art:not([hidden])) {
-  padding-block: 8px 12px;
-  gap: 8px;
+.target[data-word-size='long'] {
+  font-size: clamp(13px, 6.6cqi, 20px);
 }
-.card-center:has(.word-art[hidden]):has(.waiting-card[hidden]) {
-  min-height: 0;
+.target[data-word-size='extended'] {
+  font-size: 17px;
+  line-height: 1.15;
+}
+.target[data-word-size='message'] {
+  margin-top: 6px;
+  font-size: 21px;
+  line-height: 1.14;
 }
 .card-detail {
+  margin-top: 6px;
+  color: #c9c0d1;
   font-size: 12px;
-  line-height: 1.55;
-  color: var(--copy);
-  max-width: 33ch;
+  line-height: 1.5;
   text-wrap: pretty;
 }
 .forbidden {
-  margin-inline: 16px;
-  padding-block: 0 12px;
-  text-align: center;
+  margin-top: 10px;
 }
 .forbidden h3 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #c9c0d1;
   font-size: 11px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--muted);
-  margin-bottom: 6px;
+  font-weight: 400;
+  line-height: 14px;
+}
+.forbidden h3::before,
+.forbidden h3::after {
+  content: '';
+  flex: none;
+  width: 24px;
+  border-top: 1px solid #fffdf747;
 }
 .forbidden ul {
-  list-style: none;
-  display: flex;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
   justify-content: center;
-  flex-wrap: wrap;
+  justify-items: start;
+  gap: 4px 20px;
   margin: 0;
   padding: 0;
-}
-.forbidden ul[data-count='4'] {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, max-content));
+  list-style: none;
 }
 .forbidden li {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid var(--b-clue-edge);
-  border-radius: 2px;
-  background: var(--b-clue-bg);
-  padding: 3px 6px;
+  gap: 3px;
+  color: var(--paper);
   font-size: 12px;
-  line-height: 1.3;
   font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--b-clue-text);
-  overflow-wrap: anywhere;
-  max-width: 100%;
+  white-space: nowrap;
 }
 .forbidden li::before {
   content: '';
-  flex: 0 0 6px;
-  height: 2px;
-  background: var(--b-clue-mark);
+  flex: none;
+  width: 7px;
+  border-top: 2px solid var(--lit);
 }
+.card-question {
+  margin-top: 8px;
+  color: var(--copy);
+  font-size: 13px;
+  line-height: 18px;
+  text-wrap: balance;
+}
+/* The footer rule is the round's timer, as on the overlay card. */
 .clock {
-  margin-inline: 16px;
-  padding: 10px 0 14px;
-  border-top: 1px solid var(--subtle-line);
+  position: relative;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #5a4e66;
 }
 .clock-labels {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
+  align-items: center;
+  gap: 8px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
+}
+.clock-mark {
+  width: 52px;
+  margin-right: auto;
+  color: var(--paper);
 }
 .clock-value {
-  font-size: 22px;
   color: var(--paper);
+  font-size: 18px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
   line-height: 1;
 }
 progress {
+  position: absolute;
+  top: -1px;
+  left: 0;
   display: block;
   appearance: none;
   width: 100%;
-  height: 3px;
+  height: 2px;
   border: 0;
   border-radius: 0;
-  background: #48414f;
-  color: var(--violet);
+  background: transparent;
+  color: var(--lit);
   overflow: hidden;
 }
 progress::-webkit-progress-bar {
-  background: #48414f;
+  background: transparent;
 }
 progress::-webkit-progress-value {
-  background: var(--violet);
+  background: var(--lit);
 }
 progress::-moz-progress-bar {
-  background: var(--violet);
+  background: var(--lit);
 }
 .clock[data-urgent='true'] progress::-webkit-progress-value {
   background: var(--yellow);
@@ -383,16 +470,20 @@ progress::-moz-progress-bar {
 .card-baseline {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 12px;
-  margin-inline: 16px;
-  border-top: 1px solid var(--line);
-  padding: 9px 0 11px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #5a4e66;
+}
+.card-baseline .baited-glyph {
+  width: 52px;
+  color: var(--paper);
 }
 .card-stamp {
-  font-size: 10px;
   color: var(--muted);
-  text-align: center;
+  font-size: 10px;
+  text-align: right;
 }
 .panel-footer {
   padding: 8px 2px 0;
@@ -410,44 +501,17 @@ code {
   font-weight: 650;
   color: var(--lit);
 }
-.secret-card:has(.clock:not([hidden])) .card-center {
-  min-height: 0;
-  padding-block: 8px 12px;
-  gap: 8px;
-}
-.secret-card:has(.clock:not([hidden])) .word-art {
-  width: 132px;
-  height: 132px;
-}
-.secret-card:has(.clock:not([hidden])) .waiting-card {
-  width: 88px;
-  height: 123px;
-}
-.secret-card[data-state='active'] .card-detail {
-  max-width: none;
-}
-.secret-card:has(.clock:not([hidden])) .clock {
-  padding-block: 8px 10px;
-}
-.secret-card:has(.clock:not([hidden])) .forbidden {
-  padding-bottom: 12px;
-}
 .secret-card:has(.clock:not([hidden])) .card-baseline {
   display: none;
 }
-.secret-card[data-state='paused'] .card-center {
-  min-height: 0;
-  padding-block: 8px 12px;
-  gap: 8px;
-}
-.secret-card[data-state='result'] .card-center {
-  min-height: 0;
+.secret-card[data-state='result'] .target {
+  margin-top: 0;
 }
 .secret-card[data-state='reconnecting'] .target {
-  color: var(--copy);
+  color: var(--copy) !important;
 }
 .secret-card[data-state='reconnecting'] .card-center {
-  opacity: .75;
+  opacity: 0.75;
 }
 
 /* Configuration hands off to the studio. Steps are a sequence, not more cards. */
@@ -495,24 +559,23 @@ code {
   background: var(--b-table-night);
   border-radius: 6px;
 }
+/* The landing's Mosaic back: the card as the streamer sees it. */
 .setup-card-back {
   display: grid;
   place-items: center;
   width: 96px;
   height: 134px;
   border: 1px solid var(--b-edge);
-  border-top-color: var(--lit);
-  border-radius: 5px 12px 5px 5px;
-  background: var(--card);
+  border-top-color: var(--b-edge-lit);
+  border-radius: 4px 8px 4px 4px;
+  background: #25113f url('./assets/back-mosaic.webp') center / cover no-repeat;
   box-shadow: 0 4px 0 -1px #120d1a;
   transform: rotate(-7deg);
 }
-.setup-card-back span {
-  width: 46px;
-  height: 70px;
-  border: 1px solid #796388;
-  border-radius: 50%;
-  transform: rotate(22deg);
+.setup-card-back .baited-glyph {
+  width: 64%;
+  color: var(--paper);
+  filter: drop-shadow(0 1px 0 #160b26);
 }
 .setup-card-well figcaption {
   color: var(--copy);
@@ -684,28 +747,14 @@ code {
   .wordmark {
     font-size: 23px;
   }
-  .card-topline {
-    padding-inline: 12px;
+  .secret-card {
+    padding: 12px 12px 10px;
   }
-  .card-center {
-    padding-inline: 12px;
-  }
-  .card-baseline,
-  .forbidden,
-  .clock {
-    margin-inline: 12px;
-  }
-  .target {
-    font-size: 29px;
-  }
-  .target[data-word-size='medium'] {
-    font-size: clamp(14px, 8.8cqi, 24px);
-  }
-  .target[data-word-size='long'] {
-    font-size: clamp(14px, 6.4cqi, 19px);
+  .forbidden ul {
+    gap: 4px 12px;
   }
   .target[data-word-size='extended'] {
-    font-size: 17px;
+    font-size: 15px;
   }
   .setup {
     padding-inline: 14px;
@@ -719,24 +768,24 @@ code {
   .setup-card-well {
     display: none;
   }
-  .forbidden ul[data-count='4'] {
-    display: flex;
+  .forbidden ul {
+    grid-template-columns: max-content;
+    justify-content: center;
+  }
+  .card-question {
+    display: none;
   }
 }
 @media (max-width: 199px) {
   .panel { padding-inline: 8px; }
   .wordmark { width: 64px; }
   .masthead { gap: 6px; }
+  .secret-card { padding: 10px 8px 8px; }
   .card-topline { flex-wrap: wrap; gap: 5px; }
-  .card-center { padding-inline: 8px; }
-  .target[data-word-size='message'] { font-size: 20px; }
-  .forbidden, .clock, .card-baseline { margin-inline: 8px; }
+  .target[data-word-size='message'] { font-size: 18px; }
   .connection { flex-wrap: wrap; }
-  .waiting-card { width: 88px; height: 123px; }
-  .secret-card:is([data-state='active'], [data-state='paused']) .word-art {
-    width: 104px;
-    height: 104px;
-  }
+  .waiting-card { width: 80px; }
+  .clock-mark, .card-baseline .baited-glyph { width: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *,

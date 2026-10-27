@@ -251,9 +251,13 @@ test('card review fixtures use real clues and preserve broadcaster secrecy', () 
     assert.equal(viewer.target, word.toUpperCase());
     assert.deepEqual(viewer.forbiddenClues, clues);
     assert.equal(viewer.difficulty, word === 'dinosaur' ? 'easy' : word === 'marshmallow' ? 'medium' : 'hard');
+    assert.match(viewer.ink, /^#[0-9a-f]{6}$/);
+    assert.equal(typeof viewer.example, 'string');
     const broadcaster = fixtureState(word, 'broadcaster', 0, 1000).room.round;
     assert.equal('target' in broadcaster, false);
     assert.equal('forbiddenClues' in broadcaster, false);
+    assert.equal('ink' in broadcaster, false);
+    assert.equal('example' in broadcaster, false);
   }
   assert.equal(fixtureState('caught', 'viewer', 0, 1000).room.result.elapsed, 32);
 });

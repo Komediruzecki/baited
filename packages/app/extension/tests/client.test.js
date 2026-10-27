@@ -90,6 +90,21 @@ test('difficulty is copied only from the validated server field, never inferred 
   assert.equal(readState(value).room.round.difficulty, undefined);
 });
 
+test('printed ink and example question are copied only beside a target, and ink must be a hex colour', () => {
+  const value = state();
+  value.room.round.ink = '#ff743c';
+  value.room.round.example = 'Where would you definitely not build a house?';
+  assert.equal(readState(value).room.round.ink, '#ff743c');
+  assert.equal(readState(value).room.round.example, 'Where would you definitely not build a house?');
+  for (const ink of ['red', '#fff', 'url(x)', '#ff743c;color:red', 7]) {
+    assert.throws(() => readState({ ...value, room: { ...value.room, round: { ...value.room.round, ink } } }), /Invalid ink/);
+  }
+  assert.throws(() => readState({ ...value, room: { ...value.room, round: { ...value.room.round, example: 'x'.repeat(161) } } }), /Invalid example/);
+  delete value.room.round.target;
+  assert.equal('ink' in readState(value).room.round, false);
+  assert.equal('example' in readState(value).room.round, false);
+});
+
 test('state parser carries only a valid public streak and badge', () => {
   const room = (result, score) => ({ version: '0.0.1', configured: true, room: {
     phase: 'cooldown', channel: 'streamer', serverTime: 1, round: null, result, ...(score === undefined ? {} : { score }),

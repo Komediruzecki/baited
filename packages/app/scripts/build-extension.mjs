@@ -4,15 +4,15 @@ import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { proofWords } from '../extension/presentation.js';
+import { finishArt, proofWords, streakTiers } from '../extension/presentation.js';
 
 export const EXTENSION_FILES = Object.freeze([
   'viewer.html', 'config.html', 'overlay.html', 'tokens.css', 'styles.css', 'overlay.css',
   'runtime-config.js', 'client.js', 'viewer.js', 'config.js', 'overlay.js', 'presentation.js',
   'assets/inter-latin.woff2', 'assets/russo-one.ttf',
   'assets/Inter-OFL.txt', 'assets/RussoOne-OFL.txt',
-  'assets/baited-original-mask.svg',
-  'assets/streak-flame.svg', 'assets/streak-blaze.svg', 'assets/streak-flame-violet.svg',
+  'assets/baited-original-mask.svg', 'assets/back-mosaic.webp',
+  ...streakTiers.map((tier) => finishArt(tier.finish, 'extension')).filter(Boolean).map((file) => `assets/${file}`),
   ...proofWords.map((word) => `assets/card-${word}.png`),
 ]);
 export const HELPER_URL = 'https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js';

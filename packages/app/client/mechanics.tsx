@@ -270,17 +270,18 @@ export function AwardReview({
   );
 }
 
-export function ForbiddenClueCard({ game }: { game: GameView }) {
+/** `rulesOnly` explains the rules under a card that already prints its clues. */
+export function ForbiddenClueCard({ game, rulesOnly = false }: { game: GameView; rulesOnly?: boolean }) {
   if (!['active', 'paused'].includes(game.phase) || !game.round) return null;
   const clues = game.round.forbiddenClues ?? [];
   return (
-    <section className="clue-card" aria-label="Clue rules">
-      <div>
+    <section className={rulesOnly ? 'clue-card clue-card--rules' : 'clue-card'} aria-label="Clue rules">
+      {!rulesOnly && <div>
         <Eye size={19} />
         <h3>{clues.length ? 'Keep out of chat' : 'Only the word is off limits.'}</h3>
         <span>{game.round.difficulty}</span>
-      </div>
-      {clues.length > 0 && (
+      </div>}
+      {!rulesOnly && clues.length > 0 && (
         <ul className="clue-chips">
           {clues.map((clue) => (
             <li key={clue}>{clue}</li>

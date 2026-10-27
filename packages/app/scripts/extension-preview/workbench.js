@@ -15,7 +15,7 @@ const descriptions = {
   settling: 'The round has ended while the last speech segment is checked.',
   review: 'A catch is waiting for the broadcaster to confirm it. It is not a win yet.',
   caught:
-    'The broadcaster confirmed the catch: five in a row, and the On fire badge unlocks. The overlay card leaves after 12 seconds.',
+    'The broadcaster confirmed the catch: five in a row, and the card is reprinted as the Velvet streak card. The overlay card leaves after 12 seconds.',
   escaped:
     'The clock ran out before a confirmed catch. The overlay card leaves after 12 seconds.',
   broadcaster:

@@ -46,6 +46,7 @@ const mime = new Map([
   ['.js', 'text/javascript; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
   ['.png', 'image/png'],
+  ['.webp', 'image/webp'],
   ['.svg', 'image/svg+xml'],
   ['.woff2', 'font/woff2'],
   ['.ttf', 'font/ttf'],
@@ -134,11 +135,12 @@ export function fixtureState(mode, role, at, now = Date.now()) {
                 mode === 'longword'
                   ? ['establishment', 'constitutional', 'disestablishment']
                   : example.clues.slice(0, { easy: 0, medium: 2, hard: 4 }[difficulty]),
+              ...(mode === 'longword' ? {} : { ink: example.ink, example: example.example }),
             }
           : {}),
       }
     : null;
-  // A confirmed catch lands chat's streak on five, the On fire badge.
+  // A confirmed catch lands chat's streak on five, the Velvet card.
   const result =
     phase === 'cooldown'
       ? {

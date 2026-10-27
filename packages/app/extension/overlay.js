@@ -1,5 +1,5 @@
 import { clockValue, connectToTwitch, readState } from './client.js';
-import { cardArtFile, streakArtFile, streakMilestone, streakRow, wordSize } from './presentation.js';
+import { cardArtFile, finishArt, glassRules, nextStreakTier, streakMilestone, wordSize } from './presentation.js';
 
 const byId = (id) => document.getElementById(id);
 // A finished card stays on the video briefly, then the overlay is transparent again.
@@ -14,6 +14,12 @@ let dealtRound = '';
 let turnTimer = null;
 let landing;
 let shownResult = { key: '', since: 0 };
+// The ink a viewer's card was dealt with, kept for the same card's reveal.
+let dealtInk = { id: '', ink: '' };
+
+const rules = glassRules();
+byId('field-rules').setAttribute('d', rules);
+byId('lens-rules').setAttribute('d', rules);
 
 const reducedMotion = () =>
   typeof window.matchMedia === 'function' &&
@@ -56,13 +62,22 @@ function setArt(word) {
   else art.removeAttribute('src');
 }
 
-function setWord(word) {
+function setWord(word, ink = '') {
   byId('front-word').textContent = word;
   byId('front-word').dataset.wordSize = wordSize(word);
+  // The ink names the word as surely as the word does; it is cleared with it.
+  byId('front-word').style.color = ink;
 }
 
-function setClues(clues) {
-  byId('front-clues').hidden = clues.length === 0;
+function setLevel(difficulty) {
+  const level = { easy: 1, medium: 2, hard: 3 }[difficulty] ?? 0;
+  byId('front-pips').hidden = level === 0;
+  byId('front-pips').dataset.level = String(level);
+}
+
+/** Exact playable clues under the landing's rail, or the easy rule when there are none. */
+function setRules(clues) {
+  byId('front-rules').hidden = clues.length === 0;
   byId('front-clues').replaceChildren(
     ...clues.map((clue) => {
       const item = document.createElement('li');
@@ -72,60 +87,39 @@ function setClues(clues) {
   );
 }
 
-/**
- * Chat's streak is public, so both faces show it from two wins on. During play the
- * front chip replaces the kicker; a result keeps its verdict and shows coins instead.
- */
-function setStreak(score, chip = true) {
-  const streak = score?.streak ?? 0;
-  const show = chip && streak >= 2;
+/** Chat's streak is public, so both faces show it from two wins on. */
+function setStreak(streak) {
+  const show = streak >= 2;
+  const copy = `${streak} in a row`;
   byId('front-streak').hidden = !show;
-  byId('front-kicker').hidden = show;
-  byId('front-streak-count').textContent = String(streak);
-  byId('back-streak').hidden = streak < 2;
-  byId('back-streak-copy').textContent = `Chat: ${streak} in a row`;
+  byId('back-streak').hidden = !show;
+  byId('front-streak-copy').textContent = show ? copy : '';
+  byId('back-streak-copy').textContent = show ? copy : '';
 }
 
-function setRow(streak) {
-  const row = byId('front-row');
-  row.hidden = streak < 1;
-  row.replaceChildren(
-    ...(streak < 1 ? [] : streakRow(streak)).map((slot) => {
-      const item = document.createElement('li');
-      item.dataset.state = slot.state;
-      const coin = document.createElement('span');
-      const flame = document.createElement('img');
-      flame.setAttribute('src', './assets/streak-flame.svg');
-      flame.setAttribute('alt', '');
-      coin.replaceChildren(flame);
-      const n = document.createElement('span');
-      n.textContent = String(slot.n);
-      item.replaceChildren(coin, n);
-      return item;
-    }),
-  );
+/** A milestone win reprints the card in its streak finish; every other card is Glass. */
+function setFinish(tier) {
+  const card = byId('card');
+  const image = byId('front-finish');
+  const file = tier ? finishArt(tier.finish, 'extension') : null;
+  if (tier) card.dataset.finish = tier.finish;
+  else delete card.dataset.finish;
+  image.hidden = !file;
+  if (file) image.setAttribute('src', `./assets/${file}`);
+  else image.removeAttribute('src');
 }
 
-function setMedal(tier) {
-  const medal = byId('front-medal');
-  medal.hidden = !tier;
-  if (tier) {
-    medal.dataset.tone = tier.tone;
-    byId('front-medal-art').setAttribute('src', `./assets/${streakArtFile(tier.art, 'extension')}`);
-  } else byId('front-medal-art').removeAttribute('src');
-}
-
-/** Removes every secret the front face may hold: word, artwork filename and clues. */
+/** Removes every secret the front face may hold: word, ink, artwork filename, clues and question. */
 function clearFront() {
-  byId('front-word').textContent = '';
-  byId('front-word').dataset.wordSize = 'message';
-  byId('front-detail').textContent = '';
-  byId('front-kicker').textContent = "Chat's secret";
-  byId('front-stamp').textContent = 'Only chat knows';
+  setWord('');
+  byId('front-word').dataset.wordSize = 'short';
+  byId('front-chip').textContent = '';
+  byId('front-note').textContent = '';
+  byId('front-question').textContent = '';
+  setLevel(null);
   setArt(null);
-  setClues([]);
-  setRow(0);
-  setMedal(null);
+  setRules([]);
+  setFinish(null);
 }
 
 function setVisible(visible) {
@@ -142,9 +136,10 @@ function hide(resetAnnouncement = false) {
   landing?.cancel();
   setVisible(false);
   clearFront();
-  setStreak(null);
+  setStreak(0);
   setFace('back');
   dealtRound = '';
+  dealtInk = { id: '', ink: '' };
   byId('card').dataset.state = 'waiting';
   delete byId('card').dataset.outcome;
   if (resetAnnouncement) {
@@ -170,7 +165,7 @@ function deal(roundId, face) {
         { opacity: 0, transform: 'translateX(36px) rotate(4deg)' },
         { opacity: 1, transform: 'translateX(0) rotate(0deg)' },
       ],
-      { duration: 360, easing: 'cubic-bezier(.22,1,.36,1)' },
+      { duration: 280, easing: 'cubic-bezier(.16,1,.3,1)' },
     );
   }
   if (face === 'front') {
@@ -198,22 +193,22 @@ function showRound(room) {
   setVisible(true);
   card.dataset.state = room.phase;
   delete card.dataset.outcome;
-  setStreak(room.score);
-  setRow(0);
-  setMedal(null);
+  setFinish(null);
+  setStreak(room.score.streak);
   if (visible) {
-    byId('front-kicker').textContent =
-      room.phase === 'paused' ? 'Paused' : room.phase === 'settling' ? 'Checking' : "Chat's secret";
-    setWord(round.target);
+    byId('front-chip').textContent =
+      room.phase === 'paused'
+        ? 'Paused'
+        : room.phase === 'settling'
+          ? 'Checking'
+          : `Round ${round.number}`;
+    setWord(round.target, round.ink ?? '');
+    setLevel(round.difficulty);
     setArt(round.target);
-    setClues(round.forbiddenClues);
-    byId('front-detail').textContent =
-      room.phase === 'active'
-        ? "Make them say it. Don't type it."
-        : room.phase === 'paused'
-          ? 'Hold that thought.'
-          : 'Checking the last words.';
-    byId('front-stamp').textContent = 'Only chat knows';
+    setRules(round.forbiddenClues);
+    byId('front-note').textContent = round.forbiddenClues.length ? '' : 'Only this word is off limits.';
+    byId('front-question').textContent = round.example ?? '';
+    dealtInk = { id: round.id, ink: round.ink ?? '' };
   } else clearFront();
   byId('back-copy').textContent =
     room.phase === 'paused'
@@ -233,42 +228,47 @@ function showRound(room) {
 
 function showResult(room) {
   const result = room.result;
+  const streak = room.score.streak;
   const copy = {
-    caught: ['Baited.', 'Chat got the word.', 'They said it'],
+    caught: ['They said it', streak >= 2 ? `Chat wins · ${streak} in a row` : 'Chat wins'],
     escaped:
       result.reason === 'guess'
-        ? ['Bait called.', 'The streamer guessed it.', 'Streamer escapes']
-        : ['Got away.', 'Time ran out.', 'Next round soon'],
-    skipped: ['New bait next.', 'Chat skipped this word.', 'Next round soon'],
-    ended: ['Round ended.', 'The streamer ended it.', 'Next round soon'],
-    overturned: ['Catch rejected.', 'That catch does not count.', 'Next round soon'],
-    review: ['Catch pending.', 'The streamer is checking.', 'Did they say it?'],
+        ? ['Bait called', 'The streamer guessed it']
+        : ['Time’s up', 'The streamer got away'],
+    skipped: ['Skipped', 'New bait next'],
+    ended: ['Round ended', 'New bait next'],
+    overturned: ['Catch rejected', 'That catch does not count'],
+    review: ['Catch pending', 'The streamer is checking'],
   }[result.outcome];
   const card = byId('card');
   setVisible(true);
   cancelTurn();
   card.dataset.state = result.outcome === 'review' ? 'review' : 'result';
   card.dataset.outcome = result.outcome;
-  byId('front-kicker').textContent = copy[0];
-  setWord(result.word);
-  setClues([]);
-  setStreak(room.score, false);
-  // A win shows the streak as coins; one that lands on a tier shows its medallion instead of the art.
+  setWord(result.word, dealtInk.id === result.id ? dealtInk.ink : '');
+  setLevel(null);
+  setArt(result.word);
+  setRules([]);
+  setStreak(0);
+  // A win that lands on a streak tier is reprinted in that tier's finish.
   const caught = result.outcome === 'caught';
   const tier = caught && result.milestone ? streakMilestone(result.milestone) : null;
-  setRow(caught ? room.score.streak : 0);
-  setMedal(tier);
-  setArt(tier ? null : result.word);
-  byId('front-detail').textContent = tier
-    ? result.newBadge
-      ? `New streak badge: ${tier.name}`
-      : `${tier.name}: ${tier.count} in a row`
-    : copy[1];
-  byId('front-stamp').textContent = copy[2];
+  const next = caught ? nextStreakTier(tier?.count ?? streak) : null;
+  setFinish(tier);
+  byId('front-chip').textContent = tier ? (result.newBadge ? 'New streak card' : 'Streak card') : copy[0];
+  byId('front-note').textContent = tier ? `${tier.name} edition · ${tier.count} in a row` : copy[1];
+  byId('front-question').textContent = !caught
+    ? ''
+    : next
+      ? `${next.count - streak} more in a row for the ${next.name} card.`
+      : 'Chat holds the rarest card.';
   // The decided card turns over for everyone, including the broadcaster.
   if (!dealtRound) dealtRound = result.id;
   setFace('front');
-  announce(`result:${result.id}:${result.outcome}`, `${copy[0]} The word was ${result.word}.`);
+  announce(
+    `result:${result.id}:${result.outcome}`,
+    `${copy[0]}. The word was ${result.word}.${tier ? ` New ${tier.name} streak card.` : ''}`,
+  );
 }
 
 function paint() {
@@ -297,14 +297,14 @@ function render({ configured, room }) {
 function renderClock() {
   const card = byId('card');
   if (!current?.round || !['active', 'paused', 'settling'].includes(current.phase)) {
-    byId('card-progress').style.width = '0%';
+    card.style.setProperty('--progress', '0');
     return;
   }
   const clock = clockValue(current, receivedAt);
-  const label = connected ? clock.label : '--';
+  const label = connected ? clock.label : '--:--';
   byId('front-clock').textContent = label;
   byId('back-clock').textContent = label;
-  byId('card-progress').style.width = `${clock.fraction * 100}%`;
+  card.style.setProperty('--progress', String(connected ? clock.fraction : 0));
   card.dataset.urgent = String(
     connected && current.phase === 'active' && clock.milliseconds <= 15000,
   );

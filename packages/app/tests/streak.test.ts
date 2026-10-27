@@ -8,6 +8,7 @@ import {
   streakText,
 } from '../server/chat-copy.js';
 import {
+  finishArt,
   nextStreakTier,
   streakMilestone,
   streakRow,
@@ -23,15 +24,22 @@ function play(f: ReturnType<typeof fixture>, win = true) {
   return f.game.data.history[0];
 }
 
-test('tiers are ordered, named and drawn; the row centres on the current win', () => {
+test('tiers are ordered Card Lab finishes; the row centres on the current win', () => {
   assert.deepEqual(
-    streakTiers.map((tier) => tier.count),
-    [2, 3, 5, 10, 15, 25, 50],
+    streakTiers.map((tier) => [tier.count, tier.finish]),
+    [[2, 'stock'], [3, 'dither'], [5, 'velvet'], [10, 'engraved'], [15, 'spotlight'], [25, 'prism']],
   );
-  assert.equal(streakMilestone(3)?.name, 'Lit fuse');
+  assert.equal(streakMilestone(3)?.name, 'Dither');
   assert.equal(streakMilestone(4), null);
   assert.equal(nextStreakTier(5)?.count, 10);
-  assert.equal(nextStreakTier(50), null);
+  assert.equal(nextStreakTier(25), null);
+  // Textures come from the Card Lab; the Extension ships its own copies.
+  assert.equal(finishArt('stock', 'client'), null);
+  assert.equal(finishArt('velvet', 'client'), '/card-lab/finishes/front-velvet.webp');
+  assert.equal(finishArt('velvet', 'client', true), '/card-lab/finishes/front-velvet-swatch.webp');
+  assert.equal(finishArt('dither', 'client', true), '/card-lab/finishes/dither.svg');
+  assert.equal(finishArt('prism', 'extension'), 'finish-prism.webp');
+  assert.equal(finishArt('glass' as never, 'client'), null);
   assert.deepEqual(
     streakRow(0).map((slot) => [slot.n, slot.state]),
     [[1, 'ahead'], [2, 'ahead'], [3, 'ahead'], [4, 'ahead'], [5, 'ahead']],
@@ -42,7 +50,7 @@ test('tiers are ordered, named and drawn; the row centres on the current win', (
   );
 });
 
-test('wins in a row unlock each badge once, dated, and the view lists them', () => {
+test('wins in a row unlock each card once, dated and printed with its word', () => {
   const f = fixture();
   const results = Array.from({ length: 5 }, () => play(f));
   assert.deepEqual(
@@ -53,6 +61,10 @@ test('wins in a row unlock each badge once, dated, and the view lists them', () 
   const view = f.game.view('overlay');
   assert.deepEqual(view.badges.map((badge) => badge.count), [2, 3, 5]);
   assert.ok(view.badges.every((badge) => typeof badge.at === 'number'));
+  assert.deepEqual(
+    view.badges.map((badge) => badge.word),
+    [results[1].word, results[2].word, results[4].word],
+  );
   // A skip ends the streak. Reaching a tier again is celebrated but unlocks nothing new.
   play(f, false);
   assert.equal(f.game.score.streak, 0);
@@ -98,14 +110,14 @@ test('unlocks survive a restart; bests from before dates were kept still count',
   legacy.game.data.priorBest = 6;
   assert.deepEqual(
     legacy.game.view('viewer').badges,
-    [2, 3, 5].map((count) => ({ count, at: null })),
+    [2, 3, 5].map((count) => ({ count, at: null, word: null })),
   );
   // Reaching an old tier again does not count as a first unlock.
   play(legacy);
   assert.equal(play(legacy).newBadge, undefined);
 });
 
-test('the bot celebrates streaks and badges, and says when a streak ends', () => {
+test('the bot celebrates streaks and cards, and says when a streak ends', () => {
   const f = fixture();
   const texts: string[] = [];
   f.game.onEvent = (event) => {
@@ -118,17 +130,17 @@ test('the bot celebrates streaks and badges, and says when a streak ends', () =>
   play(f);
   play(f);
   play(f);
-  assert.match(texts.at(-2)!, /Chat wins\. 🔥 3 in a row!/);
+  assert.match(texts.at(-2)!, /Chat wins, 3 in a row!/);
   assert.equal(
     texts.at(-1),
-    '🏅 New streak badge: Lit fuse! Chat won 3 in a row. Next badge: On fire at 5.',
+    '🃏 New streak card: Dither edition! Chat won 3 in a row. Next card: Velvet at 5.',
   );
-  assert.equal(streakText(f.game.view('overlay')), '🔥 Chat is on a 3-win streak. Best: 3. Next badge: On fire at 5 in a row. Badges: 2 of 7.');
+  assert.equal(streakText(f.game.view('overlay')), '🃏 Chat is on a 3-win streak. Best: 3. Next card: Velvet at 5 in a row. Streak cards: 2 of 6.');
   play(f, false);
   assert.match(texts.at(-1)!, /Word skipped\. New bait next\. That ends chat's 3-win streak\./);
-  assert.equal(streakText(f.game.view('overlay')), 'No streak running. Best: 3. Win a round to start one. Badges: 2 of 7.');
+  assert.equal(streakText(f.game.view('overlay')), 'No streak running. Best: 3. Win a round to start one. Streak cards: 2 of 6.');
   play(f);
   play(f);
-  assert.equal(texts.at(-1), '🏅 2 in a row: Spark again! Next badge: Lit fuse at 3.');
+  assert.equal(texts.at(-1), '🃏 2 in a row: the Stock card again! Next card: Dither at 3.');
   assert.equal(parseCommand('!bait streak'), 'streak');
 });
