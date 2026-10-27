@@ -27,6 +27,9 @@ import {
  * Twitch lets a bot that is not a moderator send 20 messages per 30 seconds across all
  * channels, and one per second in each channel. Going over silences it for an hour.
  * baited stays inside both, and also keeps each channel to a few posts per half minute.
+ * Command replies wait behind announcements and take at most half of a channel's posts.
+ * A channel that has had its fair share of the global budget leaves the last few slots to quieter
+ * channels, so floods in some channels cannot hold back a round post in another.
  */
 export const LIMITS = Object.freeze({
   globalCount: 18,
@@ -35,8 +38,12 @@ export const LIMITS = Object.freeze({
   channelWindow: 30000,
   channelGap: 1100,
   queue: 6,
+  replyQueue: 3,
+  channelReplyCount: 3,
+  globalReserve: 3,
   recent: 8,
   commandCooldown: 20000,
+  chatterCooldown: 30000,
   forbiddenPause: 60000,
 });
 const MAX_LENGTH = 500;
@@ -49,8 +56,14 @@ interface Outgoing extends Announcement {
   replyTo?: string;
 }
 interface RoomState {
+  /** Announcements and results. They always go before command replies. */
   queue: Outgoing[];
+  /** Command replies, in their own lane so they never push an announcement out. */
+  replies: Outgoing[];
+  /** Whether posts go to Twitch and count against the global budget (not a demo preview). */
+  live: boolean;
   sent: number[];
+  replySent: number[];
   lastAt: number;
   sending: boolean;
   pausedUntil: number;
@@ -58,6 +71,7 @@ interface RoomState {
   problem: string | null;
   nudges: { roundId: string; half: boolean; struggle: boolean; final: boolean };
   commandAt: Map<ChatCommand, number>;
+  chatterAt: Map<string, number>;
 }
 const tokenSchema = z.object({ access_token: z.string().min(1), expires_in: z.number() });
 const sendSchema = z.object({
@@ -138,11 +152,15 @@ export class ChatBot {
       return;
     }
     if (!this.wants(game)) return;
-    // A burst of the same command gets one answer.
+    // A burst of the same command gets one answer, and so does one chatter cycling commands.
     const room = this.room(game.data.id),
       now = this.clock();
     if (now - (room.commandAt.get(command) ?? -Infinity) < LIMITS.commandCooldown) return;
+    if (now - (room.chatterAt.get(message.userId) ?? -Infinity) < LIMITS.chatterCooldown) return;
     room.commandAt.set(command, now);
+    if (room.chatterAt.size >= 512)
+      for (const [id, at] of room.chatterAt) if (now - at >= LIMITS.chatterCooldown) room.chatterAt.delete(id);
+    room.chatterAt.set(message.userId, now);
     const view = game.view('overlay');
     this.reply(
       game,
@@ -163,7 +181,8 @@ export class ChatBot {
   /** Runs with the game ticker: timer nudges, then whatever the limits allow to go out. */
   tick(game: Game) {
     if (this.wants(game)) this.nudge(game);
-    if (this.rooms.get(game.data.id)?.queue.length) this.drain(game);
+    const room = this.rooms.get(game.data.id);
+    if (room?.queue.length || room?.replies.length) this.drain(game);
   }
 
   forget(roomId: string) {
@@ -220,7 +239,10 @@ export class ChatBot {
     if (!room) {
       room = {
         queue: [],
+        replies: [],
+        live: false,
         sent: [],
+        replySent: [],
         lastAt: -Infinity,
         sending: false,
         pausedUntil: 0,
@@ -228,6 +250,7 @@ export class ChatBot {
         problem: null,
         nudges: { roundId: '', half: false, struggle: false, final: false },
         commandAt: new Map(),
+        chatterAt: new Map(),
       };
       this.rooms.set(id, room);
     }
@@ -251,7 +274,7 @@ export class ChatBot {
   }
 
   private reply(game: Game, message: ChatMessage, text: string, key: string) {
-    if (this.wants(game)) this.enqueue(game, { key, text, ttl: 15000 }, message.id);
+    if (this.wants(game)) this.enqueue(game, { key, text, ttl: 15000 }, message.id, true);
   }
 
   private nudge(game: Game) {
@@ -283,12 +306,15 @@ export class ChatBot {
     if (room) room.queue = room.queue.filter((item) => !keys.includes(item.key));
   }
 
-  private enqueue(game: Game, announcement: Announcement, replyTo?: string) {
+  private enqueue(game: Game, announcement: Announcement, replyTo?: string, reply = false) {
     const room = this.room(game.data.id),
       now = this.clock();
-    room.queue = room.queue.filter((item) => item.key !== announcement.key);
-    room.queue.push({ ...announcement, id: randomUUID(), expiresAt: now + announcement.ttl, replyTo });
-    if (room.queue.length > LIMITS.queue) room.queue.splice(0, room.queue.length - LIMITS.queue);
+    room.live = game.data.mode !== 'demo';
+    const lane = reply ? 'replies' : 'queue',
+      limit = reply ? LIMITS.replyQueue : LIMITS.queue;
+    room[lane] = room[lane].filter((item) => item.key !== announcement.key);
+    room[lane].push({ ...announcement, id: randomUUID(), expiresAt: now + announcement.ttl, replyTo });
+    if (room[lane].length > limit) room[lane].splice(0, room[lane].length - limit);
     this.drain(game);
   }
 
@@ -296,19 +322,25 @@ export class ChatBot {
     const room = this.room(game.data.id),
       now = this.clock();
     room.queue = room.queue.filter((item) => item.expiresAt > now);
-    if (!room.queue.length || room.sending || now < room.pausedUntil) return;
+    room.replies = room.replies.filter((item) => item.expiresAt > now);
+    if (!(room.queue.length || room.replies.length) || room.sending || now < room.pausedUntil) return;
     if (now - room.lastAt < LIMITS.channelGap) return;
     room.sent = room.sent.filter((at) => now - at < LIMITS.channelWindow);
+    room.replySent = room.replySent.filter((at) => now - at < LIMITS.channelWindow);
     if (room.sent.length >= LIMITS.channelCount) return;
+    // Announcements first. A reply goes only when none is waiting and replies have budget left.
+    const reply = !room.queue.length;
+    if (reply && room.replySent.length >= LIMITS.channelReplyCount) return;
     const preview = game.data.mode === 'demo';
     if (!preview) {
       this.globalSent = this.globalSent.filter((at) => now - at < LIMITS.globalWindow);
-      if (now < this.globalPausedUntil || this.globalSent.length >= LIMITS.globalCount) return;
+      if (now < this.globalPausedUntil || !this.fairShare(room, now)) return;
       this.globalSent.push(now);
     }
-    const item = room.queue.shift()!;
+    const item = (reply ? room.replies : room.queue).shift()!;
     room.lastAt = now;
     room.sent.push(now);
+    if (reply) room.replySent.push(now);
     if (preview) {
       this.record(game, item, 'preview', null);
       return;
@@ -317,6 +349,27 @@ export class ChatBot {
     void this.deliver(game, item).finally(() => {
       room.sending = false;
     });
+  }
+
+  /**
+   * Whether this channel may take a slot of the global budget now. Up to its fair share it may
+   * take any free slot; past it, only while more than the reserve stays free for other channels.
+   */
+  private fairShare(room: RoomState, now: number) {
+    const free = LIMITS.globalCount - this.globalSent.length;
+    if (free <= 0) return false;
+    let active = 0;
+    for (const other of this.rooms.values())
+      if (
+        other === room ||
+        (other.live &&
+          (other.queue.length ||
+            other.replies.length ||
+            other.sent.some((at) => now - at < LIMITS.globalWindow)))
+      )
+        active++;
+    const share = Math.max(1, Math.floor((LIMITS.globalCount - LIMITS.globalReserve) / active));
+    return room.sent.length < share || free > LIMITS.globalReserve;
   }
 
   private record(game: Game, item: Outgoing, status: ChatBotPost['status'], problem: string | null) {
@@ -339,7 +392,7 @@ export class ChatBot {
         const wait = reset > 0 ? reset * 1000 - this.clock() : LIMITS.globalWindow;
         this.globalPausedUntil = this.clock() + Math.max(1000, Math.min(60000, wait));
         // Twitch did not take it. Try again later if it is still current.
-        room.queue.unshift(item);
+        (item.key.startsWith('command:') ? room.replies : room.queue).unshift(item);
         room.problem = 'Twitch is rate limiting the bot. Messages resume shortly.';
         this.options.onUpdate?.(game);
         return;
@@ -347,6 +400,7 @@ export class ChatBot {
       if (response.status === 403) {
         room.pausedUntil = this.clock() + LIMITS.forbiddenPause;
         room.queue = [];
+        room.replies = [];
         this.record(
           game,
           item,

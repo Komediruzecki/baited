@@ -232,9 +232,10 @@ test('demo rooms preview posts in the studio with Twitch pacing and newest-wins 
   bot.tick(f.game);
   assert.equal(recent().length, 2);
   // At most channelCount posts per window, however many keys are waiting.
-  for (const text of ['!bait help', '!bait score', '!bait top']) bot.chat(f.game, message(text));
+  for (const [i, text] of ['!bait help', '!bait score', '!bait top'].entries())
+    bot.chat(f.game, message(text, { userId: `viewer-${i}` }));
   // The same command again inside its cooldown gets no second answer.
-  bot.chat(f.game, message('!bait help'));
+  bot.chat(f.game, message('!bait help', { userId: 'viewer-9' }));
   for (let i = 0; i < 4; i++) {
     now += LIMITS.channelGap;
     bot.tick(f.game);
@@ -255,6 +256,129 @@ test('demo rooms preview posts in the studio with Twitch pacing and newest-wins 
   assert.equal(recent().length, LIMITS.channelCount);
   assert.equal(recent().filter((post) => post.text.endsWith('!bait top · !bait who')).length, 1);
   assert.ok(recent().every((post) => !matches(post.text, f.game.round!.word)));
+});
+
+test('one chatter cycling commands gets one answer, and replies never crowd out announcements', async (t) => {
+  const store = await tempStore(t);
+  let now = 3_000_000;
+  const f = fixture();
+  f.game.data.settings.chatBot = true;
+  const bot = new ChatBot({ config: loadConfig({}), store, ready: () => null, clock: () => now });
+  f.game.onEvent = (event) => bot.event(f.game, event);
+  const recent = () => bot.status(f.game).recent;
+  const step = () => {
+    now += LIMITS.channelGap;
+    bot.tick(f.game);
+  };
+  f.game.begin();
+  assert.equal(recent().length, 1);
+  // Cycling every command from one account earns a single answer per cooldown.
+  for (const text of ['!bait help', '!bait score', '!bait streak', '!bait top', '!bait who'])
+    bot.chat(f.game, message(text, { userId: 'cycler' }));
+  for (let i = 0; i < 5; i++) step();
+  assert.equal(recent().length, 2);
+  assert.match(recent()[0].text, /!bait top · !bait who$/);
+  // Other chatters fill the reply lane; a round post that arrives after them goes out first.
+  for (const [i, text] of ['!bait score', '!bait streak', '!bait top', '!bait who'].entries())
+    bot.chat(f.game, message(text, { userId: `viewer-${i}` }));
+  f.game.pause();
+  step();
+  assert.match(recent()[0].text, /the clock is frozen/i);
+  for (let i = 0; i < 6; i++) step();
+  // Replies use at most their share of the channel budget, so a result still has room.
+  assert.equal(recent().length, 2 + LIMITS.channelReplyCount);
+  f.game.resume();
+  step();
+  assert.equal(recent().length, LIMITS.channelCount);
+  assert.match(recent()[0].text, /^▶ /);
+  // The cycler can ask again once their own cooldown has passed.
+  now += LIMITS.chatterCooldown;
+  bot.chat(f.game, message('!bait score', { userId: 'cycler' }));
+  step();
+  assert.match(recent()[0].text, /^📊 /);
+});
+
+test('a flood in three channels cannot hold back a fourth channel', async (t) => {
+  const store = await tempStore(t);
+  const owners = ['1', '2', '3', '4'];
+  for (const owner of owners)
+    await store.setCredentials(owner, credentials({ userId: owner, login: `channel${owner}`, name: `Channel${owner}` }));
+  await store.setCredentials(
+    botKey('999'),
+    credentials({ userId: '999', login: 'baitedbot', name: 'BaitedBot', scope: ['user:write:chat', 'user:bot'] }),
+  );
+  const config = loadConfig({
+    TWITCH_CLIENT_ID: 'client-test',
+    TWITCH_CLIENT_SECRET: 'secret-test',
+    TOKEN_ENCRYPTION_KEY: key,
+    TWITCH_BOT_USER_ID: '999',
+  });
+  let now = 11_000_000;
+  const posts: { at: number; channel: string; text: string }[] = [];
+  const bot = new ChatBot({
+    config,
+    store,
+    ready: () => null,
+    clock: () => now,
+    fetcher: (async (url: string, init?: RequestInit) => {
+      if (String(url).endsWith('/oauth2/token')) return tokenReply();
+      const body = JSON.parse(String(init?.body));
+      posts.push({ at: now, channel: body.broadcaster_id, text: body.message });
+      return sent();
+    }) as typeof fetch,
+  });
+  const games = owners.map((owner) => {
+    const game = new Game(saved({ id: `room-${owner}`, owner, channel: `channel${owner}` }));
+    game.onEvent = (event) => bot.event(game, event);
+    return game;
+  });
+  const enqueue = (bot as unknown as { enqueue: (game: Game, announcement: { key: string; text: string; ttl: number }) => void })
+    .enqueue.bind(bot);
+  // Fetch the app token first, so each post is timed when the scheduler sends it.
+  await (bot as unknown as { token: (force: boolean) => Promise<string> }).token(false);
+  let load = 0;
+  const flood = async () => {
+    for (const game of games.slice(0, 3))
+      for (let i = 0; i < 2; i++) enqueue(game, { key: `load-${load++}`, text: `load ${load}`, ttl: 30000 });
+    await flush();
+  };
+  const step = async (ms = 100) => {
+    now += ms;
+    for (const game of games) bot.tick(game);
+    await flush();
+  };
+  // The first three channels flood for ten seconds and use every slot they can.
+  for (let i = 0; i < 100; i++) {
+    if (i % 5 === 0) await flood();
+    await step();
+  }
+  const flooded = posts.length;
+  assert.ok(flooded >= LIMITS.globalCount - LIMITS.globalReserve, `${flooded} posts`);
+  // The fourth channel's round post goes out within a few seconds, not after a full window.
+  const quiet = games[3];
+  const before = now;
+  enqueue(quiet, { key: 'start', text: 'round 1 is live', ttl: 20000 });
+  await flush();
+  for (let i = 0; i < 30 && !posts.some((post) => post.channel === '4'); i++) {
+    await flood();
+    await step();
+  }
+  const fourth = posts.find((post) => post.channel === '4');
+  assert.ok(fourth, 'the fourth channel posted');
+  assert.ok(fourth.at - before <= 3000, `waited ${fourth.at - before} ms`);
+  // Keep flooding for two more windows: every Twitch limit still holds.
+  for (let i = 0; i < 600; i++) {
+    if (i % 5 === 0) await flood();
+    await step();
+  }
+  for (const post of posts) {
+    const window = posts.filter((other) => other.at > post.at - LIMITS.globalWindow && other.at <= post.at);
+    assert.ok(window.length <= LIMITS.globalCount, `${window.length} posts in 30 s`);
+    const channel = window.filter((other) => other.channel === post.channel);
+    assert.ok(channel.length <= LIMITS.channelCount, `${channel.length} posts in one channel in 30 s`);
+    const previous = posts.filter((other) => other.channel === post.channel && other.at < post.at).at(-1);
+    if (previous) assert.ok(post.at - previous.at >= LIMITS.channelGap, `posts stay apart: ${post.channel} ${previous.at} ${post.at}`);
+  }
 });
 
 test('timer nudges fire once per round: halfway and the final ten seconds', async (t) => {
