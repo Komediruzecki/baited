@@ -11,7 +11,7 @@
 .obs-root {
   --twitch: #9146ff;
 }
-.obs-root :is(.obs-hud, .streak-celebration),
+.obs-root :is(.obs-hud, .streak-celebration, .baited-sting),
 .obs-root > .public-award {
   border: 0;
   border-radius: 0;
@@ -108,10 +108,98 @@
   font: 400 24px/1.25 'Baited Pixel', var(--b-ui);
 }
 
-/* The reveal follows the HUD in flow, so it always clears it: the result card, and
-   beside it the medallion on a badge win. */
+/* The streamer's pick: BAITED BY @name lands with pixel confetti for six seconds, then
+   leaves the corner chip behind. Stepped motion, like the font. */
+.obs-root .baited-sting {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: min(640px, calc(100vw - 96px));
+  padding: 32px 48px;
+  background: var(--b-table-night);
+  color: var(--b-paper);
+  text-align: center;
+  animation: baited-sting 6000ms linear var(--sting-age) both;
+}
+.baited-sting__kicker {
+  color: var(--b-lilac);
+  font: 400 24px/1.25 'Baited Pixel', var(--b-ui);
+}
+.baited-sting__name {
+  max-width: 100%;
+  color: var(--b-paper);
+  font: 400 48px/1.25 'Baited Pixel', var(--b-ui);
+  overflow-wrap: anywhere;
+}
+.baited-sting__name.is-long {
+  font-size: 32px;
+}
+.baited-sting__name.is-longest {
+  font-size: 24px;
+}
+.baited-sting__note {
+  color: var(--b-muted);
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+}
+.baited-sting__confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.baited-sting__confetti i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--c);
+  opacity: 0;
+  animation: baited-confetti 1600ms steps(16, end) calc(240ms + var(--d) + var(--sting-age)) forwards;
+}
+@keyframes baited-sting {
+  0% {
+    opacity: 0;
+    transform: translateY(-64px) scale(0.5);
+    animation-timing-function: steps(4, end);
+  }
+  5% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+    animation-timing-function: steps(2, end);
+  }
+  8%,
+  94% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: steps(3, end);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-48px) scale(0.8);
+  }
+}
+@keyframes baited-confetti {
+  0% {
+    opacity: 1;
+    transform: translate(-4px, -4px);
+  }
+  45% {
+    opacity: 1;
+    transform: translate(calc(var(--x) * 0.8), calc(var(--y) * 0.8)) rotate(var(--r));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x), calc(var(--y) + 160px)) rotate(var(--r));
+  }
+}
+
+/* The reveal follows the HUD in flow, so it always clears it: the result card, beside it
+   the medallion on a badge win, and the streamer's pick when it lands. */
 .obs-reveal {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 30px;
   margin-top: 36px;
@@ -126,21 +214,45 @@
   .obs-reveal .streak-celebration {
     display: none;
   }
+  .obs-root .baited-sting {
+    padding: 24px 32px;
+  }
+  .baited-sting__name {
+    font-size: 32px;
+  }
+  .baited-sting__name:is(.is-long, .is-longest) {
+    font-size: 24px;
+  }
 }
 @media (max-width: 600px) {
   .obs-hud .obs-time {
     font-size: 32px;
   }
   .obs-hud .obs-message > strong,
-  .obs-root > .public-award strong {
+  .obs-root > .public-award strong,
+  .baited-sting__kicker {
+    font-size: 16px;
+  }
+  .baited-sting__name {
+    font-size: 24px;
+  }
+  .baited-sting__name:is(.is-long, .is-longest) {
     font-size: 16px;
   }
   .obs-reveal {
     margin-top: 24px;
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  .obs-root .baited-sting {
+    animation: none;
+  }
+  .baited-sting__confetti {
+    display: none;
+  }
+}
 @media (forced-colors: active) {
-  .obs-root :is(.obs-hud, .streak-celebration),
+  .obs-root :is(.obs-hud, .streak-celebration, .baited-sting),
   .obs-root > .public-award {
     border: 1px solid CanvasText;
     box-shadow: none;

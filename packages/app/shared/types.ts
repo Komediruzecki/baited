@@ -25,7 +25,8 @@ export interface Result {
   elapsed: number;
   participants: number;
   at: number;
-  award?: { name: string };
+  /** The streamer's "You baited me" pick; `at` (when it was chosen) cues the OBS sting. */
+  award?: { name: string; at?: number };
   reason?: 'guess' | 'timer';
   /** This win landed chat's streak on a badge tier. */
   milestone?: number;
@@ -94,6 +95,8 @@ export interface GameView {
   voters: number;
   voteThreshold: number;
   leaders: Leader[];
+  /** Up to five chatters with the most streamer's picks, most first. */
+  mvps: Leader[];
   /** Unlocked streak badges by tier count; `at` is null when reached before dates were kept. */
   badges: { count: number; at: number | null }[];
   connection: {

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture } from './fixtures.js';
-import { Game, clueMatches } from '../server/game.js';
+import { Game, spoils } from '../server/game.js';
 import { clueCards, forbiddenClues } from '../server/cards.js';
 import { words } from '../server/words.js';
 
@@ -14,8 +14,106 @@ test('every original target has four distinct clues and difficulty reveals zero,
     assert.equal(forbiddenClues(word, 'hard').length, 4);
   }
   for (const text of ['BIRD', 'birds', 'bird’s', 'bird-house'])
-    assert.ok(clueMatches(text, 'bird'));
-  assert.ok(!clueMatches('birdwatching', 'bird'));
+    assert.ok(spoils(text, 'bird'));
+  assert.ok(!spoils('birdwatching', 'bird'));
+});
+
+test('disguised words still spoil; longer words that only contain them do not', () => {
+  for (const text of [
+    'PENGUIN',
+    'pengu1n',
+    'p3ngu!n',
+    'peeengguuin',
+    'p e n g u i n',
+    'p.e.n.g.u.i.n',
+    'p-e-n-g-u-i-n',
+    'say p e n g u i n s pls',
+    'pëngüin',
+    'реnguin', // Cyrillic р and е
+    'ｐｅｎｇｕｉｎ',
+    'pen​guin',
+    'pen guin',
+    'p enguin',
+    'penguins',
+    'penguin’s!',
+  ])
+    assert.ok(spoils(text, 'penguin'), text);
+  for (const text of ['pen', 'a waddling bird', 'penguinlike', 'p e n'])
+    assert.ok(!spoils(text, 'penguin'), text);
+  assert.ok(spoils('1gl00', 'igloo'));
+  assert.ok(spoils('1ighthouse', 'lighthouse'));
+  assert.ok(spoils('a snow man', 'snowman'));
+  assert.ok(spoils('pizz@', 'pizza'));
+  assert.ok(spoils('!ce cold', 'ice'));
+  assert.ok(spoils('Say doughnuts', 'donut'));
+  assert.ok(!spoils('join the discord', 'disco'));
+  assert.ok(!spoils('a nice price', 'ice'));
+  assert.ok(!spoils('plow', 'pillow'));
+  assert.ok(spoils(`hmm ${'p'.repeat(40)}eeeeeeeeeeeenguin`, 'penguin'), 'stretched letters');
+  assert.ok(spoils(`${'a '.repeat(60)}p e n g u i n`, 'penguin'), 'spelled at the end of a long run');
+});
+
+test('a wall of look-alike characters is checked quickly', () => {
+  const started = performance.now();
+  for (const wall of ['1|'.repeat(250), '1 | '.repeat(125), `${'1|!'.repeat(160)}x`])
+    for (const word of ['pillow', 'lighthouse', 'chandelier', 'kaleidoscope'])
+      assert.equal(spoils(wall, word), false);
+  assert.ok(performance.now() - started < 250, `${Math.round(performance.now() - started)} ms`);
+});
+
+test('a disguised spoiler earns nothing and cannot win the award', () => {
+  const f = fixture();
+  f.game.begin();
+  assert.equal(f.game.chat('leet', 'a', 'Alex', 'pengu1n!!', f.now()), false);
+  assert.equal(f.game.view('viewer').violations, 1);
+  assert.equal(f.game.round!.hints[0].reason, 'Target word spoiled');
+  assert.equal(f.game.round!.participants.size, 0);
+  assert.equal(f.game.chat('spelled', 'b', 'Blake', 'b i r d', f.now()), true);
+  assert.match(f.game.round!.hints[1].reason!, /Forbidden clue: bird/);
+});
+
+test('the MVP board ranks streamer picks, and only a new name replays the OBS sting', () => {
+  const f = fixture();
+  f.game.data.leaders = {
+    a: { name: 'Alex', rounds: 9, baits: 1 },
+    b: { name: 'Blake', rounds: 2, baits: 3 },
+    c: { name: 'Casey', rounds: 4, baits: 1 },
+    d: { name: 'Drew', rounds: 20 },
+  };
+  const board = () => f.game.view('overlay').mvps.map((mvp) => [mvp.name, mvp.baits]);
+  assert.deepEqual(board(), [['Blake', 3], ['Alex', 1], ['Casey', 1]]);
+  f.game.begin();
+  f.game.chat('one', 'a', 'Alex', 'fancy outfit?', f.now());
+  f.game.chat('two', 'b', 'Blake', 'slides on its belly?', f.now());
+  f.advance(3000);
+  f.game.chat('three', 'a', 'Alex', 'waddle waddle', f.now());
+  f.game.transcript(f.transcript());
+  const review = f.game.awardBoard!;
+  const pick = (text: string) =>
+    f.game.award(review.roundId, review.candidates.find((hint) => hint.text === text)!.id);
+  pick('fancy outfit?');
+  const at = f.now();
+  assert.deepEqual(f.game.result?.award, { name: 'Alex', at });
+  f.advance(1000);
+  pick('waddle waddle');
+  assert.equal(f.game.result?.award?.at, at, 'another hint by the same chatter keeps its sting');
+  pick('slides on its belly?');
+  assert.deepEqual(f.game.result?.award, { name: 'Blake', at: f.now() });
+  assert.deepEqual(board(), [['Blake', 4], ['Alex', 1], ['Casey', 1]]);
+});
+
+test('trimming a busy channel keeps the bait MVPs', () => {
+  const f = fixture();
+  f.game.data.leaders = Object.fromEntries(
+    Array.from({ length: 1000 }, (_, i) => [`regular${i}`, { name: `Regular${i}`, rounds: 5 }]),
+  );
+  f.game.data.leaders.mvp = { name: 'Mvp', rounds: 1, baits: 1 };
+  f.game.begin();
+  f.game.chat('new', 'newcomer', 'Newcomer', 'a clean clue', f.now());
+  f.game.transcript(f.transcript());
+  assert.equal(Object.keys(f.game.data.leaders).length, 1000);
+  assert.equal(f.game.data.leaders.mvp?.baits, 1);
+  assert.deepEqual(f.game.view('viewer').mvps.map((mvp) => mvp.name), ['Mvp']);
 });
 
 test('live clue lists and hint text remain outside studio and overlay projections', () => {
@@ -51,7 +149,7 @@ test('a forbidden hint cannot win an award; its author can still submit a clean 
   assert.match(bad.reason!, /bird/);
   assert.throws(() => f.game.award(board.roundId, bad.id), /eligible/);
   f.game.award(board.roundId, good.id);
-  assert.deepEqual(f.game.result?.award, { name: 'Alex' });
+  assert.deepEqual(f.game.result?.award, { name: 'Alex', at: f.now() });
   assert.equal(f.game.score.wins, 1);
   assert.equal(f.game.view('viewer').leaders[0].baits, 1);
   assert.equal(f.game.view('viewer').leaders[0].rounds, 1);

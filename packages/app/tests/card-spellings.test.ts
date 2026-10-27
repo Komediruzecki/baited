@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { matches, clueMatches } from '../server/game.js';
+import { matches, spoils } from '../server/game.js';
 import { fixture } from './fixtures.js';
 
 test('equivalent card spellings match whole words without matching longer words or synonyms', () => {
@@ -9,8 +9,8 @@ test('equivalent card spellings match whole words without matching longer words 
     assert.ok(matches(canonical, alternate));
     assert.ok(!matches(`${alternate}maker`, canonical));
     assert.ok(!matches(`${alternate}s`, canonical));
-    assert.ok(clueMatches(`${alternate}s`, canonical));
-    assert.ok(clueMatches(`${alternate}’s`, canonical));
+    assert.ok(spoils(`${alternate}s`, canonical));
+    assert.ok(spoils(`${alternate}’s`, canonical));
   }
   assert.ok(!matches('pastry', 'donut'));
 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Game, defaults, matches, type GameEvent, type SavedGame } from '../server/game.js';
+import { Game, defaults, matches, spoils, type GameEvent, type SavedGame } from '../server/game.js';
 import { words } from '../server/words.js';
 import { Store, type Credentials } from '../server/store.js';
 import { loadConfig } from '../server/config.js';
@@ -134,7 +134,17 @@ test("none of Baity's lines can say a target word, in any mood", () => {
   for (const difficulty of ['easy', 'medium', 'hard'] as const)
     for (const word of words[difficulty])
       for (const line of all)
-        assert.equal(matches(line.replace(/\{\w+\}/g, ' '), word), false, `${word} in: ${line}`);
+        assert.equal(spoils(line.replace(/\{\w+\}/g, ' '), word), false, `${word} in: ${line}`);
+});
+
+test('!bait top shows the bait MVPs once the streamer has picked someone', () => {
+  const f = fixture();
+  f.game.data.leaders = { a: { name: 'Alex', rounds: 9 }, b: { name: 'Blake', rounds: 2, baits: 2 } };
+  const top = () => topText(f.game.view('overlay'));
+  assert.match(top(), /MVP.*1\. Blake \(2 picks\)/);
+  assert.doesNotMatch(top(), /Alex/);
+  f.game.data.leaders.b.baits = 0;
+  assert.match(top(), /1\. Alex \(9 rounds\) · 2\. Blake \(2 rounds\)/);
 });
 
 test('Baity gets louder while chat loses, and cute again when chat wins', () => {

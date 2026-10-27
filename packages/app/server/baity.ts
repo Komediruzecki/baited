@@ -500,6 +500,24 @@ export const lines = {
     "no baiters yet 🥺 chat during a round to join in ✨",
     "leaderboard's empty!! chat during a round to join in 🎀",
   ],
+  mvps: {
+    0: [
+      "🏆 bait MVPs: {mvps} ✨ {channel} picked every one of them personally 🎀",
+      "🏆 Baity's MVP board 🎀 {mvps}. certified menaces ✨",
+    ],
+    1: [
+      "🏆 BAIT MVPS: {mvps}. STUDY THEM.",
+      "🏆 MVP BOARD: {mvps}. EVERYONE ELSE, LOCK IN.",
+    ],
+    2: [
+      "🏆 BAIT MVPS: {mvps}. CARRYING THIS CHAT ON THEIR BACKS 😭",
+      "🏆 MVP BOARD: {mvps}. THE ONLY ONES WHO EVER GOT {channel} 💀",
+    ],
+    3: [
+      "🏆 BAIT MVPS: {mvps}. THE ONLY ONES BAEITTRICE STILL SPEAKS TO.",
+      "🏆 MVP BOARD: {mvps}. EVERYONE ELSE: BAEITTRICE IS DISAPPOINTED IN YOU.",
+    ],
+  },
   mod_problem: [
     "@{name} {problem}",
     "@{name} can't do that one 🎀 {problem}",
@@ -510,6 +528,7 @@ export type Slot = keyof typeof lines;
 
 const turns = new Map<string, number>();
 const commands = /![a-z]+/g;
+const shouted = new Set(['channel', 'baiters', 'leaders', 'mvps']);
 
 /** True when a line shouts: no lowercase outside its placeholders and chat commands. */
 export function shouting(template: string) {
@@ -519,7 +538,7 @@ export function shouting(template: string) {
 /**
  * One line for a moment. Variants rotate per room and slot, so the same post never
  * repeats back to back (Twitch drops an identical message sent within 30 seconds).
- * In a shouted line, the channel name and the baiter count are shouted too.
+ * In a shouted line, the channel name, the baiter count and the boards are shouted too.
  */
 export function say(
   slot: Slot,
@@ -541,7 +560,7 @@ export function say(
   const fill = (text: string) =>
     text.replace(/\{(\w+)\}/g, (_, name: string) => {
       const value = String(values[name] ?? '');
-      return loud && (name === 'channel' || name === 'baiters') ? value.toUpperCase() : value;
+      return loud && shouted.has(name) ? value.toUpperCase() : value;
     });
   return fill(
     template.replace(/\[\[(.*?)\]\]/g, (_: string, part: string) =>

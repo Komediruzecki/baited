@@ -247,16 +247,20 @@ export function streakText(view: GameView) {
   return text;
 }
 
+/** `!bait top`: the bait MVP board, or the most rounds joined until the streamer picks someone. */
 export function topText(view: GameView) {
+  const mood = moodOf(losingRun(view));
+  if (view.mvps.length) {
+    const mvps = view.mvps
+      .slice(0, 3)
+      .map((mvp, i) => `${i + 1}. ${mvp.name} (${count(mvp.baits, 'pick')})`)
+      .join(' · ');
+    return line(view, 'mvps', mood, { mvps });
+  }
   const top = view.leaders.slice(0, 3);
   if (!top.length) return line(view, 'top_empty', 0);
-  const leaders = top
-    .map(
-      (leader, i) =>
-        `${i + 1}. ${leader.name} (${count(leader.rounds, 'round')}${leader.baits ? `, ${count(leader.baits, 'pick')}` : ''})`,
-    )
-    .join(' · ');
-  return line(view, 'top', moodOf(losingRun(view)), { leaders });
+  const leaders = top.map((leader, i) => `${i + 1}. ${leader.name} (${count(leader.rounds, 'round')})`).join(' · ');
+  return line(view, 'top', mood, { leaders });
 }
 
 /** A moderator command that could not run, with the game's own reason. */

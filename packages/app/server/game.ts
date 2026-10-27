@@ -81,15 +81,93 @@ export const matches = (text: string, word: string) => {
   const forms = spellings(word);
   return tokens(text).some((token) => forms.includes(token));
 };
-export const clueMatches = (text: string, clue: string) => {
-  const variants = new Set(spellings(clue).flatMap((form) => [
-    form,
-    `${form}s`,
-    `${form}es`,
-    ...(form.endsWith('y') ? [`${form.slice(0, -1)}ies`] : []),
-  ]));
-  return tokens(text).some((token) => variants.has(token.replace(/['’]s$/, '')));
+// Chat disguises a word to slip it past the streamer: letters from other scripts that
+// pass for Latin ones, and digits or symbols typed in place of a letter.
+const lookalikes: Record<string, string> = {
+  а: 'a', в: 'b', е: 'e', к: 'k', м: 'm', н: 'h', о: 'o', р: 'p', с: 'c', т: 't', у: 'y', х: 'x',
+  і: 'i', ј: 'j', ѕ: 's', ԁ: 'd', ӏ: 'l', ԛ: 'q', ԝ: 'w', ү: 'y',
+  α: 'a', β: 'b', ε: 'e', η: 'n', ι: 'i', κ: 'k', ν: 'v', ο: 'o', ρ: 'p', τ: 't', υ: 'u', χ: 'x', ω: 'w',
+  ı: 'i', ł: 'l', ø: 'o', đ: 'd', ɡ: 'g',
 };
+const standIns: Record<string, string> = {
+  a: '4@', b: '8', e: '3', g: '69', i: '1!|', l: '1|', o: '0', s: '5$', t: '7+', z: '2',
+};
+// Accents, invisible characters and full-width or styled letters fold to plain ones.
+const fold = (text: string) =>
+  text
+    .normalize('NFKD')
+    .replace(/[\p{M}\p{Cf}]/gu, '')
+    .toLocaleLowerCase('en-US')
+    .replace(/[^\x00-\x7f]/g, (c) => lookalikes[c] ?? c);
+const disguises = new Map<
+  string,
+  { whole: RegExp; spelled: RegExp; shortest: number; longest: number; step: number }
+>();
+function disguise(word: string) {
+  let found = disguises.get(word);
+  if (!found) {
+    const forms = spellings(word).flatMap((form) => [
+      form,
+      `${form}s`,
+      `${form}es`,
+      ...(form.endsWith('y') ? [`${form.slice(0, -1)}ies`] : []),
+    ]);
+    // Every letter, stretched to any length, or what chat types in its place.
+    const body = forms
+      .map((form) => [...form].map((c) => `[${c}${standIns[c] ?? ''}]+`).join(''))
+      .join('|');
+    const lengths = forms.map((form) => form.length);
+    found = {
+      whole: new RegExp(`^[^\\p{L}\\p{N}]*(?:${body})(?:['’][s5$])?[^\\p{L}\\p{N}]*$`, 'u'),
+      spelled: new RegExp(body, 'u'),
+      shortest: Math.min(...lengths),
+      // Every letter doubled, plus a possessive: the longest text worth testing.
+      longest: 2 * Math.max(...lengths) + 4,
+      step: Math.max(...lengths) + 2,
+    };
+    if (disguises.size > 2000) disguises.clear();
+    disguises.set(word, found);
+  }
+  return found;
+}
+/**
+ * Whether chat text gives a word away, however it is dressed up: any case or accent,
+ * look-alike letters, digits or symbols for letters (pengu1n), stretched letters,
+ * letters typed one at a time (p e n g u i n, p.e.n.g.u.i.n), the word split in two or
+ * three (snow man), and plurals or possessives. A longer word that only contains it is
+ * fine: "discord" does not spoil DISCO. Speech and the streamer's guess stay exact (matches).
+ */
+export function spoils(text: string, word: string) {
+  const { whole, spelled, shortest, longest, step } = disguise(word);
+  // Some stand-ins fit two letters (1 is i or l), so a long run of them could keep the
+  // patterns backtracking. Runs of one character fold to two, and no test sees more than
+  // `longest` characters.
+  const pieces = fold(text)
+    .replace(/(.)\1{2,}/gu, '$1$1')
+    .split(/[^\p{L}\p{N}@$!|+'’]+/u)
+    .filter(Boolean);
+  let letters = '';
+  for (const piece of [...pieces, '']) {
+    if (piece.length === 1) letters += piece;
+    else {
+      // Windows overlap, so any spelled-out form lands whole inside one of them.
+      for (let at = 0; letters.length >= shortest; at += step) {
+        if (spelled.test(letters.slice(at, at + longest))) return true;
+        if (at + longest >= letters.length) break;
+      }
+      letters = '';
+    }
+  }
+  for (let i = 0; i < pieces.length; i++) {
+    let joined = '';
+    for (let j = i; j < pieces.length && j < i + 3; j++) {
+      joined += pieces[j];
+      if (joined.length > longest) break;
+      if (joined.length >= shortest && whole.test(joined)) return true;
+    }
+  }
+  return false;
+}
 interface Hint extends HintCandidate {
   userId: string;
 }
@@ -134,6 +212,11 @@ export interface SavedGame {
   /** First unlock of each streak badge, keyed by tier count, with the round that earned it. */
   streakBadges?: Record<string, { at: number; round: string }>;
 }
+type StoredLeader = SavedGame['leaders'][string];
+// Streamer's picks outrank rounds played, so trimming a busy channel's records never
+// drops a bait MVP in favour of someone who only chatted more.
+const byPicks = (a: StoredLeader, b: StoredLeader) =>
+  (b.baits ?? 0) - (a.baits ?? 0) || b.rounds - a.rounds;
 export class Game {
   phase: GameView['phase'] = 'idle';
   round: Round | null = null;
@@ -381,7 +464,7 @@ export class Game {
     if (Object.keys(this.data.leaders).length > 1000)
       this.data.leaders = Object.fromEntries(
         Object.entries(this.data.leaders)
-          .sort((a, b) => b[1].rounds - a[1].rounds || (b[1].baits ?? 0) - (a[1].baits ?? 0))
+          .sort((a, b) => byPicks(a[1], b[1]))
           .slice(0, 1000),
       );
     this.phase = 'cooldown';
@@ -542,21 +625,22 @@ export class Game {
           [hint.userId, leader],
           ...Object.entries(this.data.leaders)
             .filter(([id]) => id !== hint.userId)
-            .sort((a, b) => b[1].rounds - a[1].rounds || (b[1].baits ?? 0) - (a[1].baits ?? 0))
+            .sort((a, b) => byPicks(a[1], b[1]))
             .slice(0, 999),
         ]);
+      // `at` cues the OBS sting, so only a new name gets one.
+      result.award = { name: hint.name, at: this.clock() };
     }
     this.awardOwners.set(roundId, hint.userId);
     board.selectedHintId = hintId;
-    result.award = { name: hint.name };
     this.changed();
     // Choosing another hint by the same chatter changes nothing public.
     if (old !== hint.userId) this.emit({ type: 'award' });
   }
-  private rememberHint(r: Round, userId: string, name: string, text: string) {
+  private rememberHint(r: Round, userId: string, name: string, text: string, spoiled: boolean) {
     if (text.trim().startsWith('!')) return;
-    const blocked = r.clues.filter((clue) => clueMatches(text, clue));
-    const reason = matches(text, r.word)
+    const blocked = r.clues.filter((clue) => spoils(text, clue));
+    const reason = spoiled
       ? 'Target word spoiled'
       : blocked.length
         ? `Forbidden clue: ${blocked.join(', ')}`
@@ -646,9 +730,10 @@ export class Game {
     this.chatIds.add(id);
     if (now - (this.recentChat.get(userId) ?? -Infinity) < 3000) return false;
     if (!r.participants.has(userId) && r.participants.size >= 10000) return false;
-    this.rememberHint(r, userId, name, text);
-    // Explicit spoiler text earns no participation credit and is never echoed by BAIT.
-    if (matches(text, r.word)) return false;
+    const spoiled = spoils(text, r.word);
+    this.rememberHint(r, userId, name, text, spoiled);
+    // Spoiler text, however disguised, earns no participation credit and is never echoed by BAIT.
+    if (spoiled) return false;
     this.recentChat.set(userId, now);
     r.participants.set(userId, name.slice(0, 40));
     const voted = text.trim().toLowerCase() === '!skip' && !r.votes.has(userId);
@@ -712,6 +797,12 @@ export class Game {
       leaders: Object.values(this.data.leaders)
         .sort((a, b) => b.rounds - a.rounds || a.name.localeCompare(b.name))
         .slice(0, 8)
+        .map((leader) => ({ ...leader, baits: leader.baits ?? 0 })),
+      // Bait MVPs: the chatters the streamer picked most often as "You baited me".
+      mvps: Object.values(this.data.leaders)
+        .filter((leader) => (leader.baits ?? 0) > 0)
+        .sort((a, b) => byPicks(a, b) || a.name.localeCompare(b.name))
+        .slice(0, 5)
         .map((leader) => ({ ...leader, baits: leader.baits ?? 0 })),
       // Badges reached before unlocks were recorded count as unlocked, without a date.
       badges: streakTiers

@@ -142,8 +142,8 @@ export function HowTo() {
         <summary>Optional rules</summary>
         <ul>
           <li>
-            <strong>Off-limits clues:</strong> Easy: none. Medium: two. Hard: four. A flagged hint
-            can’t win an award. The round continues.
+            <strong>Off-limits clues:</strong> Easy: none. Medium: two. Hard: four. Disguised
+            spellings count too. A flagged hint can’t win an award. The round continues.
           </li>
           <li>
             <strong>Three-word mission:</strong> Land three words on one clock. Gaps count. Pause
@@ -155,7 +155,8 @@ export function HowTo() {
           </li>
           <li>
             <strong>You baited me:</strong> After a win, the streamer can award one eligible hint.
-            The community keeps the shared win.
+            The community keeps the shared win; the chatter gets a sting on stream and a spot on
+            the Bait MVPs board.
           </li>
         </ul>
       </details>

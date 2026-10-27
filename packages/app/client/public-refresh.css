@@ -41,6 +41,13 @@
 .viewer-room .viewer-playbook { display: grid; gap: 16px; margin: 28px 0; padding: 0; list-style: none; }
 .viewer-room .viewer-playbook li { display: flex; align-items: flex-start; gap: 12px; color: var(--b-muted); font: 400 13px/1.6 var(--b-ui); }
 .viewer-room .viewer-playbook svg { flex: none; margin-top: 1px; color: var(--b-lilac); }
+.viewer-room .viewer-mvps { padding: 18px 0; border-top: 1px solid var(--b-line); }
+.viewer-room .viewer-mvps h2 { margin: 0 0 10px; color: var(--b-lilac); font: 600 12px/1.4 var(--b-ui); letter-spacing: .06em; text-transform: uppercase; }
+.viewer-room .viewer-mvps ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: mvp; }
+.viewer-room .viewer-mvps li { display: flex; align-items: baseline; gap: 10px; min-width: 0; color: var(--b-muted); font: 400 13px/1.5 var(--b-ui); counter-increment: mvp; }
+.viewer-room .viewer-mvps li::before { content: counter(mvp); min-width: 1em; color: var(--b-urgent); font: 400 14px/1 var(--b-display); }
+.viewer-room .viewer-mvps strong { overflow: hidden; color: var(--b-paper); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.viewer-room .viewer-mvps span { flex: none; margin-left: auto; }
 .viewer-room .viewer-scoreline { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin: 0; padding: 18px 0; border-top: 1px solid var(--b-line); border-bottom: 1px solid var(--b-line); color: var(--b-muted); font: 400 13px/1.5 var(--b-ui); }
 .viewer-room .viewer-scoreline strong { color: var(--b-paper); font-weight: 600; }
 .viewer-room .viewer-scoreline > span[aria-hidden] { padding-inline: 4px; }

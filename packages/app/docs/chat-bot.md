@@ -52,7 +52,7 @@ The streak shows as fire: on the OBS overlay (a strip with the count, fire coins
 
 ## Commands
 
-`!bait` alone still joins the round. Anyone can type `!bait help`, `!bait score`, `!bait streak`, `!bait top` or `!bait who` (also `!bait baity`); each command is answered at most once every 20 seconds, as a threaded reply.
+`!bait` alone still joins the round. Anyone can type `!bait help`, `!bait score`, `!bait streak`, `!bait top` or `!bait who` (also `!bait baity`); each command is answered at most once every 20 seconds, as a threaded reply. `!bait top` posts the bait MVPs, the three chatters with the most streamer's picks (“🏆 bait MVPs: 1. Alex (3 picks) · 2. Sam (1 pick) ✨ …”); until the streamer has picked anyone, it lists the chatters who joined the most rounds instead.
 
 With **Moderator commands** on, the broadcaster, moderators and lead moderators can type `!bait start`, `!bait pause` and `!bait resume`. Starting and resuming need the same readiness as the studio buttons: chat connected and the streamer's microphone armed in the studio. Viewers' attempts are ignored silently. Commands work even when announcements are off; the bot just doesn't reply.
 

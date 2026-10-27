@@ -57,7 +57,16 @@ import './style.css';
 import Landing from './Landing';
 import { productBrand as brand, botNotices, Button, Tag, CopyButton, Modal, HowTo } from './ui';
 import './brand.css';
-import { MissionStatus, GuessForm, AwardReview, ForbiddenClueCard, PublicAward } from './mechanics';
+import {
+  MissionStatus,
+  GuessForm,
+  AwardReview,
+  ForbiddenClueCard,
+  PublicAward,
+  BaitedSting,
+  MvpBoard,
+  STING_MS,
+} from './mechanics';
 import './mechanics.css';
 import './angular.css';
 import './landing-game.css';
@@ -1466,6 +1475,7 @@ function Community({ game: g }: { game: GameView }) {
       </dl>
       <StreakBadges game={g} />
       <div className="bottom-grid">
+        <MvpBoard mvps={g.mvps} />
         <section className="panel">
           <div className="section-heading">
             <h3>Participation</h3>
@@ -1806,14 +1816,21 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     pendingCatch = g.result?.outcome === 'review' && finished;
   const stale = offline;
   const showCard = !stale && finished && !!g.result && ['caught', 'escaped'].includes(g.result.outcome) && now + offset.current - g.result.at < 5500;
+  // A fresh streamer's pick plays its sting first; the corner chip takes over after.
+  const award = g.history[0]?.award;
+  const stingAge = award?.at === undefined ? Infinity : now + offset.current - award.at;
+  const sting = !stale && !!award && stingAge < STING_MS;
   if (overlay)
     return <div className="obs-root">
-      {!stale && <PublicAward award={g.history[0]?.award} />}
+      {!stale && !sting && <PublicAward award={award} />}
       <ObsHud game={g} timeLeft={fmt(ms)} now={now} offset={offset.current} offline={stale} showCard={showCard} />
       {/* In flow under the HUD, so the reveal clears it whatever the HUD's height. */}
-      {showCard && g.result && <div className="obs-reveal">
-        <ResultCard key={`${g.result.id}:${g.result.outcome}`} result={g.result} broadcast age={now + offset.current - g.result.at} />
-        <StreakCelebration key={`streak:${g.result.id}`} result={g.result} streak={g.score.streak} age={now + offset.current - g.result.at} />
+      {(showCard || sting) && <div className="obs-reveal">
+        {showCard && g.result && <>
+          <ResultCard key={`${g.result.id}:${g.result.outcome}`} result={g.result} broadcast age={now + offset.current - g.result.at} />
+          <StreakCelebration key={`streak:${g.result.id}`} result={g.result} streak={g.score.streak} age={now + offset.current - g.result.at} />
+        </>}
+        {sting && award && <BaitedSting key={`sting:${award.at}`} name={award.name} age={stingAge} />}
       </div>}
     </div>;
   const playing = active || paused || settling;
@@ -1890,6 +1907,16 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             <StreakCount count={g.score.streak} />
             <StreakRow count={g.score.streak} />
             <p>{nextStreakTier(g.score.streak) ? `Win ${nextStreakTier(g.score.streak)!.count} in a row for the ${nextStreakTier(g.score.streak)!.name} badge. Best so far: ${g.score.best}.` : `Every streak badge is unlocked. Best so far: ${g.score.best}.`}</p>
+          </div>
+        )}
+        {!stale && g.mvps.length > 0 && (
+          <div className="viewer-mvps">
+            <h2>Bait MVPs</h2>
+            <ol>
+              {g.mvps.slice(0, 3).map((mvp) => (
+                <li key={mvp.name}><strong>@{mvp.name}</strong><span>{mvp.baits} {mvp.baits === 1 ? 'pick' : 'picks'}</span></li>
+              ))}
+            </ol>
           </div>
         )}
         <p className="viewer-scoreline">{stale && <span>Last known: </span>}<strong>{g.score.wins}</strong> {g.score.wins === 1 ? 'chat win' : 'chat wins'} <span aria-hidden="true">·</span> streak <strong>{g.score.streak}</strong></p>

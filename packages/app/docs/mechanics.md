@@ -18,15 +18,19 @@ When a live round reaches zero while the microphone is listening, the server all
 
 The existing difficulty pools contain 72 targets. Every target has four original related clues in `server/cards.ts`. The active subset appears only on the viewer card. The studio and OBS do not receive it.
 
-For PENGUIN, the four clues are bird, ice, Antarctica and waddle. Medium reveals the first two; Hard cards reveal all four clues for their own target pool. The checker recognizes a listed word, common plural and possessive. It is a literal rule checker, not a semantic or evasion detector.
+For PENGUIN, the four clues are bird, ice, Antarctica and waddle. Medium reveals the first two; Hard cards reveal all four clues for their own target pool. The checker recognizes a listed word, common plural and possessive, and the usual disguises (`spoils` in `server/game.ts`): any case or accent, look-alike letters from other scripts, digits or symbols for letters (pengu1n, b!rd), stretched letters, letters typed one at a time (p e n g u i n, p.e.n.g.u.i.n), and a word split in two or three (snow man). A longer word that only contains the listed one stays clean: discord does not spoil DISCO, and birdwatching is not bird. It is a literal rule checker, not a semantic detector.
 
-Only the violating hint becomes ineligible for the streamer’s award. A later clean hint from the same chatter can receive it. Community wins, time and other viewers are unaffected. BAIT flags messages within the game and never deletes them from Twitch. Explicit target spoilers also remain ineligible and receive no participation credit.
+Only the violating hint becomes ineligible for the streamer’s award. A later clean hint from the same chatter can receive it. Community wins, time and other viewers are unaffected. BAIT flags messages within the game and never deletes them from Twitch. Target spoilers, disguised or not, also remain ineligible and receive no participation credit. Speech and the streamer’s private guess still need the exact word.
 
 ## “You baited me” award
 
 After a community win, the authenticated studio shows recent eligible and flagged hints. The streamer can choose one eligible hint or leave the award unassigned. A different selection moves the award rather than adding a second point. Reversing the win removes its award and restores the previous score and mission progress.
 
 The award is the streamer’s choice. BAIT does not infer causation. Public views receive the selected display name and award totals, with the label “Streamer’s pick.” Participation still counts completed rounds joined and is shown separately.
+
+A new pick plays a six-second “BAITED BY @name” sting on the OBS overlay, with pixel confetti, before the corner chip takes over. Moving the award to another chatter plays it again for the new name; another hint by the same chatter does not. The sting shows the name only, never the hint.
+
+Picks add up on the Bait MVPs board: up to five chatters with the most picks, ties broken by rounds joined. The studio’s Community tab shows it as a podium, the viewer room lists the top three, and `!bait top` posts it in chat. Room records keep 1,000 chatters; when a busy channel goes over, chatters with picks are kept before anyone with only more rounds.
 
 Review retains up to 40 clean hints and 20 flagged hints per word, with at most three clean hints and one flagged hint per author. The current word and previous review can coexist. Text stays in server memory, is shown only after that word is revealed, and clears ten minutes after the round or when the following round ends. Chat text is never written to disk. A selection can be made while the next word is active, until the previous review expires or is replaced. Chat commands such as `!skip` are not award candidates.
 

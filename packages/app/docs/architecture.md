@@ -29,7 +29,7 @@ Every studio request resolves the room from its authenticated server session, ne
 
 Viewer URLs contain a random room ID. Viewer endpoints deliberately return the target. Overlay endpoints require a separate random read key and return an explicit projection without the target or control credentials. Studio endpoints receive the same secret-free projection plus share URLs. No frontend module imports the word bank. Do not log capability URLs, session cookies or OAuth/speech queries at the proxy.
 
-The room owner can open the viewer URL and read the word. Chat can also spoil it. Explicit target spoilers earn no participation credit. Forbidden-clue hints can still count as participation but cannot receive an award. Active hint text stays out of the studio response. After a word is revealed, its retained hints appear only in the authenticated studio for manual award review; public views receive the selected name and totals. BAIT does not moderate or delete messages on Twitch.
+The room owner can open the viewer URL and read the word. Chat can also spoil it. Target spoilers, including disguised spellings such as pengu1n or p e n g u i n, earn no participation credit. Forbidden-clue hints can still count as participation but cannot receive an award. Active hint text stays out of the studio response. After a word is revealed, its retained hints appear only in the authenticated studio for manual award review; public views receive the selected name and totals. BAIT does not moderate or delete messages on Twitch.
 
 ## Twitch and recovery
 
@@ -51,7 +51,7 @@ The physical microphone stays open while consent is armed so automatic rounds ca
 
 - One process and one writable state directory. Do not run multiple replicas against the same file. An eventual clustered version would need shared authoritative state and pub/sub.
 - At most 2,000 SSE subscribers per instance. State broadcasts are coalesced to at most 10 per second per room, and slow clients are disconnected. Actual internet fanout at this limit has not been load-tested.
-- Up to 10,000 participating chatters per round; a chatter can add activity at most once per three seconds. Skip votes are one per chatter. Up to 1,000 cumulative participant records per room and 100 historical outcomes are retained; aggregate scores survive history compaction.
+- Up to 10,000 participating chatters per round; a chatter can add activity at most once per three seconds. Skip votes are one per chatter. Up to 1,000 cumulative participant records per room and 100 historical outcomes are retained; chatters with streamer's picks are kept first, and aggregate scores survive history compaction.
 - Participation credit records rounds joined by active chatters. Passive lurkers and page opens do not earn points. BAIT cannot determine which hint caused a win. No public client can submit Twitch identity claims.
 - The local demo is restricted to a loopback peer in non-production. It is not saved. Reverse proxies count as the peer; never expose a development server through a proxy. Production disables the local demo regardless of the environment flag.
 - English, curated single-word targets. Recognition latency and accuracy depend on the provider and audio conditions. No latency benchmark with a real provider has been recorded.
