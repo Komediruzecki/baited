@@ -4,6 +4,7 @@ import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
+import { runInNewContext } from 'node:vm'
 import { installSelectedCards } from '../scripts/selected-cards.mjs'
 import { cardFace, clueStyles, exactClues, glassOptics, glassRules, parseClueStyle, pauseSelectedReveal, revealSelectedCard, settleSelectedCard } from '../selected-cards/selected-cards.js'
 import { cards } from '../site/data.js'
@@ -53,6 +54,30 @@ test('production installer is a no-op and a dev hook mismatch fails before publi
   const html = await readFile(join(dev, 'index.html'), 'utf8')
   await assert.rejects(installSelectedCards({ environment: 'dev', stagingSite: dev }), /hook changed/)
   assert.equal(await readFile(join(dev, 'index.html'), 'utf8'), html)
+})
+
+test('staged capture-loss handler ignores descendant losses and still ends a hand capture loss', async t => {
+  const stagingSite = await fixture(t)
+  const original = await readFile(new URL('../site/app.js', import.meta.url), 'utf8')
+  await installSelectedCards({ environment: 'dev', stagingSite })
+  const app = await readFile(join(stagingSite, 'app.js'), 'utf8')
+  const handler = "hand.addEventListener('lostpointercapture', (event) => {\n  if (event.target === hand) endDrag(event)\n})"
+  assert.equal(app.split("hand.addEventListener('lostpointercapture'").length - 1, 1, 'keep exactly one capture-loss handler')
+  assert.ok(app.includes(handler), 'the staged handler must guard the original event target')
+  assert.ok(app.includes("hand.addEventListener('pointerup', (event) => endDrag(event))"))
+  assert.ok(app.includes("hand.addEventListener('pointercancel', (event) => endDrag(event, true))"))
+  const listeners = new Map()
+  const ended = []
+  const hand = { addEventListener: (type, listener) => listeners.set(type, listener) }
+  runInNewContext(handler, { hand, endDrag: event => ended.push(event) })
+  const loss = listeners.get('lostpointercapture')
+  const childLoss = { target: { parentElement: hand }, currentTarget: hand, pointerId: 7 }
+  loss(childLoss)
+  assert.equal(ended.length, 0, 'bubbled implicit capture loss from artwork must not end the hand drag')
+  const handLoss = { target: hand, currentTarget: hand, pointerId: 7 }
+  loss(handLoss)
+  assert.deepEqual(ended, [handLoss], 'genuine hand capture loss still reaches the existing cleanup')
+  assert.equal(await readFile(new URL('../site/app.js', import.meta.url), 'utf8'), original, 'production source remains unchanged')
 })
 
 test('selected renderer needs neither inline style permission nor live services', async () => {

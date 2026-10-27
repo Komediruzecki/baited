@@ -18,6 +18,24 @@ async function ready(page) {
   await page.evaluate(() => document.fonts.ready)
 }
 
+async function artReadyForCapture(page) {
+  const images = studies(page).locator('img.bait-card-art:visible')
+  await expect(images).toHaveCount(styles.length)
+  for (const image of await images.all()) {
+    // Full-page captures include offscreen studies. Wake a lazy illustration
+    // through its actual viewport before decoding, without fetching substitutes.
+    if (await image.getAttribute('loading') === 'lazy') await image.scrollIntoViewIfNeeded()
+    const decoded = await image.evaluate(async (element) => {
+      await element.decode()
+      return { complete: element.complete, width: element.naturalWidth, height: element.naturalHeight }
+    })
+    expect(decoded.complete, 'Card illustration is completely loaded before capture').toBe(true)
+    expect(decoded.width, 'Card illustration has decoded pixels').toBeGreaterThan(0)
+    expect(decoded.height, 'Card illustration has decoded pixels').toBeGreaterThan(0)
+  }
+  await expect(studies(page).locator('.cl-pixel-art[data-resolving="true"]')).toHaveCount(0)
+}
+
 async function readableClues(page, example, context) {
   const group = studies(page)
   await expect(group.locator('.cl-card__word')).toHaveText(styles.map(() => example.word.toUpperCase()))
@@ -115,7 +133,7 @@ for (const width of [320, 768, 1440]) {
     const geometryPath = testInfo.outputPath('clue-geometry.json')
     writeFileSync(geometryPath, JSON.stringify(measurements, null, 2))
     await testInfo.attach('clue-geometry.json', { path: geometryPath, contentType: 'application/json' })
-    await expect(studies(page).locator('.cl-pixel-art[data-resolving="true"]')).toHaveCount(0)
+    await artReadyForCapture(page)
     await page.screenshot({ path: testInfo.outputPath(`clue-studies-${width}.png`), fullPage: true })
   })
 }
@@ -194,6 +212,7 @@ test('reduced motion and forced colors preserve clue readability and hide words 
   }
   const animated = await studies(page).locator('article.cl-card').evaluateAll((cards) => cards.flatMap((card) => card.getAnimations({ subtree: true }).filter((animation) => animation.playState === 'running').map((animation) => animation.animationName)))
   expect(animated).toEqual([])
+  await artReadyForCapture(page)
   await page.screenshot({ path: testInfo.outputPath('clue-studies-forced-colors.png'), fullPage: true })
   for (const state of ['waiting', 'broadcaster']) {
     await page.getByRole('combobox', { name: 'Synthetic state', exact: true }).selectOption(state)

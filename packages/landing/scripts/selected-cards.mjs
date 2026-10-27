@@ -33,6 +33,9 @@ export async function installSelectedCards({ environment, stagingSite }) {
   app = replaceOnce(app, "hand.addEventListener('keydown', (event) => {", "settleSelectedCard(items[deck.front])\n\nhand.addEventListener('keydown', (event) => {")
   app = replaceOnce(app, '  if (event.button !== 0 || !event.isPrimary || drag) return\n', '  if (event.button !== 0 || !event.isPrimary || drag) return\n  pauseSelectedReveal()\n')
   app = replaceOnce(app,
+    "hand.addEventListener('lostpointercapture', (event) => endDrag(event))",
+    "hand.addEventListener('lostpointercapture', (event) => {\n  if (event.target === hand) endDrag(event)\n})")
+  app = replaceOnce(app,
     "new IntersectionObserver((entries) => hand.classList.toggle('is-live', entries[0].isIntersecting), { threshold: 0.35 }).observe(hand)",
     "new IntersectionObserver((entries) => {\n  hand.classList.toggle('is-live', entries[0].isIntersecting)\n  revealSelectedCard(items[wrapIndex(deck.target, items.length)])\n}, { threshold: 0.35 }).observe(hand)")
   const target = join(stagingSite, 'card-lab/landing')
