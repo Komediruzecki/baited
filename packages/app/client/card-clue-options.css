@@ -1,0 +1,95 @@
+/* The clue review is an independent axis. Edition and material picks stay intact. */
+.cl-controls .cl-clue-selector { display:grid; gap:7px; margin-top:24px; padding-top:20px; border-top:1px solid #51465d; }
+.cl-clue-selector label { display:flex; align-items:center; gap:9px; min-height:44px; font-size:13px; cursor:pointer; }
+.cl-clue-selector input { accent-color:#9146ff; width:16px; height:16px; }
+.cl-clue-selector label small,.cl-clue-study h3 small { display:block; margin-top:3px; font:400 11px/1.4 Inter,Arial,sans-serif; color:#c9a8ff; }
+.cl-clue-selector>p { margin:6px 0; font-size:12px; line-height:1.5; color:#c9c0d1; }
+.cl-clue-gallery { min-width:0; }
+.cl-clue-studies { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr)); align-items:start; gap:24px 20px; }
+.cl-clue-study { min-width:0; padding:20px 14px; border:1px solid #51465d; border-radius:6px; background:#1b1523; }
+.cl-clue-study[data-selected=true] { border-color:#c9a8ff; }
+.cl-clue-study>header { min-height:80px; max-width:340px; margin:0 auto 18px; }
+.cl-clue-study h3 { font:400 20px/1.2 'Russo One',sans-serif; margin:0 0 8px; }
+.cl-clue-study>header p { color:#c9c0d1; font-size:12px; line-height:1.5; }
+.cl-clue-study .cl-context { margin-inline:auto; }
+.cl-clue-preview { max-width:100%; overflow:auto; padding:6px; }
+.cl-clue-preview__inner { width:max-content; min-width:100%; }
+.cl-clue-preview .cl-context--deck { width:360px; max-width:none; }
+.cl-clue-study .cl-context--desktop { max-width:none; }
+.cl-clue-study .cl-context--obs { transform-origin:top left; }
+.cl-clue-status { margin:24px 0 16px; font-size:13px; color:#c9a8ff; }
+.cl-clue-note textarea { width:100%; min-height:96px; resize:vertical; padding:10px 12px; border:1px solid #68616f; border-radius:5px; background:#201c25; color:#fffdf7; font:inherit; }
+.cl-clue-note { display:grid; gap:10px; max-width:600px; font-size:13px; margin-bottom:12px; }
+@media(max-width:760px) { .cl-clue-gallery { order:0; } }
+@media(max-width:420px) { .cl-clue-study { padding:18px 0; border-inline:0; } .cl-clue-studies { gap:28px; } .cl-clue-study>header { padding-inline:12px; } }
+@media(forced-colors:active) { .cl-clue-study[data-selected=true] { border:2px solid Highlight; } }
+
+/* Opus clue studies. Boxes remains the original control; other editions keep their own rows. */
+.cl-card[data-layout=table][data-clue]:where(:not([data-clue=baseline])) {
+  --clue-ink:#fffdf7; --clue-mark:#c9a8ff; --clue-rule:#fffdf747; --clue-rule-soft:#fffdf724;
+  --clue-track:.04em; --clue-line:16px; --minus-w:7px; --minus-h:2px; --minus-gap:3px;
+}
+.cl-card[data-layout=table][data-size=l][data-clue] { --clue-line:17px; --minus-w:8px; }
+.cl-card[data-layout=table][data-size=xs][data-clue] { --clue-line:12px; --minus-w:5px; --minus-h:1px; --minus-gap:2px; --clue-track:.02em; }
+.cl-card[data-layout=table][data-clue]:where(:not([data-clue=baseline])) .cl-card__clues li {
+  gap:var(--minus-gap); padding:0; border:0; border-radius:0; background:none; color:var(--clue-ink);
+  font:600 var(--chip-font)/var(--clue-line) Inter,Arial,sans-serif; letter-spacing:var(--clue-track);
+  white-space:nowrap; overflow-wrap:normal;
+}
+.cl-card[data-layout=table][data-clue]:where(:not([data-clue=baseline])) .cl-card__clues li::before {
+  width:var(--minus-w); height:0; background:none; border-top:var(--minus-h) solid var(--clue-mark);
+}
+
+/* Ruled: content-width words under a label between two hairlines. */
+.cl-card[data-layout=table][data-clue=rail] .cl-card__clue-label { gap:8px; margin:0 0 8px!important; }
+.cl-card[data-layout=table][data-clue=rail] .cl-card__clue-label::before,
+.cl-card[data-layout=table][data-clue=rail] .cl-card__clue-label::after { content:''; flex:none; width:24px; border-top:1px solid var(--clue-rule); }
+.cl-card[data-layout=table][data-clue=rail] .cl-card__clues { grid-template-columns:repeat(2,max-content); justify-content:center; justify-items:start; gap:4px 20px; }
+.cl-card[data-layout=table][data-clue=rail] .cl-card__clues li { justify-content:start; }
+.cl-card[data-layout=table][data-size=l][data-clue=rail] .cl-card__clue-label { gap:9px; }
+.cl-card[data-layout=table][data-size=l][data-clue=rail] .cl-card__clue-label::before,
+.cl-card[data-layout=table][data-size=l][data-clue=rail] .cl-card__clue-label::after { width:28px; }
+.cl-card[data-layout=table][data-size=l][data-clue=rail] .cl-card__clues { gap:5px 24px; }
+.cl-card[data-layout=table][data-size=xs][data-clue=rail] .cl-card__clue-label { gap:5px; margin-bottom:5px!important; }
+.cl-card[data-layout=table][data-size=xs][data-clue=rail] .cl-card__clue-label::before,
+.cl-card[data-layout=table][data-size=xs][data-clue=rail] .cl-card__clue-label::after { width:14px; }
+.cl-card[data-layout=table][data-size=xs][data-clue=rail] .cl-card__clues { gap:3px 12px; }
+
+/* Minus pills: outline only, with the minus in the same ink as the word. */
+.cl-card[data-layout=table][data-clue=pills] .cl-card__clues { grid-template-columns:repeat(2,max-content); justify-content:center; gap:6px; }
+.cl-card[data-layout=table][data-clue=pills] .cl-card__clues li { height:22px; padding:0 9px 0 8px; border:1px solid #c9a8ff73; border-radius:11px; }
+.cl-card[data-layout=table][data-clue=pills] .cl-card__clues li:nth-child(odd) { justify-self:end; }
+.cl-card[data-layout=table][data-clue=pills] .cl-card__clues li:nth-child(even) { justify-self:start; }
+.cl-card[data-layout=table][data-clue=pills] .cl-card__clues li::before { border-top-color:currentColor; }
+.cl-card[data-layout=table][data-size=l][data-clue=pills] .cl-card__clues { gap:6px 8px; }
+.cl-card[data-layout=table][data-size=l][data-clue=pills] .cl-card__clues li { height:24px; padding:0 10px 0 9px; border-radius:12px; }
+.cl-card[data-layout=table][data-size=xs][data-clue=pills] .cl-card__clues { gap:4px 3px; }
+.cl-card[data-layout=table][data-size=xs][data-clue=pills] .cl-card__clues li { height:16px; padding:0 5px 0 4px; border-radius:8px; }
+
+/* Ledger: one ruled object with open sides, rather than separate boxes. */
+.cl-card[data-layout=table][data-clue=tokens] .cl-card__restrictions { border-block:1px solid var(--clue-rule); }
+.cl-card[data-layout=table][data-clue=tokens] .cl-card__clue-label { margin:0!important; padding:4px 0; line-height:14px; border-bottom:1px solid var(--clue-rule-soft); }
+.cl-card[data-layout=table][data-clue=tokens] .cl-card__clues { grid-template-columns:repeat(2,minmax(max-content,1fr)); gap:0; }
+.cl-card[data-layout=table][data-clue=tokens] .cl-card__clues li { justify-content:center; min-height:26px; padding:5px 6px; }
+.cl-card[data-layout=table][data-clue=tokens] .cl-card__clues li::before { content:none; }
+.cl-card[data-layout=table][data-clue=tokens] .cl-card__clues li:nth-child(odd) { border-right:1px solid var(--clue-rule-soft); }
+.cl-card[data-layout=table][data-clue=tokens] .cl-card__clues li:nth-child(n+3) { border-top:1px solid var(--clue-rule-soft); }
+.cl-card[data-layout=table][data-size=l][data-clue=tokens] .cl-card__clues li { min-height:28px; padding:5px 8px; }
+.cl-card[data-layout=table][data-size=xs][data-clue=tokens] .cl-card__clue-label { padding:3px 0 2px; line-height:12px; }
+.cl-card[data-layout=table][data-size=xs][data-clue=tokens] .cl-card__clues li { min-height:18px; padding:3px 4px; }
+
+/* Sentence keeps the rule in normal reading order, with each exact term intact. */
+.cl-card[data-layout=table][data-clue=quiet] .cl-card__rule { margin:0; font:400 var(--chip-font)/1.42 Inter,Arial,sans-serif; color:#c9c0d1; text-align:center; text-wrap:balance; }
+.cl-card[data-layout=table][data-clue=quiet] .cl-card__term { font-weight:600; color:#fffdf7; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+.cl-card[data-layout=table][data-size=xs][data-clue=quiet] .cl-card__rule { line-height:1.33; }
+.cl-card[data-layout=table][data-size=xs][data-clue=quiet] .cl-card__term { letter-spacing:.02em; }
+
+@media(forced-colors:active) {
+  .cl-card[data-layout=table][data-clue] { --clue-ink:CanvasText; --clue-mark:CanvasText; --clue-rule:CanvasText; --clue-rule-soft:CanvasText; }
+  .cl-card[data-layout=table][data-clue] .cl-card__clues li::before { height:0; background:none; border-top:var(--minus-h,2px) solid CanvasText; }
+  .cl-card[data-layout=table][data-clue=rail] .cl-card__clue-label::before,
+  .cl-card[data-layout=table][data-clue=rail] .cl-card__clue-label::after,
+  .cl-card[data-layout=table][data-clue=pills] .cl-card__clues li,
+  .cl-card[data-layout=table][data-clue=tokens] :is(.cl-card__restrictions,.cl-card__clue-label,.cl-card__clues li) { border-color:CanvasText; }
+  .cl-card[data-layout=table][data-clue=quiet] :is(.cl-card__rule,.cl-card__term) { color:CanvasText; }
+}

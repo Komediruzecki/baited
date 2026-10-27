@@ -130,7 +130,7 @@ for (const { width, height, touch, reduced = false } of layouts) {
           .toBeLessThan(2)
       }
       // Clues must be readable at the card's actual responsive size, without a bar across the letters.
-      const clueReadability = await page.locator('.deck-card-item.is-front .card-clues > span:not(.no-clues)').evaluateAll((clues) =>
+      const clueReadability = await page.locator('.deck-card-item.is-front .card-clues > span:not(.no-clues), .deck-card-item.is-front [data-clue-word]').evaluateAll((clues) =>
         clues.map((clue) => {
           const style = getComputedStyle(clue)
           const after = getComputedStyle(clue, '::after')
