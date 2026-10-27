@@ -33,14 +33,19 @@ export function SoundControls({ roomId, game, offline = false, lab = false }: {
     setBusy(true);
     try { await control.current?.enable(); } finally { setBusy(false); }
   };
+  const volume = Math.round(state.volume * 100);
   return <div className={`bait-sound-controls ${lab ? 'is-lab' : ''}`}>
     <div className="sound-main-row">
-      <button type="button" aria-pressed={state.enabled} onClick={() => void toggle()} disabled={busy || offline}>
-        {busy ? 'Enabling sound…' : state.enabled ? 'Mute sound' : 'Enable sound'}
+      {/* A switch: its name stays "Sound effects" and its state is aria-checked. */}
+      <button type="button" role="switch" aria-checked={state.enabled} className="sound-switch"
+        onClick={() => void toggle()} disabled={busy || offline}>
+        <span className="sound-switch__track" aria-hidden="true"><span className="sound-switch__handle" /></span>
+        <span>{busy ? 'Enabling sound…' : 'Sound effects'}</span>
       </button>
       <label>Volume <input aria-label="Effect volume" type="range" min="0" max="100" step="5"
-        value={Math.round(state.volume * 100)} onChange={(e) => control.current?.setVolume(Number(e.target.value) / 100)} />
-        <output>{Math.round(state.volume * 100)}%</output></label>
+        value={volume} style={{ '--value': `${volume}%` } as React.CSSProperties}
+        onChange={(e) => control.current?.setVolume(Number(e.target.value) / 100)} />
+        <output>{volume}%</output></label>
     </div>
     {lab && <div className="sound-cue-list">{SOUND_CUES.map((cue) =>
       <button type="button" key={cue} disabled={!state.enabled} onClick={() => {

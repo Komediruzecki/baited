@@ -81,6 +81,7 @@ import './landing-shell.css';
 import './chat-bot.css';
 import './streak.css';
 import './obs-twitch.css';
+import './studio-m3.css';
 
 const ProductReview = React.lazy(() => import('./ProductReview'));
 const CardDesignLab = React.lazy(() => import('./CardDesignLab'));
@@ -1034,16 +1035,21 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           ) : modal === 'end' ? (
             <>
               <p>The secret word will be revealed and automatic rounds will stop.</p>
-              <Button
-                className="danger"
-                disabled={settling || busy || offline}
-                onClick={() => {
-                  setModal('');
-                  void action('end');
-                }}
-              >
-                End this round
-              </Button>
+              <div className="modal-actions">
+                <Button className="text" onClick={() => setModal('')}>
+                  Keep playing
+                </Button>
+                <Button
+                  className="danger"
+                  disabled={settling || busy || offline}
+                  onClick={() => {
+                    setModal('');
+                    void action('end');
+                  }}
+                >
+                  End this round
+                </Button>
+              </div>
             </>
           ) : modal === 'delete' ? (
             <>
@@ -1051,16 +1057,21 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                 Your settings, scores, participation records, and Twitch authorization will be
                 removed. Shared links will stop working.
               </p>
-              <Button
-                className="danger"
-                onClick={() => {
-                  void request('/api/account/delete', {}, session.csrf)
-                    .then(reload)
-                    .catch((e) => setError(e.message));
-                }}
-              >
-                Delete my data
-              </Button>
+              <div className="modal-actions">
+                <Button className="text" onClick={() => setModal('')}>
+                  Cancel
+                </Button>
+                <Button
+                  className="danger"
+                  onClick={() => {
+                    void request('/api/account/delete', {}, session.csrf)
+                      .then(reload)
+                      .catch((e) => setError(e.message));
+                  }}
+                >
+                  Delete my data
+                </Button>
+              </div>
             </>
           ) : modal === 'twitch' ? (
             <>
@@ -1167,7 +1178,7 @@ function SettingsForm({
         ))}
       </div>
       <label className="field-label">Difficulty</label>
-      <div className="segmented">
+      <div className="segmented" role="group" aria-label="Difficulty">
         {(['easy', 'medium', 'hard'] as const).map((d) => (
           <button
             key={d}
@@ -1247,6 +1258,7 @@ function SettingsForm({
         </span>
         <input
           type="checkbox"
+          role="switch"
           checked={s.auto}
           onChange={(e) => set({ ...s, auto: e.target.checked })}
         />
@@ -1258,6 +1270,7 @@ function SettingsForm({
         </span>
         <input
           type="checkbox"
+          role="switch"
           checked={s.callBait}
           onChange={(e) => set({ ...s, callBait: e.target.checked })}
         />
@@ -1270,6 +1283,7 @@ function SettingsForm({
         </span>
         <input
           type="checkbox"
+          role="switch"
           checked={s.chatBot}
           onChange={(e) => set({ ...s, chatBot: e.target.checked })}
         />
@@ -1284,6 +1298,7 @@ function SettingsForm({
         </span>
         <input
           type="checkbox"
+          role="switch"
           checked={s.modCommands}
           onChange={(e) => set({ ...s, modCommands: e.target.checked })}
         />
