@@ -48,7 +48,7 @@ function settle(ms = 5000) {
     for (const post of [...bot.status(game).recent].reverse())
       if (!seen.has(post.id)) {
         seen.add(post.id);
-        lines.push(`  ${time()}  baited bot   ${post.text}`);
+        lines.push(`  ${time()}  Baity        ${post.text}`);
       }
   }
 }

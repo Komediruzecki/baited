@@ -126,17 +126,16 @@ test('the bot celebrates streaks and badges, and says when a streak ends', () =>
   play(f);
   play(f);
   play(f);
-  assert.match(texts.at(-2)!, /Chat wins\. 🔥 3 in a row!/);
-  assert.equal(
-    texts.at(-1),
-    '🏅 New streak badge: Heating up! Chat won 3 in a row. Next badge: On fire at 5.',
-  );
-  assert.equal(streakText(f.game.view('overlay')), '🔥 Chat is on a 3-win streak. Best: 3. Next badge: On fire at 5 in a row. Badges: 2 of 7.');
+  // Baity rotates between variants, so these match what every variant says.
+  assert.match(texts.at(-2)!, /chat wins.*🔥 (3 in a row!|that's 3 straight!!)/);
+  assert.match(texts.at(-1)!, /^🏅 .*Heating up.*On fire at 5/);
+  assert.doesNotMatch(texts.at(-1)!, /again/);
+  assert.match(streakText(f.game.view('overlay')), /^🔥 .*3.*best: 3\..*On fire.*5.* badges: 2 of 7 🏅$/);
   play(f, false);
-  assert.match(texts.at(-1)!, /Word skipped\. New bait next\. That ends chat's 3-win streak\./);
-  assert.equal(streakText(f.game.view('overlay')), 'No streak running. Best: 3. Win a round to start one. Badges: 2 of 7.');
+  assert.match(texts.at(-1)!, /^⏭ WORD SKIPPED\. NEW BAIT NEXT\..*3-WIN STREAK 💀/);
+  assert.match(streakText(f.game.view('overlay')), /BEST: 3\..* BADGES: 2 OF 7 🏅$/);
   play(f);
   play(f);
-  assert.equal(texts.at(-1), '🏅 2 in a row: Spark again! Next badge: Heating up at 3.');
+  assert.match(texts.at(-1)!, /^🏅 .*Spark again.*Heating up at 3/);
   assert.equal(parseCommand('!bait streak'), 'streak');
 });

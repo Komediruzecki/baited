@@ -1080,7 +1080,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                 reference template in the README.
               </p>
               <p className="muted">
-                baited asks to read your chat. Announcements are optional and post through a
+                baited asks to read your chat. Announcements are optional and post as Baity, a
                 separate bot account; they never include the secret word while a round is live.
               </p>
             </>
@@ -1132,7 +1132,8 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
   );
 }
 function chatBotHint(bot: ChatBotStatus) {
-  const what = 'Posts round starts, halfway, the last 10 seconds and results. Never the word while a round is live.';
+  const what =
+    'Baity posts round starts, halfway, the last 10 seconds and results, and gets louder every round chat loses. Never the word while a round is live.';
   if (bot.mode === 'demo') return `${what} In this demo, posts appear under Demo controls.`;
   if (bot.mode === 'unconfigured') return `${what} This server has no bot account yet, so nothing is posted.`;
   if (bot.mode === 'unauthorized')
@@ -1275,7 +1276,7 @@ function SettingsForm({
           onChange={(e) => set({ ...s, callBait: e.target.checked })}
         />
       </label>
-      <p className="field-label">Chat bot</p>
+      <p className="field-label">Baity, the chat bot</p>
       <label className="toggle-row">
         <span>
           <strong>Announce rounds in chat</strong>
@@ -1438,7 +1439,7 @@ function Rehearsal({
             {feedback}
           </p>
           <div className="bot-preview">
-            <h3>Chat bot preview</h3>
+            <h3>Baity preview</h3>
             {game.settings.chatBot ? (
               bot.recent.length ? (
                 <BotPosts posts={bot.recent} />
@@ -1712,12 +1713,12 @@ function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
       </span>
       <div className="setup-step-body">
         <div className="setup-step-heading">
-          <h2>Add the chat bot</h2>
+          <h2>Add Baity, the chat bot</h2>
           <Tag tone={tone}>{tag}</Tag>
         </div>
         <p className="muted">
           {bot.mode === 'demo'
-            ? 'The bot announces rounds, the last 10 seconds and results. In this demo its posts appear under Demo controls instead of Twitch chat.'
+            ? 'Baity announces rounds, the last 10 seconds and results: cute while chat wins, louder every round chat loses. In this demo the posts appear under Demo controls instead of Twitch chat.'
             : bot.mode === 'unconfigured'
               ? 'This server has no bot account. Its operator sets one up first; until then baited stays read-only in chat.'
               : bot.mode === 'unauthorized'
@@ -1735,7 +1736,8 @@ function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
           </div>
         )}
         <p className="setup-commands">
-          Chat can type <code>!bait help</code>, <code>!bait score</code> and <code>!bait top</code>.
+          Chat can type <code>!bait help</code>, <code>!bait score</code>, <code>!bait top</code> and{' '}
+          <code>!bait who</code>.
           With moderator commands on, mods can type <code>!bait start</code>,{' '}
           <code>!bait pause</code> and <code>!bait resume</code>.
         </p>
@@ -1953,8 +1955,8 @@ function Privacy() {
         <h2>Chat bot</h2>
         <p>
           If the streamer turns announcements on and allows the bot in their channel, a bot
-          account run by this server’s operator posts round starts, timer reminders, results,
-          scores and the streamer’s award pick in Twitch chat. It names chatters only in that award,
+          account run by this server’s operator posts as Baity: round starts, timer reminders,
+          results, scores and the streamer’s award pick in Twitch chat. It names chatters only in that award,
           in the top-baiters list the room already shows, and when replying to their own command.
           It never posts a word while its round is live, and it
           does not store what it posts beyond the last few messages shown in the streamer’s

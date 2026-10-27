@@ -12,10 +12,13 @@ import {
   halfwayAnnouncement,
   helpText,
   MOD_COMMANDS,
+  modProblemText,
   parseCommand,
   scoreText,
   streakText,
+  strugglingAnnouncement,
   topText,
+  whoText,
   type Announcement,
   type ChatCommand,
 } from './chat-copy.js';
@@ -53,7 +56,7 @@ interface RoomState {
   pausedUntil: number;
   recent: ChatBotPost[];
   problem: string | null;
-  nudges: { roundId: string; half: boolean; final: boolean };
+  nudges: { roundId: string; half: boolean; struggle: boolean; final: boolean };
   commandAt: Map<ChatCommand, number>;
 }
 const tokenSchema = z.object({ access_token: z.string().min(1), expires_in: z.number() });
@@ -130,7 +133,8 @@ export class ChatBot {
         message.badges.some((badge) => MODERATOR_BADGES.has(badge));
       if (!moderator) return;
       const problem = this.control(game, command);
-      if (problem) this.reply(game, message, `@${message.name} ${problem}`, `command:${command}`);
+      if (problem)
+        this.reply(game, message, modProblemText(game.view('overlay'), message.name, problem), `command:${command}`);
       return;
     }
     if (!this.wants(game)) return;
@@ -144,12 +148,14 @@ export class ChatBot {
       game,
       message,
       command === 'help'
-        ? helpText()
+        ? helpText(view)
         : command === 'score'
           ? scoreText(view)
           : command === 'streak'
             ? streakText(view)
-            : topText(view),
+            : command === 'who'
+              ? whoText(view)
+              : topText(view),
       `command:${command}`,
     );
   }
@@ -220,7 +226,7 @@ export class ChatBot {
         pausedUntil: 0,
         recent: [],
         problem: null,
-        nudges: { roundId: '', half: false, final: false },
+        nudges: { roundId: '', half: false, struggle: false, final: false },
         commandAt: new Map(),
       };
       this.rooms.set(id, room);
@@ -253,15 +259,22 @@ export class ChatBot {
     const view = game.view('overlay'),
       round = view.round!;
     const room = this.room(game.data.id);
-    if (room.nudges.roundId !== round.id) room.nudges = { roundId: round.id, half: false, final: false };
+    if (room.nudges.roundId !== round.id)
+      room.nudges = { roundId: round.id, half: false, struggle: false, final: false };
     if (!room.nudges.half && round.duration >= 60000 && round.remaining <= round.duration / 2) {
       room.nudges.half = true;
       const halfway = halfwayAnnouncement(view);
       if (halfway && round.remaining > 20000) this.enqueue(game, halfway);
     }
+    // Three quarters in, once chat has started losing; never on top of the halfway or final post.
+    if (!room.nudges.struggle && round.duration >= 90000 && round.remaining <= round.duration / 4) {
+      room.nudges.struggle = true;
+      const struggling = strugglingAnnouncement(view);
+      if (struggling && round.remaining > 20000) this.enqueue(game, struggling);
+    }
     if (!room.nudges.final && round.duration >= 30000 && round.remaining <= 10000) {
       room.nudges.final = true;
-      if (round.remaining > 3000) this.enqueue(game, finalAnnouncement());
+      if (round.remaining > 3000) this.enqueue(game, finalAnnouncement(view));
     }
   }
 

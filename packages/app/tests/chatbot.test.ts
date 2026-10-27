@@ -16,8 +16,11 @@ import {
   parseCommand,
   scoreText,
   streakText,
+  strugglingAnnouncement,
   topText,
+  whoText,
 } from '../server/chat-copy.js';
+import { lines, shouting } from '../server/baity.js';
 import {
   AuthRevoked,
   BotAccountMismatch,
@@ -80,6 +83,8 @@ test('!bait alone still joins; named commands parse strictly', () => {
   assert.equal(parseCommand('!bait rules'), 'help');
   assert.equal(parseCommand('!bait Score'), 'score');
   assert.equal(parseCommand('!bait top'), 'top');
+  assert.equal(parseCommand('!bait who'), 'who');
+  assert.equal(parseCommand('!bait Baity'), 'who');
   for (const name of ['start', 'pause', 'resume'] as const) assert.equal(parseCommand(`!bait ${name}`), name);
   for (const text of ['!bait nonsense', '!baited', '!bait start now', 'hello !bait', '!skip', 'bait help'])
     assert.equal(parseCommand(text), null, text);
@@ -103,7 +108,7 @@ test('no announcement during a round contains its word, for every target', () =>
       game.begin();
       const word = game.round!.word;
       const view = () => game.view('overlay');
-      texts.push(halfwayAnnouncement(view())!.text, finalAnnouncement().text, helpText());
+      texts.push(halfwayAnnouncement(view())!.text, finalAnnouncement(view()).text, helpText(view()), whoText(view()));
       texts.push(scoreText(view()), topText(view()), streakText(view()));
       assert.equal(game.chat('m1', 'viewer-1', 'Viewer', '!skip', time), true);
       game.pause();
@@ -121,6 +126,49 @@ test('no announcement during a round contains its word, for every target', () =>
     }
 });
 
+test("none of Baity's lines can say a target word, in any mood", () => {
+  const all = Object.values(lines as Record<string, readonly string[] | Record<string, readonly string[]>>).flatMap(
+    (set) => (Array.isArray(set) ? set : Object.values(set).flat()),
+  );
+  assert.ok(all.length > 150);
+  for (const difficulty of ['easy', 'medium', 'hard'] as const)
+    for (const word of words[difficulty])
+      for (const line of all)
+        assert.equal(matches(line.replace(/\{\w+\}/g, ' '), word), false, `${word} in: ${line}`);
+});
+
+test('Baity gets louder while chat loses, and cute again when chat wins', () => {
+  const f = fixture();
+  const texts: string[] = [];
+  f.game.onEvent = (event) => {
+    const announcement = eventAnnouncement(f.game.view('overlay'), event);
+    if (announcement) texts.push(announcement.text);
+  };
+  const timeOut = () => {
+    f.advance(f.game.round!.duration + 1);
+    f.game.tick();
+  };
+  f.game.begin();
+  assert.equal(shouting(texts.at(-1)!), false, 'a fresh room starts cute');
+  assert.equal(strugglingAnnouncement(f.game.view('overlay')), null, 'no struggling before a loss');
+  for (let losses = 1; losses <= 3; losses++) {
+    timeOut();
+    assert.ok(shouting(texts.at(-1)!), `loss ${losses} is shouted: ${texts.at(-1)}`);
+    f.advance(60000);
+    f.game.begin();
+    assert.ok(shouting(texts.at(-1)!), `the round after loss ${losses} is shouted: ${texts.at(-1)}`);
+    assert.ok(shouting(strugglingAnnouncement(f.game.view('overlay'))!.text));
+  }
+  assert.match(texts.at(-2)!, /BAEITTRICE/, 'the third loss in a row is Baeittrice');
+  assert.match(whoText(f.game.view('overlay')), /BAEITTRICE/);
+  f.game.transcript(f.transcript());
+  assert.equal(shouting(texts.at(-1)!), false, `the comeback is cute: ${texts.at(-1)}`);
+  assert.match(texts.at(-1)!, /🎀/);
+  f.advance(60000);
+  f.game.begin();
+  assert.equal(shouting(texts.at(-1)!), false, 'a win resets the mood');
+});
+
 test('finished words are announced only for caught and escaped rounds, like OBS', () => {
   const f = fixture();
   const texts: string[] = [];
@@ -131,7 +179,7 @@ test('finished words are announced only for caught and escaped rounds, like OBS'
   f.game.begin();
   let word = f.game.round!.word;
   f.game.transcript(f.transcript());
-  assert.match(texts.at(-1)!, new RegExp(`Baited! The streamer said ${word.toUpperCase()} after`));
+  assert.match(texts.at(-1)!, new RegExp(`said ${word.toUpperCase()} after`));
   for (const outcome of ['skipped', 'ended'] as const) {
     f.advance(60000);
     f.game.begin();
@@ -144,7 +192,7 @@ test('finished words are announced only for caught and escaped rounds, like OBS'
   word = f.game.round!.word;
   f.advance(f.game.round!.duration + 1);
   f.game.tick();
-  assert.match(texts.at(-1)!, new RegExp(`The word was ${word.toUpperCase()}`));
+  assert.match(texts.at(-1)!, new RegExp(`WAS ${word.toUpperCase()}`));
 });
 
 test('demo rooms preview posts in the studio with Twitch pacing and newest-wins coalescing', async (t) => {
@@ -159,7 +207,7 @@ test('demo rooms preview posts in the studio with Twitch pacing and newest-wins 
   f.game.begin();
   assert.equal(recent().length, 1);
   assert.equal(recent()[0].status, 'preview');
-  assert.match(recent()[0].text, /Round 1 is live: 2:00 on the clock/);
+  assert.match(recent()[0].text, /round 1\b.*2:00 on the clock/i);
   // Within the per-channel gap, state changes coalesce to the latest one.
   f.game.pause();
   f.game.resume();
@@ -169,7 +217,7 @@ test('demo rooms preview posts in the studio with Twitch pacing and newest-wins 
   now += LIMITS.channelGap;
   bot.tick(f.game);
   assert.equal(recent().length, 2);
-  assert.match(recent()[0].text, /Round paused/);
+  assert.match(recent()[0].text, /^⏸ .*the clock is frozen/i);
   now += LIMITS.channelGap;
   bot.tick(f.game);
   assert.equal(recent().length, 2);
@@ -195,7 +243,7 @@ test('demo rooms preview posts in the studio with Twitch pacing and newest-wins 
   now += LIMITS.channelWindow;
   bot.tick(f.game);
   assert.equal(recent().length, LIMITS.channelCount);
-  assert.equal(recent().filter((post) => post.text.startsWith('baited:')).length, 1);
+  assert.equal(recent().filter((post) => post.text.endsWith('!bait top · !bait who')).length, 1);
   assert.ok(recent().every((post) => !matches(post.text, f.game.round!.word)));
 });
 
@@ -216,14 +264,41 @@ test('timer nudges fire once per round: halfway and the final ten seconds', asyn
   step(59000);
   assert.equal(bot.status(f.game).recent.length, 1);
   step(2000);
-  assert.match(bot.status(f.game).recent[0].text, /^⏳ Halfway: 0:59 left and nobody is baiting yet\./);
+  assert.match(bot.status(f.game).recent[0].text, /^⏱ halfway.*0:59.*nobody is baiting yet/i);
   step(2000);
   step(46000);
-  assert.equal(bot.status(f.game).recent.length, 2);
+  assert.equal(bot.status(f.game).recent.length, 2, 'a chat that has not lost gets no struggling nudge');
   step(2000);
-  assert.match(bot.status(f.game).recent[0].text, /10 seconds left/);
+  assert.match(bot.status(f.game).recent[0].text, /^🔥 (10|ten) seconds/i);
   step(1000);
   assert.equal(bot.status(f.game).recent.length, 3);
+});
+
+test('a losing chat gets one struggling nudge three quarters in', async (t) => {
+  const store = await tempStore(t);
+  const f = fixture();
+  f.game.data.settings.chatBot = true;
+  let now = 7_000_000;
+  const bot = new ChatBot({ config: loadConfig({}), store, ready: () => null, clock: () => now });
+  f.game.onEvent = (event) => bot.event(f.game, event);
+  const step = (ms: number) => {
+    f.advance(ms);
+    now += ms;
+    f.game.tick();
+    bot.tick(f.game);
+  };
+  f.game.begin();
+  step(f.game.round!.duration + 1);
+  step(60000);
+  f.game.begin();
+  step(61000);
+  assert.match(bot.status(f.game).recent[0].text, /^⏱ HALFWAY/);
+  step(29000);
+  const struggling = bot.status(f.game).recent[0].text;
+  assert.match(struggling, /0:30 LEFT/);
+  assert.ok(shouting(struggling));
+  step(5000);
+  assert.equal(bot.status(f.game).recent[0].text, struggling, 'once per round');
 });
 
 function twitchBot(
@@ -293,7 +368,7 @@ test('Twitch delivery uses an app token, the bot as sender, and refreshes once o
   const body = JSON.parse(String(messages[1].init?.body));
   assert.equal(body.broadcaster_id, '123');
   assert.equal(body.sender_id, '999');
-  assert.match(body.message, /Round 1 is live/);
+  assert.match(body.message, /round 1\b/i);
   assert.equal(matches(body.message, game.round!.word), false);
   assert.equal(bot.status(game).recent[0].status, 'sent');
   assert.equal(bot.status(game).problem, null);
@@ -305,7 +380,7 @@ test('Twitch delivery uses an app token, the bot as sender, and refreshes once o
   assert.equal(calls.filter((call) => call.url.endsWith('/oauth2/token')).length, 2);
   const reply = calls.filter((call) => call.url.endsWith('/helix/chat/messages')).at(-1)!;
   assert.equal(JSON.parse(String(reply.init?.body)).reply_parent_message_id, 'parent-message');
-  assert.match(JSON.parse(String(reply.init?.body)).message, /^Chat has 0 wins in 0 rounds/);
+  assert.match(JSON.parse(String(reply.init?.body)).message, /^📊 .*0 won.*0 played/);
 });
 
 test('held, refused and rate-limited messages surface in the studio without retry storms', async (t) => {
@@ -353,7 +428,7 @@ test('held, refused and rate-limited messages surface in the studio without retr
   await flush();
   assert.equal(posts(), limited + 1);
   assert.equal(bot.status(game).recent[0].status, 'sent');
-  assert.match(bot.status(game).recent[0].text, /Back on/);
+  assert.match(bot.status(game).recent[0].text, /^▶ .*left/);
   assert.equal(bot.status(game).problem, null);
 });
 
@@ -395,7 +470,7 @@ test('moderator commands need the setting, a moderator and the studio readiness'
   reason = "The streamer's microphone is off. Turn it on in the studio first.";
   bot.chat(f.game, mod('!bait start'));
   assert.equal(f.game.phase, 'idle');
-  assert.match(bot.status(f.game).recent[0].text, /^@ModName The streamer's microphone is off/);
+  assert.match(bot.status(f.game).recent[0].text, /^@ModName .*The streamer's microphone is off/);
   reason = null;
   bot.chat(f.game, message('!bait start', { userId: 'owner' }));
   assert.equal(f.game.phase, 'active', 'the broadcaster needs no badge');
@@ -408,7 +483,7 @@ test('moderator commands need the setting, a moderator and the studio readiness'
     now += LIMITS.channelGap;
     bot.tick(f.game);
   }
-  assert.ok(bot.status(f.game).recent.some((post) => /^@ModName Finish the current round first\./.test(post.text)));
+  assert.ok(bot.status(f.game).recent.some((post) => /^@ModName .*Finish the current round first\./.test(post.text)));
   // With announcements off, commands still work but nothing is posted.
   f.game.data.settings.chatBot = false;
   const posted = bot.status(f.game).recent.length;

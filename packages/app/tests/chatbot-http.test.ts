@@ -98,7 +98,7 @@ test('demo studio previews bot posts and accepts moderator commands from simulat
   studio = await (await json('/api/studio', undefined, undefined, cookie)).json();
   assert.equal(studio.room.phase, 'active');
   const word = bait.rooms.get(studio.room.id)!.round!.word;
-  assert.match(studio.chatBot.recent[0].text, /Round 1 is live/);
+  assert.match(studio.chatBot.recent[0].text, /round 1\b/i);
   assert.equal(studio.chatBot.recent[0].status, 'preview');
   assert.equal(matches(JSON.stringify(studio.chatBot), word), false);
 
@@ -108,9 +108,9 @@ test('demo studio previews bot posts and accepts moderator commands from simulat
   // The pause announcement waits out the per-channel gap, then the ticker posts it.
   await new Promise((resolve) => setTimeout(resolve, 1500));
   studio = await (await json('/api/studio', undefined, undefined, cookie)).json();
-  assert.match(studio.chatBot.recent[0].text, /Round paused/);
+  assert.match(studio.chatBot.recent[0].text, /the clock is frozen/i);
   assert.equal(matches(JSON.stringify(studio.chatBot), word), false);
   // Public projections never carry the bot's feed.
   const publicView = await (await json(`/api/rooms/${studio.room.id}/viewer`)).text();
-  assert.doesNotMatch(publicView, /"recent"|Round paused/);
+  assert.doesNotMatch(publicView, /"recent"|clock is frozen/i);
 });
