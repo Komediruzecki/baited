@@ -3,6 +3,7 @@ import type { SessionInfo } from '../shared/types';
 import { productBrand } from './ui';
 import { CardArt } from './CardArt';
 import { PixelRevealArt } from './PixelRevealArt';
+import { GlassField, GlassLens, type GlassSize } from './CardGlass';
 import { SoundControls } from './SoundControls';
 import { contexts, editions, exactClues, generic, isEdition, parsePicks, reviewDeck, stateLabel, states, type CardState, type Context, type Edition, type Picks, type ReviewEntry } from './card-lab-model';
 import { backs, finishes, logoModes, finishHost, backShowsLogo, type FinishId, type BackId, type LogoMode } from './card-finish-catalogue';
@@ -25,7 +26,8 @@ function Pips({ difficulty }: { difficulty: string }) {
   return <span className="cl-pips" role="img" aria-label={`${difficulty} difficulty`}>{[1, 2, 3].map(index => <i key={index} data-filled={index <= count} />)}</span>;
 }
 
-function FinishLayer({ finish }: { finish: FinishId }) {
+function FinishLayer({ finish, size }: { finish: FinishId; size: GlassSize }) {
+  if (finish === 'glass') return <span className="cl-card__finish" aria-hidden="true"><GlassField size={size} /></span>;
   const asset = finishes.find(item => item.id === finish)!.asset;
   return asset ? <span className="cl-card__finish" aria-hidden="true"><img src={asset} alt="" decoding="async" loading="lazy" /></span> : null;
 }
@@ -33,8 +35,8 @@ function BackLayers({ back, logo, fan = false }: { back: BackId; logo: LogoMode;
   const asset = backs.find(item => item.id === back)!.asset;
   return <>{asset && <img className={fan ? 'cl-fan__art' : 'cl-card__back-art'} src={asset} alt="" decoding="async" loading="lazy" />}{backShowsLogo(back, logo) && <span className={fan ? 'cl-fan__mark' : 'cl-card__back-mark'}><span className="baited-glyph" aria-hidden="true" /></span>}</>;
 }
-type CardProps = { edition: Edition; entry: ReviewEntry; state: CardState; time: number; back: boolean; large?: boolean; compact?: boolean; wide?: boolean; labels: boolean; alwaysWord: boolean; whiteWord: boolean; round: number; mission: boolean; crisp: boolean; reducedMotion: boolean; finish: FinishId; backStyle: BackId; logo: LogoMode };
-function EditionCard({ edition, entry, state, time, back, large, compact, wide, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion, finish, backStyle, logo }: CardProps) {
+type CardProps = { edition: Edition; entry: ReviewEntry; state: CardState; time: number; back: boolean; large?: boolean; compact?: boolean; wide?: boolean; labels: boolean; alwaysWord: boolean; whiteWord: boolean; round: number; mission: boolean; crisp: boolean; reducedMotion: boolean; finish: FinishId; backStyle: BackId; logo: LogoMode; bend?: boolean };
+function EditionCard({ edition, entry, state, time, back, large, compact, wide, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion, finish, backStyle, logo, bend = true }: CardProps) {
   const [revealed, setRevealed] = useState(false);
   const [legend, setLegend] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -75,16 +77,18 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
   const clockLabel = state === 'reconnecting' ? '—:—' : elapsedState ? stateLabel(state) : clock(effectiveTime);
   const rail = <header className="cl-card__rail"><span>{picture ? 'Experiment' : `Round ${String(round).padStart(2, '0')}`}</span><Pips difficulty={entry.difficulty} /></header>;
   const foilPlate = effective === 'foil' && activeFinish !== 'stock';
-  return <article ref={card} className="cl-card" data-edition={effective} data-layout={layout} data-size={compact ? 'xs' : large ? 'l' : 's'} data-face={faceDown ? 'back' : 'front'} data-state={state} data-crisp={crisp} data-urgent={urgent || undefined} data-host={host} data-finish={activeFinish} data-back={backStyle} data-logo={logo}
+  const size: GlassSize = compact ? 'xs' : large ? 'l' : 's';
+  return <article ref={card} className="cl-card" data-edition={effective} data-layout={layout} data-size={size} data-face={faceDown ? 'back' : 'front'} data-state={state} data-crisp={crisp} data-urgent={urgent || undefined} data-host={host} data-finish={activeFinish} data-back={backStyle} data-logo={logo}
     aria-label={faceDown ? 'Face-down Baited card' : picture && !showWord ? `Picture experiment. ${word.length} letters. ${entry.difficulty}.` : `${word}. ${entry.difficulty}.${clues.length ? ` Keep out of chat: ${clues.join(', ')}.` : ' Only the target is off limits.'}`}
     style={{ '--chars': Math.max(word.length, 1), '--word-ink': whiteWord ? '#fffdf7' : entry.ink, '--clock-left': `${Math.max(0, Math.min(1, effectiveTime / 120)) * 100}%` } as React.CSSProperties}
     onPointerMove={tilt} onPointerLeave={resetTilt} onPointerCancel={resetTilt} onPointerUp={resetTilt}>
-    <div className="cl-card__cut" aria-hidden="true">{host === 'slab' && !faceDown && <FinishLayer finish={activeFinish} />}</div><div className="cl-card__foil" aria-hidden="true" />
-    {!faceDown && host === 'full' && <FinishLayer finish={activeFinish} />}<span className="cl-card__sheen" aria-hidden="true" />
+    <div className="cl-card__cut" aria-hidden="true">{host === 'slab' && !faceDown && <FinishLayer finish={activeFinish} size={size} />}</div><div className="cl-card__foil" aria-hidden="true" />
+    {!faceDown && host === 'full' && <FinishLayer finish={activeFinish} size={size} />}<span className="cl-card__sheen" aria-hidden="true" />
     {!faceDown && activeFinish === 'velvet' && [0, 1, 2, 3].map(index => <span className="cl-card__gem" data-corner={index} key={index} aria-hidden="true" />)}
     {faceDown ? <div className={`cl-card__back${backStyle !== 'current' ? ' cl-card__back--custom' : ''}`}><BackLayers back={backStyle} logo={logo} /></div> : <>
       {!foilPlate && rail}
       <div className="cl-card__art">
+        {activeFinish === 'glass' && <GlassLens size={size} bend={bend} />}
         <svg className="cl-card__aperture" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M.5 .5H88L99.5 12V99.5H.5Z" /><path d="M4 4H86L96 14V96H4Z" /></svg>
         {entry.synthetic ? <div className="cl-card__generic" aria-hidden="true">Aa</div> : pixelReveal ? <PixelRevealArt key={`${effective}-${entry.word}`} word={entry.word} disabled={reducedMotion || state === 'paused' || state === 'reconnecting'} /> : <CardArt word={entry.word} />}
         {effective === 'pixel' && <span className="cl-card__curtain" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <i key={index} style={{ '--tile-delay': `${((index * 17) % 36) * 6}ms` } as React.CSSProperties} />)}</span>}
@@ -188,6 +192,7 @@ export default function CardDesignLab({ session, standalone = false }: { session
   const [whiteWord, setWhiteWord] = useState(false);
   const [mission, setMission] = useState(false);
   const [crisp, setCrisp] = useState(true);
+  const [bend, setBend] = useState(() => initial.get('refraction') !== 'off');
   const [scrub, setScrub] = useState(2.5);
   const [picks, setPicks] = useState<Picks>(() => { try { return parsePicks(localStorage.getItem(storageKey)); } catch { return parsePicks(null); } });
   const [saveStatus, setSaveStatus] = useState('Choices stay in this browser.');
@@ -202,9 +207,9 @@ export default function CardDesignLab({ session, standalone = false }: { session
   useEffect(() => {
     if (!allowed) return;
     const url = new URL(location.href);
-    for (const [key, value] of Object.entries({ edition, word, state, ctx: context, compare: compare ? '1' : '0', t: String(time), motion: motion ? 'reduced' : 'full', finish: surfaces.finish, back: surfaces.back, logo: surfaces.logo, view })) url.searchParams.set(key, value);
+    for (const [key, value] of Object.entries({ edition, word, state, ctx: context, compare: compare ? '1' : '0', t: String(time), motion: motion ? 'reduced' : 'full', finish: surfaces.finish, back: surfaces.back, logo: surfaces.logo, view, refraction: bend ? 'on' : 'off' })) url.searchParams.set(key, value);
     history.replaceState(null, '', url);
-  }, [allowed, edition, word, state, context, compare, time, motion, surfaces.finish, surfaces.back, surfaces.logo, view]);
+  }, [allowed, edition, word, state, context, compare, time, motion, surfaces.finish, surfaces.back, surfaces.logo, view, bend]);
   const saveSurfaces = (next: SurfaceReview) => {
     const clean = parseSurfaceReview(JSON.stringify({ ...next, updatedAt: new Date().toISOString() })); setSurfaces(clean);
     try { localStorage.setItem(CARD_SURFACE_STORAGE_KEY, JSON.stringify(clean)); setSurfaceStatus('Finish and back choices saved in this browser.'); } catch { setSurfaceStatus('Storage is unavailable. Download the full review to keep your choices.'); }
@@ -226,7 +231,7 @@ export default function CardDesignLab({ session, standalone = false }: { session
   const download = () => { const url = URL.createObjectURL(new Blob([exportChoices], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `baited-card-choices-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
   const fullReview = JSON.stringify({ editions: picks, surfaces }, null, 2);
   const downloadReview = () => { const url = URL.createObjectURL(new Blob([fullReview], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `baited-full-card-review-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  const props: CardProps = { edition, entry, state, time, back, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion: motion, finish: surfaces.finish, backStyle: surfaces.back, logo: surfaces.logo };
+  const props: CardProps = { edition, entry, state, time, back, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion: motion, finish: surfaces.finish, backStyle: surfaces.back, logo: surfaces.logo, bend };
   if (!allowed) return <main className="card-lab"><div className="cl-closed">{productBrand}<h1>Card lab is local.</h1><p>Open the local preview without Twitch credentials to compare editions. The game never reads these examples.</p><a href="/">Back to Baited</a></div></main>;
   return <main className="card-lab">
     <header className="cl-top"><a href="/" aria-label={standalone ? 'Baited website' : 'Baited Studio'}>{productBrand}</a><nav aria-label="Card lab tools"><button type="button" aria-pressed={view === 'stage'} onClick={() => setView('stage')}>Stage</button><button type="button" aria-pressed={view === 'gallery'} onClick={() => setView('gallery')}>Gallery</button>{view === 'stage' && <><button type="button" aria-pressed={compare} onClick={() => setCompare(value => !value)}>Compare</button><button type="button" aria-pressed={back} onClick={() => setBack(value => !value)}>{back ? 'Show front' : 'Show back'}</button></>}<button type="button" onClick={() => setReplay(value => value + 1)}>Replay deal</button><a href="#cl-picks">Your picks</a></nav><a className="cl-product-link" href={standalone ? '/' : '/product-review'}>{standalone ? 'Back to Baited' : 'Product screens'}</a></header>
@@ -250,6 +255,7 @@ export default function CardDesignLab({ session, standalone = false }: { session
           <label className="cl-check"><input type="checkbox" checked={alwaysWord} onChange={event => setAlwaysWord(event.target.checked)} />Always show Picture’s word</label>
           <label className="cl-check"><input type="checkbox" checked={whiteWord} onChange={event => setWhiteWord(event.target.checked)} />White words instead of item colors</label>
           <label className="cl-check"><input type="checkbox" checked={crisp} onChange={event => setCrisp(event.target.checked)} />Crisp pixel rendering</label>
+          {surfaces.finish === 'glass' && <label className="cl-check"><input type="checkbox" checked={bend} onChange={event => setBend(event.target.checked)} />Bend glass</label>}
           <label className="cl-check"><input type="checkbox" checked={mission} onChange={event => setMission(event.target.checked)} />Example three-word mission</label>
         </div></details>
       </aside>

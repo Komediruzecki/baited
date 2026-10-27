@@ -12,9 +12,21 @@ Opus 5.5 completed its design inspection in **26m59s** through the owner-authori
 
 A second Opus 5.5 lead-design pass completed in **23m36s**, again with Max effort requested and a 45-minute bound. It defined the materials, composition rules and all seven image prompts. Read the [material design](card-surfaces-opus-design.md), [exact prompts](card-surface-prompts.json) and [asset provenance](card-surface-assets/README.md). Table Reveal × Engraved × Mosaic is its suggested first pairing, not an applied product choice.
 
+A third Opus 5.5 inspection completed in **23 minutes** and specified the code-only Glass finish from the supplied video reference. Max effort was requested within a 45-minute bound; effective effort was not reported. The first attempt ended from an external termination signal without an answer. Read the [Glass design](card-glass-opus-design.md) and [source observations](glass-reference.md). The adaptation displaces decorative lines under a smoked block, keeping sprites and text separate. **Bend glass** provides a flat/bent comparison without changing saved edition choices.
+
+## Glass inspection
+
+Local Chromium checks used the built standalone development bundle. The real **Bend glass** control visibly changed the ruled background while preserving the card, art and word boxes exactly. The 294×324px GHOST card in the 318×500 mock panel had identical rail, art, word and footer boxes to Stock. The transparent sprite loaded, and no foreground ancestor had a filter or backdrop filter.
+
+BANANA/Table Reveal and ARCHIPELAGO/Glance Plus fit the mock panel, GHOST/Cut fit the 190px Studio card, and VOLCANO/Table Reveal fit the 360px desktop card. At a 320×740 viewport, the gallery had a 305px document width and 255px cards with no horizontal overflow. All live SVG IDs were unique and their local filter references resolved. Forced-color emulation hid the Glass lens and its backing layer while keeping words visible. The inspected final panel reported no console warnings or errors.
+
+Six focused SVG tests passed, including 64 sibling lenses, resource-reference isolation, deterministic rendering and the flat fallback. Nine material-model tests passed. These are local Chromium and synthetic-host checks; Firefox, WebKit, physical phones and Twitch-hosted acceptance of Glass remain unverified. No idle performance trace was recorded.
+
+The earlier local Wrangler process also stopped unexpectedly during navigation. A safe supervisor now preserves its exit status and forwards structural diagnostics without messages or authentication headers; its six focused tests passed. This is diagnostic hardening, not a claimed fix for the unexplained exit. Fresh PR CI remains the complete gate before merge.
+
 ## Materials and backs
 
-The lab preserves all ten editions and adds six front finishes (Stock, Dither, Prism, Engraved, Velvet and Spotlight) and five back choices (Current, Dither, Mosaic, Prism and Seal). Seven generated textures are separate from the word, clues and original BAITED wordmark, which remain in code. Dither is generated deterministically in code. No generated lettering, hooks or bombs were introduced.
+The lab preserves all ten editions and adds seven front finishes (Stock, Dither, Prism, Engraved, Velvet, Spotlight and Glass) and five back choices (Current, Dither, Mosaic, Prism and Seal). Seven generated textures are separate from the word, clues and original BAITED wordmark, which remain in code. Dither is generated deterministically in code. No generated lettering, hooks or bombs were introduced.
 
 Use **Gallery** to compare the finishes, backs and six gameplay states. **Stage** keeps the exact panel, phone, desktop and Studio studies. Current, Pixel and Wide retain their own front stock; selecting a material from their gallery uses Table so the result matches its preview. Back choices work across editions. **As designed / On / Off** controls the wordmark on backs.
 
@@ -49,7 +61,6 @@ These are visual/demo previews. LAN HTTP does not provide the trusted secure con
 | **Foil** | A reflective frame that follows the pointer. The owner approved keeping it for a special edition; inspect touch and reduced-motion behavior too. |
 | **Wide** | A horizontal desktop card. It falls back to Table in smaller contexts; compare it in Desktop viewer. |
 | **Picture** | Experimental picture-led face with the exact word available on demand. Use “Always show Picture's word” to compare. Clues remain readable and the game still matches the exact target word. |
-
 | **Table Reveal** | Table with a 630 ms coarse-to-sharp artwork reveal. Text and clues stay sharp throughout. |
 | **Glance Plus** | Larger chat/clock/help symbols, larger artwork, clearer clue grouping and the same artwork reveal. Toggle the icon labels to compare. |
 
@@ -98,7 +109,7 @@ rtk proxy timeout --signal=TERM --kill-after=10s 10800s pnpm --dir /home/maff/fo
 Latest standalone Card Lab and landing:
 
 ```sh
-rtk proxy timeout --signal=TERM --kill-after=10s 10800s pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60/packages/landing exec wrangler dev --env dev --local --ip 192.168.178.33 --port 4374 --inspector-port 9374 --compatibility-date 2026-08-08
+rtk proxy timeout -s TERM -k 5s 10810s pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60/packages/landing exec node scripts/browser-server.mjs --host 0.0.0.0 --port 4374 --inspector-port 9374 --lifetime-ms 10800000
 ```
 
 Each session is bounded to **three hours**. **Ctrl+C** stops that terminal's preview sooner. The app and native scripts use strict ports; keep the landing and inspector on their explicit ports too. If a requested port is occupied, inspect the terminal/process owner and reuse the intended preview or stop that exact session. Do not kill unrelated processes or silently accept another port.

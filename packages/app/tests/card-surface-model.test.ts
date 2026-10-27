@@ -5,7 +5,7 @@ import { editions, parsePicks, type Picks } from '../client/card-lab-model';
 import { CARD_SURFACE_STORAGE_KEY, DEFAULT_SURFACE_SELECTION, MAX_SURFACE_PAIRINGS, emptySurfaceReview, parseSurfaceChoice, parseSurfaceReview, parseSurfaceUrl, type SurfaceReview, type SurfaceSelection } from '../client/card-surface-model';
 
 test('the catalogue contains exactly the approved materials and same-origin asset paths', () => {
-  assert.deepEqual(finishes.map(item => item.id), ['stock', 'dither', 'prism', 'engraved', 'velvet', 'spotlight']);
+  assert.deepEqual(finishes.map(item => item.id), ['stock', 'dither', 'prism', 'engraved', 'velvet', 'spotlight', 'glass']);
   assert.deepEqual(backs.map(item => item.id), ['current', 'dither', 'mosaic', 'prism', 'seal']);
   for (const item of [...finishes, ...backs]) {
     for (const path of [item.asset, item.swatch]) if (path) assert.match(path, /^\/card-lab\/(?:finishes|backs)\/[a-z-]+\.(?:webp|svg)$/);
@@ -81,6 +81,7 @@ test('arbitrary URLs, prototype properties and live-game fields cannot enter sel
 });
 
 test('URL state uses only known IDs and works without browser globals', () => {
+  assert.equal(parseSurfaceUrl('?finish=glass').finish, 'glass');
   assert.deepEqual(parseSurfaceUrl('?finish=velvet&back=seal&logo=off&view=gallery'), { finish: 'velvet', back: 'seal', logo: 'off', view: 'gallery' });
   assert.deepEqual(parseSurfaceUrl('?finish=https%3A%2F%2Fexample.invalid&back=__proto__&logo=true&view=https%3A%2F%2Fexample.invalid'), { ...DEFAULT_SURFACE_SELECTION, view: 'stage' });
   const params = new URLSearchParams('back=prism');

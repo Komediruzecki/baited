@@ -39,6 +39,8 @@ The approved original wordmark and upload-ready logo, icon and discovery exports
 
 The deck has 78 illustrated targets. [Card artwork and provenance](packages/app/public/cards/proofs/README.md) records the 18 original illustrations and the 60-card expansion. Artwork is separate from titles, clue restrictions and example questions. Run `node packages/app/scripts/sync-card-art.mjs --check` to verify the unchanged image copies used by the app, native Extension and landing. Updating the landing does not update an installed Twitch Extension; that requires a rebuilt ZIP and a new Hosted Test upload.
 
+The development-only [Card Lab](https://dev.baited.maff.app/card-lab/) compares card editions, materials, backs and gameplay states at panel, phone and Studio sizes. It uses synthetic rounds, and review choices stay in that browser without changing the game. The route and its assets are excluded from production. See [the design and test record](packages/app/docs/card-product-review.md) for local previews, Opus's direction and the checks completed so far.
+
 ## Deployment and access
 
 The landing workflow deploys `main` to dev. Production requires an annotated `bait-vX.Y.Z` tag matching `packages/landing/package.json` and pointing to a commit on `main`. The repository variable `LANDING_DEPLOY_ENABLED` must be `true`. See [deployment ownership and secrets](docs/landing-deployment.md).

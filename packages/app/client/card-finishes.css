@@ -17,6 +17,9 @@
 .cl-card[data-finish=engraved] { --finish-base:#1c1328; --plate:#1a1422; --plate-edge:#c9a8ff4d; }
 .cl-card[data-finish=velvet] { --finish-base:#140c1f; --plate:#211d26; --plate-edge:#d9cfe826; }
 .cl-card[data-finish=spotlight] { --finish-base:#120d1a; --plate:#16121c; --plate-edge:#c9a8ff99; }
+.cl-card[data-finish=glass] { --finish-base:#120d1a; --plate:#1a1522; --plate-edge:#fffdf747; --glass-radius:12px 20px 12px 12px; }
+.cl-card[data-finish=glass][data-size=l] { --glass-radius:14px 24px 14px 14px; }
+.cl-card[data-finish=glass][data-size=xs] { --glass-radius:8px 14px 8px 8px; }
 
 .cl-card__plate { display:contents; }
 .cl-card__finish {
@@ -90,6 +93,26 @@
 }
 .cl-card[data-finish=spotlight] .cl-card__finish { box-shadow:inset 0 0 0 var(--surface-frame) #100c17; }
 .cl-card[data-finish=spotlight] .cl-card__finish>img { position:relative; z-index:-1; }
+
+/* Glass bends only a decorative copy of its own ruled light. */
+.cl-card[data-finish=glass] .cl-card__finish {
+  background:radial-gradient(70% 36% at 100% 0,#c9a8ff59,#c9a8ff00),linear-gradient(#9146ff,#5b25c2 30%,#2a1160 56%,#120d1a 82%);
+}
+.cl-glass-field,.cl-glass__bend { position:absolute; display:block; pointer-events:none; }
+.cl-glass-field { inset:0; width:100%; height:100%; }
+.cl-glass {
+  position:absolute; inset:0 -10% -10%; z-index:-1; display:block; overflow:clip;
+  pointer-events:none; border-radius:var(--glass-radius);
+  box-shadow:0 0 0 1px #0d0a12b3,0 10px 18px -10px #05030a;
+}
+/* Explicit SVG dimensions and bleed keep the displaced copy underneath the rim. */
+.cl-glass__bend { top:-28px; left:-28px; width:calc(100% + 56px); height:calc(100% + 56px); }
+.cl-glass::after {
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  background:radial-gradient(closest-side at 50% 46%,#0d0a12a6,#0d0a124d 72%,#0d0a121a);
+  box-shadow:inset 0 1px 0 #fffdf75c,inset 1px 0 0 #fffdf71f,inset 0 0 0 var(--surface-pixel) #c9a8ff12;
+}
+.cl-card[data-host=slab] .cl-glass { bottom:12px; }
 
 /* Cut's material ends above the word even when its card grows for a result. */
 .cl-card[data-host=slab]:not([data-finish=stock]) {
@@ -181,7 +204,7 @@
   .cl-card__sheen,.cl-card__back--custom::before,.cl-fan::before { display:none!important; animation:none!important; }
 }
 @media(forced-colors:active) {
-  .cl-card__finish,.cl-card__sheen,.cl-card__aperture,.cl-card__gem,.cl-card__art::before,
+  .cl-card__finish,.cl-card__sheen,.cl-card__aperture,.cl-card__gem,.cl-card__art::before,.cl-glass,
   .cl-card__information::before,.cl-card::after,.cl-card__back-art,.cl-fan__art,
   .cl-card__back--custom::before,.cl-fan::before { display:none!important; }
   .cl-card[data-host=full]:not([data-finish=stock])[data-face=front],.cl-card__back--custom { background:Canvas; }

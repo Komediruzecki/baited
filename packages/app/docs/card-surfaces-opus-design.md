@@ -6,6 +6,8 @@ I've specified a set of 4 generated fronts and 3 generated backs. Fronts are **P
 
 I read the sources, all six listed screenshots, the two back captures and six illustrations. I didn't run a browser, take measurements or generate images, so every visual outcome below is a hypothesis until Codex inspects it.
 
+A subsequent [Glass design inspection](card-glass-opus-design.md) adds a seventh code-only front finish. The collection below records this earlier six-finish specification.
+
 ## 1. Critique
 
 **What I saw**

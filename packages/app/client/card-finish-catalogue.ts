@@ -8,6 +8,7 @@ export const finishes = [
   { id: 'engraved', name: 'Engraved', note: 'Security print for a secret word.', source: 'generated', asset: '/card-lab/finishes/front-engraved.webp', swatch: '/card-lab/finishes/front-engraved-swatch.webp' },
   { id: 'velvet', name: 'Velvet', note: 'The item on display, in a velvet niche.', source: 'generated', asset: '/card-lab/finishes/front-velvet.webp', swatch: '/card-lab/finishes/front-velvet-swatch.webp' },
   { id: 'spotlight', name: 'Spotlight', note: 'Two-ink poster burst for the big moment.', source: 'generated', asset: '/card-lab/finishes/front-spotlight.webp', swatch: '/card-lab/finishes/front-spotlight-swatch.webp' },
+  { id: 'glass', name: 'Glass', note: 'Smoked glass block. The lines behind it bend.', source: 'code', asset: null, swatch: null },
 ] as const;
 
 export const backs = [
