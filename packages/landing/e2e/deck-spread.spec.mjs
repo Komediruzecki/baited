@@ -1,4 +1,5 @@
 import { test, expect } from 'playwright/test'
+import { writeFile } from 'node:fs/promises'
 
 async function parkInDeckPin(page) {
   await page.evaluate(() => {
@@ -35,7 +36,7 @@ async function prepareDeck(browser, baseURL, { width = 1440, height = 900, touch
       new MutationObserver(records => { for (const record of records) if (record.type === 'childList' || record.type === 'characterData') probe.status.push(status.textContent) }).observe(status, { childList: true, characterData: true, subtree: true })
       for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) document.addEventListener(type, event => {
         if (!event.target.closest?.('#deck-hand')) return
-        probe.events.push({ type, trusted: event.isTrusted, pointerType: event.pointerType, target: event.target.matches('.card-word') ? 'word' : event.target.id === 'deck-hand' ? 'hand' : 'other' })
+        probe.events.push({ type, trusted: event.isTrusted, pointerType: event.pointerType, target: event.target.matches('.card-word') ? 'word' : event.target.id === 'deck-hand' ? 'hand' : 'other', time: performance.now(), inputTime: event.timeStamp, x: event.clientX, mode: window.__baitedSpread.mode, position: window.__baitedSpread.position })
       })
     })
     return { context, page, errors, client: touch ? await context.newCDPSession(page) : null }
@@ -105,8 +106,17 @@ async function dragTouch(page, client, { distance = 260, duration = 600, end = t
   const start = { x: word.x + word.width - 8, y: word.y + word.height / 2 }
   expect(start.x - distance, 'the finger path stays inside the physical viewport').toBeGreaterThanOrEqual(8)
   expect(await page.evaluate(point => document.elementFromPoint(point.x, point.y)?.matches('.card-word'), start)).toBe(true)
+  if (duration < 260 && end) {
+    // Let Chromium schedule this fast, trusted gesture. Serial protocol calls
+    // include paint/transport cost and can turn 150ms into a 700ms slow drag.
+    await client.send('Input.synthesizeScrollGesture', {
+      ...start, xDistance: -distance, speed: Math.round(distance / (duration / 1000)),
+      gestureSourceType: 'touch', preventFling: false,
+    })
+    return
+  }
   await touch(client, 'touchStart', start)
-  const steps = duration < 260 ? 6 : 20
+  const steps = 20
   for (let index = 1; index <= steps; index++) {
     // These intervals author the gesture's speed, not a readiness workaround.
     await page.waitForTimeout(duration / steps)
@@ -137,7 +147,18 @@ test('390px: a deliberate trusted touch opens the ribbon without descendant capt
 test('390px: a fast large trusted swipe stays an ordinary fan flick', async ({ browser }, testInfo) => {
   const { context, page, errors, client } = await prepareDeck(browser, testInfo.project.use.baseURL, { width: 390, height: 844, touch: true })
   try {
+    const cpuRate = Number(process.env.BAITED_TOUCH_CPU_RATE || 1)
+    await client.send('Emulation.setCPUThrottlingRate', { rate: cpuRate })
     await dragTouch(page, client, { duration: 150 })
+    const gesture = await page.evaluate(() => window.__ribbonProbe.events)
+    const down = gesture.find(event => event.type === 'pointerdown')
+    const up = gesture.find(event => event.type === 'pointerup')
+    const moves = gesture.filter(event => event.type === 'pointermove')
+    const measured = { cpuRate, requestedDurationMs: 150, handledDurationMs: up.time - down.time, inputDurationMs: up.inputTime - down.inputTime, movingDurationMs: moves.at(-1).inputTime - moves[0].inputTime, finalMode: await mode(page), finalPosition: await position(page), events: gesture }
+    await writeFile(testInfo.outputPath('fast-touch-timing.json'), JSON.stringify(measured, null, 2))
+    console.log('fast-touch-timing', JSON.stringify({ ...measured, events: undefined }))
+    expect(measured.inputDurationMs, 'the trusted input remains a fast gesture under CPU load').toBeLessThan(260)
+    expect(moves.every(event => event.x >= 8 && event.x <= 382), 'the native touch path stays inside the physical viewport').toBe(true)
     await expect(page.locator('.deck-card-item.is-front .card-word')).toHaveText('BANANA')
     expect(await mode(page)).toBe('fan')
     await expect(page.locator('#deck-hand')).not.toHaveClass(/is-ribbon-open|is-dragging/)
@@ -165,13 +186,16 @@ test('390px: trusted pointer cancellation folds the ribbon and leaves no drift r
 test('mouse opening drifts, Pause holds still, and Play resumes without hover pausing', async ({ browser }, testInfo) => {
   const { context, page, errors } = await prepareDeck(browser, testInfo.project.use.baseURL)
   try {
+    const cpuRate = Number(process.env.BAITED_TOUCH_CPU_RATE || 1)
+    await (await context.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: cpuRate })
     await page.getByRole('button', { name: 'spread the deck', exact: true }).click()
     await expect.poll(() => mode(page)).toBe('cruise')
-    const before = await position(page)
-    const started = Date.now()
+    const before = await page.evaluate(() => ({ position: window.__baitedSpread.position, at: performance.now() }))
     await page.waitForTimeout(2000)
-    const elapsed = (Date.now() - started) / 1000
-    const speed = ((await position(page)) - before) / elapsed
+    const afterDrift = await page.evaluate(() => ({ position: window.__baitedSpread.position, at: performance.now() }))
+    const elapsed = (afterDrift.at - before.at) / 1000
+    const speed = (afterDrift.position - before.position) / elapsed
+    await writeFile(testInfo.outputPath('cruise-timing.json'), JSON.stringify({ cpuRate, before, after: afterDrift, elapsedSeconds: elapsed, cardsPerSecond: speed }, null, 2))
     expect(speed).toBeGreaterThanOrEqual(0.22)
     expect(speed).toBeLessThanOrEqual(0.28)
     expect((await inspectSpread(page)).announcements).toEqual([])

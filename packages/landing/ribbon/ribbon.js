@@ -24,7 +24,7 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   let tMotion = null
   let pMotion = null
   let frame = 0
-  let lastTime = 0
+  let lastTime = null
   let idleTimer = 0
   let leaveTimer = 0
   let openingTimer = 0
@@ -69,7 +69,7 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   function stopFrame() {
     cancelAnimationFrame(frame)
     frame = 0
-    lastTime = 0
+    lastTime = null
   }
   function clearTimers() {
     clearTimeout(idleTimer)
@@ -135,12 +135,15 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     return open && !document.hidden && (tMotion || pMotion || mode === 'cruise' || mode === 'coast')
   }
   function requestFrame() {
-    if (!frame && needsFrame()) frame = requestAnimationFrame(tick)
+    if (!frame && needsFrame()) {
+      if (lastTime === null) lastTime = performance.now()
+      frame = requestAnimationFrame(tick)
+    }
   }
   function tick(now) {
     frame = 0
     if (destroyed || document.hidden || !open) return
-    const dt = Math.min(34, lastTime ? now - lastTime : 0) / 1000
+    let dt = Math.max(0, now - (lastTime ?? now)) / 1000
     lastTime = now
     if (tMotion) {
       const motion = tMotion
@@ -150,6 +153,8 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
         tMotion = null
         hand.classList.remove('is-ribbon-changing')
         if (!motion.to) return landInFan()
+        // Only the part of this frame after unfolding belongs to the drift.
+        dt = Math.min(dt, Math.max(0, now - motion.start - motion.duration) / 1000)
         mode = gesture ? 'grab' : userPaused ? 'paused' : 'coast'
         syncControls()
       }
@@ -169,14 +174,19 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
       }
     } else if (!gesture && !tMotion && (mode === 'coast' || mode === 'cruise')) {
       const target = userPaused ? 0 : .25
-      velocity = target + (velocity - target) * Math.exp(-dt / (mode === 'coast' ? .42 : .6))
-      state.p += velocity * dt
+      const duration = mode === 'coast' ? .42 : .6
+      const difference = velocity - target
+      const decay = Math.exp(-dt / duration)
+      // Integrating the decay keeps both distance and speed tied to elapsed
+      // visible time, even when a busy frame takes longer than the usual 16ms.
+      state.p += target * dt + difference * duration * (1 - decay)
+      velocity = target + difference * decay
       if (userPaused && Math.abs(velocity) < .05) glide(Math.round(state.p), false, 320)
       else if (!userPaused && Math.abs(velocity - target) < .01) mode = 'cruise'
     }
     draw()
     requestFrame()
-    if (!frame) lastTime = 0
+    if (!frame) lastTime = null
   }
   function transition(to, milliseconds) {
     if (reduced.matches || !options.gsap) {

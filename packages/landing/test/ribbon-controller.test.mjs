@@ -70,10 +70,10 @@ function platform() {
     },
     get frames() { return frames.size },
     get timers() { return timers.size },
-    advance(milliseconds) {
+    advance(milliseconds, frameInterval = 16) {
       const end = now + milliseconds
       while (now < end) {
-        now = Math.min(end, now + 16)
+        now = Math.min(end, now + frameInterval)
         const due = [...timers].filter(([, timer]) => timer.at <= now).sort((left, right) => left[1].at - right[1].at)
         for (const [key, timer] of due) if (timers.delete(key)) timer.callback()
         const requested = [...frames]
@@ -249,4 +249,55 @@ test('a paused ribbon refresh warms its expanded art window without advancing th
   assert.equal(view.api.mode, 'paused')
   assert.equal(view.clock.frames, 0)
   assert.equal(view.clock.timers, 0)
+})
+
+test('visible cruise travels at the same wall-time pace with normal and delayed frames', async t => {
+  const samples = []
+  for (const frameInterval of [16, 50, 100]) {
+    await t.test(`${frameInterval}ms visible frame interval`, subtest => {
+      const view = scene(subtest)
+      view.api.spread({ paused: true })
+      view.clock.advance(700)
+      assert.equal(view.api.mode, 'paused')
+      const from = view.api.position
+      view.api.play()
+      view.clock.advance(2_000, frameInterval)
+      const startupTravel = view.api.position - from
+      assert.ok(startupTravel > 0, 'play visibly advances the cards during startup')
+      view.clock.advance(1_000, frameInterval)
+      const steadyFrom = view.api.position
+      view.clock.advance(2_000, frameInterval)
+      const steadyTravel = view.api.position - steadyFrom
+      samples.push({ frameInterval, startupTravel, steadyTravel })
+      assert.ok(Math.abs(steadyTravel - .5) < .005,
+        `${frameInterval}ms frames moved ${steadyTravel} cards in two seconds; cruise should move approximately half a card`)
+      assert.equal(view.api.mode, 'cruise')
+      assert.equal(view.clock.document.hidden, false)
+    })
+  }
+  const startup = samples.map(sample => sample.startupTravel)
+  const steady = samples.map(sample => sample.steadyTravel)
+  assert.ok(Math.max(...startup) - Math.min(...startup) < .005,
+    `startup travel must depend on elapsed time rather than frame count: ${JSON.stringify(samples)}`)
+  assert.ok(Math.max(...steady) - Math.min(...steady) < .005,
+    `steady cruise must depend on elapsed time rather than frame count: ${JSON.stringify(samples)}`)
+})
+
+test('direct spreading starts its cruise at the same elapsed time across visible frame intervals', async t => {
+  const samples = []
+  for (const frameInterval of [16, 50, 100, 250]) {
+    await t.test(`${frameInterval}ms visible frame interval`, subtest => {
+      const view = scene(subtest)
+      view.api.spread()
+      view.clock.advance(2_000, frameInterval)
+      samples.push({ frameInterval, position: view.api.position })
+      assert.ok(view.api.position > 0 && view.api.position < .5, 'the deck unfolds before beginning its slow cruise')
+      assert.equal(view.api.openness, 1)
+      assert.equal(view.api.mode, 'cruise')
+      assert.equal(view.clock.document.hidden, false)
+    })
+  }
+  const positions = samples.map(sample => sample.position)
+  assert.ok(Math.max(...positions) - Math.min(...positions) < .005,
+    `unfold completion must not count its last frame as extra cruise time: ${JSON.stringify(samples)}`)
 })
