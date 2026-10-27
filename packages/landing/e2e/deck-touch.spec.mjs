@@ -102,7 +102,8 @@ async function deckState(page) {
 test('trusted touch keeps dragging when implicit capture transfers from the word to the deck', async ({ browser }, testInfo) => {
   const { context, page, errors, start, cardWidth, client } = await prepareDeck(browser, testInfo.project.use.baseURL)
   try {
-    expect(await deckState(page)).toMatchObject({ front: 'VOLCANO', images: 7, glass: 1, overflow: false })
+    // Approved Cut Open faces have no inner glass lens, including during a drag.
+    expect(await deckState(page)).toMatchObject({ front: 'VOLCANO', images: 7, glass: 0, overflow: false })
     await sendTouch(client, 'touchStart', start)
     for (let step = 1; step <= 12; step++) {
       await page.waitForTimeout(15)
@@ -112,7 +113,7 @@ test('trusted touch keeps dragging when implicit capture transfers from the word
         // hand. It must not end the active drag before the finger is released.
         const state = await deckState(page)
         expect(state.events).toContainEqual(expect.objectContaining({ type: 'lostpointercapture', target: 'word', trusted: true }))
-        expect(state).toMatchObject({ dragging: true, captures: true, glass: 1 })
+        expect(state).toMatchObject({ dragging: true, captures: true, glass: 0 })
       }
     }
     await sendTouch(client, 'touchEnd')
@@ -121,7 +122,7 @@ test('trusted touch keeps dragging when implicit capture transfers from the word
     await expect.poll(async () => (await deckState(page)).revealStarts).toBe(1)
     await expect(page.locator('.deck-card-item .card-art.is-resolving')).toHaveCount(0)
     const state = await deckState(page)
-    expect(state).toMatchObject({ front: 'BANANA', frontCount: 1, maxFronts: 1, captures: false, glass: 1, images: 7, maxImages: 7, maxReveals: 1, revealStarts: 1, overflow: false })
+    expect(state).toMatchObject({ front: 'BANANA', frontCount: 1, maxFronts: 1, captures: false, glass: 0, images: 7, maxImages: 7, maxReveals: 1, revealStarts: 1, overflow: false })
     expect(state.frontWords).toEqual(['VOLCANO', 'BANANA'])
     expect(state.events.filter(event => event.type === 'pointerup')).toHaveLength(1)
     expect(state.events.every(event => event.trusted && event.pointerType === 'touch')).toBe(true)
