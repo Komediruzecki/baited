@@ -2,7 +2,7 @@
   "name": "@baited/landing",
   "private": true,
   "type": "module",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "scripts": {
     "build:dev": "node scripts/build-site.mjs --env dev",
     "build:prod": "node scripts/build-site.mjs --env prod",
