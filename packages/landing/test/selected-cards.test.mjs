@@ -170,7 +170,7 @@ test('clue query accepts only stable IDs and defaults to the approved Ruled row'
   for (const search of ['', '?clue=__proto__', '?clue=constructor', '?clue=/external.css', '?clue=RAIL', '?clues=pills', null]) assert.equal(parseClueStyle(search), 'rail')
 })
 
-test('all 78 Cut Open faces preserve exact clues, lazy art and unique accessible labels without inner lenses', () => {
+test('all 100 Cut Open faces preserve exact clues, lazy art and unique accessible labels without inner lenses', () => {
   const previous = globalThis.document
   const create = tag => ({ tag, dataset: {}, attributes: {}, children: [], textContent: '', setAttribute(key, value) { this.attributes[key] = String(value) }, append(...items) { this.children.push(...items) }, addEventListener() {} })
   globalThis.document = { createElement: create, createElementNS: (_, tag) => create(tag) }
@@ -221,15 +221,15 @@ test('all 78 Cut Open faces preserve exact clues, lazy art and unique accessible
 })
 
 test('art windows release old images and reveal canvases across the full catalogue and wraparound', () => {
-  const items = Array.from({ length: 78 }, (_, index) => {
+  const items = Array.from({ length: cards.length }, (_, index) => {
     const image = { dataset: { src: `/art-${index}.webp` }, src: null, getAttribute() { return this.src }, removeAttribute() { this.src = null } }
     const canvas = { width: 160, height: 160 }
     return { image, canvas, querySelector: selector => selector === '.card-art img' ? image : canvas }
   })
   const held = () => items.flatMap((item, index) => item.image.src ? [index] : [])
   warmSelectedArt(items, 0)
-  assert.deepEqual(held(), [0, 1, 2, 3, 75, 76, 77])
-  for (let index = 0; index < 156; index++) {
+  assert.deepEqual(held(), [0, 1, 2, 3, items.length - 3, items.length - 2, items.length - 1])
+  for (let index = 0; index < items.length * 2; index++) {
     warmSelectedArt(items, index)
     assert.equal(held().length, 7)
   }

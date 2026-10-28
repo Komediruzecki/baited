@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Config } from './config.js';
 import type { Store } from './store.js';
-import type { Game, GameEvent } from './game.js';
+import { spoils, type Game, type GameEvent } from './game.js';
+import { targetForms } from '../shared/card-library.js';
 import type { ChatBotPost, ChatBotStatus } from '../shared/types.js';
 import { botKey, CHANNEL_BOT_SCOPE, type ChatMessage } from './twitch.js';
 import {
@@ -327,8 +328,10 @@ export class ChatBot {
       room.replies = [];
       return;
     }
-    room.queue = room.queue.filter((item) => item.expiresAt > now);
-    room.replies = room.replies.filter((item) => item.expiresAt > now);
+    // A custom target can be an ordinary word in Baity's copy. Recheck at
+    // delivery, including posts queued before a different card was dealt.
+    room.queue = room.queue.filter((item) => item.expiresAt > now && !this.revealsTarget(game, item.text));
+    room.replies = room.replies.filter((item) => item.expiresAt > now && !this.revealsTarget(game, item.text));
     if (!(room.queue.length || room.replies.length) || room.sending || now < room.pausedUntil) return;
     if (now - room.lastAt < LIMITS.channelGap) return;
     room.sent = room.sent.filter((at) => now - at < LIMITS.channelWindow);
@@ -391,7 +394,8 @@ export class ChatBot {
   private async deliver(game: Game, item: Outgoing) {
     const room = this.room(game.data.id);
     try {
-      const response = await this.post(game.data.owner, item);
+      const response = await this.post(game, item);
+      if (!response) return;
       if (response.status === 429) {
         // Ratelimit-Reset is a Unix time in seconds. Without it, wait out a full window.
         const reset = Number(response.headers.get('Ratelimit-Reset'));
@@ -438,8 +442,16 @@ export class ChatBot {
     }
   }
 
-  private async post(channelId: string, item: Outgoing, retried = false): Promise<Response> {
+  private revealsTarget(game: Game, text: string) {
+    const round = game.round;
+    return !!round && (['active', 'paused', 'settling'].includes(game.phase) || game.pendingCatch) &&
+      targetForms(round.word, round.acceptedSpellings).some((word) => spoils(text, word));
+  }
+
+  private async post(game: Game, item: Outgoing, retried = false): Promise<Response | null> {
     const token = await this.token(retried);
+    // Token refresh may outlast a round or a permission change.
+    if (!this.wants(game) || this.revealsTarget(game, item.text)) return null;
     const response = await this.fetcher('https://api.twitch.tv/helix/chat/messages', {
       method: 'POST',
       headers: {
@@ -448,14 +460,14 @@ export class ChatBot {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        broadcaster_id: channelId,
+        broadcaster_id: game.data.owner,
         sender_id: this.options.config.botUserId,
         message: item.text.slice(0, MAX_LENGTH),
         ...(item.replyTo ? { reply_parent_message_id: item.replyTo } : {}),
       }),
       signal: AbortSignal.timeout(10000),
     });
-    if (response.status === 401 && !retried) return this.post(channelId, item, true);
+    if (response.status === 401 && !retried) return this.post(game, item, true);
     return response;
   }
 

@@ -1,6 +1,8 @@
 # Baited card maker
 
-27 October 2026. Proposed feature, not implemented. The landing sample and scroll changes are a separate, scoped update.
+28 October 2026 update: the first channel-owned text card maker is implemented in Studio. See [Make a card pack](../packages/app/docs/card-maker.md) for its actual controls, privacy boundaries, limits and recovery behavior. This is source implementation status, not a claim of hosted deployment or a completed real-channel acceptance test.
+
+The original 27 October plan follows as a design record. The first version includes text packs, draft/playable states, private pronunciation rehearsal, next-round custom/mixed selection, archive/restore and revision-safe saving. Optional example questions, artwork uploads, extra finishes, teammate authoring, viewer proposals and public discovery remain parked. References below to 78 built-in cards describe the earlier baseline; the new built-in deck has 100 targets. The public landing still includes ten examples.
 
 ## Recommendation
 
@@ -30,7 +32,7 @@ The native Twitch panel stays focused on playing. A full editor would compete wi
 
 Keep the save action visible beside the preview. Confirm saved state only after the server persists it. Failed saves keep the editor contents and offer Retry. Switching away from unsaved edits needs a choice to save or discard.
 
-Six targets is a proposed minimum per active difficulty, not a shipped rule. A pack can contain several difficulties; show which ones have enough cards before it can be selected.
+The implemented first version requires six targets per active difficulty, including mixed mode. A pack can contain several difficulties; Studio shows which ones have enough cards before it can be selected.
 
 ## Content and presentation
 
@@ -45,7 +47,7 @@ Six targets is a proposed minimum per active difficulty, not a shipped rule. A p
 | Edition and colors | Approved card tokens and a small set of readable palettes; no freeform CSS or uploaded card layouts |
 | Size limit | Start with 100 cards per channel and 10 packs; enforce on the server and revisit from real use |
 
-These are proposed validation limits. Support multiword phrases, additional languages and more unusual spellings only after the text matcher and speech tests support them. Do not bias Moonshine with the hidden active word. Keep catch confirmation in the streamer's hands.
+The first version applies the text and quota limits above; the optional example question and artwork fields remain planned. Support multiword phrases, additional languages and more unusual spellings only after the text matcher and speech tests support them. Do not bias Moonshine with the hidden active word. Keep catch confirmation in the streamer's hands.
 
 The editor changes text data; it does not bake words into an image. That preserves legibility, scaling and screen-reader output. Artwork remains a separate layer inside the existing safe art window. Rare foil or holographic treatments can be selected later without changing a card's gameplay rules.
 

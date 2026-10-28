@@ -5,6 +5,8 @@ import { z, ZodError } from 'zod';
 import { WebSocketServer } from 'ws';
 import { Game, defaults } from './game.js';
 import { Store } from './store.js';
+import { CardLibraryStore, CardLibraryError } from './card-library.js';
+import { archiveInputSchema, selectInputSchema } from '../shared/card-library.js';
 import { Sessions, Limiter, cookies, equal, isLoopback, randomKey } from './security.js';
 import {
   TwitchAuth,
@@ -85,6 +87,8 @@ export async function createBait(
     server = createServer(app),
     store = new Store(config.dataDir, config.key);
   await store.load();
+  const cardLibrary = new CardLibraryStore(config.dataDir);
+  await cardLibrary.load();
   const rooms = new Map<string, Game>(),
     sessions = new Sessions(config.production),
     limiter = new Limiter(),
@@ -143,6 +147,7 @@ export async function createBait(
   function studio(game: Game): Studio {
     return {
       room: game.view('studio'),
+      deck: cardLibrary.selected(game.data.owner, game.data.settings.difficulty),
       viewerUrl: `${config.origin}/play/${game.data.id}`,
       overlayUrl: `${config.origin}/overlay/${game.data.id}?key=${game.data.overlayKey}`,
       speechReady: speechReady(),
@@ -194,6 +199,8 @@ export async function createBait(
   }
   function register(game: Game) {
     rooms.set(game.data.id, game);
+    if (game.data.mode === 'demo') cardLibrary.markEphemeral(game.data.owner);
+    game.deckFor = (difficulty) => cardLibrary.resolve(game.data.owner, difficulty);
     game.canRun = () => microphoneReady(game);
     game.onChange = () => {
       const bridge = speech.get(game.data.id);
@@ -329,6 +336,8 @@ export async function createBait(
       }),
     );
   }
+  // Card snapshots can contain 100 bounded text cards. Other endpoints retain 8 KB.
+  app.use('/api/studio/cards', express.json({ limit: '96kb' }));
   app.use(express.json({ limit: '8kb' }));
   app.use('/api', (_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -612,6 +621,30 @@ export async function createBait(
       failed(oauthErrorFields(e), e instanceof BotAsStreamer ? 'bot-as-streamer' : 'oauth');
     }
   });
+  app.get('/api/studio/cards', session, (_req, res) => {
+    const game = gameFor(res);
+    res.json(cardLibrary.view(game.data.owner, game.data.settings.difficulty));
+  });
+  app.post('/api/studio/cards/pack', protect, async (req, res) => {
+    const game = gameFor(res);
+    const savedPackId = await cardLibrary.savePack(game.data.owner, req.body);
+    broadcast(game);
+    res.json({ ...cardLibrary.view(game.data.owner, game.data.settings.difficulty), savedPackId });
+  });
+  app.post('/api/studio/cards/archive', protect, async (req, res) => {
+    const game = gameFor(res), body = archiveInputSchema.parse(req.body);
+    await cardLibrary.archive(game.data.owner, body.id, body.expectedRevision);
+    broadcast(game);
+    res.json(cardLibrary.view(game.data.owner, game.data.settings.difficulty));
+  });
+  app.post('/api/studio/cards/select', protect, async (req, res) => {
+    const game = gameFor(res), body = selectInputSchema.parse(req.body);
+    await cardLibrary.select(game.data.owner, {
+      mode: body.mode, packId: body.mode === 'builtin' ? null : body.packId ?? null,
+    }, body.expectedRevision, game.data.settings.difficulty);
+    broadcast(game);
+    res.json(cardLibrary.view(game.data.owner, game.data.settings.difficulty));
+  });
   app.get('/api/studio', session, (_req, res) => res.json(studio(gameFor(res))));
   app.get('/api/studio/events', session, (req, res) =>
     subscribe(req, res, gameFor(res), 'studio', res.locals.session),
@@ -779,7 +812,7 @@ export async function createBait(
     store.snapshot.rooms = [...rooms.values()]
       .filter((g) => g.data.mode === 'twitch')
       .map((g) => g.data);
-    await Promise.all([store.save(), revoking]);
+    await Promise.all([store.save(), revoking, cardLibrary.deleteOwner(s.userId)]);
     sessions.clear(res, s.id);
     res.json({ ok: true });
   });
@@ -893,9 +926,17 @@ export async function createBait(
     });
   });
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Route not found.' }));
-  app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
     if (res.headersSent) {
       res.end();
+      return;
+    }
+    if (error instanceof CardLibraryError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
+    if (error instanceof ZodError && req.path.startsWith('/api/studio/cards')) {
+      res.status(400).json({ error: 'Check the highlighted card details.', issues: error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })) });
       return;
     }
     if (error instanceof AuthRevoked) {
@@ -938,6 +979,7 @@ export async function createBait(
     auth,
     bot,
     startupValidation,
+    cardLibrary,
     async close() {
       closed = true;
       clearInterval(ticker);
@@ -955,6 +997,7 @@ export async function createBait(
         .map((r) => r.data);
       await store.save();
       await store.flush();
+      await cardLibrary.flush();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },
   };

@@ -30,6 +30,7 @@ import {
   ChevronDown,
   MessageSquare,
   NoChat,
+  Card,
 } from './icons';
 import type {
   GameView,
@@ -105,6 +106,7 @@ import './studio-m3.css';
 
 const ProductReview = React.lazy(() => import('./ProductReview'));
 const CardDesignLab = React.lazy(() => import('./CardDesignLab'));
+const CardLibrary = React.lazy(() => import('./CardLibrary').then((module) => ({ default: module.CardLibrary })));
 
 const fmt = (ms: number) => {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -179,6 +181,13 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [level, setLevel] = useState(0),
     [consent, setConsent] = useState(false);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
+  const [cardsDirty, setCardsDirty] = useState(false);
+  const [cardsBusy, setCardsBusy] = useState(false);
+  const [leaveCards, setLeaveCards] = useState<(() => void) | null>(null);
+  const leaveSafely = (next: () => void) => {
+    if (cardsDirty) setLeaveCards(() => next);
+    else next();
+  };
   const [transcriptLines, setTranscriptLines] = useState<TranscriptPreviewLine[]>([]);
   const transcriptBuffer = useRef(new TranscriptPreviewBuffer());
   const capture = useRef<Capture | null>(null),
@@ -230,6 +239,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [reload, pauseForMicrophone],
   );
   useLive('/api/studio/events', receive, connectionError);
+  const refreshDeck = useCallback(() => {
+    void request<Studio>('/api/studio').then(receive).catch((e) => setError(e.message));
+  }, [receive]);
   useEffect(() => {
     void request<Studio>('/api/studio')
       .then(receive)
@@ -397,7 +409,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     demo = g.mode === 'demo',
     modelLoading = micStatus.startsWith('Loading Moonshine'),
     modelProgress = /^Loading Moonshine (\d+)%$/.exec(micStatus),
-    readyToBegin = !modelLoading && (demo || (connected && microphoneReady(studio.speechReady, consent, micStatus)));
+    microphoneIsReady = !modelLoading && (demo || (connected && microphoneReady(studio.speechReady, consent, micStatus))),
+    readyToBegin = microphoneIsReady && !studio.deck?.problem;
   return (
     <div className="app-shell studio-app studio-shell">
       <aside className="sidebar">
@@ -408,13 +421,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           {[
             ['studio', 'Studio', LayoutDashboard],
             ['community', 'Community', Users],
+            ['cards', 'Cards', Card],
             ['setup', 'Stream setup', Monitor],
           ].map(([id, label, Icon]) => {
             const I = Icon as typeof Monitor;
             return (
               <button
                 key={id as string}
-                onClick={() => setTab(id as string)}
+                disabled={tab === 'cards' && cardsBusy}
+                onClick={() => { if (id !== tab) leaveSafely(() => setTab(id as string)); }}
                 className={cx('nav-item', tab === id && 'selected')}
                 aria-current={tab === id ? 'page' : undefined}
               >
@@ -453,7 +468,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               <strong>{demo ? 'Your studio' : session.user?.name}</strong>
               {!demo && <span>Signed in to Twitch</span>}
             </div>
-            <button className="icon-button" aria-label="Sign out" onClick={() => void logOut()}>
+            <button className="icon-button" aria-label="Sign out" disabled={cardsBusy} onClick={() => leaveSafely(() => void logOut())}>
               <LogOut size={16} />
             </button>
           </div>
@@ -462,8 +477,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       <div className="workspace">
         <main className="main-content">
           <div className={cx('page-title', tab === 'studio' && 'page-title--studio')}>
-            <div><h1>{tab === 'studio' ? 'Studio' : tab === 'community' ? 'Community' : 'Stream setup'}</h1>
-              {tab !== 'studio' && <p>{tab === 'community' ? 'Round participation and shared wins.' : 'Connect chat, check your mic, then bring viewers in.'}</p>}
+            <div><h1>{tab === 'studio' ? 'Studio' : tab === 'community' ? 'Community' : tab === 'cards' ? 'Cards' : 'Stream setup'}</h1>
+              {tab !== 'studio' && <p>{tab === 'community' ? 'Round participation and shared wins.' : tab === 'cards' ? 'Build a pack for your next stream.' : 'Connect chat, check your mic, then bring viewers in.'}</p>}
             </div>
             {tab !== 'studio' && <Button className="secondary game-settings-button" disabled={settling || offline} onClick={() => setModal('settings')}><Settings2 size={16} />Game settings</Button>}
           </div>
@@ -496,6 +511,10 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               </button>
             </div>
           )}
+          {tab === 'studio' && studio.deck?.problem && <div className="error-banner" role="alert">
+            <Card size={18} /><span>{studio.deck.problem}</span>
+            <Button className="secondary" onClick={() => setTab('cards')}>Choose a deck</Button>
+          </div>}
           {notice && (
             <div className={cx('error-banner', notice.ok && 'info-banner')} role="status">
               {notice.ok ? <Check size={17} /> : <AlertTriangle size={17} />}
@@ -603,7 +622,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       ) : paused ? (
                         <Button
                           className={demo || consent ? 'primary' : 'secondary'}
-                          disabled={busy || offline || !readyToBegin}
+                          disabled={busy || offline || !microphoneIsReady}
                           onClick={() => void action('resume')}
                         >
                           <Play size={16} /> Resume round
@@ -645,7 +664,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         </>
                       )}
                     </div>
-                    {!active && !paused && !pendingCatch && !readyToBegin && <p className="start-reason" role="status">{modelLoading ? 'Waiting for the speech model.' : 'Connect chat and turn on your microphone to start.'}</p>}
+                    {!active && !paused && !pendingCatch && !readyToBegin && <p className="start-reason" role="status">{studio.deck?.problem ? 'Choose a playable deck before starting the next round.' : modelLoading ? 'Waiting for the speech model.' : 'Connect chat and turn on your microphone to start.'}</p>}
                   </div>
                   <div
                     className={cx(
@@ -958,6 +977,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </>
           )}
           {tab === 'community' && <Community game={g} />}
+          {tab === 'cards' && <React.Suspense fallback={<section className="panel" role="status">Opening your card library…</section>}><CardLibrary csrf={session.csrf!} difficulty={g.settings.difficulty}
+            offline={offline} pronunciationDisabled={consent || micStatus !== 'off' || active || paused || settling || !!pendingCatch}
+            onDirtyChange={setCardsDirty} onBusyChange={setCardsBusy} onDeckChange={refreshDeck} /></React.Suspense>}
           {tab === 'setup' && (
             <Setup
               studio={studio}
@@ -965,7 +987,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               action={action}
               micEnabled={consent}
               micStatus={micStatus}
-              onMicrophone={() => setTab('studio')}
+              onMicrophone={() => leaveSafely(() => setTab('studio'))}
               onDelete={() => setModal('delete')}
             />
           )}
@@ -991,6 +1013,13 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           </footer>
         </main>
       </div>
+      {leaveCards && <Modal title="Leave this pack?" onClose={() => setLeaveCards(null)}>
+        <p>Your latest card edits have not been saved. Keep editing to save them, or discard the edits and leave.</p>
+        <div className="modal-actions">
+          <Button className="text" onClick={() => { const next = leaveCards; setLeaveCards(null); setCardsDirty(false); next(); }}>Discard and leave</Button>
+          <Button className="primary" onClick={() => setLeaveCards(null)}>Keep editing</Button>
+        </div>
+      </Modal>}
       {modal && (
         <Modal
           title={

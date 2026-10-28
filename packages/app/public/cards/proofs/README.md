@@ -1,4 +1,4 @@
-# BAIT card illustration proofs
+# Baited card illustration proofs
 
 Six approved original illustration proofs generated on October 25, 2026 with the built-in ChatGPT `image_gen` tool: banana, penguin, microwave, dragon, volcano and monocle.
 
@@ -22,10 +22,18 @@ The owner approved the original six and requested more cards. Twelve additional 
 
 ## 60-card expansion
 
-The next batch adds illustrations for the 54 remaining original targets and six new targets: mushroom, ghost, donut, hedgehog, gramophone and hourglass. The catalogue now has 78 illustrated, playable targets. The new files use approved existing illustrations as style references. Each was generated separately with the built-in ChatGPT image tool; titles, clue restrictions, questions and card furniture remain live interface elements rather than pixels in the artwork.
+The next batch added illustrations for the 54 remaining original targets and six new targets: mushroom, ghost, donut, hedgehog, gramophone and hourglass. That brought the catalogue to 78 illustrated, playable targets. The new files use approved existing illustrations as style references. Each was generated separately with the built-in ChatGPT image tool; titles, clue restrictions, questions and card furniture remain live interface elements rather than pixels in the artwork.
 
 `expansion-60-a.json` and `expansion-60-b.json` retain the exact prompts, style references, generation identifiers, measured dimensions, bytes and original SHA-256 hashes. Visual review is recorded separately from the owner's selection. All 18 earlier originals are preserved. No production release is implied by these source assets.
 
 The landing and native Extension keep unchanged copies so each package can deploy independently. From the workspace root, run `node packages/app/scripts/sync-card-art.mjs` to add missing recorded copies, or append `--check` to verify them without writing. The script refuses incomplete manifests, changed originals and conflicting existing copies.
 
 A new Twitch Hosted Test ZIP must be built and uploaded before the native installed panel receives these images or the revised clue styling. A landing deployment alone does not update an installed Twitch Extension.
+
+## 100-target deck
+
+The latest authored deck adds 22 targets, with four ordered clues per target and matching review examples. The additions are listed in [the deck notes](../../../docs/deck-100.md). The selected Cut Open layout, Prism back and pixel reveal stay unchanged. Each new illustration belongs in its own transparent PNG, without a title, clue, logo or card frame baked into it.
+
+`expansion-100.json` records the new batch's original prompts, style references, generation identifiers, dimensions and hashes. The sync check must pass before a build is described as containing all 100 illustrations. Voice recognition of these new targets still needs a real microphone session; catalogue and image checks do not establish that result.
+
+The development Card Lab uses the complete review catalogue. The public landing continues to ship ten fixed examples, even though the source catalogue contains 100 targets. Production excludes the Card Lab and its complete artwork set.

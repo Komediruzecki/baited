@@ -31,6 +31,7 @@ import {
   type ChatMessage,
 } from '../server/twitch.js';
 import { fixture } from './fixtures.js';
+import { matchesCustomTarget } from '../shared/card-library.js';
 
 const key = 'ab'.repeat(32);
 const flush = async (times = 6) => {
@@ -252,6 +253,46 @@ test('finished words are announced only for caught and escaped rounds, like OBS'
   f.advance(f.game.round!.duration + 1);
   f.game.tick();
   assert.match(texts.at(-1)!, new RegExp(`WAS ${word.toUpperCase()}`));
+});
+
+test('custom targets and aliases are withheld from Baity posts until the result is public', async (t) => {
+  const store = await tempStore(t);
+  for (const [target, aliases] of [['word', []], ['quokka', ['word']]] as [string, string[]][]) {
+    const f = fixture();
+    f.game.data.settings.chatBot = true;
+    f.game.deckFor = () => [{ target, acceptedSpellings: aliases, difficulty: 'medium', blockedClues: ['clue', 'hint'] }];
+    const bot = new ChatBot({ config: loadConfig({}), store, ready: () => null, clock: f.now });
+    f.game.onEvent = (event) => bot.event(f.game, event);
+    f.game.begin();
+    assert.equal(bot.status(f.game).recent.length, 0, 'the start line would say the target or its alias');
+    bot.chat(f.game, message('!bait help'));
+    f.advance(61000); bot.tick(f.game);
+    f.game.pause(); f.advance(LIMITS.channelGap); bot.tick(f.game);
+    f.game.resume(); f.advance(LIMITS.channelGap); bot.tick(f.game);
+    f.game.transcript(f.transcript(), 'confirm');
+    f.advance(LIMITS.channelGap); bot.tick(f.game);
+    for (const post of bot.status(f.game).recent)
+      assert.equal(matchesCustomTarget(post.text, target, aliases), false, post.text);
+    f.game.decideCatch(f.game.round!.id, 'confirm');
+    f.advance(LIMITS.channelGap); bot.tick(f.game);
+    assert.ok(bot.status(f.game).recent.some((post) => matches(post.text, target)), 'a confirmed catch may reveal its target');
+  }
+});
+
+test('queued replies are checked against the newly selected card before delivery', async (t) => {
+  const store = await tempStore(t), f = fixture();
+  f.game.data.settings.chatBot = true;
+  const bot = new ChatBot({ config: loadConfig({}), store, ready: () => null, clock: f.now });
+  f.game.onEvent = (event) => bot.event(f.game, event);
+  f.game.begin();
+  bot.chat(f.game, message('!bait help'));
+  const oldPosts = new Set(bot.status(f.game).recent.map((post) => post.id));
+  f.game.end('ended'); f.advance(11000);
+  f.game.deckFor = () => [{ target: 'word', acceptedSpellings: [], difficulty: 'medium', blockedClues: ['clue', 'hint'] }];
+  f.game.begin();
+  f.advance(LIMITS.channelGap); bot.tick(f.game);
+  for (const post of bot.status(f.game).recent.filter((post) => !oldPosts.has(post.id)))
+    assert.equal(matches(post.text, 'word'), false, post.text);
 });
 
 test('demo rooms preview posts in the studio with Twitch pacing and newest-wins coalescing', async (t) => {
@@ -526,6 +567,23 @@ function twitchBot(
 const tokenReply = () => Response.json({ access_token: 'app-token', expires_in: 3600, token_type: 'bearer' });
 const sent = (isSent = true, drop: { code: string; message: string } | null = null) =>
   Response.json({ data: [{ message_id: isSent ? 'msg-1' : '', is_sent: isSent, drop_reason: drop }] });
+
+test('a token refresh cannot deliver a queued message that spoils the next card', async (t) => {
+  let release!: (response: Response) => void;
+  const pending = new Promise<Response>((resolve) => { release = resolve; });
+  const { game, calls, bot } = await twitchBot(t, (url) => url.endsWith('/oauth2/token') ? pending : sent());
+  game.begin();
+  assert.equal(calls.filter((call) => call.url.endsWith('/oauth2/token')).length, 1);
+  game.end('ended');
+  game.nextAt = 0;
+  game.deckFor = () => [{ target: 'word', acceptedSpellings: [], difficulty: 'medium', blockedClues: ['clue', 'hint'] }];
+  game.begin();
+  release(tokenReply());
+  await flush();
+  assert.equal(calls.filter((call) => call.url.endsWith('/helix/chat/messages')).length, 0);
+  assert.equal(bot.status(game).recent.length, 0);
+  assert.equal(bot.status(game).problem, null);
+});
 
 test('Twitch delivery uses an app token, the bot as sender, and refreshes once on 401', async (t) => {
   let posts = 0;

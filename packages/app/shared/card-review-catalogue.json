@@ -934,5 +934,269 @@
     ],
     "example": "What do you turn over to give yourself another minute?",
     "ink": "#b9e8ed"
+  },
+  {
+    "word": "balloon",
+    "difficulty": "easy",
+    "clues": [
+      "helium",
+      "inflate",
+      "party",
+      "float"
+    ],
+    "example": "What would ruin a party if you let go of its string?",
+    "ink": "#d4b3ff"
+  },
+  {
+    "word": "guitar",
+    "difficulty": "easy",
+    "clues": [
+      "strings",
+      "strum",
+      "chords",
+      "instrument"
+    ],
+    "example": "What would you bring to play songs around a campfire?",
+    "ink": "#f2ba79"
+  },
+  {
+    "word": "carrot",
+    "difficulty": "easy",
+    "clues": [
+      "orange",
+      "rabbit",
+      "vegetable",
+      "root"
+    ],
+    "example": "What would a snowman borrow from your shopping bag?",
+    "ink": "#ffbe82"
+  },
+  {
+    "word": "cupcake",
+    "difficulty": "easy",
+    "clues": [
+      "frosting",
+      "muffin",
+      "bake",
+      "icing"
+    ],
+    "example": "What tiny treat deserves its own paper wrapper?",
+    "ink": "#f8a7d4"
+  },
+  {
+    "word": "umbrella",
+    "difficulty": "easy",
+    "clues": [
+      "rain",
+      "parasol",
+      "canopy",
+      "handle"
+    ],
+    "example": "What turns inside out at the worst possible moment?",
+    "ink": "#d4b3ff"
+  },
+  {
+    "word": "elephant",
+    "difficulty": "easy",
+    "clues": [
+      "trunk",
+      "tusks",
+      "herd",
+      "mammal"
+    ],
+    "example": "Who would need the biggest seat on this bus?",
+    "ink": "#b8d7ed"
+  },
+  {
+    "word": "hamburger",
+    "difficulty": "easy",
+    "clues": [
+      "burger",
+      "bun",
+      "patty",
+      "beef"
+    ],
+    "example": "What meal always seems taller in the advert?",
+    "ink": "#f2c17c"
+  },
+  {
+    "word": "butterfly",
+    "difficulty": "easy",
+    "clues": [
+      "wings",
+      "caterpillar",
+      "insect",
+      "cocoon"
+    ],
+    "example": "Who has the most dramatic makeover in the garden?",
+    "ink": "#edb3ff"
+  },
+  {
+    "word": "pineapple",
+    "difficulty": "medium",
+    "clues": [
+      "fruit",
+      "tropical",
+      "spiky",
+      "crown"
+    ],
+    "example": "What causes the biggest argument about pizza toppings?",
+    "ink": "#f8d879"
+  },
+  {
+    "word": "crocodile",
+    "difficulty": "medium",
+    "clues": [
+      "reptile",
+      "alligator",
+      "teeth",
+      "swamp"
+    ],
+    "example": "Who should never be invited to a pool party?",
+    "ink": "#b3e29b"
+  },
+  {
+    "word": "astronaut",
+    "difficulty": "medium",
+    "clues": [
+      "space",
+      "moon",
+      "rocket",
+      "orbit"
+    ],
+    "example": "Whose commute needs a countdown?",
+    "ink": "#e2e9f6"
+  },
+  {
+    "word": "binoculars",
+    "difficulty": "medium",
+    "clues": [
+      "lenses",
+      "zoom",
+      "birds",
+      "magnify"
+    ],
+    "example": "What would help you find a friend on the opposite hill?",
+    "ink": "#c9b9f2"
+  },
+  {
+    "word": "seahorse",
+    "difficulty": "medium",
+    "clues": [
+      "ocean",
+      "fish",
+      "tail",
+      "snout"
+    ],
+    "example": "Which tiny swimmer leaves the pregnancy to dad?",
+    "ink": "#f4ce91"
+  },
+  {
+    "word": "hammock",
+    "difficulty": "medium",
+    "clues": [
+      "swing",
+      "sleep",
+      "rope",
+      "trees"
+    ],
+    "example": "What is the least graceful thing to climb out of on holiday?",
+    "ink": "#d8b3ff"
+  },
+  {
+    "word": "scarecrow",
+    "difficulty": "medium",
+    "clues": [
+      "straw",
+      "birds",
+      "field",
+      "crops"
+    ],
+    "example": "Who stands outside all day wearing somebody else's old clothes?",
+    "ink": "#f1c482"
+  },
+  {
+    "word": "waterfall",
+    "difficulty": "medium",
+    "clues": [
+      "water",
+      "cascade",
+      "river",
+      "cliff"
+    ],
+    "example": "What makes a hike noisier before you can even see it?",
+    "ink": "#b4e8f5"
+  },
+  {
+    "word": "chameleon",
+    "difficulty": "hard",
+    "clues": [
+      "lizard",
+      "color",
+      "camouflage",
+      "scales"
+    ],
+    "example": "Who could wear a different outfit without getting dressed?",
+    "ink": "#b4e3a0"
+  },
+  {
+    "word": "metronome",
+    "difficulty": "hard",
+    "clues": [
+      "tempo",
+      "beat",
+      "rhythm",
+      "tick"
+    ],
+    "example": "What is the strictest teacher on a pianist's desk?",
+    "ink": "#efc298"
+  },
+  {
+    "word": "terrarium",
+    "difficulty": "hard",
+    "clues": [
+      "glass",
+      "plants",
+      "container",
+      "ecosystem"
+    ],
+    "example": "What tiny garden could live on your desk?",
+    "ink": "#bee5c0"
+  },
+  {
+    "word": "pendulum",
+    "difficulty": "hard",
+    "clues": [
+      "swing",
+      "clock",
+      "weight",
+      "bob"
+    ],
+    "example": "What goes back and forth without ever leaving its spot?",
+    "ink": "#f4d18a"
+  },
+  {
+    "word": "pomegranate",
+    "difficulty": "hard",
+    "clues": [
+      "fruit",
+      "seeds",
+      "red",
+      "juice"
+    ],
+    "example": "What snack takes ages to open and leaves your shirt looking guilty?",
+    "ink": "#f3a7bb"
+  },
+  {
+    "word": "marionette",
+    "difficulty": "hard",
+    "clues": [
+      "puppet",
+      "strings",
+      "wooden",
+      "control"
+    ],
+    "example": "Who can't take a bow until somebody above them says so?",
+    "ink": "#e6bf9c"
   }
 ]

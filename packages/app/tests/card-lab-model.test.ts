@@ -5,10 +5,10 @@ import { words } from '../server/words';
 import { forbiddenClues } from '../server/cards';
 import type { Difficulty } from '../shared/types';
 
-test('the lab uses all 78 real words with their actual difficulty and exact playable clues', () => {
+test('the lab uses all 100 real words with their actual difficulty and exact playable clues', () => {
   const actual = Object.entries(words).flatMap(([difficulty, pool]) => pool.map(word => ({ word, difficulty })));
-  assert.equal(reviewDeck.length, 78);
-  assert.equal(new Set(reviewDeck.map(entry => entry.word)).size, 78);
+  assert.equal(reviewDeck.length, 100);
+  assert.equal(new Set(reviewDeck.map(entry => entry.word)).size, 100);
   assert.deepEqual(reviewDeck.map(entry => entry.word).sort(), actual.map(entry => entry.word).sort());
   for (const entry of reviewDeck) {
     const expected = actual.find(item => item.word === entry.word)!;

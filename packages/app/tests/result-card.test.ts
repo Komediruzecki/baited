@@ -59,14 +59,17 @@ test('native card artwork is restricted to the approved local assets', () => {
 });
 
 test('words without an illustration get a deliberate word face without placeholder artwork', () => {
+  // Use a synthetic custom word: pineapple now belongs to the illustrated deck.
+  const customWord = 'COMMUNITYWORD';
+  assert.equal(cardArtFile(customWord), null);
   const markup = renderToStaticMarkup(
     React.createElement(ResultCard, {
-      result: { ...result, word: 'PINEAPPLE' },
+      result: { ...result, word: customWord },
     }),
   );
   assert.match(markup, /data-art="word"/);
-  assert.match(markup, /PINEAPPLE/);
-  assert.doesNotMatch(markup, /class="bait-card-art"/);
+  assert.match(markup, /COMMUNITYWORD/);
+  assert.doesNotMatch(markup, /<img\b/);
   assert.match(renderToStaticMarkup(React.createElement(ResultCard, { result })), /data-art="art"/);
 });
 

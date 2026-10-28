@@ -1724,3 +1724,71 @@ input {
 .card-word--hourglass {
   color: #b9e8ed;
 }
+
+/* The 100-card expansion keeps the approved readable, sprite-led word inks. */
+.card-word--balloon {
+  color: #d4b3ff;
+}
+.card-word--guitar {
+  color: #f2ba79;
+}
+.card-word--carrot {
+  color: #ffbe82;
+}
+.card-word--cupcake {
+  color: #f8a7d4;
+}
+.card-word--umbrella {
+  color: #d4b3ff;
+}
+.card-word--elephant {
+  color: #b8d7ed;
+}
+.card-word--hamburger {
+  color: #f2c17c;
+}
+.card-word--butterfly {
+  color: #edb3ff;
+}
+.card-word--pineapple {
+  color: #f8d879;
+}
+.card-word--crocodile {
+  color: #b3e29b;
+}
+.card-word--astronaut {
+  color: #e2e9f6;
+}
+.card-word--binoculars {
+  color: #c9b9f2;
+}
+.card-word--seahorse {
+  color: #f4ce91;
+}
+.card-word--hammock {
+  color: #d8b3ff;
+}
+.card-word--scarecrow {
+  color: #f1c482;
+}
+.card-word--waterfall {
+  color: #b4e8f5;
+}
+.card-word--chameleon {
+  color: #b4e3a0;
+}
+.card-word--metronome {
+  color: #efc298;
+}
+.card-word--terrarium {
+  color: #bee5c0;
+}
+.card-word--pendulum {
+  color: #f4d18a;
+}
+.card-word--pomegranate {
+  color: #f3a7bb;
+}
+.card-word--marionette {
+  color: #e6bf9c;
+}
