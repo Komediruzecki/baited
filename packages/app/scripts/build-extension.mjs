@@ -7,11 +7,11 @@ import { createHash } from 'node:crypto';
 import { proofWords, streakFlameFiles } from '../extension/presentation.js';
 
 export const EXTENSION_FILES = Object.freeze([
-  'viewer.html', 'config.html', 'overlay.html', 'tokens.css', 'styles.css', 'overlay.css',
-  'runtime-config.js', 'client.js', 'viewer.js', 'config.js', 'overlay.js', 'presentation.js',
+  'viewer.html', 'config.html', 'overlay.html', 'tokens.css', 'card.css', 'styles.css', 'overlay.css',
+  'runtime-config.js', 'client.js', 'viewer.js', 'config.js', 'overlay.js', 'presentation.js', 'pixel-reveal.js',
   'assets/inter-latin.woff2', 'assets/russo-one.ttf',
   'assets/Inter-OFL.txt', 'assets/RussoOne-OFL.txt',
-  'assets/baited-original-mask.svg', 'assets/back-mosaic.webp',
+  'assets/baited-original-mask.svg', 'assets/back-prism.webp',
   ...streakFlameFiles.map((file) => `assets/${file}`),
   ...proofWords.map((word) => `assets/card-${word}.png`),
 ]);

@@ -1,5 +1,6 @@
 import { clockValue, connectToTwitch, connectionView, readState } from './client.js';
-import { cardArtFile, glassRules, streakMilestone, wordSize } from './presentation.js';
+import { cardArtFile, cardWordSize, glassRules, streakMilestone } from './presentation.js';
+import { revealPixels } from './pixel-reveal.js';
 
 const byId = (id) => document.getElementById(id);
 let current = null;
@@ -10,9 +11,11 @@ let dealtRound = '';
 let dealAnimation;
 // The ink this viewer's card was dealt with, kept for the same card's reveal.
 let dealtInk = { id: '', ink: '' };
-const rules = glassRules();
-byId('field-rules').setAttribute('d', rules);
-byId('lens-rules').setAttribute('d', rules);
+// The art of a newly dealt card resolves from pixels once, as on the landing.
+let stopReveal = () => {};
+let pendingReveal = null;
+let artFile = '';
+byId('field-rules').setAttribute('d', glassRules());
 
 function announce(key, text) {
   if (key === announcementKey) return;
@@ -22,7 +25,7 @@ function announce(key, text) {
 
 function setTitle(value, secret = false, ink = '') {
   byId('card-title').textContent = value;
-  byId('card-title').dataset.wordSize = secret ? wordSize(value) : 'message';
+  byId('card-title').dataset.wordSize = secret ? cardWordSize(value) : 'message';
   // The ink names the word as surely as the word does; it is cleared with it.
   byId('card-title').style.color = secret ? ink : '';
 }
@@ -32,9 +35,36 @@ function setQuestion(text) {
   byId('card-question').hidden = !text;
 }
 
+function cancelReveal() {
+  if (pendingReveal) byId('word-art').removeEventListener('load', pendingReveal);
+  pendingReveal = null;
+  stopReveal();
+  stopReveal = () => {};
+}
+
+function revealArt() {
+  cancelReveal();
+  const image = byId('word-art');
+  const file = artFile;
+  if (!file) return;
+  const play = () => {
+    pendingReveal = null;
+    if (artFile !== file) return;
+    stopReveal = revealPixels({ holder: byId('art-reveal'), image, canvas: byId('art-pixels') });
+  };
+  if (image.complete && image.naturalWidth) play();
+  else {
+    pendingReveal = play;
+    image.addEventListener('load', play, { once: true });
+  }
+}
+
 function setArt(word) {
   const file = cardArtFile(word);
   const art = byId('word-art');
+  // The canvas holds pixels of the artwork, so it is emptied with the image.
+  if ((file ?? '') !== artFile) cancelReveal();
+  artFile = file ?? '';
   art.hidden = !file;
   // A filename can reveal the word too. Remove it when authorization or role changes.
   if (file) art.setAttribute('src', `./assets/${file}`);
@@ -62,6 +92,7 @@ function deal(roundId) {
   if (dealtRound === roundId) return;
   dealtRound = roundId;
   dealAnimation?.cancel();
+  revealArt();
   const card = byId('card');
   if (card.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     dealAnimation = card.animate(

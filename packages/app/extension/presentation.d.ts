@@ -80,6 +80,7 @@ export const proofWords: readonly [
 ];
 export function cardArtFile(word?: string): string | null;
 export function wordSize(word?: string): 'short' | 'medium' | 'long' | 'extended';
+export function cardWordSize(word?: string): 'short' | 'medium' | 'long' | 'extended';
 export function winLabel(wins: number): string;
 export function glassRules(pitch?: number): string;
 export interface StreakTier {

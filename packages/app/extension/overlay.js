@@ -1,13 +1,14 @@
 import { clockValue, connectToTwitch, readState } from './client.js';
 import {
   cardArtFile,
+  cardWordSize,
   glassRules,
   nextStreakTier,
   streakArtFile,
   streakMilestone,
   streakRow,
-  wordSize,
 } from './presentation.js';
+import { revealPixels } from './pixel-reveal.js';
 
 const byId = (id) => document.getElementById(id);
 // A finished card stays on the video briefly, then the overlay is transparent again.
@@ -24,10 +25,13 @@ let landing;
 let shownResult = { key: '', since: 0 };
 // The ink a viewer's card was dealt with, kept for the same card's reveal.
 let dealtInk = { id: '', ink: '' };
+// A face's art resolves from pixels the first time it turns up, as on the landing.
+let artFile = '';
+let revealedArt = '';
+let stopReveal = () => {};
+let pendingReveal = null;
 
-const rules = glassRules();
-byId('field-rules').setAttribute('d', rules);
-byId('lens-rules').setAttribute('d', rules);
+byId('field-rules').setAttribute('d', glassRules());
 
 const reducedMotion = () =>
   typeof window.matchMedia === 'function' &&
@@ -55,15 +59,50 @@ function announce(key, text) {
   byId('announcement').textContent = text;
 }
 
+function cancelReveal() {
+  if (pendingReveal) byId('front-art').removeEventListener('load', pendingReveal);
+  pendingReveal = null;
+  stopReveal();
+  stopReveal = () => {};
+}
+
+/** Plays once per dealt card and artwork, timed to the face turning into view. */
+function revealFront() {
+  const key = `${dealtRound}|${artFile}`;
+  if (!artFile || revealedArt === key) return;
+  revealedArt = key;
+  // A put-away card shows its finished art when it comes back.
+  if (byId('deal').dataset.collapsed === 'true') return;
+  cancelReveal();
+  const image = byId('front-art');
+  const play = () => {
+    pendingReveal = null;
+    if (revealedArt !== key) return;
+    stopReveal = revealPixels({ holder: byId('front-reveal'), image, canvas: byId('front-pixels'), hold: 200 });
+  };
+  if (image.complete && image.naturalWidth) play();
+  else {
+    pendingReveal = play;
+    image.addEventListener('load', play, { once: true });
+  }
+}
+
 function setFace(face) {
   byId('card').dataset.face = face;
   byId('face-front').setAttribute('aria-hidden', String(face !== 'front'));
   byId('face-back').setAttribute('aria-hidden', String(face !== 'back'));
+  if (face === 'front') revealFront();
 }
 
 function setArt(word) {
   const file = cardArtFile(word);
   const art = byId('front-art');
+  // The canvas holds pixels of the artwork, so it is emptied with the image.
+  if ((file ?? '') !== artFile) {
+    cancelReveal();
+    revealedArt = '';
+  }
+  artFile = file ?? '';
   art.hidden = !file;
   // A filename can reveal the word too. Remove it whenever the face is cleared.
   if (file) art.setAttribute('src', `./assets/${file}`);
@@ -72,7 +111,7 @@ function setArt(word) {
 
 function setWord(word, ink = '') {
   byId('front-word').textContent = word;
-  byId('front-word').dataset.wordSize = wordSize(word);
+  byId('front-word').dataset.wordSize = cardWordSize(word);
   // The ink names the word as surely as the word does; it is cleared with it.
   byId('front-word').style.color = ink;
 }

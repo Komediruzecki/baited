@@ -1,8 +1,8 @@
 /* The video overlay draws one card over the live video and nothing else. It is the
-   landing's selected card (packages/landing/selected-cards): a Glass face and the
-   Mosaic back. The player height sets the card's size and the card's width sets its
-   type, so it reads the same in a small player, theatre mode and fullscreen.
-   One container unit is 3px on a full-size 300 × 420 card. */
+   landing's approved card, Cut Open / Glass / Prism (card.css): the face and the Prism
+   back. The player height sets the card's size and the card's width sets everything in
+   it, so it reads the same in a small player, theatre mode and fullscreen. At 300 x 420
+   it is the landing card at its own size. */
 :root {
   /* Browsers paint an opaque canvas behind a frame whose color scheme differs
      from its embedder's, which would cover the video. Keep the default scheme. */
@@ -87,7 +87,8 @@ body[data-surface='overlay'] {
   white-space: nowrap;
 }
 
-/* The card: 5:7, turned with the faces back to back. */
+/* The card: 5:7, turned with the faces back to back. The card is the container host
+   for card.css, so one landing pixel is a three-hundredth of its width. */
 .playing-card {
   --card-h: clamp(150px, 54vh, 420px);
   position: relative;
@@ -114,272 +115,47 @@ body[data-surface='overlay'] {
 .face {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  isolation: isolate;
-  padding: 5.333cqw 6cqw 4.667cqw;
-  border: 1px solid var(--b-edge);
-  border-top-color: var(--b-edge-lit);
-  border-radius: 4.667cqw 8cqw 4.667cqw 4.667cqw;
-  background: #120d1a;
-  color: var(--b-paper);
-  box-shadow:
-    0 2.667cqw 0 -1cqw #120d1a,
-    0 8cqw 16cqw #1d0b4573;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 .face-back {
   transform: rotateY(180deg);
 }
+/* A word without art, and no badge in its place, keeps the field at the landing's minimum
+   art height and centres its lines between the field and the footer. */
+.face-front:has(#front-art[hidden]):not(:has(.badge-medal:not([hidden]))) {
+  --cut-art: calc(80 * var(--cut-u));
+}
+.face-front:has(#front-art[hidden]):not(:has(.badge-medal:not([hidden]))) .face-word {
+  margin-top: auto;
+}
 
-/* Glass: ruled light behind the card and a bent copy behind the art. */
-.glass-field {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background:
-    radial-gradient(70% 36% at 100% 0, #c9a8ff59, #c9a8ff00),
-    linear-gradient(#9146ff, #5b25c2 30%, #2a1160 56%, #120d1a 82%);
-}
-/* Front: a chip, the card's level, its art, then the word plate. */
-.face-top {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 1.333cqw;
-  flex: none;
-  min-height: 6.667cqw;
-}
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 1.333cqw;
-  padding: 1cqw 2cqw;
-  border-radius: 1.333cqw;
-  background: #1a1522;
-  color: var(--b-paper);
-  font: 600 max(9px, 3.333cqw) / 1 var(--b-ui);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
+/* Chips: an empty chip takes no room. Chat's streak is fire, on both faces. */
 .chip:empty {
   display: none;
 }
-/* Chat's streak is fire, on both faces. */
 .chip-streak {
   color: #ffae4a;
 }
 .chip-streak img {
-  width: max(10px, 3.667cqw);
+  width: max(10px, calc(11 * var(--cut-u)));
   height: auto;
   flex: none;
   image-rendering: pixelated;
-}
-.pips {
-  gap: 1cqw;
-  margin-left: auto;
-  padding: 1.333cqw 1.667cqw;
-  border-radius: 3.333cqw;
-}
-.pips i {
-  width: max(5px, 2cqw);
-  height: max(5px, 2cqw);
-  border: max(1px, 0.5cqw) solid #8f84a0;
-  border-radius: 50%;
-}
-.pips[data-level='1'] i:first-child,
-.pips[data-level='2'] i:not(:last-child),
-.pips[data-level='3'] i {
-  border-color: var(--b-lilac);
-  background: var(--b-lilac);
-  box-shadow: 0 0 0 0.833cqw #c9a8ff2e;
-}
-.face-art {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex: 0 1 58.667cqw;
-  height: 58.667cqw;
-  min-height: 20cqw;
-  margin: 1.333cqw 0 2.667cqw;
-  isolation: isolate;
-}
-.face-square {
-  position: relative;
-  display: block;
-  height: 100%;
-  aspect-ratio: 1;
-  max-width: 100%;
-}
-.glass-lens {
-  position: absolute;
-  inset: 0 -10% -10%;
-  z-index: -1;
-  overflow: clip;
-  border-radius: 4cqw 6.667cqw 4cqw 4cqw;
-  box-shadow:
-    0 0 0 1px #0d0a12b3,
-    0 3.333cqw 6cqw -3.333cqw #05030a;
-  pointer-events: none;
-}
-/* The bleed keeps the displaced copy underneath the rim. */
-.glass-bend {
-  position: absolute;
-  top: -9.333cqw;
-  left: -9.333cqw;
-  width: calc(100% + 18.667cqw);
-  height: calc(100% + 18.667cqw);
-}
-.glass-lens::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(closest-side at 50% 46%, #0d0a12a6, #0d0a124d 72%, #0d0a121a);
-  box-shadow:
-    inset 0 1px 0 #fffdf75c,
-    inset 1px 0 0 #fffdf71f,
-    inset 0 0 0 1.333cqw #c9a8ff12;
-}
-.face-art-image {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  pointer-events: none;
-}
-.face-plate {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  flex: 1 0 auto;
-  min-height: min-content;
-  margin: 0 -2cqw -2cqw;
-  padding: 1cqw 2cqw 2cqw;
-  border-radius: 1cqw 1cqw 2.333cqw 2.333cqw;
-  background: #1a1522;
-  text-align: center;
-}
-/* The word is printed in its item's own ink. */
-/* Sizes follow the word's length so a small card never breaks a word. */
-.face-word {
-  color: var(--b-paper);
-  font: 400 max(12px, 10cqw) / 1.1 var(--b-display);
-  letter-spacing: -0.025em;
-  text-transform: uppercase;
-  overflow-wrap: anywhere;
-}
-.face-word[data-word-size='medium'] {
-  font-size: max(11px, 8.333cqw);
-}
-.face-word[data-word-size='long'] {
-  font-size: max(10px, 7cqw);
-}
-.face-word[data-word-size='extended'] {
-  font-size: max(9px, 5.667cqw);
-  line-height: 1.15;
-}
-.face-rules {
-  flex: none;
-  margin-top: 3.333cqw;
-}
-.face-rules-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2.667cqw;
-  margin-bottom: 2.667cqw;
-  color: #c9c0d1;
-  font: 400 max(9px, 3.667cqw) / 1.27 var(--b-ui);
-}
-.face-rules-label::before,
-.face-rules-label::after {
-  content: '';
-  flex: none;
-  width: 8cqw;
-  border-top: 1px solid #fffdf747;
-}
-.face-clues {
-  display: grid;
-  grid-template-columns: repeat(2, max-content);
-  justify-content: center;
-  justify-items: start;
-  gap: 1.333cqw 6.667cqw;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.face-clues li {
-  display: flex;
-  align-items: center;
-  gap: 1cqw;
-  color: var(--b-paper);
-  font: 600 max(9.5px, 4cqw) / 1.333 var(--b-ui);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.face-clues li::before {
-  content: '';
-  flex: none;
-  width: 2.333cqw;
-  border-top: 2px solid var(--b-lilac);
-}
-.face-note {
-  flex: none;
-  margin-top: 3.333cqw;
-  color: #c9c0d1;
-  font: 400 max(9.5px, 4cqw) / 1.42 var(--b-ui);
-  text-wrap: balance;
-}
-.playing-card:is([data-state='result'], [data-state='review']) .face-note {
-  margin-top: 2.667cqw;
-  color: var(--b-paper);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.face-question {
-  flex: none;
-  margin: 2.667cqw 0;
-  color: var(--b-copy);
-  font: 400 max(10px, 4.333cqw) / 1.385 var(--b-ui);
-  text-wrap: balance;
 }
 .face-note:empty,
 .face-question:empty {
   display: none;
 }
-.face-footer {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2.667cqw;
-  margin-top: auto;
-  padding-top: 3cqw;
-  min-height: 8.333cqw;
-  border-top: 1px solid #5a4e66;
-}
-.face-logo {
-  width: 17.333cqw;
-  min-width: 40px;
+.playing-card:is([data-state='result'], [data-state='review']) .face-note {
   color: var(--b-paper);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .face-clock {
   color: var(--b-paper);
-  font: 600 max(11px, 4.667cqw) / 1 var(--b-ui);
+  font: 600 max(11px, calc(14 * var(--cut-u))) / 1 var(--b-ui);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
 }
@@ -400,34 +176,6 @@ body[data-surface='overlay'] {
 }
 .playing-card:is([data-state='result'], [data-state='review']) :is(.face-clock, .timer-rule) {
   visibility: hidden;
-}
-
-/* A decided win catches the light once, like the landing's front card. */
-.face-front::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  background: linear-gradient(
-    105deg,
-    transparent 34%,
-    rgb(255 255 255 / 16%) 46%,
-    rgb(213 186 255 / 20%) 50%,
-    rgb(255 255 255 / 0%) 60%
-  );
-  transform: translateX(-120%);
-  pointer-events: none;
-}
-.playing-card[data-outcome='caught'] .face-front::after {
-  animation: card-glint 1.1s cubic-bezier(0.3, 0.6, 0.2, 1) 0.25s both;
-}
-@keyframes card-glint {
-  from {
-    transform: translateX(-120%);
-  }
-  to {
-    transform: translateX(120%);
-  }
 }
 
 /* Chat's win streak: fire coins on a win, and a medallion in the art's place when
@@ -515,7 +263,7 @@ body[data-surface='overlay'] {
   image-rendering: pixelated;
   filter: drop-shadow(0 1cqw 0 #0009);
 }
-.face-square:has(.badge-medal:not([hidden])) :is(.glass-lens, .face-art-image) {
+.face-square:has(.badge-medal:not([hidden])) .cut-card__reveal {
   visibility: hidden;
 }
 .badge-medal[data-tone='amber'] {
@@ -561,47 +309,30 @@ body[data-surface='overlay'] {
   }
 }
 
-/* Back: the landing's Mosaic. The streamer sees only this while chat plays. */
-.face-back {
-  padding: 0;
-  background: #25113f url('./assets/back-mosaic.webp') center / cover no-repeat;
-}
-.back-mark {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-}
-.back-mark .baited-glyph {
-  width: 64%;
-  color: var(--b-paper);
-  filter: drop-shadow(0 0.667cqw 0 #160b26);
-}
+/* Back: the landing's Prism. The streamer sees only this while chat plays. The streak
+   chip and the clock sit inside its inked frame. */
 .back-streak {
   position: absolute;
-  top: 5.333cqw;
-  left: 6cqw;
+  top: calc(7% + 8 * var(--cut-u));
+  left: calc(7% + 8 * var(--cut-u));
 }
 .back-plate {
   position: absolute;
-  right: 4cqw;
-  bottom: 4cqw;
-  left: 4cqw;
+  right: calc(7% + 8 * var(--cut-u));
+  bottom: calc(7% + 8 * var(--cut-u));
+  left: calc(7% + 8 * var(--cut-u));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2.667cqw;
-  padding: 2.667cqw 3.333cqw;
-  border-radius: 1cqw 1cqw 2.333cqw 2.333cqw;
+  gap: calc(8 * var(--cut-u));
+  padding: calc(8 * var(--cut-u)) calc(10 * var(--cut-u));
+  border-radius: calc(3 * var(--cut-u));
   background: #1a1522;
-  box-shadow:
-    inset 0 1px 0 #fffdf747,
-    0 0 0 1px #0d0a12b3;
+  box-shadow: inset 0 1px 0 #fffdf747;
 }
 .back-copy {
   color: var(--b-paper);
-  font: 600 max(10px, 4cqw) / 1.3 var(--b-ui);
+  font: 600 max(10px, calc(12 * var(--cut-u))) / 1.3 var(--b-ui);
   text-align: left;
 }
 
@@ -617,12 +348,41 @@ body[data-surface='overlay'] {
     display: none;
   }
   .face-rules {
-    margin-top: 2cqw;
+    margin-top: calc(6 * var(--cut-u));
+  }
+}
+/* Under 230 px tall, two columns of deck clues no longer fit side by side (measured on all
+   78 targets); one clue per line keeps every word whole. */
+@container (max-height: 230px) {
+  .face-rules .cut-card__clues {
+    grid-template-columns: minmax(0, max-content);
+    gap: calc(2 * var(--cut-u));
   }
 }
 @container (max-height: 210px) {
   .back-copy,
   .face-row {
+    display: none;
+  }
+}
+/* The smallest player's card: words step down instead of splitting (GRAMOPHONE needs
+   11 px, KALEIDOSCOPE 9.5 px), and the chip row steps aside so the clues keep their own
+   lines. The back keeps the streak. */
+@container (max-height: 160px) {
+  .face-word {
+    font-size: 11px;
+  }
+  .face-word[data-word-size='medium'] {
+    font-size: 9.5px;
+  }
+  .face-front {
+    --cut-top: 0px;
+  }
+  .face-top {
+    display: none;
+  }
+  /* A word without art gives its empty field to the copy. */
+  .face-front:has(#front-art[hidden]):not(:has(.badge-medal:not([hidden]))) .face-art {
     display: none;
   }
 }
@@ -642,29 +402,15 @@ body[data-surface='overlay'] {
   .card-turn {
     transition: none;
   }
-  .face-front::after {
-    display: none;
-  }
   .badge-medal {
     animation: none;
   }
 }
 @media (forced-colors: active) {
-  .face,
-  .face-back,
-  .face-plate,
   .back-plate,
   .chip {
     background: Canvas;
     color: CanvasText;
     border-color: CanvasText;
-  }
-  .glass-field,
-  .glass-lens,
-  .face-front::after {
-    display: none;
-  }
-  .face-word {
-    color: CanvasText !important;
   }
 }

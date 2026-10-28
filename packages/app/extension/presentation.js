@@ -91,12 +91,21 @@ export function wordSize(word = '') {
   return length <= 9 ? 'short' : length <= 13 ? 'medium' : length <= 18 ? 'long' : 'extended';
 }
 
+/**
+ * A card face's word size, as on the landing: a word over ten letters steps down once.
+ * Longer words outside the deck step down again so a small card never breaks one.
+ */
+export function cardWordSize(word = '') {
+  const length = Array.from(word).length;
+  return length <= 10 ? 'short' : length <= 13 ? 'medium' : length <= 18 ? 'long' : 'extended';
+}
+
 export function winLabel(wins) {
   return `${wins} ${wins === 1 ? 'WIN' : 'WINS'}`;
 }
 
 /**
- * The Glass card's ruled light at 60°, as on the landing, for a 300 × 420 view box.
+ * The Glass finish's ruled light at 60°, as on the landing, for a 300 × 420 view box.
  * Keep in parity with client/CardGlass.tsx and packages/landing/selected-cards.
  */
 export function glassRules(pitch = 12) {
