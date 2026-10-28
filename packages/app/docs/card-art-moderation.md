@@ -53,7 +53,7 @@ Sharp validates the declared type against PNG/JPEG/WebP signatures and decoded f
 
 ## API and privacy boundary
 
-All authoring routes use the existing owner session, origin and CSRF checks. The channel comes from that session. The native Twitch JWT grants no authoring access.
+All authoring routes require the existing owner session. Writes additionally require origin and CSRF checks. The channel comes from that session. The native Twitch JWT grants no authoring access.
 
 | Route | Behavior |
 | --- | --- |
@@ -69,7 +69,7 @@ The capability is stable across polling and binds room, round and artwork ID wit
 
 The native Extension needs the backend hostname in Twitch's image-domain allowlist for direct image rendering. The existing API fetching allowlist remains necessary. The first client update needs a rebuilt ZIP; later artwork uploads do not. The local Studio allows `blob:` images for editor previews. These changes do not relax script policy. [Twitch Extension policy configuration](https://dev.twitch.tv/docs/extensions/), [submission domain guidance](https://dev.twitch.tv/docs/extensions/submission-best-practices/)
 
-Approved source records and image hashes persist privately in `DATA_DIR/card-art/index.json`; normalized PNGs sit beside it with opaque UUID names. Raw image bytes, model scores and provider error text do not enter logs. Writes are serialized and atomic. Reference changes share the artwork lock with deletion. A failed deletion keeps the record available for retry; missing or deletion-pending bytes cannot be attached. Account deletion invalidates in-flight scans and delayed pack saves even if the owner signs in again.
+Approved source records and image hashes persist privately in `DATA_DIR/card-art/index.json`; normalized PNGs sit beside it with opaque UUID names. Raw image bytes, model scores and provider error text do not enter logs. Writes are serialized; individual PNG and index replacements are atomic, but the multi-file operation is not a crash-atomic transaction. Reference changes share the artwork lock with deletion. A failed deletion keeps the record available for retry; missing or deletion-pending bytes cannot be attached. Account deletion invalidates in-flight scans and delayed pack saves even if the owner signs in again.
 
 ## Verification and remaining acceptance
 
