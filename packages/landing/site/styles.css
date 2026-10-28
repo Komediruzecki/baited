@@ -154,11 +154,12 @@ input {
   height: 76px;
 }
 /* The navigation, after monochrome-studio.com's header (and the owner's screen recording of it): a
-   white bar centred at the top. The black logo sits in a light cell that fills with violet pixels
-   on hover; a link's words shrink into a small violet square that grows and assembles a pixel icon;
-   the chat button is a violet square whose dots keep typing. While the visitor scrolls down the
-   links fold away and the chat button widens with its words; scrolling up or keyboard focus opens
-   the bar again. It steps away when the footer fills the top of the screen (nav.js). */
+   white bar centred at the top. The violet pixel logo sits in a lavender cell; on hover a wave runs
+   through its columns while the cell fills with deeper lavender pixels. A link's word turns into a
+   pixel icon on a violet square; the chat button is a violet square whose dots keep typing. While
+   the visitor scrolls down the links fold away and the chat button widens with its words; scrolling
+   up or keyboard focus opens the bar again. It steps away when the footer fills the top of the
+   screen (nav.js). */
 .site-nav {
   --nav-cell: 44px;
   position: fixed;
@@ -193,7 +194,8 @@ input {
     opacity 0.25s ease,
     visibility 0s 0.45s;
 }
-/* The logo's cell fills with violet pixels at random moments (nav.js) and the logo turns white. */
+/* On hover the logo's lavender cell fills with deeper lavender pixels at random moments (nav.js);
+   the letters keep their violet. */
 .nav-logo {
   position: relative;
   display: grid;
@@ -214,8 +216,9 @@ input {
   height: 20px; /* 2px per logo pixel */
   transition: filter 0.25s ease;
 }
-/* The letters as violet pixels that blink in a loop (nav.js). The image stays in place, hidden, to
-   hold the size, and shows as before without JavaScript or in forced colors. */
+/* The letters redrawn as violet pixels on a canvas (nav.js), so hovering can send a wave through
+   them; at rest they hold still. The image stays in place, hidden, to hold the size, and shows as
+   before without JavaScript or in forced colors. */
 .nav-logo.has-ink img {
   visibility: hidden;
 }
