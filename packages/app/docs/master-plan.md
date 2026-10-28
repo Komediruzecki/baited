@@ -1,127 +1,90 @@
-# BAIT: next steps, Twitch setup and Extension review
+# Baited: where we are and what's next
 
-Checked 25 October 2026 against the game source and current official Twitch documentation. This is the current entry point; earlier planning was split across the documents linked below. No account registration, live-game deployment or Extension submission was performed while preparing it.
+Rewritten 28 October 2026 after PR #8 (stream layer) and PR #12 (its follow-ups). This is the entry point for planning. The older version of this page, dated 25 October, is in git history; its account-setup and Extension-submission steps now live in [HOSTED_TEST.md](HOSTED_TEST.md), [chat-bot.md](chat-bot.md) and the [Twitch lifecycle docs](https://dev.twitch.tv/docs/extensions/life-cycle/).
 
-**Current build:** [baited v0.0.1 local test guide](baited-local-test.md), including restart commands and exact console settings. The viewer/configuration panel and signed backend are implemented on the private task branch; real Twitch installation and a complete round remain acceptance checks. The [branding plan](baited-v0.0.1-plan.md) is still pending design review. Both test accounts are resolved: `komediruzecki7` (501062940) and `yahwehwastaken` (566058624). Reuse the existing application and Extension; do not register duplicates.
+**Deadline:** Devpost entry by **2 November 2026, 23:00 Zagreb**. Team review on 1 November. See [Devpost](#devpost) below.
 
 ## Where we are
 
-| Part | Current state |
+| Part | State on 28 October |
 | --- | --- |
-| Landing | Released at [bait.maff.app](https://bait.maff.app/) and [dev.bait.maff.app](https://dev.bait.maff.app/), from private `disjoint-colliders/packages/bait`, tag `bait-v1.0.0`. Its replay is scripted. |
-| Game | Private [Komediruzecki/bait](https://github.com/Komediruzecki/bait), separate Node server, studio, secret viewer room and OBS overlay. Not deployed for remote play. |
-| Gameplay | 72 target/clue cards; difficulty, skip votes, three-word missions, private guesses, hint awards and win reversal already exist. |
-| Art and audio | 18 illustrated targets and six opt-in sound cues. Illustrations are not separate action-card mechanics. |
-| Speech | Local Moonshine is the default. A proposed catch needs broadcaster confirmation. Deepgram is optional; ElevenLabs has no adapter. |
-| Evidence | Synthetic speech and OBS-load checks exist. A physical-microphone round with real Twitch chat, the actual OBS overlay and a remote viewer still needs to pass. |
-| Native Extension | Viewer/configuration frontend, verified JWT API, frontend ZIP, local HTTPS gateway and labelled fixture preview implemented. Not installed, deployed or submitted; the first real Twitch round remains unverified. |
+| Repository | [Komediruzecki/baited](https://github.com/Komediruzecki/baited), private pnpm monorepo: `packages/app` (server, studio, Extension), `packages/landing`, `packages/review-host`. |
+| Landing | [baited.maff.app](https://baited.maff.app/) from annotated `bait-v*` tags, [dev.baited.maff.app](https://dev.baited.maff.app/) from every push to `main`. Cut Open cards with Prism backs since `bait-v1.4.0`. |
+| Game backend | Runs as the hosted-test Docker image on the owner's machine, behind the named Cloudflare tunnel at `play-baited.maff.app` ([HOSTED_TEST.md](HOSTED_TEST.md)). Not a permanent deployment: it is up only while someone runs it. |
+| Extension | Panel 0.0.2 in Hosted Test. The video overlay and the award/MVP display need a 0.0.3 upload. Not submitted for review. |
+| Chat bot | Baity (`baity_bot`, user ID 1596216112) is signed in on the hosted backend. Its `!bait` commands have not been tested in real chat. |
+| Cards | Every plain card in the product uses the landing's Cut Open card from one shared `extension/card.css`; `tests/card-parity.test.ts` holds them to the landing value by value. |
 
-## V2 design review
+## What PR #8 shipped (merged 28 October, 5f3676b)
 
-Opus completed the **Dealt In** direction on 25 October 2026: a violet broadcast stage, charcoal cards, a staged 32-second round called **The Spicy Mountain**, and a local hint-writing interaction. The [v2 review index](v2/README.md) links the detailed [landing plan](v2/landing-plan.md), [hero storyboard](v2/hero-storyboard.md) and [gameplay/card expansion plan](v2/gameplay-plan.md).
+- **Extension video overlay.** Viewers see the secret card on the stream; the broadcaster's own view only shows its back.
+- **Chat bot, then Baity.** Round announcements, timer nudges, `!bait help/score/streak/top/who`, moderator `!bait start/pause/resume`, all under Twitch's rate limits. Baity (legally Baeittrice) is cute while chat wins and louder with every round chat loses.
+- **Win streaks** with badge tiers on OBS, the Extension, the viewer room, the studio and chat. Fire streak back, OBS boxes in the original Baited Pixel font.
+- **Studio in Material 3**, in the landing's colours.
+- **Bait MVP.** OBS "BAITED BY @name" sting, MVP podium, top three in the viewer room. The spoiler check catches disguised words (`pengu1n`, `p e n g u i n`).
+- **Fixes found in review:** `!skip` sits outside the 3-second hint limit and counts once per chatter; Shared Chat messages from partner channels are ignored.
+- **Cut Open cards** on the panel, overlay, viewer room, studio, OBS reveal and sign-in back.
 
-The mockup is isolated from the released landing and game. Review its layout, motion and phone behavior before choosing integration or release. Opus calls for this work use the `irch` account, request Max effort and allow 45 minutes per pass. The plans do not authorize deployment or gameplay expansion.
+## What PR #12 adds
 
-The content proposal targets 100 complete cards (50 illustrated and 50 type-led), then roughly 1,000 reviewed words. The existing 18 illustrations stay intact. Authored openers, moment stamps and card reactions come before the larger game modes; Six-word showdown is the first proposed gameplay experiment. All remain behind the real-round acceptance milestone below.
+- Rate limiter with bounded memory that never refuses a new viewer (the old one refused everyone past 10,000 keys, about 5,000 viewers).
+- Hint review newest first, with the time each hint was sent.
+- Moderator deletes drop that hint; bans and timeouts drop the chatter's hints and, while the 10-minute review is open, the award.
+- The streamer's pick and the MVP top three in the Extension panel and video overlay (data version stays `0.0.1`).
+- Baity audit fixes: command replies in their own lane so they never push out an announcement, a 30-second cooldown per chatter, a fair share of the global budget across channels, queued posts dropped once the bot may no longer post, one automatic re-ask when a sign-in drops `channel:bot`, the bot-permission button held until the round ends, and a reason code logged for every failed sign-in.
+- Decisions applied on 28 October (see the decision log): no emoji in Baity's lines or the streak UI, and the bot account refused in the streamer sign-in.
 
-## The next working milestone
+## Tested and not tested
 
-Record one complete round: Paolo sees the secret, posts a real hint in Twitch chat, the streamer says the target, Moonshine proposes the catch, the streamer confirms it, and the OBS recording shows one result without exposing the secret early.
+**Tested live (27 October, hosted test with Paolo as remote viewer):** Twitch sign-in, real chat reaching the studio, physical microphone with Moonshine, catches, and the native panel from Twitch's CDN.
 
-| Order | Work | Done when |
+**Not yet tested live:**
+
+- Baity's posts with the Chat Bot badge, and chat and moderator `!bait` commands through EventSub.
+- Moderator delete and ban events reaching the game (fixture tests only).
+- The video overlay and the award/MVP display on Twitch (needs the 0.0.3 upload).
+- The rest of the [HOSTED_TEST.md](HOSTED_TEST.md) checklist: target hidden in Studio and OBS with the real scene running, every result path (confirmed, rejected, pause/resume, escape), reload without double scoring, real screenshots and a short OBS recording.
+
+## What's left, in order
+
+| # | Work | Done when |
 | --- | --- | --- |
-| 1 | Repair the Moonshine rehearsal setup | `scripts/rehearse-local.mjs` no longer demands a Deepgram key in Moonshine mode; its reference-only template explicitly selects Moonshine. Missing Twitch/encryption credentials still fail clearly. |
-| 2 | Connect the existing Twitch application | Intended channel signs in and a second account's actual chat reaches the game. |
-| 3 | Test the real microphone | Both teammates test natural speech, similar words, game audio, near-buzzer speech, confirm/reject and reconnect. Keep confirmation mandatory. |
-| 4 | Check OBS Browser Source and record locally | Actual BAIT overlay, camera/game and audio appear correctly. No duplicate sound or captured viewer page. |
-| 5 | Host the live game for remote viewers | One persistent Node process, disk, HTTPS, working SSE/WebSockets, exact OAuth callback and restart checks. Choose host, game hostname and operating cost first. |
-| 6 | Rehearse from a second device/network | Viewer joining, complete round, pause/recovery and correction work without developer assistance. |
-| 7 | Prepare the Extension and submission packet | Follow the separate paths below. Do not make review approval a dependency of the real-game demonstration. |
+| 1 | **Extension and Baity test** (next session) | Rebuild the hosted image from `main`, upload Extension 0.0.3 (`--version 0.0.3`, `overlay.html` as the video overlay view), then on a test channel: Baity posts with the Chat Bot badge, every `!bait` command answers, a moderator delete and a timeout remove hints, the overlay shows the card, the pick and the MVPs. |
+| 2 | Finish the HOSTED_TEST checklist | Every open item above ticked, with screenshots and an OBS recording saved through `agent-out`. |
+| 3 | Make Baity a VIP, or exempt it from caps filters | Nightbot, Fossabot and Streamlabs Cloudbot leave its loud lines alone on the test channel. |
+| 4 | Devpost entry | Video, description, repository access and judge instructions reviewed by both of us and submitted before the deadline. |
+| 5 | Extension review submission | Listing, privacy and terms URLs, images, walkthrough and reviewer availability. Twitch estimates 8 to 14 days. |
+| 6 | Spoiler-check tuning | The open gaps from the 27 October audit covered by tests, without new false positives on ordinary hints. |
+| 7 | **TIME WARP** chaos card, about a day | Unlocks with 30 s left, once per word, when as many distinct chatters as the skip threshold type `!bait warp`. Reuses the +15 s from a wrong Call the bait guess. A "Warp x/y" count, an OBS sting, two Baity lines, no tally post per vote. Shown in the Extension as an optional field. |
+| 8 | "Baity thinks @name got you" | A suggested pick from the card's clues in the hint review. Medium. Matching hints against the transcript is larger and later. |
+| 9 | A pre-round vote with no secret in it | Chat picks difficulty, or one word against a three-word mission. One latest vote per viewer, fixed close, safe default. |
+| 10 | Chat chooses the word, opt-in, about 9 to 11 days | Private voting by slot number in the panel or viewer room (never in chat), candidates typed in chat thrown out with a silent swap, a minimum candidate pool, and `violations` made viewer-only first (it reaches the Studio and OBS projections today). |
+| 11 | A permanent game host | One persistent Node process with disk, HTTPS, SSE and WebSockets, the exact OAuth callback, restart checks, and an agreed monthly cost. Needed before Extension release, not for Devpost. |
 
-**Setup repair implemented:** `rehearsal:local` and the reference-only templates default to Moonshine and no longer require a Deepgram key in that mode. Twitch OAuth and a persistent encryption key remain required for a real rehearsal. The [local test guide](baited-local-test.md) links the provisioned Proton references and uses a fresh data directory. Simulated chat is not proof of Twitch integration.
+Not planned: **COUNTER BAIT** already exists as Call the bait. **DOUBLE DOWN** waits for a chat-vs-streamer points score, since doubling a win would make the "N in a row" badges untrue. **DECOY** is cut: all words ship in the client, so a category shown to the streamer narrows the word down.
 
-The saved synthetic comparison found 4 of 6 targets and one false target candidate among six negative sentences in both runs. These small fixture results do not establish human recognition accuracy. The installed SDK's confidence is a constant placeholder. See [Moonshine behavior](moonshine.md) and [the measured rehearsal](moonshine-rehearsal.md). The last OBS inspection lacked Browser Source; recheck **Sources → + → Browser** in the running installation.
+Earlier creative proposals (Six-word showdown, themed decks, reveal sequence, Bank or bait, Pass the mic) stay in [tabletop-options.md](tabletop-options.md) and [v2/gameplay-plan.md](v2/gameplay-plan.md), behind the items above.
 
-## Account setup: start here
+## Decision log
 
-1. Use broadcaster `komediruzecki7`. Sign into the [Twitch Developer Console](https://dev.twitch.tv/console/apps), verify the account email and enable 2FA.
-2. Under **Applications**, open the existing application. Confirm its **Confidential** client type and exact local callback `http://localhost:3000/auth/twitch/callback`. The server handles the secret and authorization-code exchange. [Official app registration](https://dev.twitch.tv/docs/authentication/register-app/).
-3. The OAuth pair and Extension shared secret resolve from Proton item `dev / tw-bait-ids`. The new persistent encryption key is `dev / tw-bait-runtime / token-encryption-key`; the local guide provides reference-only launch templates. No Twitch password, stream key or speech-provider key is needed by the app for Moonshine.
-4. Connect the intended broadcaster and authorize the existing `user:read:chat` scope. BAIT's code uses EventSub to read that channel's chat. Use `localhost:3000` consistently for this callback.
-5. In the studio, load Moonshine, enable the microphone and use headphones. The model runs in the standalone studio. Audio stays on that computer; final text goes to the game server for matching without being persisted.
-6. In OBS, add the **OBS overlay URL** from Stream setup as a 1920×1080 Browser Source. Keep the secret viewer page and studio out of the captured scene. Record first; verify the sound is captured once. The overlay itself stays silent.
-
-The earlier [Twitch/Deepgram/OBS guide](twitch-deepgram-obs-setup.md) contains expanded OAuth and OBS steps, but its provider recommendation and launcher instructions predate Moonshine. It is not the current default workflow.
-
-## Do we need a Twitch organization?
-
-One account can own the first Extension. Shared management in Twitch's console uses an organization; it need not be an incorporated company. GitHub collaboration can continue while approval is pending.
-
-Open [the console](https://dev.twitch.tv/console) → account dropdown → **Create Organization**. Enter the real Irchiinnuss details, Developer type, website, matching-domain contact email, team size and location. Select Extensions; do not claim an unrelated game. Both members need verified email and 2FA. Approval typically takes two business weeks. After approval, use **Manage Members** to add Paolo as Developer. Before changing ownership, verify Twitch's supported transfer path for the existing Extension; do not recreate it. [Twitch organization guide](https://dev.twitch.tv/docs/companies/).
-
-## Make BAIT a native Twitch Extension
-
-Recommended first version: a small **viewer panel** containing the secret card, forbidden clues, round state and result. The [v0.0.1 plan](baited-v0.0.1-plan.md) keeps existing `!skip` chat commands and defers a new panel voting control. Keep Moonshine and the microphone in the standalone broadcaster studio. OBS displays the existing secret-free overlay. Viewers should not download the speech model.
-
-```mermaid
-flowchart LR
-  Mic[Streamer microphone] --> Moon[Moonshine in standalone studio]
-  Moon -->|Final text| Game[BAIT game server]
-  Chat[Twitch chat / EventSub] --> Game
-  Panel[Twitch viewer panel] <-->|Extension-authenticated API| Game
-  Game -->|Secret-free state| OBS[OBS overlay]
-```
-
-The v0.0.1 branch implements this panel with signed-token authentication and read-only state/configuration endpoints. The standalone studio keeps its existing cookie and CSRF protections. Real installation, browser trust and gameplay evidence are still required.
-
-Implementation and acceptance checklist:
-
-- Build viewer and broadcaster configuration entry points. Start with the existing card UI, sized for a panel; keep the landing's large animation/gallery out of the first load.
-- Load Twitch's Extension Helper in every entry point. Use `onAuthorized` and validate the supplied JWT on the server, including signature, expiry, channel and role. Extension credentials are separate from the ordinary OAuth app's credentials.
-- Map each authorized channel to its BAIT room. Keep viewer actions separate from broadcaster controls. Never trust a client-provided channel or role; never ship secrets in the frontend.
-- Expose only the required HTTPS API/WSS endpoints with explicit origins and network allowlists. Preserve the standalone studio's existing protection. Twitch's CDN hosts the frontend; our host still runs the game backend.
-- Test renewal, expired credentials, wrong-channel requests, disconnects and installation/configuration. The active secret belongs only in the viewer projection. As with the current companion page, secrecy depends on the streamer choosing not to look at the viewer view.
-
-[Twitch building guide](https://dev.twitch.tv/docs/extensions/building/). Mobile support requires testing inside the Twitch mobile app, not only a narrow desktop browser. Follow the [Extension policies](https://dev.twitch.tv/docs/extensions/guidelines-and-policies/) for audio controls, assets, external connections and any user-generated content.
-
-## Create, test and submit the Extension
-
-1. In the intended owner's [Extensions console](https://dev.twitch.tv/console/extensions), open the existing Extension and confirm **Panel** and version `0.0.1`. The planned display name is **baited**. This version is independent of the landing's `bait-v1.0.0` tag. [Creation tutorial](https://dev.twitch.tv/docs/tutorials/extension-101-tutorial-series/create-extension/).
-2. **Local Test:** configure the HTTPS testing base URI and viewer/config paths. Install and activate on the test channel. Use numeric IDs `501062940,566058624` in the testing-account allowlist, not usernames.
-3. Upload the built frontend ZIP with files at its root, then enter **Hosted Test**. Keep Node code, credentials, local data and speech models out of that ZIP. Test against the reachable game backend.
-4. Complete the listing, author/contact fields, privacy and terms URLs, logo, discovery image and screenshots. Supply the review channel and walkthrough. Submit for **Review**.
-5. Resolve requested changes. Once approved, choose **Release**. Twitch estimates 8–14 days for review, sometimes longer. A website tag does not submit or release an Extension. [Lifecycle and exact submission fields](https://dev.twitch.tv/docs/extensions/life-cycle/).
-
-The testing-account allowlist grants prerelease testing access. The streamer allowlist restricts installation; do not confuse the two. For review, explain installation, external studio setup, microphone consent, one successful round and confirmation/rejection. Include reviewer availability within 09:00–17:00 Pacific because the full BAIT loop needs an active operator. Keep the backend available; continuous broadcasting throughout the queue is not required. [Review walkthrough guidance](https://dev.twitch.tv/docs/extensions/submission-best-practices/).
-
-## Creative follow-ups, in order
-
-These are proposals, not shipped features. Demonstrate the existing missions, private guess and hint awards before adding more systems.
-
-| Idea | What changes in play | Effort / next proof |
+| Date | Decision | Why |
 | --- | --- | --- |
-| Six-word showdown | Award-eligible hints have at most six words. Longer hints do not punish the community or delete Twitch messages. | Small. Test three rounds; keep only if understood without coaching. |
-| Themed decks | Food, creatures, fantasy and everyday objects give streams a recognizable theme. Add art to selected words among the 54 currently without bespoke illustrations. | Small to medium. Speech-test targets before producing more art; do not equate art count with new mechanics. |
-| Reveal sequence | After a confirmed catch, show the chosen clean hint, flip the card and play one opt-in cue. Give the trap a readable payoff. | Medium. Never expose the target early or imply automatic attribution. |
-| Audience chooses the next constraint | A timed pre-round vote selects Classic or Six words. | Medium. One latest vote per viewer, fixed close time and a safe no-vote default. |
-| Bank or bait | After mission word two, chat banks a small bonus or risks it on word three. | Medium to large. Separate bonus accounting, ties and win-reversal behavior need testing. |
-| Pass the mic | Two streamers alternate responsibility under one clock. | Large. Separate microphone ownership, consent and reconnection; save for after the first release. |
+| 27 Oct | Bot persona is Baity, legally Baeittrice; account `baity_bot`. | `BaityBot` and `Baity` were taken. |
+| 27 Oct | PR #8 merged as a merge commit, not a squash. | Keeps the original commit authors without a co-author trailer. |
+| 28 Oct | No emoji in Baity's chat lines or the streak UI. Chat lines carry the persona in words; the UI uses SVG icons. | Standing owner rule: no emoji anywhere in code or UI. Twitch emote names were rejected because they show as raw words in the studio's Baity preview. |
+| 28 Oct | The bot account cannot sign in as a streamer, unless `TWITCH_BOT_IS_STREAMER=1`. | On 27 October `baity_bot` signed in through the streamer flow by mistake and got its own room. The flag keeps the supported one-account setup working. |
+| 28 Oct | A ban or timeout takes back an award only while that round's 10-minute review is open. | `channel.chat.clear_user_messages` cannot tell a ban from an automatic caps or link timeout. Telling them apart needs `channel.moderate` and a new moderator scope, which means every streamer signs in again. |
+| 28 Oct | Partner channels' moderation in Shared Chat is accepted as it comes. | Twitch's reference gives Shared Chat copies their own `message_id` (with a separate `source_message_id`) but documents no source field on delete or clear events. Only this channel's messages become hints, so the worst case is a partner's ban removing a hint. |
+| 28 Oct | Card port kept as reviewed: no glint, panel art shrinks to 104 landing px when both the pick and the MVPs show, Studio and OBS result cards leave the clue area empty. | Keeps the panel inside Twitch's 500 px height; the owner checked the screenshots. |
 
-The saved [tabletop plan](tabletop-options.md) gives the exact Six-word, Bank or bait and Pass the mic proposals. The reveal sequence and themed-deck priorities above are follow-up suggestions. Keep sound opt-in and avoid simultaneous playback from the studio and OBS overlay.
+## Devpost
 
-## Devpost is a separate submission
+The rules allow Twitch chat, overlay and API integrations; native Extension approval is not required. Two eligible individuals can enter as a team with one representative. Prepare a public YouTube demo under three minutes showing working Twitch play and Codex use, the main Codex session ID, source, assets and run instructions, and the English description. Private GitHub is allowed with the judge access the [official rules](https://twitchcon-codex.devpost.com/rules) name; inviting judges is an owner decision.
 
-The current rules allow Twitch chat/overlay/API integrations; native Extension approval is not required. Two eligible individuals can enter as a team with one representative; legal organizations cannot enter. Twitch-console team management does not by itself settle project ownership or entrant eligibility. Confirm the submitted work belongs to the eligible entrants, particularly if using a company brand. [Official rules](https://twitchcon-codex.devpost.com/rules).
+Working documents: [submission draft](submission.md), [team checklist](team-and-release-checklist.md), [demo script](demo-script.md), [judge walkthrough](judge-walkthrough.md), [game-hosting runbook](deployment-runbook.md).
 
-Deadline: **2 November 2026, 23:00 Zagreb**. Prepare a public YouTube demo under three minutes showing working Twitch play and Codex use, the main Codex session ID, complete source/assets/run instructions, and the English description. Private GitHub is allowed with the specified judge access. Check the exact recipient in the rules before inviting anyone. Target team review on 1 November. [Official requirements](https://twitchcon-codex.devpost.com/rules).
+Split: maff handles runtime, accounts and hosting; Paolo tests as the independent viewer and reviews rules, art and the demo edit. Both review the final entry.
 
-Working documents: [submission draft](../devpost-submission.md), [team checklist](team-and-release-checklist.md), [demo script](demo-script.md), [judge walkthrough](judge-walkthrough.md), [game-hosting runbook](deployment-runbook.md).
+## Twitch organization
 
-Suggested split: maff handles runtime/accounts/hosting; Paolo tests as the independent viewer and reviews rules, art and the demo edit. Both review the final entry.
-
-## What the owner needs to provide next
-
-- Extension shared-secret field/reference; the OAuth fields and both test identities have been verified. The game also needs a persistent token-encryption key, provisioned securely if none exists.
-- Confirm the existing Extension's owner, version state and display type. An Irchiinnuss organization can follow if both teammates need console administration.
-- Which microphone to use and whether OBS currently offers Browser Source.
-- A hosting/domain/budget decision for the live game after the local round passes. The existing landing deployment does not supply that runtime.
+One account can own the first Extension. Shared console management needs a Twitch organization (it need not be a company): console account menu, **Create Organization**, Developer type, Extensions selected. Approval takes about two business weeks. Then add Paolo as Developer. Check Twitch's transfer path before moving the existing Extension; never recreate it. [Organization guide](https://dev.twitch.tv/docs/companies/).
