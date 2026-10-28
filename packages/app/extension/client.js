@@ -5,6 +5,7 @@ const difficulties = new Set(['easy', 'medium', 'hard']);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const number = (value) => typeof value === 'number' && Number.isFinite(value);
 const string = (value, max = 120) => typeof value === 'string' && value.length > 0 && value.length <= max;
+const count = (value) => Number.isSafeInteger(value) && value >= 0;
 
 export function readRuntimeConfig(value) {
   if (!object(value) || !string(value.clientId, 128) || !/^[a-z0-9]+$/i.test(value.clientId)) {
@@ -36,15 +37,30 @@ export function readState(value) {
     if (q.target !== undefined && !string(q.target)) throw new Error('Invalid target.');
     if (q.difficulty !== undefined && !difficulties.has(q.difficulty)) throw new Error('Invalid difficulty.');
     if (q.forbiddenClues !== undefined && (!Array.isArray(q.forbiddenClues) || q.forbiddenClues.length > 10 || q.forbiddenClues.some((x) => !string(x, 80)))) throw new Error('Invalid clues.');
-    round = { id: q.id, number: q.number, duration: q.duration, remaining: q.remaining, endsAt: q.endsAt, difficulty: q.difficulty, target: q.target, forbiddenClues: q.forbiddenClues ?? [] };
+    // The printed ink lands in a style property, so only a plain hex colour is accepted.
+    if (q.ink !== undefined && !(typeof q.ink === 'string' && /^#[0-9a-f]{6}$/i.test(q.ink))) throw new Error('Invalid ink.');
+    if (q.example !== undefined && !string(q.example, 160)) throw new Error('Invalid example.');
+    round = { id: q.id, number: q.number, duration: q.duration, remaining: q.remaining, endsAt: q.endsAt, difficulty: q.difficulty, target: q.target, forbiddenClues: q.forbiddenClues ?? [],
+      ...(q.target !== undefined && q.ink ? { ink: q.ink } : {}), ...(q.target !== undefined && q.example ? { example: q.example } : {}) };
   }
   let result = null;
   if (r.result !== null) {
     const resultValue = r.result;
     if (!object(resultValue) || !string(resultValue.id) || !string(resultValue.word) || !outcomes.has(resultValue.outcome)) throw new Error('Invalid result.');
-    result = { id: resultValue.id, word: resultValue.word, outcome: resultValue.outcome };
+    if (resultValue.reason !== undefined && !['guess', 'timer'].includes(resultValue.reason)) throw new Error('Invalid result.');
+    // Stays self-contained for the LAN harness; screens ignore counts that are not a tier.
+    if (resultValue.milestone !== undefined && !(count(resultValue.milestone) && resultValue.milestone >= 2)) throw new Error('Invalid result.');
+    if (resultValue.newBadge !== undefined && typeof resultValue.newBadge !== 'boolean') throw new Error('Invalid result.');
+    result = { id: resultValue.id, word: resultValue.word, outcome: resultValue.outcome, ...(resultValue.reason ? { reason: resultValue.reason } : {}),
+      ...(resultValue.milestone ? { milestone: resultValue.milestone, newBadge: resultValue.newBadge === true } : {}) };
   }
-  return { configured: true, room: { phase: r.phase, channel: r.channel, serverTime: r.serverTime, round, result } };
+  // Chat's streak is public. Older backends without a score read as no streak.
+  let score = { streak: 0, best: 0 };
+  if (r.score !== undefined) {
+    if (!object(r.score) || !count(r.score.streak) || !count(r.score.best)) throw new Error('Invalid score.');
+    score = { streak: r.score.streak, best: r.score.best };
+  }
+  return { configured: true, room: { phase: r.phase, channel: r.channel, serverTime: r.serverTime, round, result, score } };
 }
 
 export function readConfiguration(value, studioBaseUrl) {

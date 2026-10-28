@@ -12,6 +12,10 @@ export interface Settings {
   mission: 'single' | 'three';
   missionDuration: number;
   callBait: boolean;
+  /** The bot announces rounds in Twitch chat. Off until the streamer opts in. */
+  chatBot: boolean;
+  /** Moderators can type !bait start, !bait pause and !bait resume. */
+  modCommands: boolean;
 }
 export interface Result {
   id: string;
@@ -21,8 +25,13 @@ export interface Result {
   elapsed: number;
   participants: number;
   at: number;
-  award?: { name: string };
+  /** The streamer's "You baited me" pick; `at` (when it was chosen) cues the OBS sting. */
+  award?: { name: string; at?: number };
   reason?: 'guess' | 'timer';
+  /** This win landed chat's streak on a badge tier. */
+  milestone?: number;
+  /** ...and unlocked that badge for the first time in this room. */
+  newBadge?: boolean;
 }
 export type ResultView = Omit<Result, 'word'> & { word?: string };
 export interface Leader {
@@ -69,6 +78,9 @@ export interface GameView {
     epoch: number;
     target?: string;
     forbiddenClues?: string[];
+    /** The card's printed word colour and example question; sent only with `target`. */
+    ink?: string;
+    example?: string;
     difficulty: Difficulty;
     guessEnabled: boolean;
     guessUsed: boolean;
@@ -83,6 +95,10 @@ export interface GameView {
   voters: number;
   voteThreshold: number;
   leaders: Leader[];
+  /** Up to five chatters with the most streamer's picks, most first. */
+  mvps: Leader[];
+  /** Unlocked streak badges by tier count; `at` is null when reached before dates were kept. */
+  badges: { count: number; at: number | null }[];
   connection: {
     status: 'offline' | 'connecting' | 'connected' | 'reconnecting' | 'error';
     detail: string;
@@ -92,6 +108,24 @@ export interface GameView {
   mission: MissionView | null;
   violations: number;
 }
+export interface ChatBotPost {
+  id: string;
+  at: number;
+  text: string;
+  /** `preview`: a demo room, never sent to Twitch. `dropped`: Twitch accepted the request but held or refused the message. */
+  status: 'sent' | 'preview' | 'dropped' | 'failed';
+}
+export interface ChatBotStatus {
+  /** `demo` previews in the studio; `unconfigured` has no bot account on this server. */
+  mode: 'demo' | 'unconfigured' | 'unauthorized' | 'twitch';
+  /** Bot account display name once its owner has authorized it. */
+  name: string | null;
+  /** The broadcaster granted channel:bot, so the bot can post here with the Chat Bot badge. */
+  channelAllowed: boolean;
+  /** The latest delivery problem, if any. Cleared by the next successful message. */
+  problem: string | null;
+  recent: ChatBotPost[];
+}
 export interface Studio {
   room: GameView;
   viewerUrl: string;
@@ -99,6 +133,7 @@ export interface Studio {
   speechReady: boolean;
   speechProvider: SpeechProvider;
   awardBoard: AwardBoard | null;
+  chatBot: ChatBotStatus;
 }
 export interface SessionInfo {
   authenticated: boolean;

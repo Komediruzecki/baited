@@ -49,7 +49,7 @@ This is an API application for the existing BAIT build. Native Twitch Extension 
 5. If **Client Type** is offered, choose **Confidential**: BAIT's server stores the secret and performs the authorization-code exchange.
 6. Complete the displayed verification and create the application. Open **Manage**, copy the Client ID into Proton Pass, then use **New Secret** and save the secret directly there too. Creating another secret invalidates the previous one.
 
-Follow the [official registration steps](https://dev.twitch.tv/docs/authentication/register-app) and [server-side authentication guidance](https://dev.twitch.tv/docs/authentication/). BAIT requests only `user:read:chat`; it does not need permission to send or moderate messages. Its outbound EventSub WebSocket works without a public webhook. [Twitch chat authentication](https://dev.twitch.tv/docs/chat/authenticating/).
+Follow the [official registration steps](https://dev.twitch.tv/docs/authentication/register-app) and [server-side authentication guidance](https://dev.twitch.tv/docs/authentication/). BAIT requests `user:read:chat`; it does not need permission to moderate messages. Sending is limited to the optional [chat bot](chat-bot.md), which asks the streamer for `channel:bot` only when they allow it. Its outbound EventSub WebSocket works without a public webhook. [Twitch chat authentication](https://dev.twitch.tv/docs/chat/authenticating/).
 
 Use `http://localhost:3000` throughout this live local session. Substituting `127.0.0.1`, changing the port or altering the callback path can break redirect matching or session cookies.
 

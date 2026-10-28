@@ -14,6 +14,16 @@ export const brand = (
     <span className="baited-glyph" aria-hidden="true" style={{ height: '100%' }} />
   </span>
 );
+/** Outcomes of the operator's one-time bot account sign-in, shown on return from Twitch. */
+export const botNotices = {
+  ready: 'The bot account is connected. Streamers can now turn on chat announcements in Game settings.',
+  errors: {
+    'bot-account':
+      'That Twitch account is not the bot account this server expects. Sign in as the bot account, in a private window if you are signed in as a streamer.',
+    'bot-setup':
+      'This server has no bot account configured. Set TWITCH_BOT_USER_ID, then sign in as the bot.',
+  } as Record<string, string>,
+};
 export function Button({
   children,
   className = '',
@@ -132,8 +142,8 @@ export function HowTo() {
         <summary>Optional rules</summary>
         <ul>
           <li>
-            <strong>Off-limits clues:</strong> Easy: none. Medium: two. Hard: four. A flagged hint
-            can’t win an award. The round continues.
+            <strong>Off-limits clues:</strong> Easy: none. Medium: two. Hard: four. Disguised
+            spellings count too. A flagged hint can’t win an award. The round continues.
           </li>
           <li>
             <strong>Three-word mission:</strong> Land three words on one clock. Gaps count. Pause
@@ -145,7 +155,8 @@ export function HowTo() {
           </li>
           <li>
             <strong>You baited me:</strong> After a win, the streamer can award one eligible hint.
-            The community keeps the shared win.
+            The community keeps the shared win; the chatter gets a sting on stream and a spot on
+            the Bait MVPs board.
           </li>
         </ul>
       </details>

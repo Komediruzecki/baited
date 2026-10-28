@@ -90,6 +90,35 @@ test('difficulty is copied only from the validated server field, never inferred 
   assert.equal(readState(value).room.round.difficulty, undefined);
 });
 
+test('printed ink and example question are copied only beside a target, and ink must be a hex colour', () => {
+  const value = state();
+  value.room.round.ink = '#ff743c';
+  value.room.round.example = 'Where would you definitely not build a house?';
+  assert.equal(readState(value).room.round.ink, '#ff743c');
+  assert.equal(readState(value).room.round.example, 'Where would you definitely not build a house?');
+  for (const ink of ['red', '#fff', 'url(x)', '#ff743c;color:red', 7]) {
+    assert.throws(() => readState({ ...value, room: { ...value.room, round: { ...value.room.round, ink } } }), /Invalid ink/);
+  }
+  assert.throws(() => readState({ ...value, room: { ...value.room, round: { ...value.room.round, example: 'x'.repeat(161) } } }), /Invalid example/);
+  delete value.room.round.target;
+  assert.equal('ink' in readState(value).room.round, false);
+  assert.equal('example' in readState(value).room.round, false);
+});
+
+test('state parser carries only a valid public streak and badge', () => {
+  const room = (result, score) => ({ version: '0.0.1', configured: true, room: {
+    phase: 'cooldown', channel: 'streamer', serverTime: 1, round: null, result, ...(score === undefined ? {} : { score }),
+  } });
+  const caught = { id: 'r', word: 'VOLCANO', outcome: 'caught', milestone: 3, newBadge: true };
+  const parsed = readState(room(caught, { wins: 9, played: 12, streak: 3, best: 5 }));
+  assert.deepEqual(parsed.room.score, { streak: 3, best: 5 });
+  assert.deepEqual(parsed.room.result, { id: 'r', word: 'VOLCANO', outcome: 'caught', milestone: 3, newBadge: true });
+  assert.deepEqual(readState(room(null)).room.score, { streak: 0, best: 0 });
+  for (const bad of [room({ ...caught, milestone: 1 }), room({ ...caught, milestone: '3' }), room({ ...caught, newBadge: 'yes' }),
+    room(null, { streak: -1, best: 0 }), room(null, { streak: 1.5, best: 2 }), room(null, 'streak')])
+    assert.throws(() => readState(bad));
+});
+
 test('studio URL is restricted to the configured service and exact path', () => {
   const value = { version: '0.0.1', connected: true, channelId: '12345', channelName: 'streamer', studioUrl: 'https://game.example/studio' };
   assert.equal(readConfiguration(value, config.apiBaseUrl).studioUrl, value.studioUrl);

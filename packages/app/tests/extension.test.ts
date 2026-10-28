@@ -114,12 +114,16 @@ test('Extension API isolates channels and roles while preserving studio protecti
     const state = await response.json() as ExtensionState;
     assert.equal(state.room?.round?.target, game.round!.word);
     assert.deepEqual(state.room?.round?.forbiddenClues, game.round!.clues);
+    assert.match(state.room?.round?.ink ?? '', /^#[0-9a-f]{6}$/);
+    assert.equal(typeof state.room?.round?.example, 'string');
     assert.equal(state.configured, true);
     assert.equal('overlayKey' in state.room!, false);
     assert.equal('csrf' in state, false);
     const hostState = await (await fetch(`${base}/api/extension/state`, { headers: headers(hostToken) })).json() as ExtensionState;
     assert.equal(hostState.room?.round?.target, undefined);
     assert.equal(hostState.room?.round?.forbiddenClues, undefined);
+    assert.equal(hostState.room?.round?.ink, undefined);
+    assert.equal(hostState.room?.round?.example, undefined);
     assert.equal(JSON.stringify(hostState).includes(game.round!.word), false);
 
     const elsewhere = await token({ channel_id: '999999' });

@@ -8,15 +8,18 @@
     <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
     <script src="./runtime-config.js"></script>
     <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./card.css" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-surface="viewer">
     <!-- THESIS: One dealt card beside the stream. OWN-WORLD: The landing's
-    charcoal card stock, violet table and original BAITED signature.
+    approved card, Cut Open / Glass / Prism: a charcoal face whose ruled violet
+    field ends at an angle under the art, the word in its item's ink, the Prism
+    back and the original BAITED signature, on the violet table.
     STORY: Read the word, avoid the forbidden clues, then steer the conversation.
     FIRST VIEWPORT: Compact brand rail above one card. The word owns the middle;
-    clues, the short rule and clock sit immediately below.
-    FORM: The approved playing-card composition, fitted to Twitch's 318 px panel.
+    clues, the example question and clock sit immediately below.
+    FORM: The landing's card composition, fitted to Twitch's 318 px panel.
     State changes carry meaning; the card holds still while chat plays. -->
     <main class="panel" aria-label="baited viewer panel">
       <header class="masthead">
@@ -29,40 +32,54 @@
         <span id="connection-copy">Connecting to Twitch…</span>
         <button class="retry" id="retry" type="button" hidden>Try again</button>
       </div>
-      <section class="secret-card" id="card" aria-labelledby="card-title" data-state="waiting">
-        <div class="card-topline">
-          <p class="card-kicker" id="card-kicker">Next round</p>
-          <span class="phase-label" id="phase-label">Waiting</span>
-          <span class="difficulty" id="difficulty" role="img" hidden></span>
+      <section class="secret-card cut-card" id="card" aria-labelledby="card-title" data-state="waiting">
+        <div class="cut-card__top card-topline">
+          <p class="cut-card__chip card-kicker" id="card-kicker">Next round</p>
+          <span class="cut-card__chip phase-label" id="phase-label">Waiting</span>
+          <span class="cut-card__pips difficulty" id="difficulty" role="img" hidden></span>
         </div>
-        <div class="card-center">
+        <div class="cut-card__art card-center">
+          <!-- The view box is the full-size card in CSS pixels, so the rules scale with the card. -->
+          <svg class="cut-card__field" viewBox="0 0 300 420" preserveAspectRatio="xMinYMin slice" aria-hidden="true" focusable="false">
+            <path id="field-rules" fill="none" stroke="#fffdf7" stroke-opacity="0.22" stroke-width="1.5" />
+          </svg>
           <div class="waiting-card" id="card-back" aria-hidden="true">
-            <span class="waiting-mark baited-glyph"></span>
+            <div class="prism-back"><span class="prism-back__mark baited-glyph"></span></div>
           </div>
-          <img class="word-art" id="word-art" alt="" width="132" height="132" hidden />
-          <h2 class="target" id="card-title">The word is coming.</h2>
+          <span class="cut-card__square art-square">
+            <span class="cut-card__reveal" id="art-reveal">
+              <img class="cut-card__image word-art" id="word-art" alt="" width="1254" height="1254" hidden />
+              <canvas class="cut-card__pixels" id="art-pixels" width="1" height="1" aria-hidden="true"></canvas>
+            </span>
+          </span>
+        </div>
+        <div class="cut-card__plate card-plate">
+          <h2 class="cut-card__word target" id="card-title">The word is coming.</h2>
           <p class="card-detail" id="card-detail">
             It appears here when the streamer starts a round.
           </p>
-        </div>
-        <section class="forbidden" id="forbidden" aria-labelledby="forbidden-heading" hidden>
-          <h3 id="forbidden-heading">Keep out of chat</h3>
-          <ul id="forbidden-list"></ul>
-        </section>
-        <div class="clock" id="clock" hidden>
-          <div class="clock-labels">
-            <span id="clock-caption">Time left</span>
-            <span id="clock-value" class="clock-value" role="timer" aria-live="off" aria-label="Time left">0:00</span>
+          <section class="cut-card__rules forbidden" id="forbidden" aria-labelledby="forbidden-heading" hidden>
+            <h3 class="cut-card__rules-label" id="forbidden-heading">Keep out of chat</h3>
+            <ul class="cut-card__clues" id="forbidden-list"></ul>
+          </section>
+          <p class="cut-card__question card-question" id="card-question" hidden></p>
+          <div class="cut-card__footer clock" id="clock" hidden>
+            <span class="cut-card__signature baited-glyph" aria-hidden="true"></span>
+            <span class="clock-labels">
+              <span id="clock-caption">Time left</span>
+              <span id="clock-value" class="clock-value" role="timer" aria-live="off" aria-label="Time left">0:00</span>
+            </span>
+            <progress
+              id="clock-progress"
+              max="100"
+              value="100"
+              aria-label="Round time remaining"
+            ></progress>
           </div>
-          <progress
-            id="clock-progress"
-            max="100"
-            value="100"
-            aria-label="Round time remaining"
-          ></progress>
-        </div>
-        <div class="card-baseline">
-          <span class="card-stamp" id="card-stamp">Only chat will know</span>
+          <div class="cut-card__footer card-baseline">
+            <span class="cut-card__signature baited-glyph" aria-hidden="true"></span>
+            <span class="card-stamp" id="card-stamp">Only chat will know</span>
+          </div>
         </div>
       </section>
       <footer class="panel-footer">

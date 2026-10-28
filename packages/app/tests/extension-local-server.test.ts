@@ -43,7 +43,8 @@ function get(port: number, path: string, headers: RequestOptions['headers'] = {}
 test('local gateway serves only its native bundle, pins Host and rejects unsafe raw paths', async () => {
   let proxied = 0;
   const handler = gateway.createExtensionLocalHandler({
-    files: new Map([['/viewer.html', Buffer.from('native viewer')], ['/config.html', Buffer.from('native setup')], ['/styles.css', Buffer.from('body {}')],
+    files: new Map([['/viewer.html', Buffer.from('native viewer')], ['/config.html', Buffer.from('native setup')],
+      ['/overlay.html', Buffer.from('native overlay')], ['/styles.css', Buffer.from('body {}')],
       ['/assets/baited-original-mask.svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')]]),
     requestUpstream: () => { proxied++; throw new Error('unexpected'); },
   });
@@ -63,6 +64,9 @@ test('local gateway serves only its native bundle, pins Host and rejects unsafe 
     const twitchQuery = 'anchor=panel&language=en&locale=en-US&mode=viewer&platform=web&popout=false&state=testing';
     assert.equal((await get(port, `/viewer.html?${twitchQuery}`)).body, 'native viewer');
     assert.equal((await get(port, '/config.html?mode=config&platform=web&state=testing')).body, 'native setup');
+    assert.equal((await get(port, '/overlay.html?anchor=video_overlay&mode=viewer&platform=web&state=testing')).body,
+      'native overlay');
+    assert.equal((await get(port, '/overlay.html?token=secret')).status, 400);
     assert.equal((await get(port, '/viewer.html?mode=viewer&mode=config')).status, 400);
     assert.equal((await get(port, '/styles.css?mode=viewer')).status, 400);
     assert.equal((await get(port, '/viewer.html?language=%00')).status, 400);

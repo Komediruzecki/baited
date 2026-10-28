@@ -1,0 +1,416 @@
+/* The video overlay draws one card over the live video and nothing else. It is the
+   landing's approved card, Cut Open / Glass / Prism (card.css): the face and the Prism
+   back. The player height sets the card's size and the card's width sets everything in
+   it, so it reads the same in a small player, theatre mode and fullscreen. At 300 x 420
+   it is the landing card at its own size. */
+:root {
+  /* Browsers paint an opaque canvas behind a frame whose color scheme differs
+     from its embedder's, which would cover the video. Keep the default scheme. */
+  color-scheme: normal;
+  background: transparent;
+}
+body[data-surface='overlay'] {
+  min-width: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+}
+.table {
+  position: fixed;
+  inset: 0;
+}
+.deal {
+  position: absolute;
+  top: 50%;
+  right: clamp(8px, 2.4vw, 40px);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  translate: 0 -50%;
+  transition:
+    opacity 240ms ease-out,
+    visibility 240ms;
+}
+.table[data-visible='false'] .deal {
+  visibility: hidden;
+  opacity: 0;
+}
+.deal[data-collapsed='true'] .playing-card {
+  display: none;
+}
+
+/* Collapse tab: the viewer can put the card away and bring it back. */
+.collapse {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--b-edge);
+  border-top-color: var(--b-edge-lit);
+  border-radius: 4px 8px 4px 4px;
+  background: #1a1522;
+  color: var(--b-paper);
+  box-shadow: 0 4px 0 -2px #120d1a;
+  transition:
+    background var(--b-t-state) ease-out,
+    border-color var(--b-t-state) ease-out;
+}
+.collapse:hover {
+  background: #2a1160;
+  border-color: var(--b-lilac);
+}
+.collapse-glyph {
+  width: 8px;
+  height: 8px;
+  margin-left: -3px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+}
+.deal[data-collapsed='true'] .collapse {
+  height: 72px;
+  border-color: var(--b-lilac);
+}
+.deal[data-collapsed='true'] .collapse-glyph {
+  margin: 0 0 0 3px;
+  transform: rotate(135deg);
+}
+.collapse-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* The card: 5:7, turned with the faces back to back. The card is the container host
+   for card.css, so one landing pixel is a three-hundredth of its width. */
+.playing-card {
+  --card-h: clamp(150px, 54vh, 420px);
+  position: relative;
+  height: var(--card-h);
+  aspect-ratio: 5 / 7;
+  container-type: size;
+  perspective: 1100px;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 200ms ease-out;
+}
+.playing-card[data-stale='true'] {
+  opacity: 0.72;
+}
+.card-turn {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform var(--b-t-turn) var(--b-ease-turn);
+}
+.playing-card[data-face='back'] .card-turn {
+  transform: rotateY(180deg);
+}
+.face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.face-back {
+  transform: rotateY(180deg);
+}
+/* A word without art, and no badge in its place, keeps the field at the landing's minimum
+   art height and centres its lines between the field and the footer. */
+.face-front:has(#front-art[hidden]):not(:has(.badge-medal:not([hidden]))) {
+  --cut-art: calc(80 * var(--cut-u));
+}
+.face-front:has(#front-art[hidden]):not(:has(.badge-medal:not([hidden]))) .face-word {
+  margin-top: auto;
+}
+
+/* Chips: an empty chip takes no room. Chat's streak is fire, on both faces. */
+.chip:empty {
+  display: none;
+}
+.chip-streak {
+  color: #ffae4a;
+}
+.chip-streak img {
+  width: max(10px, calc(11 * var(--cut-u)));
+  height: auto;
+  flex: none;
+  image-rendering: pixelated;
+}
+.face-note:empty,
+.face-question:empty {
+  display: none;
+}
+.playing-card:is([data-state='result'], [data-state='review']) .face-note {
+  color: var(--b-paper);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.face-clock {
+  color: var(--b-paper);
+  font: 600 max(11px, calc(14 * var(--cut-u))) / 1 var(--b-ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+/* The footer rule is the round's timer, on both faces. */
+.timer-rule {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: calc(var(--progress, 0) * 100%);
+  height: 2px;
+  background: var(--b-lilac);
+}
+.playing-card[data-urgent='true'] .face-clock {
+  color: var(--b-urgent);
+}
+.playing-card[data-urgent='true'] .timer-rule {
+  background: var(--b-urgent);
+}
+.playing-card:is([data-state='result'], [data-state='review']) :is(.face-clock, .timer-rule) {
+  visibility: hidden;
+}
+
+/* Chat's win streak: fire coins on a win, and a medallion in the art's place when
+   the win lands on a badge. */
+.face-row {
+  display: flex;
+  justify-content: center;
+  gap: 2.4cqw;
+  margin: 2.667cqw 0 0;
+  padding: 0;
+  list-style: none;
+}
+.face-row li {
+  display: grid;
+  justify-items: center;
+  gap: 0.8cqh;
+  color: #8d8596;
+  font: 650 max(9px, 3.6cqw) / 1 var(--b-ui);
+  font-variant-numeric: tabular-nums;
+}
+.face-row li > span:first-child {
+  display: grid;
+  place-items: center;
+  width: max(15px, 9cqw);
+  height: max(15px, 9cqw);
+  border-radius: 50%;
+  background: #2f2a36;
+  box-shadow: inset 0 0 0 1px #4a4352;
+}
+.face-row img {
+  width: 58%;
+  height: auto;
+  image-rendering: pixelated;
+  opacity: 0.22;
+  filter: grayscale(1);
+}
+.face-row li:is([data-state='won'], [data-state='current']) {
+  color: #ffae4a;
+}
+.face-row li:is([data-state='won'], [data-state='current']) > span:first-child {
+  background: radial-gradient(circle at 50% 35%, #ffc65a 0, #f07a1e 70%);
+  box-shadow: inset 0 -1px 0 #b8481466;
+}
+.face-row li:is([data-state='won'], [data-state='current']) img {
+  opacity: 1;
+  filter: none;
+}
+.face-row li[data-state='current'] > span:first-child {
+  box-shadow:
+    0 0 0 2px #1a1522,
+    0 0 0 3.5px #ffd23a;
+}
+.badge-medal {
+  --ring-a: #ffcf7a;
+  --ring-b: #c4561c;
+  --core: #3a1d12;
+  --glow: #8a3a16;
+  position: absolute;
+  inset: 4%;
+  display: grid;
+  place-items: center;
+  border: 3.2cqw solid transparent;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 40%, var(--glow) 0, var(--core) 64%) padding-box,
+    conic-gradient(
+        from 200deg,
+        var(--ring-a),
+        var(--ring-b) 25%,
+        var(--ring-a) 50%,
+        var(--ring-b) 75%,
+        var(--ring-a)
+      )
+      border-box;
+  box-shadow:
+    0 1.6cqw 0 -1px #0b0710,
+    0 3cqw 6cqw #00000080;
+  animation: medal-pop 640ms cubic-bezier(0.22, 1.4, 0.36, 1) 300ms both;
+}
+.badge-medal img {
+  width: 84%;
+  height: 84%;
+  margin-top: -16%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 1cqw 0 #0009);
+}
+.face-square:has(.badge-medal:not([hidden])) .cut-card__reveal {
+  visibility: hidden;
+}
+.badge-medal[data-tone='amber'] {
+  --ring-a: #fff3a6;
+  --ring-b: #f08a17;
+  --core: #3b2510;
+  --glow: #94591a;
+}
+.badge-medal[data-tone='flame'] {
+  --ring-a: #ffb36b;
+  --ring-b: #d7261a;
+  --core: #3d1214;
+  --glow: #9a2a17;
+}
+.badge-medal[data-tone='magma'] {
+  --ring-a: #ff8a5c;
+  --ring-b: #6e1730;
+  --core: #26090f;
+  --glow: #6a1c19;
+}
+.badge-medal[data-tone='violet'] {
+  --ring-a: #e2ccff;
+  --ring-b: #6b2cc4;
+  --core: #22123a;
+  --glow: #4f2a86;
+}
+.badge-medal[data-tone='cosmic'] {
+  --ring-a: #9de8ff;
+  --ring-b: #5b2bd6;
+  --core: #12173a;
+  --glow: #2c3c8a;
+}
+.badge-medal[data-tone='gold'] {
+  --ring-a: #fffc79;
+  --ring-b: #c98a10;
+  --core: #2a1540;
+  --glow: #6b3aa8;
+}
+@keyframes medal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-20deg);
+  }
+}
+
+/* Back: the landing's Prism. The streamer sees only this while chat plays. The streak
+   chip and the clock sit inside its inked frame. */
+.back-streak {
+  position: absolute;
+  top: calc(7% + 8 * var(--cut-u));
+  left: calc(7% + 8 * var(--cut-u));
+}
+.back-plate {
+  position: absolute;
+  right: calc(7% + 8 * var(--cut-u));
+  bottom: calc(7% + 8 * var(--cut-u));
+  left: calc(7% + 8 * var(--cut-u));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(8 * var(--cut-u));
+  padding: calc(8 * var(--cut-u)) calc(10 * var(--cut-u));
+  border-radius: calc(3 * var(--cut-u));
+  background: #1a1522;
+  box-shadow: inset 0 1px 0 #fffdf747;
+}
+.back-copy {
+  color: var(--b-paper);
+  font: 600 max(10px, calc(12 * var(--cut-u))) / 1.3 var(--b-ui);
+  text-align: left;
+}
+
+/* Small cards keep the word, the clues and the clock. */
+@container (max-height: 340px) {
+  .face-question {
+    display: none;
+  }
+}
+@container (max-height: 270px) {
+  .face-rules-label,
+  #front-chip:has(+ .chip-streak:not([hidden])) {
+    display: none;
+  }
+  .face-rules {
+    margin-top: calc(6 * var(--cut-u));
+  }
+}
+/* Under 230 px tall, two columns of deck clues no longer fit side by side (measured on all
+   78 targets); one clue per line keeps every word whole. */
+@container (max-height: 230px) {
+  .face-rules .cut-card__clues {
+    grid-template-columns: minmax(0, max-content);
+    gap: calc(2 * var(--cut-u));
+  }
+}
+@container (max-height: 210px) {
+  .back-copy,
+  .face-row {
+    display: none;
+  }
+}
+/* The smallest player's card: words step down instead of splitting (GRAMOPHONE needs
+   11 px, KALEIDOSCOPE 9.5 px), and the chip row steps aside so the clues keep their own
+   lines. The back keeps the streak. */
+@container (max-height: 160px) {
+  .face-word {
+    font-size: 11px;
+  }
+  .face-word[data-word-size='medium'] {
+    font-size: 9.5px;
+  }
+  .face-front {
+    --cut-top: 0px;
+  }
+  .face-top {
+    display: none;
+  }
+  /* A word without art gives its empty field to the copy. */
+  .face-front:has(#front-art[hidden]):not(:has(.badge-medal:not([hidden]))) .face-art {
+    display: none;
+  }
+}
+
+/* A narrow player keeps the card small; a mini player shows nothing. */
+@media (max-width: 560px) {
+  .playing-card {
+    --card-h: clamp(132px, 46vh, 260px);
+  }
+}
+@media (max-height: 220px) {
+  .deal {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-turn {
+    transition: none;
+  }
+  .badge-medal {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .back-plate,
+  .chip {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+}

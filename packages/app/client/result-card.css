@@ -1,9 +1,5 @@
-/* One authored payoff: the same charcoal card turns over in Studio and OBS. */
-.result-deal,
-.studio-card-slot {
-  --card-r: 9px 15px 9px 9px;
-  --stripe: 8px;
-}
+/* One authored payoff: the landing's card turns over in Studio and OBS. The face and
+   back are extension/card.css; this file only deals and turns them. */
 .result-deal {
   width: 190px;
   perspective: 1200px;
@@ -12,46 +8,13 @@
 .result-card {
   position: relative;
   width: 100%;
-  min-height: 266px;
   transform-style: preserve-3d;
   animation: result-turn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.card-back,
-.result-card__face {
-  border: 1px solid #515057;
-  border-top-color: #c9a8ff80;
-  border-radius: var(--card-r);
-  background: #242426;
-  box-shadow:
-    0 6px 0 -2px #120d1a,
-    0 16px 32px #0007;
-}
-.card-back {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: repeating-linear-gradient(
-    45deg,
-    #242426 0 var(--stripe),
-    #2a2830 var(--stripe) calc(var(--stripe) * 2)
-  );
-}
-.card-back::before {
-  content: '';
-  position: absolute;
-  inset: 7%;
-  border: 1px solid #c9a8ff2e;
-  border-radius: inherit;
-}
-.card-back .baited-glyph {
-  position: relative;
-  width: 72%;
-  color: #c9a8ff;
 }
 .result-card__back,
 .result-card__face {
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 .result-card__back {
   position: absolute;
@@ -59,87 +22,22 @@
   transform: rotateY(180deg);
 }
 .result-card__face {
-  min-height: inherit;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 20px 16px 14px;
-  transition: border-color 200ms ease-out;
+  --cut-card-width: 100%;
 }
-.result-card__verdict {
-  font:
-    650 10px/1.5 Inter,
-    sans-serif;
-  color: #dedce3;
-}
-.result-card__face .bait-card-art {
-  width: 100%;
-  height: 128px;
-  object-fit: contain;
-  margin: 4px 0 8px;
-  image-rendering: pixelated;
-}
-.result-card__word {
-  max-width: 100%;
-  margin: auto 0 8px;
-  font:
-    400 22px/1.12 'Russo One',
-    sans-serif;
-  letter-spacing: -0.02em;
-  color: #fffdf7;
-  overflow-wrap: anywhere;
+.result-card .cut-card__note {
+  margin-top: calc(8 * var(--cut-u));
+  color: var(--b-paper);
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.result-card__word[data-word-size='medium'] {
-  font-size: 18px;
+.result-card[data-outcome='caught'] .cut-card__note {
+  color: var(--b-lilac);
 }
-.result-card__word[data-word-size='long'] {
-  font-size: 16px;
-}
-.result-card__word[data-word-size='extended'] {
-  font-size: 14px;
-}
-.result-card__face[data-art='word'] .result-card__word {
-  flex: 1;
-  align-self: stretch;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  min-height: 128px;
-  margin: 8px 0;
-  background: radial-gradient(ellipse at 50% 72%, #4f2878aa 0, #3b247033 42%, transparent 70%);
-}
-.result-card__outcome {
-  font:
-    600 10px/1.5 Inter,
-    sans-serif;
-  color: #c9a8ff;
-}
-.result-card__signature {
-  width: 100%;
-  border-top: 1px solid #514b59;
-  margin-top: 18px;
-  padding-top: 12px;
-  color: #c9a8ff;
-}
-.result-card__signature .baited-glyph {
-  width: 65px;
-}
-.result-card[data-outcome='caught'] .result-card__face {
-  border-color: #fffdf7;
-}
-.result-card[data-outcome='caught'] .result-card__verdict {
+.result-card[data-outcome='caught'] .cut-card__chip {
   animation: verdict-stamp 220ms cubic-bezier(0.16, 1, 0.3, 1) 520ms both;
 }
-.result-card[data-outcome='caught'] .result-card__outcome {
-  color: #fffdf7;
-}
-.result-card[data-outcome='escaped'] .result-card__word {
-  color: #fffdf7;
-}
 .result-deal--broadcast {
-  --card-r: 14px 24px 14px 14px;
-  --stripe: 12px;
   position: absolute;
   top: 196px;
   left: 40px;
@@ -147,36 +45,10 @@
   animation: broadcast-deal 5500ms linear var(--result-age) both;
 }
 .result-deal--broadcast .result-card {
-  min-height: 420px;
   animation: result-turn 520ms cubic-bezier(0.22, 1, 0.36, 1) calc(360ms + var(--result-age)) both;
 }
-.result-deal--broadcast .result-card__face {
-  padding: 24px;
-}
-.result-deal--broadcast .bait-card-art {
-  height: 216px;
-}
-.result-deal--broadcast .result-card__verdict {
-  font-size: 18px;
+.result-deal--broadcast .result-card[data-outcome='caught'] .cut-card__chip {
   animation-delay: calc(900ms + var(--result-age));
-}
-.result-deal--broadcast .result-card__face[data-art='word'] .result-card__word {
-  min-height: 216px;
-}
-.result-deal--broadcast .result-card__word {
-  font-size: 38px;
-}
-.result-deal--broadcast .result-card__word[data-word-size='medium'] {
-  font-size: 30px;
-}
-.result-deal--broadcast .result-card__word[data-word-size='long'] {
-  font-size: 23px;
-}
-.result-deal--broadcast .result-card__word[data-word-size='extended'] {
-  font-size: 20px;
-}
-.result-deal--broadcast .result-card__outcome {
-  font-size: 16px;
 }
 @keyframes verdict-stamp {
   from {
@@ -222,7 +94,7 @@
 @media (prefers-reduced-motion: reduce) {
   .result-deal,
   .result-card,
-  .result-card__verdict {
+  .cut-card__chip {
     animation: none !important;
   }
 }

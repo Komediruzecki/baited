@@ -296,6 +296,33 @@ test('EventSub rejects duplicates, stale events, wrong channels and malformed pa
   assert.equal(c.acceptNotification({ hello: 'invalid' }), false);
   assert.equal(g.view('studio').participants, 1);
 });
+test('EventSub ignores Shared Chat messages sent from partner channels', () => {
+  const g = game();
+  g.begin();
+  const c = new TwitchConnection(g, {} as TwitchAuth, () => {}),
+    seen: string[] = [];
+  c.onMessage = (message) => seen.push(message.text);
+  const shared = (id: string, source: string | null, text: string) =>
+    envelope(
+      'notification',
+      {
+        event: {
+          ...event().payload.event,
+          chatter_user_id: `chatter-${id}`,
+          message_id: `chat-${id}`,
+          message: { text },
+          source_broadcaster_user_id: source,
+          source_message_id: source === null ? null : `source-${id}`,
+        },
+      },
+      `event-${id}`,
+    );
+  assert.equal(c.acceptNotification(shared('partner', '999', '!skip')), false);
+  assert.equal(c.acceptNotification(shared('own', '123', 'cold place')), true);
+  assert.equal(c.acceptNotification(shared('solo', null, 'it waddles')), true);
+  assert.deepEqual(seen, ['cold place', 'it waddles']);
+  assert.equal(g.view('studio').participants, 2);
+});
 test('EventSub watchdog reconnects after missing keepalive', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const g = game(),

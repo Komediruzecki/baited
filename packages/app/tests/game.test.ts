@@ -157,12 +157,28 @@ test('viewer commands deduplicate votes, exclude owner and spoilers, limit spam'
   assert.equal(send('3', 'b', '!skip'), false);
   assert.equal(send('4', 'a', '!skip'), false);
   f.advance(3000);
-  assert.equal(send('5', 'a', '!skip'), true);
+  // A repeated vote changes nothing.
+  assert.equal(send('5', 'a', '!skip'), false);
   assert.equal(f.game.view('viewer').voters, 1);
   assert.equal(send('6', 'b', '!skip'), true);
   assert.equal(send('7', 'c', '!skip'), true);
   assert.equal(f.game.result?.outcome, 'skipped');
   assert.equal(f.game.view('studio').participants, 3);
+});
+test('skip votes ignore the hint limit and never block the next hint', () => {
+  const f = fixture();
+  f.game.update({ ...f.game.data.settings, skipVotes: 5 });
+  f.game.begin();
+  const send = (id: string, u: string, text: string) => f.game.chat(id, u, u, text, f.now());
+  assert.equal(send('1', 'a', 'cold place'), true);
+  assert.equal(send('2', 'a', '!skip'), true);
+  assert.equal(f.game.view('viewer').voters, 1);
+  assert.equal(send('3', 'b', '!skip'), true);
+  assert.equal(send('4', 'b', 'it waddles'), true);
+  assert.equal(f.game.view('viewer').voters, 2);
+  assert.equal(f.game.view('studio').participants, 2);
+  // The hint limit still applies between hints.
+  assert.equal(send('5', 'b', 'black and white'), false);
 });
 test('replayed and stale chat cannot affect a current round', () => {
   const f = fixture();

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { AwardBoard, GameView, Studio } from '../shared/types';
+import { useState, type CSSProperties } from 'react';
+import type { AwardBoard, GameView, Leader, Studio } from '../shared/types';
 import { request } from './api';
 import { Button } from './ui';
 import { Check, Eye, ShieldCheck, Target, Timer, Trophy } from './icons';
@@ -263,6 +263,10 @@ export function AwardReview({
           : 'No award selected. You can leave it unassigned.'}
       </p>
       <p className="hint-note">
+        Your pick plays “Baited by @name” on the OBS overlay for six seconds and counts toward
+        the Bait MVPs board. Only the name is shown, never the hint.
+      </p>
+      <p className="hint-note">
         Review keeps up to 40 clean hints and 20 flagged hints, with limits per chatter. Text clears
         ten minutes after the round. baited does not delete Twitch messages.
       </p>
@@ -270,17 +274,18 @@ export function AwardReview({
   );
 }
 
-export function ForbiddenClueCard({ game }: { game: GameView }) {
+/** `rulesOnly` explains the rules under a card that already prints its clues. */
+export function ForbiddenClueCard({ game, rulesOnly = false }: { game: GameView; rulesOnly?: boolean }) {
   if (!['active', 'paused'].includes(game.phase) || !game.round) return null;
   const clues = game.round.forbiddenClues ?? [];
   return (
-    <section className="clue-card" aria-label="Clue rules">
-      <div>
+    <section className={rulesOnly ? 'clue-card clue-card--rules' : 'clue-card'} aria-label="Clue rules">
+      {!rulesOnly && <div>
         <Eye size={19} />
         <h3>{clues.length ? 'Keep out of chat' : 'Only the word is off limits.'}</h3>
         <span>{game.round.difficulty}</span>
-      </div>
-      {clues.length > 0 && (
+      </div>}
+      {!rulesOnly && clues.length > 0 && (
         <ul className="clue-chips">
           {clues.map((clue) => (
             <li key={clue}>{clue}</li>
@@ -289,7 +294,7 @@ export function ForbiddenClueCard({ game }: { game: GameView }) {
       )}
       <p>
         {clues.length
-          ? 'A hint with one of these, plurals included, can’t win the streamer’s pick.'
+          ? 'A hint with one of these, plurals and disguised spellings included, can’t win the streamer’s pick.'
           : 'Use any clue, but keep the secret word out of chat.'}{' '}
         The round carries on for everyone.
       </p>
@@ -313,5 +318,80 @@ export function PublicAward({ award }: { award?: { name: string } }) {
         <small>Streamer’s pick</small>
       </div>
     </div>
+  );
+}
+
+/** How long the OBS sting plays after the streamer picks a hint. */
+export const STING_MS = 6000;
+// Pixel confetti in the landing's celebration colours, thrown out and up from the name
+// and falling back on a step clock.
+const confetti = Array.from({ length: 20 }, (_, i) => {
+  const angle = (i / 20) * Math.PI * 2 + (i % 2 ? 0.16 : -0.12);
+  const reach = 170 + ((i * 47) % 130);
+  return {
+    '--x': `${Math.round(Math.cos(angle) * reach)}px`,
+    '--y': `${Math.round(Math.sin(angle) * reach * 0.6) - 48}px`,
+    '--r': `${(i % 3) * 90}deg`,
+    '--d': `${(i % 5) * 50}ms`,
+    '--c': ['#fffdf7', '#c9a8ff', '#fffdf7', '#9146ff'][i % 4],
+  } as CSSProperties;
+});
+
+/** OBS: the streamer's pick lands as a sting. The name only, never the hint. */
+export function BaitedSting({ name, age }: { name: string; age: number }) {
+  const size = name.length > 18 ? 'is-longest' : name.length > 12 ? 'is-long' : '';
+  return (
+    <div className="baited-sting" style={{ '--sting-age': `${-Math.max(0, age)}ms` } as CSSProperties}>
+      <span className="baited-sting__confetti" aria-hidden="true">
+        {confetti.map((style, i) => (
+          <i key={i} style={style} />
+        ))}
+      </span>
+      <span className="baited-sting__kicker">BAITED BY</span>
+      <strong className={`baited-sting__name ${size}`.trim()}>@{name}</strong>
+      <span className="baited-sting__note">STREAMER’S PICK · BAIT MVP</span>
+    </div>
+  );
+}
+
+/** The streamer's picks, most first: a podium for the top three, then the runners-up. */
+export function MvpBoard({ mvps }: { mvps: Leader[] }) {
+  const picks = (n: number) => `${n} ${n === 1 ? 'pick' : 'picks'}`;
+  return (
+    <section className="panel mvp-board">
+      <div className="section-heading">
+        <h3>Bait MVPs</h3>
+        <Trophy size={19} />
+      </div>
+      <p className="muted">
+        Chatters whose hints you picked under “You baited me”, most picks first. Chat sees the
+        top three with <code>!bait top</code>.
+      </p>
+      {mvps.length ? (
+        <>
+          <ol className="mvp-podium">
+            {mvps.slice(0, 3).map((mvp, i) => (
+              <li key={mvp.name} className={`mvp-step mvp-step--${i + 1}`}>
+                <strong>@{mvp.name}</strong>
+                <span>{picks(mvp.baits)}</span>
+                <b aria-hidden="true">{i + 1}</b>
+              </li>
+            ))}
+          </ol>
+          {mvps.slice(3).map((mvp, i) => (
+            <div className="leader-row" key={mvp.name}>
+              <span>{String(i + 4).padStart(2, '0')}</span>
+              <strong>@{mvp.name}</strong>
+              <span className="leader-credit">{picks(mvp.baits)}</span>
+            </div>
+          ))}
+        </>
+      ) : (
+        <div className="empty-history">
+          <Trophy />
+          <p>No bait MVPs yet. After a win, pick the hint that got you under “You baited me”.</p>
+        </div>
+      )}
+    </section>
   );
 }

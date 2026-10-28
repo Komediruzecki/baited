@@ -13,6 +13,12 @@ import type {
 } from '../shared/types.js';
 import { words } from './words.js';
 import { forbiddenClues } from './cards.js';
+import { streakMilestone, streakTiers } from '../extension/presentation.js';
+import catalogue from '../shared/card-review-catalogue.json';
+
+// Each card's printed ink and example question. Both identify the word, so they
+// travel only beside a viewer's target.
+const printed = new Map(catalogue.map((card) => [card.word, { ink: card.ink, example: card.example }]));
 
 export const settingsSchema = z
   .object({
@@ -25,6 +31,8 @@ export const settingsSchema = z
     mission: z.enum(['single', 'three']).default('single'),
     missionDuration: z.number().int().min(60).max(900).default(180),
     callBait: z.boolean().default(false),
+    chatBot: z.boolean().default(false),
+    modCommands: z.boolean().default(false),
   })
   .strict();
 export const defaults: Settings = {
@@ -37,7 +45,21 @@ export const defaults: Settings = {
   mission: 'single',
   missionDuration: 180,
   callBait: false,
+  chatBot: false,
+  modCommands: false,
 };
+/** Moments the chat bot may announce. Listeners read public state from the overlay projection. */
+export type GameEvent =
+  | { type: 'start' }
+  | { type: 'pause' }
+  | { type: 'resume' }
+  | { type: 'review' }
+  | { type: 'finish'; streakBefore: number }
+  | { type: 'reverse' }
+  | { type: 'wrong-guess' }
+  | { type: 'award' }
+  | { type: 'skip-vote' }
+  | { type: 'mission-timeout' };
 export const SPEECH_SETTLE_MS = 1500;
 export const tokens = (s: string): string[] =>
   s
@@ -59,15 +81,93 @@ export const matches = (text: string, word: string) => {
   const forms = spellings(word);
   return tokens(text).some((token) => forms.includes(token));
 };
-export const clueMatches = (text: string, clue: string) => {
-  const variants = new Set(spellings(clue).flatMap((form) => [
-    form,
-    `${form}s`,
-    `${form}es`,
-    ...(form.endsWith('y') ? [`${form.slice(0, -1)}ies`] : []),
-  ]));
-  return tokens(text).some((token) => variants.has(token.replace(/['’]s$/, '')));
+// Chat disguises a word to slip it past the streamer: letters from other scripts that
+// pass for Latin ones, and digits or symbols typed in place of a letter.
+const lookalikes: Record<string, string> = {
+  а: 'a', в: 'b', е: 'e', к: 'k', м: 'm', н: 'h', о: 'o', р: 'p', с: 'c', т: 't', у: 'y', х: 'x',
+  і: 'i', ј: 'j', ѕ: 's', ԁ: 'd', ӏ: 'l', ԛ: 'q', ԝ: 'w', ү: 'y',
+  α: 'a', β: 'b', ε: 'e', η: 'n', ι: 'i', κ: 'k', ν: 'v', ο: 'o', ρ: 'p', τ: 't', υ: 'u', χ: 'x', ω: 'w',
+  ı: 'i', ł: 'l', ø: 'o', đ: 'd', ɡ: 'g',
 };
+const standIns: Record<string, string> = {
+  a: '4@', b: '8', e: '3', g: '69', i: '1!|', l: '1|', o: '0', s: '5$', t: '7+', z: '2',
+};
+// Accents, invisible characters and full-width or styled letters fold to plain ones.
+const fold = (text: string) =>
+  text
+    .normalize('NFKD')
+    .replace(/[\p{M}\p{Cf}]/gu, '')
+    .toLocaleLowerCase('en-US')
+    .replace(/[^\x00-\x7f]/g, (c) => lookalikes[c] ?? c);
+const disguises = new Map<
+  string,
+  { whole: RegExp; spelled: RegExp; shortest: number; longest: number; step: number }
+>();
+function disguise(word: string) {
+  let found = disguises.get(word);
+  if (!found) {
+    const forms = spellings(word).flatMap((form) => [
+      form,
+      `${form}s`,
+      `${form}es`,
+      ...(form.endsWith('y') ? [`${form.slice(0, -1)}ies`] : []),
+    ]);
+    // Every letter, stretched to any length, or what chat types in its place.
+    const body = forms
+      .map((form) => [...form].map((c) => `[${c}${standIns[c] ?? ''}]+`).join(''))
+      .join('|');
+    const lengths = forms.map((form) => form.length);
+    found = {
+      whole: new RegExp(`^[^\\p{L}\\p{N}]*(?:${body})(?:['’][s5$])?[^\\p{L}\\p{N}]*$`, 'u'),
+      spelled: new RegExp(body, 'u'),
+      shortest: Math.min(...lengths),
+      // Every letter doubled, plus a possessive: the longest text worth testing.
+      longest: 2 * Math.max(...lengths) + 4,
+      step: Math.max(...lengths) + 2,
+    };
+    if (disguises.size > 2000) disguises.clear();
+    disguises.set(word, found);
+  }
+  return found;
+}
+/**
+ * Whether chat text gives a word away, however it is dressed up: any case or accent,
+ * look-alike letters, digits or symbols for letters (pengu1n), stretched letters,
+ * letters typed one at a time (p e n g u i n, p.e.n.g.u.i.n), the word split in two or
+ * three (snow man), and plurals or possessives. A longer word that only contains it is
+ * fine: "discord" does not spoil DISCO. Speech and the streamer's guess stay exact (matches).
+ */
+export function spoils(text: string, word: string) {
+  const { whole, spelled, shortest, longest, step } = disguise(word);
+  // Some stand-ins fit two letters (1 is i or l), so a long run of them could keep the
+  // patterns backtracking. Runs of one character fold to two, and no test sees more than
+  // `longest` characters.
+  const pieces = fold(text)
+    .replace(/(.)\1{2,}/gu, '$1$1')
+    .split(/[^\p{L}\p{N}@$!|+'’]+/u)
+    .filter(Boolean);
+  let letters = '';
+  for (const piece of [...pieces, '']) {
+    if (piece.length === 1) letters += piece;
+    else {
+      // Windows overlap, so any spelled-out form lands whole inside one of them.
+      for (let at = 0; letters.length >= shortest; at += step) {
+        if (spelled.test(letters.slice(at, at + longest))) return true;
+        if (at + longest >= letters.length) break;
+      }
+      letters = '';
+    }
+  }
+  for (let i = 0; i < pieces.length; i++) {
+    let joined = '';
+    for (let j = i; j < pieces.length && j < i + 3; j++) {
+      joined += pieces[j];
+      if (joined.length > longest) break;
+      if (joined.length >= shortest && whole.test(joined)) return true;
+    }
+  }
+  return false;
+}
 interface Hint extends HintCandidate {
   userId: string;
 }
@@ -109,7 +209,14 @@ export interface SavedGame {
   priorPlayed: number;
   priorBest: number;
   leaders: Record<string, { name: string; rounds: number; baits?: number }>;
+  /** First unlock of each streak badge, keyed by tier count, with the round that earned it. */
+  streakBadges?: Record<string, { at: number; round: string }>;
 }
+type StoredLeader = SavedGame['leaders'][string];
+// Streamer's picks outrank rounds played, so trimming a busy channel's records never
+// drops a bait MVP in favour of someone who only chatted more.
+const byPicks = (a: StoredLeader, b: StoredLeader) =>
+  (b.baits ?? 0) - (a.baits ?? 0) || b.rounds - a.rounds;
 export class Game {
   phase: GameView['phase'] = 'idle';
   round: Round | null = null;
@@ -134,6 +241,7 @@ export class Game {
   private chatIds = new Set<string>();
   private skipUsed = false;
   onChange: () => void = () => {};
+  onEvent: (event: GameEvent) => void = () => {};
   canRun: () => boolean = () => true;
   constructor(
     public data: SavedGame,
@@ -223,6 +331,7 @@ export class Game {
     this.recentChat.clear();
     this.chatIds.clear();
     this.changed();
+    this.emit({ type: 'start' });
   }
   pause() {
     if (!this.pauseIfActive()) throw new Error('No live round to pause.');
@@ -235,6 +344,7 @@ export class Game {
     this.round.epoch++;
     this.phase = 'paused';
     this.changed();
+    this.emit({ type: 'pause' });
     return true;
   }
   resume() {
@@ -245,6 +355,7 @@ export class Game {
     this.round.epoch++;
     this.phase = 'active';
     this.changed();
+    this.emit({ type: 'resume' });
   }
   end(outcome: Outcome) {
     if (!this.endIfRunning(outcome)) throw new Error('No round is running.');
@@ -274,6 +385,7 @@ export class Game {
     this.nextAt = null;
     this.review = null;
     this.changed();
+    this.emit({ type: 'review' });
   }
   decideCatch(roundId: string, decision: 'confirm' | 'reject') {
     if (!this.pendingCatch || !this.round || this.result?.id !== roundId)
@@ -328,8 +440,19 @@ export class Game {
       this.data.priorPlayed++;
       if (old.outcome === 'caught') this.data.priorWins++;
     }
+    const streakBefore = this.streak;
     this.streak =
       outcome === 'caught' ? this.streak + 1 : outcome === 'overturned' ? r.previousStreak : 0;
+    // Landing on a tier is celebrated every time; the badge itself unlocks once.
+    const tier = outcome === 'caught' ? streakMilestone(this.streak) : null;
+    if (tier) {
+      this.result.milestone = tier.count;
+      const badges = (this.data.streakBadges ??= {});
+      if (!badges[tier.count] && this.data.priorBest < tier.count) {
+        badges[tier.count] = { at: now, round: r.id };
+        this.result.newBadge = true;
+      }
+    }
     this.data.priorBest = Math.max(this.data.priorBest, this.streak);
     for (const [id, name] of r.participants) {
       const item = this.data.leaders[id] ?? { name, rounds: 0 };
@@ -341,12 +464,13 @@ export class Game {
     if (Object.keys(this.data.leaders).length > 1000)
       this.data.leaders = Object.fromEntries(
         Object.entries(this.data.leaders)
-          .sort((a, b) => b[1].rounds - a[1].rounds || (b[1].baits ?? 0) - (a[1].baits ?? 0))
+          .sort((a, b) => byPicks(a[1], b[1]))
           .slice(0, 1000),
       );
     this.phase = 'cooldown';
     this.nextAt = now + this.data.settings.cooldown * 1000;
     this.changed();
+    this.emit({ type: 'finish', streakBefore });
   }
   reverse() {
     if (
@@ -362,6 +486,14 @@ export class Game {
       this.data.leaders[awarded].baits = Math.max(0, (this.data.leaders[awarded].baits ?? 0) - 1);
     this.awardOwners.delete(this.result.id);
     delete this.result.award;
+    // A reversed win takes back the badge it unlocked.
+    if (this.result.milestone) {
+      const unlocked = this.data.streakBadges?.[this.result.milestone];
+      if (this.result.newBadge && unlocked?.round === this.result.id)
+        delete this.data.streakBadges![this.result.milestone];
+      delete this.result.milestone;
+      delete this.result.newBadge;
+    }
     if (this.review?.roundId === this.result.id) this.review.selectedHintId = null;
     if (this.mission) {
       this.mission.completed = Math.max(0, this.mission.completed - 1);
@@ -378,6 +510,7 @@ export class Game {
     // Historical best is tracked before each round so an overturned win cannot inflate it.
     this.data.priorBest = Math.max(this.streak, this.bestBeforeRound);
     this.changed();
+    this.emit({ type: 'reverse' });
   }
   private bestBeforeRound = 0;
   begin() {
@@ -418,6 +551,7 @@ export class Game {
       this.phase = this.data.settings.auto ? 'cooldown' : 'idle';
       this.nextAt = this.data.settings.auto ? now + this.data.settings.cooldown * 1000 : null;
       this.changed();
+      this.emit({ type: 'mission-timeout' });
       return;
     }
     if (this.phase === 'cooldown' && this.nextAt !== null && now >= this.nextAt) {
@@ -457,6 +591,7 @@ export class Game {
       this.mission.remaining += bonus;
     }
     this.changed();
+    this.emit({ type: 'wrong-guess' });
     return { correct: false, bonus: bonus / 1000 };
   }
   get awardBoard(): AwardBoard | null {
@@ -490,19 +625,22 @@ export class Game {
           [hint.userId, leader],
           ...Object.entries(this.data.leaders)
             .filter(([id]) => id !== hint.userId)
-            .sort((a, b) => b[1].rounds - a[1].rounds || (b[1].baits ?? 0) - (a[1].baits ?? 0))
+            .sort((a, b) => byPicks(a[1], b[1]))
             .slice(0, 999),
         ]);
+      // `at` cues the OBS sting, so only a new name gets one.
+      result.award = { name: hint.name, at: this.clock() };
     }
     this.awardOwners.set(roundId, hint.userId);
     board.selectedHintId = hintId;
-    result.award = { name: hint.name };
     this.changed();
+    // Choosing another hint by the same chatter changes nothing public.
+    if (old !== hint.userId) this.emit({ type: 'award' });
   }
-  private rememberHint(r: Round, userId: string, name: string, text: string) {
+  private rememberHint(r: Round, userId: string, name: string, text: string, spoiled: boolean) {
     if (text.trim().startsWith('!')) return;
-    const blocked = r.clues.filter((clue) => clueMatches(text, clue));
-    const reason = matches(text, r.word)
+    const blocked = r.clues.filter((clue) => spoils(text, clue));
+    const reason = spoiled
       ? 'Target word spoiled'
       : blocked.length
         ? `Forbidden clue: ${blocked.join(', ')}`
@@ -590,18 +728,29 @@ export class Game {
       return false;
     if (this.chatIds.size > 10000) this.chatIds.clear();
     this.chatIds.add(id);
-    if (now - (this.recentChat.get(userId) ?? -Infinity) < 3000) return false;
     if (!r.participants.has(userId) && r.participants.size >= 10000) return false;
-    this.rememberHint(r, userId, name, text);
-    // Explicit spoiler text earns no participation credit and is never echoed by BAIT.
-    if (matches(text, r.word)) return false;
+    // A vote is counted once and sits outside the hint limit, so a hint and a !skip never block each other.
+    if (text.trim().toLowerCase() === '!skip') {
+      if (r.votes.has(userId)) return false;
+      r.votes.add(userId);
+      r.participants.set(userId, name.slice(0, 40));
+      if (r.votes.size >= this.data.settings.skipVotes && !this.skipUsed) {
+        this.skipUsed = true;
+        this.finish('skipped');
+      } else {
+        this.changed();
+        this.emit({ type: 'skip-vote' });
+      }
+      return true;
+    }
+    if (now - (this.recentChat.get(userId) ?? -Infinity) < 3000) return false;
+    const spoiled = spoils(text, r.word);
+    this.rememberHint(r, userId, name, text, spoiled);
+    // Spoiler text, however disguised, earns no participation credit and is never echoed by BAIT.
+    if (spoiled) return false;
     this.recentChat.set(userId, now);
     r.participants.set(userId, name.slice(0, 40));
-    if (text.trim().toLowerCase() === '!skip') r.votes.add(userId);
-    if (r.votes.size >= this.data.settings.skipVotes && !this.skipUsed) {
-      this.skipUsed = true;
-      this.finish('skipped');
-    } else this.changed();
+    this.changed();
     return true;
   }
   view(role: 'studio' | 'viewer' | 'overlay'): GameView {
@@ -636,7 +785,7 @@ export class Game {
             guessUsed: r.guessUsed,
             wrongGuessBonus: r.wrongGuessBonus,
             ...(role === 'viewer' && ['active', 'paused', 'settling'].includes(this.phase)
-              ? { target: r.word, forbiddenClues: [...r.clues] }
+              ? { target: r.word, forbiddenClues: [...r.clues], ...printed.get(r.word) }
               : {}),
           }
         : null,
@@ -655,6 +804,16 @@ export class Game {
         .sort((a, b) => b.rounds - a.rounds || a.name.localeCompare(b.name))
         .slice(0, 8)
         .map((leader) => ({ ...leader, baits: leader.baits ?? 0 })),
+      // Bait MVPs: the chatters the streamer picked most often as "You baited me".
+      mvps: Object.values(this.data.leaders)
+        .filter((leader) => (leader.baits ?? 0) > 0)
+        .sort((a, b) => byPicks(a, b) || a.name.localeCompare(b.name))
+        .slice(0, 5)
+        .map((leader) => ({ ...leader, baits: leader.baits ?? 0 })),
+      // Badges reached before unlocks were recorded count as unlocked, without a date.
+      badges: streakTiers
+        .filter((tier) => this.data.streakBadges?.[tier.count] || this.score.best >= tier.count)
+        .map((tier) => ({ count: tier.count, at: this.data.streakBadges?.[tier.count]?.at ?? null })),
       mission: this.mission
         ? {
             ...this.mission,
@@ -676,5 +835,12 @@ export class Game {
   }
   private changed() {
     this.onChange();
+  }
+  private emit(event: GameEvent) {
+    try {
+      this.onEvent(event);
+    } catch {
+      /* Announcements are a side channel. The game has already moved on. */
+    }
   }
 }

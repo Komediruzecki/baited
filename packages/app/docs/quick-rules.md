@@ -25,6 +25,6 @@ At zero, live recognition may take up to 1.5 seconds to finish checking speech a
 | Forbidden clues | Easy: none. Medium: two. Hard: four. A violating hint can’t receive an award; the round continues for everyone. |
 | Three-word mission | Land three targets on one clock. Gaps count. Pause freezes time; a skip replaces a target. |
 | Call the bait | One private typed guess per word. Correct: escape the round and mission. Wrong: chat gets 15 extra seconds. |
-| You baited me | After a win, the streamer may award one eligible hint. The community keeps the shared win. |
+| You baited me | After a win, the streamer may award one eligible hint. The community keeps the shared win; the chatter gets a “BAITED BY” sting on stream and a spot on the Bait MVPs board. |
 
 Play along: no peeking, no spoilers. Full timing, matching and award details are in [mechanics.md](mechanics.md).

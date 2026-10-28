@@ -41,6 +41,10 @@ Keep `PUBLIC_URL` and the address you open identical, including `localhost` vers
 - A streamer studio with round controls, settings, scores, microphone status, and win reversal. It receives no active target.
 - A mobile viewer room that shows the word without an account or extension.
 - A transparent, read-only OBS browser source with a timer, scores, and success animation.
+- A native Twitch Extension: a viewer panel, and a video overlay that deals the card onto the stream. Viewers see the word; the broadcaster's own session sees the card's back.
+- An optional chat bot that announces rounds, nudges, results, streaks and the streamer's pick, answers `!bait help`, `!bait score`, `!bait streak` and `!bait top`, and lets moderators `!bait start`, `!bait pause` and `!bait resume`. It never posts a word while its round is live. See [Chat bot](docs/chat-bot.md).
+- Chat win streaks shown as fire, with seven badges from Spark at two in a row to Ultraviolet at fifty, on OBS, the Extension, the viewer room and the studio.
+- One card everywhere: the landing's Cut Open card, with the Glass finish and the Prism back, on the Extension overlay and panel, the studio, the viewer room and the OBS reveal. The OBS boxes around it are Twitch-style and set in the original Baited Pixel font.
 - An authoritative game engine with difficulty pools, pause/resume, deadlines, cooldowns, automatic rounds, shared streaks, participation records, and `!skip` votes.
 - Twitch authorization-code OAuth, encrypted server-side tokens, refresh deduplication, startup/hourly validation, and EventSub chat over WebSockets with recovery.
 - Microphone-only PCM capture through an AudioWorklet. Moonshine runs in a browser worker by default; its proposed catches require broadcaster confirmation. Deepgram remains an optional server-side adapter for automatic scoring.
@@ -69,7 +73,7 @@ Start with the [quick rules](docs/quick-rules.md). See [mechanics and inspiratio
 pass-cli run --env-file docs/bait.local.env.tmpl -- pnpm dev
 ```
 
-5. Choose **Connect Twitch**, and authorize the broadcaster's account. Baited reads that account's own channel. It requests only `user:read:chat` and uses that user access token for `channel.chat.message`. This connects the game backend to chat; installing the native viewer panel is a separate step in the [Extension guide](docs/baited-local-test.md). This follows Twitch's [authorization-code flow](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/) and [chat EventSub authorization](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelchatmessage).
+5. Choose **Connect Twitch**, and authorize the broadcaster's account. Baited reads that account's own channel. It requests `user:read:chat` and uses that user access token for `channel.chat.message`. Only if the streamer later allows the optional [chat bot](docs/chat-bot.md) does Twitch ask for `channel:bot` as well. This connects the game backend to chat; installing the native viewer panel is a separate step in the [Extension guide](docs/baited-local-test.md). This follows Twitch's [authorization-code flow](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/) and [chat EventSub authorization](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelchatmessage).
 6. Wait for **TWITCH / your_channel** to show connected before starting. From a different Twitch account, send an ordinary non-spoiler message or `!bait`. Confirm the participant count increases. Use `!skip` once to vote.
 
 Tokens never enter browser storage. An HttpOnly session cookie controls the studio. Twitch credentials are encrypted with AES-256-GCM in `data/bait.json`. Preserve the encryption key across restarts. If you lose it, reconnect affected accounts using a fresh data directory. Never upload `.env` or `data/` to a repository.
@@ -91,7 +95,7 @@ Deepgram remains an optional legacy adapter, selected with `SPEECH_PROVIDER=deep
 
 ## Share the viewer room and add OBS
 
-In **Studio**, copy the viewer-room URL. Put it in a channel panel or Twitch chat manually. Baited never posts the target. Viewers keep the page beside the Twitch stream and play through normal chat.
+In **Studio**, copy the viewer-room URL. Put it in a channel panel or Twitch chat manually. Baited never posts the target, including through its optional chat bot. Viewers keep the page beside the Twitch stream and play through normal chat.
 
 In **Stream setup**, copy the OBS URL. Add an OBS **Browser Source**, set width **1920**, height **1080**, and paste the URL. Its background is transparent. Place it above your scene. Do not use the viewer URL as a stream overlay.
 

@@ -8,6 +8,7 @@
     <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
     <script src="./runtime-config.js"></script>
     <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./card.css" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-surface="config">
@@ -33,7 +34,7 @@
           <p>Your viewers get the secret word. Run the round in your studio.</p>
         </div>
         <figure class="setup-card-well">
-          <div class="setup-card-back" aria-hidden="true"><span></span></div>
+          <div class="setup-card-back" aria-hidden="true"><div class="prism-back"><span class="prism-back__mark baited-glyph"></span></div></div>
           <figcaption>You see the back.<br />Viewers see the word.</figcaption>
         </figure>
       </section>
@@ -74,10 +75,10 @@
             >
           </li>
           <li>
-            <strong>Activate your viewer panel.</strong>
+            <strong>Activate Baited on your channel.</strong>
             <span
-              >In Twitch’s My Extensions, activate Baited in a free panel slot on your
-              channel.</span
+              >In Twitch’s My Extensions, choose Overlay to deal the card onto your video: chat sees
+              the word, you see its back. Or choose a free panel slot below the stream.</span
             >
           </li>
         </ol>

@@ -1,5 +1,6 @@
 import { clockValue, connectToTwitch, connectionView, readState } from './client.js';
-import { cardArtFile, wordSize } from './presentation.js';
+import { cardArtFile, cardWordSize, glassRules, streakMilestone } from './presentation.js';
+import { revealPixels } from './pixel-reveal.js';
 
 const byId = (id) => document.getElementById(id);
 let current = null;
@@ -8,6 +9,13 @@ let connected = false;
 let announcementKey = '';
 let dealtRound = '';
 let dealAnimation;
+// The ink this viewer's card was dealt with, kept for the same card's reveal.
+let dealtInk = { id: '', ink: '' };
+// The art of a newly dealt card resolves from pixels once, as on the landing.
+let stopReveal = () => {};
+let pendingReveal = null;
+let artFile = '';
+byId('field-rules').setAttribute('d', glassRules());
 
 function announce(key, text) {
   if (key === announcementKey) return;
@@ -15,14 +23,48 @@ function announce(key, text) {
   byId('announcement').textContent = text;
 }
 
-function setTitle(value, secret = false) {
+function setTitle(value, secret = false, ink = '') {
   byId('card-title').textContent = value;
-  byId('card-title').dataset.wordSize = secret ? wordSize(value) : 'message';
+  byId('card-title').dataset.wordSize = secret ? cardWordSize(value) : 'message';
+  // The ink names the word as surely as the word does; it is cleared with it.
+  byId('card-title').style.color = secret ? ink : '';
+}
+
+function setQuestion(text) {
+  byId('card-question').textContent = text ?? '';
+  byId('card-question').hidden = !text;
+}
+
+function cancelReveal() {
+  if (pendingReveal) byId('word-art').removeEventListener('load', pendingReveal);
+  pendingReveal = null;
+  stopReveal();
+  stopReveal = () => {};
+}
+
+function revealArt() {
+  cancelReveal();
+  const image = byId('word-art');
+  const file = artFile;
+  if (!file) return;
+  const play = () => {
+    pendingReveal = null;
+    if (artFile !== file) return;
+    stopReveal = revealPixels({ holder: byId('art-reveal'), image, canvas: byId('art-pixels') });
+  };
+  if (image.complete && image.naturalWidth) play();
+  else {
+    pendingReveal = play;
+    image.addEventListener('load', play, { once: true });
+  }
 }
 
 function setArt(word) {
   const file = cardArtFile(word);
   const art = byId('word-art');
+  // The canvas holds pixels of the artwork, so it is emptied with the image.
+  if ((file ?? '') !== artFile) cancelReveal();
+  artFile = file ?? '';
   art.hidden = !file;
   // A filename can reveal the word too. Remove it when authorization or role changes.
   if (file) art.setAttribute('src', `./assets/${file}`);
@@ -50,6 +92,7 @@ function deal(roundId) {
   if (dealtRound === roundId) return;
   dealtRound = roundId;
   dealAnimation?.cancel();
+  revealArt();
   const card = byId('card');
   if (card.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     dealAnimation = card.animate(
@@ -65,8 +108,10 @@ function deal(roundId) {
 function clearCard(title, detail, label = 'Waiting', resetAnnouncement = true) {
   current = null;
   dealAnimation?.cancel();
+  dealtInk = { id: '', ink: '' };
   setArt(null);
   setDifficulty(null);
+  setQuestion(null);
   if (resetAnnouncement) {
     announcementKey = '';
     byId('announcement').textContent = '';
@@ -99,7 +144,12 @@ function render({ configured, room }) {
     announce('unconfigured', 'Waiting for the streamer to connect Baited.');
     return;
   }
-  byId('round-index').textContent = room.round ? `Round ${room.round.number}` : "Chat's secret";
+  const streak = room.score.streak;
+  byId('round-index').textContent = room.round
+    ? `Round ${room.round.number}${streak >= 2 ? ` · ${streak} in a row` : ''}`
+    : streak >= 2
+      ? `${streak} in a row`
+      : "Chat's secret";
   const playing = ['active', 'paused', 'settling'].includes(room.phase) && room.round;
   if (playing) {
     const visible = typeof room.round.target === 'string';
@@ -107,9 +157,11 @@ function render({ configured, room }) {
     byId('card').dataset.state = room.phase === 'active' ? 'active' : 'paused';
     byId('card-kicker').textContent = visible ? 'Secret word' : 'Broadcaster';
     byId('phase-label').textContent = phase;
-    setTitle(visible ? room.round.target : 'Your viewers have the word.', visible);
+    setTitle(visible ? room.round.target : 'Your viewers have the word.', visible, room.round.ink);
     setArt(visible ? room.round.target : null);
     setDifficulty(visible ? room.round.difficulty : null);
+    setQuestion(visible ? room.round.example : null);
+    dealtInk = visible ? { id: room.round.id, ink: room.round.ink ?? '' } : { id: '', ink: '' };
     byId('card-detail').hidden = visible;
     byId('card-detail').textContent = !visible
       ? 'Run the round and confirm catches in your studio.'
@@ -167,16 +219,25 @@ function render({ configured, room }) {
     byId('card-kicker').textContent = copy[0];
     byId('phase-label').textContent =
       result.outcome === 'review' ? 'Streamer’s call' : 'Complete';
-    setTitle(result.word, true);
+    setTitle(result.word, true, dealtInk.id === result.id ? dealtInk.ink : '');
     setArt(result.word);
     setDifficulty(null);
-    byId('card-detail').textContent = copy[1];
+    setQuestion(null);
+    const tier =
+      result.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
+    byId('card-detail').textContent = tier
+      ? `${copy[1]} 🔥 ${result.newBadge ? 'New streak badge' : 'Streak badge'}: ${tier.name}, ${tier.count} in a row.`
+      : copy[1];
     byId('card-detail').hidden = false;
     byId('forbidden').hidden = true;
     byId('forbidden-list').replaceChildren();
     byId('clock').hidden = true;
     byId('card-stamp').textContent =
-      result.outcome === 'caught' ? 'They said it' : 'Next round soon';
+      result.outcome === 'caught'
+        ? streak >= 2
+          ? `${streak} in a row`
+          : 'They said it'
+        : 'Next round soon';
     byId('play-instruction').textContent =
       result.outcome === 'review'
         ? 'A suggested catch only counts after the streamer confirms it.'

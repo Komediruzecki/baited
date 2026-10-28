@@ -8,6 +8,7 @@ class Element extends EventTarget {
   hidden = false;
   children = [];
   attributes = new Map();
+  style = {};
   content = '';
   set textContent(value) { this.content = String(value); this.children = []; }
   get textContent() { return this.content + this.children.map((child) => child.textContent).join(''); }
@@ -46,7 +47,7 @@ test('viewer clears visible and accessible secrets on Helper renewal, role chang
   const state = (secret = true, word = '<Pineapple>') => ({ version: '0.0.1', configured: true, room: {
     phase: 'active', channel: 'streamer', serverTime: 10000, result: null,
     round: { id: 'round-one', number: 1, duration: 60000, remaining: 45000, endsAt: 55000, difficulty: 'medium',
-      ...(secret ? { target: word, forbiddenClues: ['Pizza', 'Fruit'] } : {}) },
+      ...(secret ? { target: word, forbiddenClues: ['Pizza', 'Fruit'], ink: '#f3d40b', example: 'What hides in a tropical punch?' } : {}) },
   } });
   const respond = async (index, secret = true, word = '<Pineapple>') => {
     calls[index].resolve({ status: 200, ok: true, text: async () => JSON.stringify(state(secret, word)) });
@@ -58,6 +59,8 @@ test('viewer clears visible and accessible secrets on Helper renewal, role chang
     authorize(auth('viewer-private-token'));
     await respond(0);
     assert.equal(elements.get('card-title').textContent, '<Pineapple>');
+    assert.equal(elements.get('card-title').style.color, '#f3d40b');
+    assert.equal(elements.get('card-question').textContent, 'What hides in a tropical punch?');
     assert.match(elements.get('announcement').textContent, /<Pineapple>/);
     assert.match(allText(), /Pizza/);
     assert.doesNotMatch(allText(), /private-token/);
@@ -72,7 +75,9 @@ test('viewer clears visible and accessible secrets on Helper renewal, role chang
 
     // A fresh Helper JWT can change account or role. Clear the old view before awaiting its response.
     authorize(auth('broadcaster-private-token'));
-    assert.doesNotMatch(allText(), /Pineapple|Pizza|Fruit/);
+    assert.doesNotMatch(allText(), /Pineapple|Pizza|Fruit|tropical/);
+    assert.equal(elements.get('card-title').style.color, '');
+    assert.equal(elements.get('card-question').hidden, true);
     assert.equal(elements.get('word-art').hidden, true);
     assert.equal(elements.get('word-art').attributes.has('src'), false);
     assert.equal(elements.get('difficulty').hidden, true);
@@ -88,7 +93,8 @@ test('viewer clears visible and accessible secrets on Helper renewal, role chang
     await respond(3, true, 'VOLCANO');
     assert.match(allText(), /VOLCANO/);
     helperError(new Error('Do not expose Helper details'));
-    assert.doesNotMatch(allText(), /Pineapple|Pizza|Fruit|private-token|Helper details/);
+    assert.doesNotMatch(allText(), /Pineapple|Pizza|Fruit|tropical|private-token|Helper details/);
+    assert.equal(elements.get('card-title').style.color, '');
     assert.equal(elements.get('clock').hidden, true);
     assert.equal(elements.get('word-art').hidden, true);
     assert.equal(elements.get('word-art').attributes.has('src'), false);

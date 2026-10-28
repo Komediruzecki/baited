@@ -20,7 +20,8 @@
     "licenses": "node scripts/licenses.mjs",
     "build:extension": "node scripts/build-extension.mjs",
     "preview:extension": "node scripts/preview-extension.mjs",
-    "extension:local": "node scripts/serve-extension-local.mjs"
+    "extension:local": "node scripts/serve-extension-local.mjs",
+    "bot:transcript": "tsx scripts/bot-transcript.ts"
   },
   "dependencies": {
     "@moonshine-ai/moonshine-wasm": "0.1.5",

@@ -1,0 +1,587 @@
+/* The studio in Material 3: its containers and controls, in the landing's colours
+   (packages/landing/site/why-stack.css holds the M3 roles from seed #9146FF), with
+   Duolingo's chunky, pressable bounce where the landing has no equivalent: buttons and
+   cards stand on a darker lip that collapses when pressed. Loaded last and scoped to
+   the studio, sign-in and dialogs; the cards, fire streak, OBS and viewer room keep
+   their own styles. Each selector matches or beats the rule it replaces, so load
+   order settles ties. */
+:is(.studio-shell, .signin-page, .modal) {
+  --m3-primary: #d5baff;
+  --m3-primary-fill: #7721e5;
+  --m3-primary-lip: #4b0fa3;
+  --m3-on-primary: #fffdf7;
+  --m3-secondary-container: #3b2d52;
+  --m3-secondary-lip: #241936;
+  --m3-on-secondary-container: #ecdcff;
+  --m3-tertiary-container: #6b1f58;
+  --m3-on-tertiary-container: #ffd8ef;
+  --m3-surface-low: #1e1a24;
+  --m3-surface: #221e28;
+  --m3-surface-high: #2d2833;
+  --m3-surface-highest: #38323f;
+  --m3-on-surface: #e8dfee;
+  --m3-on-surface-variant: #cdc2d8;
+  --m3-outline: #968da1;
+  --m3-outline-variant: #4b4455;
+  --m3-error-fill: #d93a42;
+  --m3-error-lip: #7d1219;
+  --m3-error-container: #5c1117;
+  --m3-on-error-container: #ffdad6;
+  --m3-card-lip: #0c0912;
+  --m3-lip: 4px;
+  --m3-shape-xl: 28px;
+  --m3-shape-l: 16px;
+  --m3-shape-m: 12px;
+  --m3-shape-s: 8px;
+  --m3-ease: cubic-bezier(0.2, 0, 0, 1);
+  --m3-hover: rgb(255 253 247 / 8%);
+  --m3-press: rgb(255 253 247 / 12%);
+}
+
+/* Containers: M3 filled cards, extra-large shape, standing on a Duolingo lip. */
+.studio-shell :is(.mission-card, .mic-card, .panel),
+.studio-shell :is(.studio-sound-section, .privacy-panel, .rehearsal-tools),
+.studio-shell .setup-steps > li > .setup-step {
+  border: 2px solid var(--m3-surface-highest);
+  border-radius: var(--m3-shape-xl);
+  background: var(--m3-surface);
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-card-lip);
+}
+.studio-shell .studio-card-slot {
+  border-radius: 20px;
+}
+.studio-shell .studio-sound-section {
+  padding: 22px 24px;
+}
+.studio-shell .section-heading h3,
+.studio-shell .studio-sound-section h2,
+.studio-shell .privacy-panel h3 {
+  font: 400 20px/1.2 var(--b-display);
+  letter-spacing: -0.01em;
+}
+
+/* Buttons: tonal by default, filled for the main action, each on its lip. */
+:is(.studio-shell, .signin-page, .modal) .button {
+  min-height: 44px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: var(--m3-shape-l);
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+  font: 600 15px/1.2 var(--b-ui);
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-secondary-lip);
+  transition:
+    background-color 160ms ease-out,
+    box-shadow 120ms var(--m3-ease),
+    translate 120ms var(--m3-ease);
+}
+:is(.studio-shell, .signin-page, .modal) .button.secondary {
+  border: 0;
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+:is(.studio-shell, .signin-page, .modal) .button.primary {
+  min-height: 48px;
+  border: 0;
+  background: var(--m3-primary-fill);
+  color: var(--m3-on-primary);
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-primary-lip);
+}
+/* The landing's ink icon square, rounded to match. */
+:is(.studio-shell, .signin-page, .modal) .button.primary > svg:first-child {
+  border-radius: 10px;
+}
+:is(.studio-shell, .signin-page, .modal) .button.danger {
+  border: 0;
+  background: var(--m3-error-fill);
+  color: #fff;
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-error-lip);
+}
+:is(.studio-shell, .signin-page, .modal) .button.danger-outline {
+  border: 2px solid var(--m3-error-fill);
+  background: transparent;
+  color: #ffb4ab;
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-error-lip);
+}
+/* M3 text button: no container, a state layer on hover. */
+:is(.studio-shell, .signin-page, .modal) .button.text {
+  padding-inline: 16px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--m3-primary);
+  box-shadow: none;
+}
+:is(.studio-shell, .signin-page, .modal) .button:hover:not(:disabled) {
+  background-image: linear-gradient(var(--m3-hover), var(--m3-hover));
+}
+:is(.studio-shell, .signin-page, .modal) .button.primary:hover:not(:disabled) {
+  background-color: var(--m3-primary-fill);
+  background-image: linear-gradient(var(--m3-hover), var(--m3-hover));
+  border-color: transparent;
+}
+:is(.studio-shell, .signin-page, .modal) .button.secondary:hover:not(:disabled) {
+  background-color: var(--m3-secondary-container);
+  border-color: transparent;
+}
+:is(.studio-shell, .signin-page, .modal) .button:active:not(:disabled),
+:is(.studio-shell, .signin-page, .modal) .button.primary:active:not(:disabled) {
+  background-image: linear-gradient(var(--m3-press), var(--m3-press));
+  box-shadow: 0 0 0 transparent;
+  translate: 0 var(--m3-lip);
+}
+:is(.studio-shell, .signin-page, .modal) .button.text:active:not(:disabled) {
+  translate: none;
+}
+:is(.studio-shell, .signin-page, .modal) .button:disabled {
+  opacity: 1;
+  background: var(--m3-surface-high);
+  color: #8f8699;
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-surface-low);
+}
+:is(.studio-shell, .signin-page, .modal) .button.text:disabled {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Skip and End sit beside the main action as tonal buttons. */
+.studio-shell .round-icon.round-secondary {
+  border: 0;
+  border-radius: var(--m3-shape-l);
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-secondary-lip);
+  transition:
+    box-shadow 120ms var(--m3-ease),
+    translate 120ms var(--m3-ease);
+}
+.studio-shell .round-icon.round-secondary:active:not(:disabled) {
+  box-shadow: 0 0 0 transparent;
+  translate: 0 var(--m3-lip);
+}
+
+/* Chips: M3 assist chips; status chips carry their meaning in a container colour. */
+.studio-shell .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--m3-shape-s);
+  background: transparent;
+  color: var(--m3-on-surface-variant);
+  font: 600 12px/1 var(--b-ui);
+}
+.studio-shell .tag.muted {
+  margin: 0;
+  font: 600 12px/1 var(--b-ui);
+}
+.studio-shell .tag.lime {
+  border-color: transparent;
+  background: var(--m3-primary-fill);
+  color: var(--m3-on-primary);
+}
+.studio-shell .tag.amber {
+  border-color: transparent;
+  background: var(--m3-tertiary-container);
+  color: var(--m3-on-tertiary-container);
+}
+
+/* The round desk. */
+.studio-shell .mission-footer > .round-difficulty {
+  display: none;
+}
+.studio-shell .timer > span {
+  margin-left: 0;
+}
+/* A Duolingo progress bar: thick, round, with a highlight along the fill. */
+.studio-shell .round-progress {
+  height: 12px;
+  margin: 18px 0 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--m3-surface-highest);
+}
+.studio-shell .round-progress > div {
+  height: 100%;
+  border-radius: inherit;
+  background:
+    linear-gradient(#ffffff52, #ffffff52) 8px 3px / calc(100% - 16px) 3px no-repeat,
+    #9146ff;
+}
+.studio-shell .mission-card.is-urgent .round-progress > div {
+  background:
+    linear-gradient(#ffffff80, #ffffff80) 8px 3px / calc(100% - 16px) 3px no-repeat,
+    var(--b-urgent);
+}
+.studio-shell .mission-card.is-caught {
+  border-color: var(--m3-primary-fill);
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-primary-lip);
+}
+/* The revealed word on the decision side, in the landing's display face. */
+.studio-shell .studio-stage__copy p.studio-result__word {
+  margin: 4px 0 10px;
+  color: var(--b-paper);
+  font: 400 40px/1.05 var(--b-display);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.studio-shell .studio-stage__copy p.studio-result__word[data-word-size='medium'] {
+  font-size: 32px;
+}
+.studio-shell .studio-stage__copy p.studio-result__word[data-word-size='long'] {
+  font-size: 26px;
+}
+.studio-shell .studio-stage__copy p.studio-result__word[data-word-size='extended'] {
+  font-size: 22px;
+}
+.studio-shell .studio-result__streak {
+  margin-top: 8px;
+  color: #ffae4a;
+  font-weight: 600;
+}
+.studio-shell .mic-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-secondary-lip);
+}
+
+/* Fields: M3 outlined text fields and selects. */
+:is(.studio-shell, .modal) :is(input:not([type='checkbox']):not([type='range']), select, textarea) {
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--m3-outline);
+  border-radius: var(--m3-shape-m);
+  background: var(--m3-surface-low);
+  color: var(--m3-on-surface);
+  font: 400 15px/1.3 var(--b-ui);
+}
+:is(.studio-shell, .modal) :is(input:not([type='checkbox']):not([type='range']), select, textarea):focus-visible {
+  border-color: var(--m3-primary);
+  outline: 2px solid var(--m3-primary);
+  outline-offset: 0;
+}
+.studio-shell .link-field {
+  overflow: hidden;
+  border-radius: var(--m3-shape-m);
+}
+.studio-shell .sound-main-row input[type='range'] {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+}
+
+/* M3 switches for the settings toggles. */
+.modal .toggle-row {
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: var(--m3-shape-l);
+  background: var(--m3-surface);
+}
+.modal .toggle-row input[type='checkbox'] {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 2px solid var(--m3-outline);
+  border-radius: 999px;
+  background: var(--m3-surface-highest);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out;
+}
+.modal .toggle-row input[type='checkbox']::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--m3-outline);
+  translate: 0 -50%;
+  transition:
+    left 160ms var(--m3-ease),
+    width 160ms var(--m3-ease),
+    height 160ms var(--m3-ease),
+    background-color 160ms ease-out;
+}
+.modal .toggle-row input[type='checkbox']:checked {
+  border-color: var(--m3-primary-fill);
+  background: var(--m3-primary-fill);
+}
+.modal .toggle-row input[type='checkbox']:checked::before {
+  left: 22px;
+  width: 24px;
+  height: 24px;
+  background: var(--b-paper);
+}
+
+/* M3 segmented buttons for format and difficulty. */
+.modal .segmented {
+  display: flex;
+  overflow: hidden;
+  min-height: 44px;
+  border: 1px solid var(--m3-outline);
+  border-radius: 999px;
+  background: transparent;
+}
+.modal .segmented button {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--m3-on-surface);
+  font: 600 14px/1.2 var(--b-ui);
+  text-transform: capitalize;
+}
+.modal .segmented button + button {
+  border-left: 1px solid var(--m3-outline);
+}
+.modal .segmented button.selected {
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+
+/* Dialogs: M3 basic dialog, extra-large shape, on a lip. */
+dialog.modal {
+  padding: 24px;
+  border: 0;
+  border-radius: var(--m3-shape-xl);
+  background: var(--m3-surface-high);
+  color: var(--m3-on-surface);
+  box-shadow: 0 6px 0 var(--m3-card-lip);
+}
+dialog.modal::backdrop {
+  background: rgb(21 10 48 / 72%);
+}
+.modal .modal-heading h2 {
+  font: 400 24px/1.2 var(--b-display);
+  letter-spacing: -0.01em;
+}
+.modal .modal-heading .icon-button {
+  border-radius: 50%;
+}
+.modal .modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+/* Banners: M3 banners, tonal by meaning. */
+.studio-shell .rehearsal-banner,
+.studio-shell .error-banner,
+.studio-app .info-banner {
+  border: 0;
+  border-radius: var(--m3-shape-l);
+}
+.studio-shell .rehearsal-banner {
+  background: var(--m3-surface-high);
+}
+.studio-shell .error-banner {
+  background: var(--m3-error-container);
+  color: var(--m3-on-error-container);
+}
+.studio-app .error-banner.info-banner {
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+.signin-page :is(.signin-error, .signin-notice) {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--m3-shape-l);
+  font: 400 14px/1.5 var(--b-ui);
+}
+.signin-page .signin-notice {
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+
+/* Stream setup as a Duolingo path: numbered nodes that fill when a step is done. */
+.studio-shell .setup-steps {
+  display: grid;
+  gap: 16px;
+}
+.studio-shell .setup-steps > li > .setup-step {
+  padding: 20px;
+}
+.studio-shell .setup-step-index {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+  font: 400 18px/1 var(--b-display);
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-secondary-lip);
+}
+.studio-shell .setup-step:has(.tag.lime) .setup-step-index {
+  background: var(--m3-primary-fill);
+  color: var(--m3-on-primary);
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-primary-lip);
+}
+
+/* Community: Duolingo stat tiles. */
+.studio-shell .community-scoreline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+.studio-shell .community-scoreline > div {
+  padding: 18px 20px;
+  border: 2px solid var(--m3-surface-highest);
+  border-radius: 20px;
+  background: var(--m3-surface);
+  box-shadow: 0 var(--m3-lip) 0 var(--m3-card-lip);
+}
+.studio-shell .community-scoreline dt {
+  color: var(--m3-on-surface-variant);
+  font: 600 12px/1.3 var(--b-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.studio-shell .community-scoreline dd {
+  margin: 6px 0 0;
+  color: var(--b-paper);
+  font: 400 36px/1 var(--b-display);
+}
+
+/* Bait MVPs: a Duolingo podium for the streamer's top three picks. */
+.studio-shell .mvp-board {
+  grid-column: 1 / -1;
+}
+.studio-shell .mvp-board code {
+  font-size: 0.95em;
+}
+.studio-shell .mvp-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  max-width: 560px;
+  margin: 20px auto 12px;
+  padding: 0;
+  list-style: none;
+}
+.studio-shell .mvp-step {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  grid-row: 1;
+  min-width: 0;
+  text-align: center;
+}
+.studio-shell .mvp-step--1 {
+  grid-column: 2;
+}
+.studio-shell .mvp-step--2 {
+  grid-column: 1;
+}
+.studio-shell .mvp-step--3 {
+  grid-column: 3;
+}
+.studio-shell .mvp-step strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--b-paper);
+  font: 600 14px/1.3 var(--b-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-shell .mvp-step span {
+  color: var(--m3-on-surface-variant);
+  font: 400 12px/1.3 var(--b-ui);
+}
+.studio-shell .mvp-step b {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  margin-top: 8px;
+  border-radius: var(--m3-shape-m) var(--m3-shape-m) 6px 6px;
+  font: 400 28px/1 var(--b-display);
+}
+.studio-shell .mvp-step--1 b {
+  height: 112px;
+  background: #fffc79;
+  color: #3a2f00;
+  box-shadow: 0 var(--m3-lip) 0 #b8a91f;
+}
+.studio-shell .mvp-step--2 b {
+  height: 80px;
+  background: #c9a8ff;
+  color: #241936;
+  box-shadow: 0 var(--m3-lip) 0 #8a62d6;
+}
+.studio-shell .mvp-step--3 b {
+  height: 56px;
+  background: #ffae4a;
+  color: #3d2200;
+  box-shadow: 0 var(--m3-lip) 0 #b86d14;
+}
+
+/* Lists: rows with a quiet state layer. */
+.studio-shell :is(.result-row, .leader-row) {
+  border-radius: var(--m3-shape-m);
+}
+.studio-shell :is(.result-row, .leader-row):hover {
+  background: var(--m3-hover);
+}
+
+/* Sign-in sheet. */
+.signin-page .signin-sheet {
+  border: 2px solid var(--m3-surface-highest);
+  border-radius: var(--m3-shape-xl);
+  box-shadow: 0 6px 0 var(--m3-card-lip);
+}
+
+/* A win lands with a little bounce. Motion only when the viewer allows it. */
+@media (prefers-reduced-motion: no-preference) {
+  .studio-shell .mission-card.is-caught {
+    animation: m3-pop 420ms var(--m3-ease);
+  }
+}
+@keyframes m3-pop {
+  40% {
+    transform: scale(1.015);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.studio-shell, .signin-page, .modal) :is(.button, .round-icon):active:not(:disabled) {
+    translate: none;
+  }
+}
+@media (forced-colors: active) {
+  :is(.studio-shell, .signin-page, .modal) :is(.button, .round-icon.round-secondary),
+  .studio-shell .setup-step-index,
+  .studio-shell .community-scoreline > div,
+  .studio-shell .mvp-step b {
+    border: 2px solid ButtonText;
+    box-shadow: none;
+  }
+  .modal .toggle-row input[type='checkbox'],
+  .modal .toggle-row input[type='checkbox']::before {
+    border: 2px solid ButtonText;
+    background: Canvas;
+  }
+  .modal .toggle-row input[type='checkbox']:checked::before {
+    background: Highlight;
+  }
+}

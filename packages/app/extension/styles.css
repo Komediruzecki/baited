@@ -147,229 +147,103 @@ h3 {
 .retry:active {
   background: #ffffff24;
 }
+/* The landing's approved card (card.css), fitted to the panel. The panel is its
+   container host: the card spans the panel's content width, so one landing pixel is
+   about 0.98 px at Twitch's 318 px. The card grows with its copy instead of keeping 5:7,
+   so its art window is smaller than the landing's to keep every state inside 500 px. */
+.panel {
+  container-type: inline-size;
+}
 .secret-card {
+  --cut-art: calc(148 * var(--cut-u));
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  position: relative;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 5px 19px 5px 5px;
-  overflow: clip;
-  container-type: inline-size;
-  box-shadow:
-    0 5px 0 -1px #09080c,
-    0 12px 24px #00000020;
-  transition: border-color 180ms ease-out;
-}
-.secret-card[data-state='active'] {
-  border-color: #9c7fbd;
 }
 .card-topline {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px 16px 0;
-}
-.card-kicker {
-  font-size: 11px;
-  font-weight: 650;
-  color: var(--copy);
+  justify-content: flex-start;
 }
 .phase-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--lit);
-  text-align: right;
   margin-left: auto;
-}
-.difficulty {
-  display: inline-flex;
-  gap: 3px;
-  align-self: center;
-  flex: none;
-}
-.difficulty i {
-  width: 5px;
-  height: 5px;
-  border: 1px solid var(--lit);
-}
-.difficulty i[data-filled='true'] {
-  background: var(--lit);
-}
-.card-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  padding: 18px 16px;
-  gap: 10px;
-  text-align: center;
-}
-.waiting-card {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 112px;
-  height: 156px;
-  margin: 2px auto 8px;
-  border: 1px solid #796388;
-  border-top-color: var(--lit);
-  border-radius: 6px 14px 6px 6px;
-  background: var(--b-table-night);
-  box-shadow: 0 5px 0 -1px #120d1a;
-}
-.waiting-mark {
-  width: 76%;
   color: var(--lit);
 }
-.target {
-  font:
-    400 34px/1.08 Russo,
-    Impact,
-    sans-serif;
-  letter-spacing: -0.025em;
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-  max-width: 100%;
-  color: var(--paper);
+.card-topline .difficulty {
+  margin-left: 0;
 }
-.target[data-word-size='medium'] {
-  font-size: clamp(14px, 8.8cqi, 27px);
+.card-center:has(.word-art[hidden]) .art-square {
+  display: none;
 }
-.target[data-word-size='long'] {
-  font-size: clamp(14px, 6.4cqi, 20px);
+/* A word without art keeps the field at the landing's minimum art height. */
+.secret-card:has(.word-art[hidden]):has(.waiting-card[hidden]) {
+  --cut-art: calc(80 * var(--cut-u));
 }
-.target[data-word-size='extended'] {
-  font-size: 19px;
-  line-height: 1.15;
+/* The streamer's card and the card between rounds: the Prism back in the art window. */
+.waiting-card {
+  position: relative;
+  height: calc(100% - 6px);
+  aspect-ratio: 5 / 7;
+  container-type: size;
+  transform: rotate(-3deg);
 }
 .target[data-word-size='message'] {
-  font-size: 28px;
+  margin-top: 4px;
+  font-size: 21px;
   line-height: 1.14;
-}
-.target[data-word-size]:not([data-word-size='message']) {
-  text-transform: uppercase;
-}
-.target:is([data-word-size='short'], [data-word-size='medium'], [data-word-size='long']) {
-  white-space: nowrap;
-  overflow-wrap: normal;
-}
-.target[data-word-size='short'] {
-  font-size: clamp(14px, 10cqi, 32px);
-}
-.word-art {
-  width: 132px;
-  height: 132px;
-  max-width: 100%;
-  margin-inline: auto;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-.card-center:has(.word-art:not([hidden])) {
-  padding-block: 8px 12px;
-  gap: 8px;
-}
-.card-center:has(.word-art[hidden]):has(.waiting-card[hidden]) {
-  min-height: 0;
+  text-transform: none;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 .card-detail {
+  margin-top: 6px;
+  color: #c9c0d1;
   font-size: 12px;
-  line-height: 1.55;
-  color: var(--copy);
-  max-width: 33ch;
+  line-height: 1.5;
   text-wrap: pretty;
 }
-.forbidden {
-  margin-inline: 16px;
-  padding-block: 0 12px;
-  text-align: center;
+.secret-card .cut-card__footer {
+  margin-top: 10px;
 }
-.forbidden h3 {
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--muted);
-  margin-bottom: 6px;
+.secret-card .card-question:not([hidden]) ~ .cut-card__footer {
+  margin-top: 2px;
 }
-.forbidden ul {
-  list-style: none;
-  display: flex;
-  gap: 5px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin: 0;
-  padding: 0;
-}
-.forbidden ul[data-count='4'] {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, max-content));
-}
-.forbidden li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--b-clue-edge);
-  border-radius: 2px;
-  background: var(--b-clue-bg);
-  padding: 3px 6px;
-  font-size: 12px;
-  line-height: 1.3;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--b-clue-text);
-  overflow-wrap: anywhere;
-  max-width: 100%;
-}
-.forbidden li::before {
-  content: '';
-  flex: 0 0 6px;
-  height: 2px;
-  background: var(--b-clue-mark);
-}
-.clock {
-  margin-inline: 16px;
-  padding: 10px 0 14px;
-  border-top: 1px solid var(--subtle-line);
-}
+/* The footer rule is the round's timer, as on the overlay card. */
 .clock-labels {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
+  align-items: center;
+  gap: 8px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
 }
 .clock-value {
-  font-size: 22px;
   color: var(--paper);
+  font-size: 18px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
   line-height: 1;
 }
 progress {
+  position: absolute;
+  top: -1px;
+  left: 0;
   display: block;
   appearance: none;
   width: 100%;
-  height: 3px;
+  height: 2px;
   border: 0;
   border-radius: 0;
-  background: #48414f;
-  color: var(--violet);
+  background: transparent;
+  color: var(--lit);
   overflow: hidden;
 }
 progress::-webkit-progress-bar {
-  background: #48414f;
+  background: transparent;
 }
 progress::-webkit-progress-value {
-  background: var(--violet);
+  background: var(--lit);
 }
 progress::-moz-progress-bar {
-  background: var(--violet);
+  background: var(--lit);
 }
 .clock[data-urgent='true'] progress::-webkit-progress-value {
   background: var(--yellow);
@@ -380,19 +254,10 @@ progress::-moz-progress-bar {
 .clock[data-urgent='true'] .clock-value {
   color: var(--yellow);
 }
-.card-baseline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-inline: 16px;
-  border-top: 1px solid var(--line);
-  padding: 9px 0 11px;
-}
 .card-stamp {
-  font-size: 10px;
   color: var(--muted);
-  text-align: center;
+  font-size: 10px;
+  text-align: right;
 }
 .panel-footer {
   padding: 8px 2px 0;
@@ -410,44 +275,21 @@ code {
   font-weight: 650;
   color: var(--lit);
 }
-.secret-card:has(.clock:not([hidden])) .card-center {
-  min-height: 0;
-  padding-block: 8px 12px;
-  gap: 8px;
-}
-.secret-card:has(.clock:not([hidden])) .word-art {
-  width: 132px;
-  height: 132px;
-}
-.secret-card:has(.clock:not([hidden])) .waiting-card {
-  width: 88px;
-  height: 123px;
-}
-.secret-card[data-state='active'] .card-detail {
-  max-width: none;
-}
-.secret-card:has(.clock:not([hidden])) .clock {
-  padding-block: 8px 10px;
-}
-.secret-card:has(.clock:not([hidden])) .forbidden {
-  padding-bottom: 12px;
-}
 .secret-card:has(.clock:not([hidden])) .card-baseline {
   display: none;
 }
-.secret-card[data-state='paused'] .card-center {
-  min-height: 0;
-  padding-block: 8px 12px;
-  gap: 8px;
-}
-.secret-card[data-state='result'] .card-center {
-  min-height: 0;
-}
 .secret-card[data-state='reconnecting'] .target {
-  color: var(--copy);
+  color: var(--copy) !important;
 }
 .secret-card[data-state='reconnecting'] .card-center {
-  opacity: .75;
+  opacity: 0.75;
+}
+/* A connection notice above the card takes the example question's room. */
+.panel:has(> .connection:not([hidden])) .secret-card {
+  --cut-art: calc(108 * var(--cut-u));
+}
+.panel:has(> .connection:not([hidden])) .card-question {
+  display: none;
 }
 
 /* Configuration hands off to the studio. Steps are a sequence, not more cards. */
@@ -495,24 +337,13 @@ code {
   background: var(--b-table-night);
   border-radius: 6px;
 }
+/* The landing's Prism back (card.css): the card as the streamer sees it. */
 .setup-card-back {
-  display: grid;
-  place-items: center;
+  position: relative;
   width: 96px;
   height: 134px;
-  border: 1px solid var(--b-edge);
-  border-top-color: var(--lit);
-  border-radius: 5px 12px 5px 5px;
-  background: var(--card);
-  box-shadow: 0 4px 0 -1px #120d1a;
+  container-type: size;
   transform: rotate(-7deg);
-}
-.setup-card-back span {
-  width: 46px;
-  height: 70px;
-  border: 1px solid #796388;
-  border-radius: 50%;
-  transform: rotate(22deg);
 }
 .setup-card-well figcaption {
   color: var(--copy);
@@ -684,28 +515,23 @@ code {
   .wordmark {
     font-size: 23px;
   }
+  /* Long state chips take two rows; the field still starts at the card's top edge.
+     A chip longer than the whole row shortens inside its pill. */
+  .secret-card {
+    --cut-top: 34px;
+  }
   .card-topline {
-    padding-inline: 12px;
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 4px;
   }
-  .card-center {
-    padding-inline: 12px;
+  .card-topline > .cut-card__chip {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .card-baseline,
-  .forbidden,
-  .clock {
-    margin-inline: 12px;
-  }
-  .target {
-    font-size: 29px;
-  }
-  .target[data-word-size='medium'] {
-    font-size: clamp(14px, 8.8cqi, 24px);
-  }
-  .target[data-word-size='long'] {
-    font-size: clamp(14px, 6.4cqi, 19px);
-  }
-  .target[data-word-size='extended'] {
-    font-size: 17px;
+  .secret-card .cut-card__clues {
+    gap: 4px 12px;
   }
   .setup {
     padding-inline: 14px;
@@ -719,24 +545,20 @@ code {
   .setup-card-well {
     display: none;
   }
-  .forbidden ul[data-count='4'] {
-    display: flex;
+  .secret-card .cut-card__clues {
+    grid-template-columns: max-content;
+    justify-content: center;
+  }
+  .card-question {
+    display: none;
   }
 }
 @media (max-width: 199px) {
   .panel { padding-inline: 8px; }
   .wordmark { width: 64px; }
   .masthead { gap: 6px; }
-  .card-topline { flex-wrap: wrap; gap: 5px; }
-  .card-center { padding-inline: 8px; }
-  .target[data-word-size='message'] { font-size: 20px; }
-  .forbidden, .clock, .card-baseline { margin-inline: 8px; }
+  .target[data-word-size='message'] { font-size: 18px; }
   .connection { flex-wrap: wrap; }
-  .waiting-card { width: 88px; height: 123px; }
-  .secret-card:is([data-state='active'], [data-state='paused']) .word-art {
-    width: 104px;
-    height: 104px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,

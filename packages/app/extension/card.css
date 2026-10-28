@@ -1,0 +1,379 @@
+/* The approved landing card, Cut Open / Glass / Prism, shared by every product surface:
+   the Extension panel and video overlay (this bundle) and the viewer room, studio, OBS
+   source and sign-in page (imported by the app).
+
+   Source of truth: packages/landing/selected-cards/selected-cards.css on the landing's
+   300 x 420 card, over its base card in packages/landing/site/styles.css. Every length
+   below is the landing's own pixel value times --cut-u, one landing pixel at this card's
+   width, so the card scales with its host. Type keeps a legibility floor on small cards.
+   tests/card-parity.test.ts compares these numbers with the landing.
+
+   Host contract: a face (.cut-card) or back (.prism-back) sits inside a container query
+   host exactly as wide as the card, with no other container between them. Hosts change
+   the art window, top row and padding through the --cut-* variables, never directly, so
+   the angled field still meets the card's top edge. */
+
+.cut-card {
+  --cut-u: calc(100cqw / 300);
+  --cut-art: calc(176 * var(--cut-u));
+  --cut-pad-top: calc(16 * var(--cut-u));
+  --cut-pad-x: calc(18 * var(--cut-u));
+  --cut-top: max(13px, calc(20 * var(--cut-u)));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  isolation: isolate;
+  padding: var(--cut-pad-top) var(--cut-pad-x) calc(14 * var(--cut-u));
+  border: 1px solid var(--b-edge);
+  border-top-color: var(--b-edge-lit);
+  border-radius: calc(12 * var(--cut-u)) calc(20 * var(--cut-u)) calc(12 * var(--cut-u)) calc(12 * var(--cut-u));
+  background: var(--b-face);
+  color: var(--b-paper);
+  text-align: left;
+  box-shadow:
+    0 calc(8 * var(--cut-u)) 0 calc(-3 * var(--cut-u)) #120d1a,
+    0 calc(24 * var(--cut-u)) calc(48 * var(--cut-u)) #1d0b4573;
+}
+
+/* Chip and level. The row keeps the landing's height so the field can reach the top edge. */
+.cut-card__top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(4 * var(--cut-u));
+  flex: none;
+  height: var(--cut-top);
+  font: 600 max(9px, calc(12 * var(--cut-u))) / 1 var(--b-ui);
+  letter-spacing: 0.06em;
+}
+.cut-card__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(4 * var(--cut-u));
+  min-width: 0;
+  padding: calc(3 * var(--cut-u)) calc(6 * var(--cut-u));
+  border-radius: calc(4 * var(--cut-u));
+  background: #1a1522;
+  color: var(--b-paper);
+  font: 600 max(9px, calc(10 * var(--cut-u))) / 1 var(--b-ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cut-card__pips {
+  display: flex;
+  flex: none;
+  gap: calc(3 * var(--cut-u));
+  margin-left: auto;
+  padding: calc(4 * var(--cut-u)) calc(5 * var(--cut-u));
+  border-radius: calc(10 * var(--cut-u));
+  background: #1a1522;
+}
+.cut-card__pips i {
+  width: max(5px, calc(6 * var(--cut-u)));
+  height: max(5px, calc(6 * var(--cut-u)));
+  border: max(1px, calc(1.5 * var(--cut-u))) solid #8f84a0;
+  border-radius: 50%;
+}
+.cut-card__pips[data-level='1'] i:first-child,
+.cut-card__pips[data-level='2'] i:not(:last-child),
+.cut-card__pips[data-level='3'] i,
+.cut-card__pips i[data-filled='true'] {
+  border-color: var(--b-lilac);
+  background: var(--b-lilac);
+  box-shadow: 0 0 0 calc(2.5 * var(--cut-u)) #c9a8ff2e;
+}
+
+/* The art window. Its Glass field rises from the card's top edge and ends at an angle
+   just below the art, following the window when long copy shrinks it. No inner frame. */
+.cut-card__art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 1 var(--cut-art);
+  width: 100%;
+  height: var(--cut-art);
+  min-height: calc(80 * var(--cut-u));
+  margin: calc(4 * var(--cut-u)) auto calc(8 * var(--cut-u));
+  isolation: isolate;
+}
+.cut-card__field {
+  position: absolute;
+  top: calc(0px - var(--cut-pad-top) - var(--cut-top) - 4 * var(--cut-u));
+  left: calc(0px - var(--cut-pad-x));
+  z-index: -1;
+  width: calc(100% + var(--cut-pad-x) * 2);
+  height: calc(100% + var(--cut-pad-top) + var(--cut-top) + 12 * var(--cut-u));
+  pointer-events: none;
+  background:
+    radial-gradient(70% 36% at 100% 0, #c9a8ff59, #c9a8ff00),
+    linear-gradient(#9146ff, #5b25c2 30%, #2a1160 56%, #120d1a 82%);
+  background-size: 100% calc(420 * var(--cut-u));
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12 * var(--cut-u)), 0 100%);
+}
+.cut-card__art::after {
+  content: '';
+  position: absolute;
+  right: calc(0px - var(--cut-pad-x));
+  bottom: calc(-8 * var(--cut-u));
+  left: calc(0px - var(--cut-pad-x));
+  z-index: -1;
+  height: calc(14 * var(--cut-u));
+  background: #c9a8ff8c;
+  clip-path: polygon(0 calc(100% - max(1px, calc(2 * var(--cut-u)))), 100% 0, 100% max(1px, calc(2 * var(--cut-u))), 0 100%);
+  pointer-events: none;
+}
+.cut-card__square {
+  position: relative;
+  display: block;
+  height: 100%;
+  aspect-ratio: 1;
+  max-width: 100%;
+}
+/* The complete sprite fits inside a four-pixel inset. */
+.cut-card__reveal {
+  position: absolute;
+  inset: calc(4 * var(--cut-u));
+  display: block;
+  pointer-events: none;
+}
+.cut-card__image,
+.cut-card__pixels {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.cut-card__pixels {
+  display: none;
+}
+.cut-card__reveal[data-resolving='true'] > .cut-card__image {
+  opacity: 0;
+}
+.cut-card__reveal[data-resolving='true'] > .cut-card__pixels {
+  display: block;
+}
+
+/* Copy sits straight on the charcoal face. */
+.cut-card__plate {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  min-height: min-content;
+  margin: 0 calc(-6 * var(--cut-u)) calc(-6 * var(--cut-u));
+  padding: calc(3 * var(--cut-u)) calc(6 * var(--cut-u)) calc(6 * var(--cut-u));
+  text-align: center;
+}
+/* The word, centred in its item's ink. Words over ten letters step down, as on the landing;
+   longer words outside the deck step down again so a small card never breaks one. */
+.cut-card__word {
+  display: block;
+  margin: 0;
+  color: var(--b-paper);
+  font: 400 max(12px, calc(30 * var(--cut-u))) / 1.1 var(--b-display);
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.cut-card__word[data-word-size='medium'] {
+  font-size: max(11px, calc(25 * var(--cut-u)));
+}
+.cut-card__word[data-word-size='long'] {
+  font-size: max(10px, calc(21 * var(--cut-u)));
+}
+.cut-card__word[data-word-size='extended'] {
+  font-size: max(9px, calc(17 * var(--cut-u)));
+  line-height: 1.15;
+}
+
+/* Ruled clues under "Keep out of chat". */
+.cut-card__rules {
+  display: block;
+  flex: none;
+  margin-top: calc(10 * var(--cut-u));
+  text-align: center;
+}
+.cut-card__rules-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(8 * var(--cut-u));
+  margin: 0 0 calc(8 * var(--cut-u));
+  color: #c9c0d1;
+  font: 400 max(9px, calc(11 * var(--cut-u))) / 1.273 var(--b-ui);
+}
+.cut-card__rules-label::before,
+.cut-card__rules-label::after {
+  content: '';
+  flex: none;
+  width: calc(24 * var(--cut-u));
+  border-top: 1px solid #fffdf747;
+}
+.cut-card__clues {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: center;
+  justify-items: start;
+  gap: calc(4 * var(--cut-u)) calc(20 * var(--cut-u));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cut-card__clues li {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  gap: calc(3 * var(--cut-u));
+  padding: 0;
+  color: var(--b-paper);
+  font: 600 max(9.5px, calc(12 * var(--cut-u))) / 1.333 var(--b-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cut-card__clues li::before {
+  content: '';
+  flex: none;
+  width: calc(7 * var(--cut-u));
+  height: 0;
+  border-top: max(1px, calc(2 * var(--cut-u))) solid var(--b-lilac);
+}
+/* Product guard, not a landing value: a streamer's own word can bring clues longer than
+   any deck clue. Then the two columns shrink and a clue wraps inside the card instead of
+   running past its edge. Clues that fit render exactly as on the landing. */
+.cut-card .cut-card__clues {
+  grid-template-columns: repeat(2, minmax(0, max-content));
+}
+.cut-card .cut-card__clues li {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.cut-card__note {
+  flex: none;
+  margin: calc(10 * var(--cut-u)) 0 0;
+  color: #c9c0d1;
+  font: 400 max(9.5px, calc(12 * var(--cut-u))) / 1.42 var(--b-ui);
+  text-wrap: balance;
+}
+.cut-card__question {
+  flex: none;
+  margin: calc(8 * var(--cut-u)) 0;
+  color: var(--b-copy);
+  font: 400 max(10px, calc(13 * var(--cut-u))) / 1.385 var(--b-ui);
+  text-wrap: balance;
+}
+
+/* The signature rule. Product surfaces add the clock and draw the round's timer on it. */
+.cut-card__footer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(8 * var(--cut-u));
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: calc(9 * var(--cut-u));
+  min-height: calc(25 * var(--cut-u));
+  border-top: 1px solid #5a4e66;
+}
+/* Two classes outrank each host's full-width .baited-glyph default. */
+.cut-card .cut-card__signature {
+  flex: none;
+  width: max(36px, calc(52 * var(--cut-u)));
+  color: #bca4d6;
+}
+.cut-card__timer {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--b-lilac);
+}
+
+/* The Prism back: foil lattice, an inked frame and the wordmark printed in ink. */
+.prism-back {
+  --cut-u: calc(100cqw / 300);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid var(--b-edge);
+  border-top-color: var(--b-edge-lit);
+  border-radius: calc(12 * var(--cut-u)) calc(20 * var(--cut-u)) calc(12 * var(--cut-u)) calc(12 * var(--cut-u));
+  background: #b8a0ec url('./assets/back-prism.webp') center / cover no-repeat;
+  box-shadow:
+    0 calc(8 * var(--cut-u)) 0 calc(-3 * var(--cut-u)) #120d1a,
+    0 calc(24 * var(--cut-u)) calc(48 * var(--cut-u)) #1d0b4573;
+}
+.prism-back::after {
+  content: '';
+  position: absolute;
+  inset: 7%;
+  border: max(1px, calc(2 * var(--cut-u))) solid #130d1d;
+  border-radius: calc(5 * var(--cut-u));
+  pointer-events: none;
+}
+.prism-back .prism-back__mark {
+  position: relative;
+  width: 72%;
+  color: var(--b-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cut-card__reveal[data-resolving='true'] > .cut-card__image {
+    opacity: 1;
+  }
+  .cut-card__pixels {
+    display: none !important;
+  }
+}
+@media (forced-colors: active) {
+  .cut-card,
+  .cut-card__chip,
+  .cut-card__pips,
+  .prism-back {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+  .cut-card__field,
+  .cut-card__art::after,
+  .cut-card__pixels {
+    display: none !important;
+  }
+  .cut-card__reveal[data-resolving='true'] > .cut-card__image {
+    opacity: 1;
+  }
+  .cut-card__word {
+    color: CanvasText !important;
+  }
+  .cut-card__rules-label,
+  .cut-card__clues li,
+  .cut-card__note,
+  .cut-card__question,
+  .cut-card__signature,
+  .prism-back__mark {
+    color: CanvasText;
+  }
+  .cut-card__rules-label::before,
+  .cut-card__rules-label::after,
+  .cut-card__clues li::before,
+  .prism-back::after {
+    border-color: CanvasText;
+  }
+}

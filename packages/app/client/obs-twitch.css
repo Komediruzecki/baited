@@ -1,0 +1,260 @@
+/* The OBS overlay's boxes in Twitch's style: square and borderless, extruded down and to
+   the left like Twitch's logo, set in Baited Pixel (scripts/build-pixel-font.mjs). The
+   result cards keep the landing's design. Type sizes are whole multiples of 8px so the
+   pixel font stays crisp in a 1920 × 1080 browser source. */
+@font-face {
+  font-family: 'Baited Pixel';
+  src: url('/fonts/baited-pixel.ttf') format('truetype');
+  font-weight: 400;
+  font-display: block;
+}
+.obs-root {
+  --twitch: #9146ff;
+}
+.obs-root :is(.obs-hud, .streak-celebration, .baited-sting),
+.obs-root > .public-award {
+  border: 0;
+  border-radius: 0;
+  font-family: 'Baited Pixel', var(--b-ui);
+  /* Older OBS browsers lack color-mix() and keep the first shadow. */
+  text-shadow: 2px 2px 0 #00000099;
+  text-shadow: 2px 2px 0 color-mix(in srgb, currentColor 22%, #000);
+  box-shadow:
+    -1px 1px 0 var(--twitch),
+    -2px 2px 0 var(--twitch),
+    -3px 3px 0 var(--twitch),
+    -4px 4px 0 var(--twitch),
+    -5px 5px 0 var(--twitch),
+    -6px 6px 0 var(--twitch),
+    -7px 7px 0 var(--twitch),
+    -8px 8px 0 var(--twitch);
+}
+.obs-root .obs-hud-stale {
+  --twitch: #8c4b58;
+}
+.obs-hud,
+.obs-hud .obs-widget,
+.obs-hud .obs-win {
+  background: #1a1522;
+}
+.obs-hud .obs-message > span {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-hud .obs-message > strong {
+  font: 400 24px/1.25 'Baited Pixel', var(--b-ui);
+}
+.obs-hud .obs-time {
+  font: 400 48px/1 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-hud .obs-score,
+.obs-hud .obs-score > .obs-mode {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-hud .obs-score {
+  background: #120d1a;
+}
+.obs-hud .mission-strip-label :is(span, strong),
+.obs-hud .mission-clock strong,
+.obs-hud .mission-pips > span {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+}
+.obs-hud .mission-pips > span {
+  border-radius: 0;
+}
+.obs-hud .mission-strip-label span {
+  max-width: none;
+}
+
+/* Fire streak strip: the count, the next badge and the coins. */
+.obs-hud .obs-streak {
+  border-top: 0;
+}
+.obs-streak__count strong {
+  font: 400 40px/1 'Baited Pixel', var(--b-ui);
+}
+.obs-streak__label,
+.obs-streak__label small {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-root :is(.obs-streak, .streak-celebration) .streak-row__n {
+  font: 400 16px/1 'Baited Pixel', var(--b-ui);
+}
+
+/* A badge win: the medallion arrives in a box of the same make. */
+.obs-root .streak-celebration {
+  background: radial-gradient(ellipse at 50% 30%, #4b2a1a 0, #1a1522 62%);
+}
+.streak-celebration__kicker,
+.streak-celebration__count,
+.streak-celebration__next {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.streak-celebration__name {
+  font: 400 24px/1.25 'Baited Pixel', var(--b-ui);
+}
+.obs-root > .public-award {
+  background: #1a1522;
+}
+.obs-root > .public-award :is(span, small) {
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+  letter-spacing: 0;
+}
+.obs-root > .public-award strong {
+  font: 400 24px/1.25 'Baited Pixel', var(--b-ui);
+}
+
+/* The streamer's pick: BAITED BY @name lands with pixel confetti for six seconds, then
+   leaves the corner chip behind. Stepped motion, like the font. */
+.obs-root .baited-sting {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: min(640px, calc(100vw - 96px));
+  padding: 32px 48px;
+  background: var(--b-table-night);
+  color: var(--b-paper);
+  text-align: center;
+  animation: baited-sting 6000ms linear var(--sting-age) both;
+}
+.baited-sting__kicker {
+  color: var(--b-lilac);
+  font: 400 24px/1.25 'Baited Pixel', var(--b-ui);
+}
+.baited-sting__name {
+  max-width: 100%;
+  color: var(--b-paper);
+  font: 400 48px/1.25 'Baited Pixel', var(--b-ui);
+  overflow-wrap: anywhere;
+}
+.baited-sting__name.is-long {
+  font-size: 32px;
+}
+.baited-sting__name.is-longest {
+  font-size: 24px;
+}
+.baited-sting__note {
+  color: var(--b-muted);
+  font: 400 16px/1.25 'Baited Pixel', var(--b-ui);
+}
+.baited-sting__confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.baited-sting__confetti i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--c);
+  opacity: 0;
+  animation: baited-confetti 1600ms steps(16, end) calc(240ms + var(--d) + var(--sting-age)) forwards;
+}
+@keyframes baited-sting {
+  0% {
+    opacity: 0;
+    transform: translateY(-64px) scale(0.5);
+    animation-timing-function: steps(4, end);
+  }
+  5% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+    animation-timing-function: steps(2, end);
+  }
+  8%,
+  94% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: steps(3, end);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-48px) scale(0.8);
+  }
+}
+@keyframes baited-confetti {
+  0% {
+    opacity: 1;
+    transform: translate(-4px, -4px);
+  }
+  45% {
+    opacity: 1;
+    transform: translate(calc(var(--x) * 0.8), calc(var(--y) * 0.8)) rotate(var(--r));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x), calc(var(--y) + 160px)) rotate(var(--r));
+  }
+}
+
+/* The reveal follows the HUD in flow, so it always clears it: the result card, beside it
+   the medallion on a badge win, and the streamer's pick when it lands. */
+.obs-reveal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 30px;
+  margin-top: 36px;
+}
+.obs-reveal :is(.result-deal--broadcast, .streak-celebration) {
+  position: relative;
+  top: auto;
+  left: auto;
+}
+
+@media (max-width: 760px) {
+  .obs-reveal .streak-celebration {
+    display: none;
+  }
+  .obs-root .baited-sting {
+    padding: 24px 32px;
+  }
+  .baited-sting__name {
+    font-size: 32px;
+  }
+  .baited-sting__name:is(.is-long, .is-longest) {
+    font-size: 24px;
+  }
+}
+@media (max-width: 600px) {
+  .obs-hud .obs-time {
+    font-size: 32px;
+  }
+  .obs-hud .obs-message > strong,
+  .obs-root > .public-award strong,
+  .baited-sting__kicker {
+    font-size: 16px;
+  }
+  .baited-sting__name {
+    font-size: 24px;
+  }
+  .baited-sting__name:is(.is-long, .is-longest) {
+    font-size: 16px;
+  }
+  .obs-reveal {
+    margin-top: 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .obs-root .baited-sting {
+    animation: none;
+  }
+  .baited-sting__confetti {
+    display: none;
+  }
+}
+@media (forced-colors: active) {
+  .obs-root :is(.obs-hud, .streak-celebration, .baited-sting),
+  .obs-root > .public-award {
+    border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+}

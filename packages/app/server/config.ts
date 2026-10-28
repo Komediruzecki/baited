@@ -34,6 +34,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     clientSecret = env.TWITCH_CLIENT_SECRET || '';
   const extensionClientId = env.TWITCH_EXTENSION_CLIENT_ID || '';
   const extensionSecret = env.TWITCH_EXTENSION_SECRET || '';
+  // The one Twitch account allowed to post as the chat bot. Its own OAuth consent is separate.
+  const botUserId = env.TWITCH_BOT_USER_ID || '';
+  if (botUserId && !/^[1-9]\d{0,19}$/.test(botUserId))
+    throw new Error('TWITCH_BOT_USER_ID must be the numeric Twitch user ID of the bot account.');
   const host = env.HOST || '127.0.0.1';
   const previewLanHost = env.LOCAL_PREVIEW_HOST || null;
   if (previewLanHost && (
@@ -72,6 +76,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     clientId,
     clientSecret,
     twitchReady: !!(key && clientId && clientSecret),
+    botUserId,
+    botReady: !!(key && clientId && clientSecret && botUserId),
     extensionClientId,
     extensionSecret,
     extensionOrigins: [...new Set(extensionOrigins)],

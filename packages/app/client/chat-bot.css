@@ -1,0 +1,87 @@
+/* Chat bot: the Stream setup step, the demo preview and sign-in notices. */
+.notice-text {
+  color: #d9c8ff;
+  font-size: 12px;
+  margin-top: 14px;
+}
+.studio-app .info-banner {
+  border-color: #6b5a86;
+  background: #251f31;
+  color: #e8ddff;
+}
+.bot-posts {
+  display: grid;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid #493950;
+}
+.bot-post {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #3a2e43;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.bot-post time {
+  color: #9d8cab;
+  font-variant-numeric: tabular-nums;
+}
+.bot-post__text {
+  color: #e6dcef;
+  overflow-wrap: anywhere;
+}
+.bot-post__status {
+  font-size: 11px;
+  color: #b7a5c6;
+  white-space: nowrap;
+}
+.bot-post--sent .bot-post__status {
+  color: #e4d2ff;
+}
+.bot-post--dropped .bot-post__status,
+.bot-post--failed .bot-post__status {
+  color: #ffb4bb;
+}
+.studio-app .rehearsal-inputs .rehearsal-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  color: #bfb0cc;
+  cursor: pointer;
+}
+.studio-app .rehearsal-body .rehearsal-check input {
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  accent-color: #c79ce9;
+}
+.bot-preview {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #4b3c58;
+}
+.bot-preview h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.bot-preview > p {
+  margin: 0;
+  font-size: 12px;
+  color: #a795b5;
+}
+@media (max-width: 600px) {
+  .bot-post {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .bot-post time {
+    grid-column: 1 / -1;
+  }
+}

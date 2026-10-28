@@ -46,6 +46,7 @@ const mime = new Map([
   ['.js', 'text/javascript; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
   ['.png', 'image/png'],
+  ['.webp', 'image/webp'],
   ['.svg', 'image/svg+xml'],
   ['.woff2', 'font/woff2'],
   ['.ttf', 'font/ttf'],
@@ -134,10 +135,12 @@ export function fixtureState(mode, role, at, now = Date.now()) {
                 mode === 'longword'
                   ? ['establishment', 'constitutional', 'disestablishment']
                   : example.clues.slice(0, { easy: 0, medium: 2, hard: 4 }[difficulty]),
+              ...(mode === 'longword' ? {} : { ink: example.ink, example: example.example }),
             }
           : {}),
       }
     : null;
+  // A confirmed catch lands chat's streak on five, the On fire badge.
   const result =
     phase === 'cooldown'
       ? {
@@ -148,8 +151,10 @@ export function fixtureState(mode, role, at, now = Date.now()) {
           elapsed: 32,
           participants: 12,
           at: now - 1000,
+          ...(mode === 'caught' ? { milestone: 5, newBadge: true } : {}),
         }
       : null;
+  const streak = mode === 'caught' ? 5 : ['escaped', 'review'].includes(mode) ? 0 : 4;
   return {
     version: '0.0.1',
     configured: true,
@@ -173,7 +178,7 @@ export function fixtureState(mode, role, at, now = Date.now()) {
         missionDuration: 180000,
         callBait: false,
       },
-      score: { wins: 3, played: 6, streak: 1, best: 2 },
+      score: { wins: 9, played: 12, streak, best: 5 },
       participants: 12,
       voters: 1,
       voteThreshold: 3,

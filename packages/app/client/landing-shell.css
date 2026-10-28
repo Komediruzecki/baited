@@ -1,0 +1,199 @@
+/* The landing's shell carried into the product (packages/landing/site): its violet
+   ground, the floating paper nav with the BAITED chip, and its violet buttons.
+   Controls stay on charcoal panels, so a dim second monitor stays dim. Loaded after
+   studio-refresh.css and public-refresh.css, which own layout. */
+:root {
+  --landing-ground:
+    radial-gradient(56% 520px at 84% -140px, #7a3ae0 0, #5b25c200 70%),
+    linear-gradient(#3a1680, #2a1160 420px, #1d0b45 900px, #150a30 1400px);
+  --landing-nav: #fffdf7;
+  --landing-chip: #ece6f5;
+  --landing-nav-shadow: 0 12px 30px #1d0b4538;
+}
+.studio-shell,
+.signin-page,
+body:has(.viewer-room) {
+  background-color: #150a30;
+  background-image: var(--landing-ground);
+  background-repeat: no-repeat;
+}
+.viewer-room {
+  background: transparent;
+}
+
+/* Floating nav: the logo chip and section tabs on one paper pill, account
+   controls on another. The drop shadow joins the pieces into one shape. */
+.studio-shell .sidebar {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0;
+  min-height: 0;
+  padding-block: 16px 0;
+  border: 0;
+  background: none;
+  filter: drop-shadow(var(--landing-nav-shadow));
+}
+.studio-shell .sidebar > .brand {
+  display: flex;
+  align-items: center;
+  width: auto;
+  height: 54px;
+  padding: 5px 0 5px 5px;
+  border-radius: 8px 0 0 8px;
+  background: var(--landing-nav);
+}
+.studio-shell .sidebar .product-brand,
+.viewer-room .viewer-header .product-brand,
+.signin-brand .product-brand {
+  display: grid;
+  place-items: center;
+  width: auto;
+  height: 44px;
+  padding: 0 13px;
+  border-radius: 4px;
+  background: var(--landing-chip);
+  color: var(--b-ink);
+}
+.studio-shell .sidebar .product-brand > .baited-glyph,
+.viewer-room .viewer-header .product-brand > .baited-glyph,
+.signin-brand .product-brand > .baited-glyph {
+  width: 74px;
+}
+.studio-shell .sidebar nav {
+  justify-self: start;
+  align-items: center;
+  gap: 2px;
+  height: 54px;
+  padding: 5px;
+  border-radius: 0 8px 8px 0;
+  background: var(--landing-nav);
+}
+.studio-shell .nav-item {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 4px;
+  color: var(--b-ink);
+  font: 600 15px/1.5 var(--b-ui);
+}
+.studio-shell .nav-item svg {
+  color: var(--b-violet-ink);
+}
+.studio-shell .nav-item:hover {
+  background: var(--landing-chip);
+  color: var(--b-ink);
+}
+.studio-shell .nav-item.selected {
+  background: var(--b-violet-ink);
+  color: var(--b-paper);
+  box-shadow: none;
+}
+.studio-shell .nav-item.selected svg {
+  color: var(--b-paper);
+}
+.studio-shell .nav-item.selected:hover {
+  background: var(--b-violet-press);
+}
+.studio-shell .sidebar-bottom {
+  height: 54px;
+  padding: 5px 5px 5px 14px;
+  border-radius: 8px;
+  background: var(--landing-nav);
+}
+.studio-shell .sound-toggle,
+.studio-shell .sidebar-bottom .icon-button,
+.studio-shell .connection-pill.online {
+  color: var(--b-ink);
+}
+.studio-shell .sound-toggle:hover {
+  color: var(--b-violet-ink);
+}
+.studio-shell .sidebar-bottom .icon-button:hover {
+  background: var(--landing-chip);
+  color: var(--b-ink);
+}
+.studio-shell .connection-pill {
+  color: #5c5466;
+}
+.studio-shell .connection-pill .dot {
+  color: var(--b-violet-ink);
+}
+.studio-shell .sidebar :is(a, button):focus-visible {
+  outline-color: var(--b-violet-ink);
+}
+
+/* Viewer room: the same chip on its own paper pill. */
+.viewer-room .viewer-header {
+  border-bottom: 0;
+}
+.viewer-room .viewer-header .brand {
+  padding: 5px;
+  border-radius: 8px;
+  background: var(--landing-nav);
+  box-shadow: var(--landing-nav-shadow);
+}
+.viewer-room .viewer-table {
+  background: #1d0b4580;
+  box-shadow: inset 0 0 0 1px #5b25c266;
+}
+
+/* Sign-in: the chip above the headline, as on the landing. */
+.signin-sheet {
+  box-shadow: 0 24px 60px #0d052466;
+}
+
+/* The landing's buttons: violet ink, square corners with a small radius. */
+:is(.studio-shell, .signin-page, .modal) {
+  --b-r-control: 4px;
+}
+:is(.studio-shell, .signin-page, .modal) .button.primary {
+  background: var(--b-violet-ink);
+  border-color: var(--b-violet-ink);
+}
+:is(.studio-shell, .signin-page, .modal) .button.primary:hover:not(:disabled) {
+  background: var(--b-violet-press);
+  border-color: var(--b-violet-press);
+}
+:is(.studio-shell, .signin-page, .modal) .button.primary:active:not(:disabled) {
+  background: #5b1fc0;
+}
+
+@media (max-width: 720px) {
+  .studio-shell .sidebar {
+    grid-template-columns: auto 1fr;
+    gap: 8px 0;
+    padding-top: 12px;
+  }
+  .studio-shell .sidebar > .brand {
+    border-radius: 8px;
+    padding-right: 5px;
+  }
+  .studio-shell .sidebar-bottom {
+    justify-self: end;
+  }
+  .studio-shell .sidebar nav {
+    justify-self: stretch;
+    border-radius: 8px;
+  }
+}
+@media (max-width: 560px) {
+  .studio-shell .sidebar .product-brand,
+  .studio-shell .sidebar > .brand {
+    width: auto;
+  }
+  .studio-shell .sidebar .product-brand > .baited-glyph {
+    width: 64px;
+  }
+  .studio-shell .sidebar-bottom {
+    padding-left: 5px;
+  }
+}
+@media (forced-colors: active) {
+  .studio-shell .sidebar {
+    filter: none;
+  }
+  .studio-shell .sidebar :is(.brand, nav, .sidebar-bottom),
+  :is(.studio-shell, .viewer-room, .signin-page) .product-brand {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

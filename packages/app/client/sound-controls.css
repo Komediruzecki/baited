@@ -9,7 +9,6 @@
   align-items: center;
   flex-wrap: wrap;
 }
-.sound-main-row > button,
 .sound-cue-list > button {
   font:
     600 13px Inter,
@@ -23,17 +22,88 @@
   color: #f5edff;
   background: #30233e;
 }
-.sound-main-row > button {
-  background: #302b38;
-  color: #efe9f7;
-  border-color: #61566e;
-  border-radius: 5px;
-}
-.sound-main-row > button:hover {
-  background: #40364c;
-}
 .sound-cue-list > button:hover {
   background: #473454;
+}
+/* Material 3 switch: 52 × 32 track, the handle grows and moves right when on. */
+.sound-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #efe9f7;
+  font: 600 15px/1.2 Inter, Arial, sans-serif;
+  cursor: pointer;
+}
+.sound-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.sound-switch__track {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 32px;
+  border: 2px solid #968da1;
+  border-radius: 999px;
+  background: #38323f;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out;
+}
+.sound-switch__handle {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #968da1;
+  translate: 0 -50%;
+  transition:
+    left 160ms cubic-bezier(0.2, 0, 0, 1),
+    width 160ms cubic-bezier(0.2, 0, 0, 1),
+    height 160ms cubic-bezier(0.2, 0, 0, 1),
+    background-color 160ms ease-out;
+}
+.sound-switch[aria-checked='true'] .sound-switch__track {
+  border-color: #7721e5;
+  background: #7721e5;
+}
+.sound-switch[aria-checked='true'] .sound-switch__handle {
+  left: 22px;
+  width: 24px;
+  height: 24px;
+  background: #fffdf7;
+}
+/* A chunky slider: the filled part follows --value, set by the component. */
+.sound-main-row input[type='range'] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #9146ff 0 var(--value, 35%), #38323f var(--value, 35%) 100%);
+  cursor: pointer;
+}
+.sound-main-row input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 3px 0 #4b0fa3;
+}
+.sound-main-row input[type='range']::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 3px 0 #4b0fa3;
 }
 .sound-main-row label {
   display: flex;
@@ -44,8 +114,7 @@
 }
 .sound-main-row input {
   accent-color: #9146ff;
-  width: 110px;
-  min-height: 30px;
+  width: 140px;
   margin: 0;
   padding: 0;
 }
@@ -78,8 +147,18 @@
   color: #c9a8ff;
 }
 .bait-sound-controls :focus-visible {
-  outline: 3px solid #fffc79;
+  outline: 2px solid #fffdf7;
   outline-offset: 4px;
+}
+@media (forced-colors: active) {
+  .sound-switch__track,
+  .sound-switch__handle {
+    border: 2px solid ButtonText;
+    background: Canvas;
+  }
+  .sound-switch[aria-checked='true'] .sound-switch__handle {
+    background: Highlight;
+  }
 }
 .studio-sound-section {
   margin-top: 28px;

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>baited · Card on the stream</title>
+    <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+    <script src="./runtime-config.js"></script>
+    <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./card.css" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./overlay.css" />
+  </head>
+  <body data-surface="overlay">
+    <!-- THESIS: One card dealt onto the video. Chat sees its face; the streamer
+    watching the same channel sees its back. OWN-WORLD: The landing's approved
+    card, Cut Open / Glass / Prism: a charcoal face whose ruled violet field ends
+    at an angle under the art, the item in its own ink, and the Prism back.
+    STORY: The card lands face down, turns over for chat, and turns over for
+    everyone when the round is decided. Chat's streak shows as fire.
+    FIRST VIEWPORT: Transparent video. One card at the right edge, clear of the
+    title and player controls, with a minimise tab.
+    FORM: A 5:7 card sized from the player height. Nothing is drawn between rounds. -->
+    <main class="table" id="table" data-visible="false" aria-label="baited card">
+      <section class="deal" id="deal" data-collapsed="false">
+        <div class="playing-card" id="card" data-face="back" data-state="waiting">
+          <div class="card-turn">
+            <div class="face face-front cut-card" id="face-front" aria-hidden="true">
+              <div class="cut-card__top face-top">
+                <span class="cut-card__chip chip" id="front-chip"></span>
+                <span class="cut-card__chip chip chip-streak" id="front-streak" hidden
+                  ><img src="./assets/streak-flame.svg" alt="" width="16" height="18" /><span
+                    id="front-streak-copy"
+                  ></span
+                ></span>
+                <span class="cut-card__pips pips" id="front-pips" aria-hidden="true" hidden><i></i><i></i><i></i></span>
+              </div>
+              <div class="cut-card__art face-art">
+                <!-- The view box is the full-size card in CSS pixels, so the rules scale with the card. -->
+                <svg class="cut-card__field" viewBox="0 0 300 420" preserveAspectRatio="xMinYMin slice" aria-hidden="true" focusable="false">
+                  <path id="field-rules" fill="none" stroke="#fffdf7" stroke-opacity="0.22" stroke-width="1.5" />
+                </svg>
+                <span class="cut-card__square face-square">
+                  <span class="cut-card__reveal" id="front-reveal">
+                    <img class="cut-card__image" id="front-art" alt="" width="1254" height="1254" hidden />
+                    <canvas class="cut-card__pixels" id="front-pixels" width="1" height="1" aria-hidden="true"></canvas>
+                  </span>
+                  <span class="badge-medal" id="front-medal" hidden
+                    ><img id="front-medal-art" alt="" width="96" height="96"
+                  /></span>
+                </span>
+              </div>
+              <div class="cut-card__plate face-plate">
+                <h2 class="cut-card__word face-word" id="front-word"></h2>
+                <div class="cut-card__rules face-rules" id="front-rules" hidden>
+                  <p class="cut-card__rules-label face-rules-label" id="front-rules-label">Keep out of chat</p>
+                  <ul class="cut-card__clues" id="front-clues" aria-labelledby="front-rules-label"></ul>
+                </div>
+                <p class="cut-card__note face-note" id="front-note"></p>
+                <ol class="face-row" id="front-row" aria-label="Wins in a row" hidden></ol>
+                <p class="cut-card__question face-question" id="front-question"></p>
+                <div class="cut-card__footer face-footer">
+                  <span class="cut-card__signature baited-glyph"></span>
+                  <span class="face-clock" id="front-clock"></span>
+                  <i class="timer-rule" aria-hidden="true"></i>
+                </div>
+              </div>
+            </div>
+            <div class="face face-back prism-back" id="face-back" aria-hidden="true">
+              <span class="prism-back__mark baited-glyph"></span>
+              <span class="cut-card__chip chip chip-streak back-streak" id="back-streak" hidden
+                ><img src="./assets/streak-flame.svg" alt="" width="16" height="18" /><span
+                  id="back-streak-copy"
+                ></span
+              ></span>
+              <div class="back-plate">
+                <span class="back-copy" id="back-copy">Chat has the word.</span>
+                <span class="face-clock" id="back-clock"></span>
+                <i class="timer-rule" aria-hidden="true"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="collapse" id="collapse" type="button" aria-expanded="true">
+          <span class="collapse-glyph" aria-hidden="true"></span>
+          <span class="collapse-label" id="collapse-label">Hide card</span>
+        </button>
+      </section>
+    </main>
+    <p id="announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+    <script type="module" src="./overlay.js"></script>
+  </body>
+</html>
