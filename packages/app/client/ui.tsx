@@ -129,7 +129,11 @@ export function Modal({
       ref={ref}
       className="modal"
       aria-label={title}
-      onCancel={onClose}
+      onCancel={(event) => {
+        // Parents may keep a dialog open while a request is in flight.
+        event.preventDefault();
+        onClose();
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

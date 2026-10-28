@@ -288,6 +288,7 @@
 }
 .modal .toggle-row input[type='checkbox'] {
   appearance: none;
+  box-sizing: border-box;
   position: relative;
   flex: none;
   width: 52px;
@@ -305,6 +306,7 @@
 }
 .modal .toggle-row input[type='checkbox']::before {
   content: '';
+  box-sizing: border-box;
   position: absolute;
   top: 50%;
   left: 6px;
@@ -312,6 +314,8 @@
   height: 16px;
   border-radius: 50%;
   background: var(--m3-outline);
+  /* Position the M3 thumb once; the legacy switch also translates checked thumbs. */
+  transform: none;
   translate: 0 -50%;
   transition:
     left 160ms var(--m3-ease),
@@ -420,7 +424,13 @@ dialog.modal::backdrop {
   gap: 16px;
 }
 .studio-shell .setup-steps > li > .setup-step {
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
   padding: 20px;
+}
+.studio-shell .setup-step-heading {
+  min-height: 48px;
 }
 .studio-shell .setup-step-index {
   display: grid;

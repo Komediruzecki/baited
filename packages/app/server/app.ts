@@ -105,7 +105,7 @@ export async function createBait(
   const microphoneLeases = new Map<string, { session: Session; leaseId: string; expires: number }>();
   const pendingOAuth = new Map<
     string,
-    { cookie: string; expires: number; kind: OAuthFlow; restore: boolean }
+    { cookie: string; expires: number; kind: OAuthFlow; restore: boolean; returnTo?: 'cards' }
   >();
   const bot = new ChatBot({
     config,
@@ -489,6 +489,7 @@ export async function createBait(
     kind: OAuthFlow,
     scopes: string[],
     restore = false,
+    returnTo?: 'cards',
   ) {
     if (!limiter.hit(`oauth:${req.ip}`, 20)) {
       res.status(429).send('Try again shortly.');
@@ -503,7 +504,8 @@ export async function createBait(
     // (the backend restarted mid-flow) still knows to send the operator back to the bot sign-in.
     const state = kind === 'bot' ? `bot.${randomKey()}` : randomKey(),
       cookie = randomKey();
-    pendingOAuth.set(state, { cookie, expires: Date.now() + 600000, kind, restore });
+    pendingOAuth.set(state, { cookie, expires: Date.now() + 600000, kind, restore,
+      ...(kind === 'broadcaster' && returnTo === 'cards' ? { returnTo } : {}) });
     res.cookie('bait_oauth', cookie, {
       httpOnly: true,
       secure: config.production,
@@ -522,8 +524,10 @@ export async function createBait(
     res.redirect(`https://id.twitch.tv/oauth2/authorize?${query}`);
   }
   app.get('/auth/twitch', (req, res) => {
+    // Fixed, named destination only. A callback cannot supply or change it.
+    const returnTo = req.query.returnTo === 'cards' ? 'cards' : undefined;
     if (!config.twitchReady) {
-      res.redirect('/?notice=setup');
+      res.redirect(`${returnTo === 'cards' ? '/studio/cards' : '/'}?notice=setup`);
       return;
     }
     // channel:bot is asked for only when the streamer allows the bot, then kept on reconnects.
@@ -543,6 +547,7 @@ export async function createBait(
       'broadcaster',
       withBot ? [...SCOPES, CHANNEL_BOT_SCOPE] : SCOPES,
       withBot && req.query.restore === '1',
+      returnTo,
     );
   });
   // The operator signs in once as the configured bot account. No studio session is created.
@@ -564,9 +569,10 @@ export async function createBait(
       sameSite: 'lax',
     });
     const flow: OAuthFlow = pending?.kind ?? (state.startsWith('bot.') ? 'bot' : 'broadcaster');
+    const destination = flow === 'broadcaster' && pending?.returnTo === 'cards' ? '/studio/cards' : '/';
     const failed = (fields: string, notice: string) => {
       logOAuthFailure(flow, fields);
-      res.redirect(`/?notice=${flow === 'bot' && notice !== 'bot-account' ? 'bot-oauth' : notice}`);
+      res.redirect(`${destination}?notice=${flow === 'bot' && notice !== 'bot-account' ? 'bot-oauth' : notice}`);
     };
     const sent = cookies(req.headers.cookie).bait_oauth || '';
     if (!pending) return failed('reason=state_missing', 'oauth');
@@ -625,10 +631,10 @@ export async function createBait(
       // Signing in from the landing page after the session expired asks only for chat reading,
       // which replaced a grant that let the bot post. Ask for channel:bot once more, never twice.
       const botLost = !c.scope.includes(CHANNEL_BOT_SCOPE);
-      if (config.botReady && botLost && pending.restore) res.redirect('/?notice=bot-declined');
+      if (config.botReady && botLost && pending.restore) res.redirect(`${destination}?notice=bot-declined`);
       else if (config.botReady && botLost && c.previousScope.includes(CHANNEL_BOT_SCOPE))
-        res.redirect('/auth/twitch?bot=1&restore=1');
-      else res.redirect('/');
+        res.redirect(`/auth/twitch?bot=1&restore=1${pending.returnTo === 'cards' ? '&returnTo=cards' : ''}`);
+      else res.redirect(destination);
     } catch (e) {
       failed(oauthErrorFields(e), e instanceof BotAsStreamer ? 'bot-as-streamer' : 'oauth');
     }

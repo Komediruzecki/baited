@@ -4,6 +4,8 @@ This guide describes the image-authoring source build. Deployment, Twitch asset 
 
 ## Add an image
 
+Open the [Card Maker](https://play-baited.maff.app/studio/cards). Twitch sign-in returns you to Cards. The library stays closed until you choose **Open card library**, so opening the link does not immediately reveal your words on stream.
+
 In **Studio → Cards**, open a pack and a card. **Upload image** accepts a still PNG, JPEG or WebP up to 5 MB and 2048 pixels per side. Use artwork you own or have permission to share. The server checks it, removes metadata and saves a PNG up to 512 pixels per side. Your image appears in the existing Cut Open card; the word, clues and timer remain separate, readable text.
 
 An upload changes the current edit. **Save draft** or **Save changes** attaches it to the saved pack. A round already in progress keeps the image it started with.

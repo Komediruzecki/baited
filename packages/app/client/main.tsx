@@ -56,6 +56,7 @@ import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
 import Landing from './Landing';
+import { studioPathFromTab, studioSignInPath, studioTabFromPath } from './studio-navigation';
 import {
   productBrand as brand,
   botNotices,
@@ -167,7 +168,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [modal, setModal] = useState(''),
-    [tab, setTab] = useState('studio'),
+    [tab, setTab] = useState<string>(() => studioTabFromPath(location.pathname)),
     // The operator may finish the bot account sign-in while signed in here as a streamer.
     [notice, setNotice] = useState(() => {
       const code = new URLSearchParams(location.search).get('notice') ?? '';
@@ -184,6 +185,10 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const [cardsDirty, setCardsDirty] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
   const [leaveCards, setLeaveCards] = useState<(() => void) | null>(null);
+  const selectTab = (next: string) => {
+    setTab(next);
+    history.replaceState(history.state, '', studioPathFromTab(next));
+  };
   const leaveSafely = (next: () => void) => {
     if (cardsDirty) setLeaveCards(() => next);
     else next();
@@ -429,7 +434,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               <button
                 key={id as string}
                 disabled={tab === 'cards' && cardsBusy}
-                onClick={() => { if (id !== tab) leaveSafely(() => setTab(id as string)); }}
+                onClick={() => { if (id !== tab) leaveSafely(() => selectTab(id as string)); }}
                 className={cx('nav-item', tab === id && 'selected')}
                 aria-current={tab === id ? 'page' : undefined}
               >
@@ -489,8 +494,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                 <strong>Local demo.</strong> Simulated chat.{' '}
               </span>
               <button
+                disabled={cardsBusy}
                 onClick={() =>
-                  session.twitchReady ? location.assign('/auth/twitch') : setModal('twitch')
+                  session.twitchReady ? leaveSafely(() => location.assign(studioSignInPath(location.pathname))) : setModal('twitch')
                 }
               >
                 Connect Twitch <ArrowUpRight size={14} />
@@ -513,7 +519,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           )}
           {tab === 'studio' && studio.deck?.problem && <div className="error-banner" role="alert">
             <Card size={18} /><span>{studio.deck.problem}</span>
-            <Button className="secondary" onClick={() => setTab('cards')}>Choose a deck</Button>
+            <Button className="secondary" onClick={() => selectTab('cards')}>Choose a deck</Button>
           </div>}
           {notice && (
             <div className={cx('error-banner', notice.ok && 'info-banner')} role="status">
@@ -987,7 +993,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               action={action}
               micEnabled={consent}
               micStatus={micStatus}
-              onMicrophone={() => leaveSafely(() => setTab('studio'))}
+              onMicrophone={() => leaveSafely(() => selectTab('studio'))}
               onDelete={() => setModal('delete')}
             />
           )}

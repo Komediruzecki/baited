@@ -57,7 +57,7 @@ export default function PixelArtEditor({ initialDocument, initialSource, onApply
   const [pending, setPending] = useState<Pending | null>(null), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(''), [imageName, setImageName] = useState('');
   const [convertPalette, setConvertPalette] = useState<PixelPalette | 'original'>('baited'), [dither, setDither] = useState(false);
-  const canvas = useRef<HTMLCanvasElement>(null), drawing = useRef<HTMLDivElement>(null), fileInput = useRef<HTMLInputElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null), drawing = useRef<HTMLDivElement>(null), fileInput = useRef<HTMLInputElement>(null), heading = useRef<HTMLHeadingElement>(null);
   const imageFile = useRef<Blob | null>(null), importSequence = useRef(0), mounted = useRef(true);
   const gesture = useRef<{ id: number; last: Point; doc: PixelDocument } | null>(null);
   const id = useId();
@@ -72,8 +72,17 @@ export default function PixelArtEditor({ initialDocument, initialSource, onApply
   };
   useEffect(() => {
     mounted.current = true;
+    heading.current?.focus();
     return () => { mounted.current = false; importSequence.current++; };
   }, []);
+  useEffect(() => {
+    // History can restore a different grid size without going through the
+    // select control. Keep the keyboard cell inside every restored document.
+    setCursor((point) => {
+      const x = Math.max(0, Math.min(doc.size - 1, point.x)), y = Math.max(0, Math.min(doc.size - 1, point.y));
+      return x === point.x && y === point.y ? point : { x, y };
+    });
+  }, [doc.size]);
   useEffect(() => {
     if (!initialSource || validPixelDocument(initialDocument)) return;
     const sequence = ++importSequence.current;
@@ -196,7 +205,7 @@ export default function PixelArtEditor({ initialDocument, initialSource, onApply
     else if (event.key.toLowerCase() === 'z' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); setHistory((value) => event.shiftKey ? redoPixels(value) : undoPixels(value)); }
   };
   return <section className="pixel-editor" aria-labelledby={`${id}-title`} aria-busy={!!busy}>
-    <header className="pixel-editor__header"><div><h2 id={`${id}-title`}>Card artwork</h2><p>Draw a word’s portrait, or turn your own image into pixels.</p></div><Button type="button" className="text" onClick={close} disabled={!!busy} aria-label="Close artwork editor"><X size={20} /></Button></header>
+    <header className="pixel-editor__header"><div><h2 ref={heading} tabIndex={-1} id={`${id}-title`}>Card artwork</h2><p>Draw a word’s portrait, or turn your own image into pixels.</p></div><Button type="button" className="text" onClick={close} disabled={!!busy} aria-label="Close artwork editor"><X size={20} /></Button></header>
     {error && <p className="pixel-editor__error" role="alert">{error}</p>}
     {notice && <p className="pixel-editor__notice" role="status"><Check size={16} />{notice}</p>}
     <div className="pixel-editor__layout">

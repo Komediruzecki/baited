@@ -20,7 +20,19 @@ export function CardArtwork({ artId, csrf, disabled, onChange, onBusyChange }: {
   const documentArtId = useRef<string | undefined>(undefined);
   const originalApproved = useRef<{ blob: Blob; id: string } | undefined>(undefined);
   const input = useRef<HTMLInputElement>(null);
+  const editorTrigger = useRef<HTMLButtonElement | null>(null), restoreEditorFocus = useRef(false);
   useEffect(() => { onBusyChange(!!busy || editor); return () => onBusyChange(false); }, [busy, editor, onBusyChange]);
+  useEffect(() => {
+    if (editor || busy || disabled || !restoreEditorFocus.current) return;
+    const frame = requestAnimationFrame(() => {
+      const trigger = editorTrigger.current;
+      if (trigger?.isConnected && !trigger.disabled) {
+        trigger.focus();
+        restoreEditorFocus.current = false;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [editor, busy, disabled]);
   useEffect(() => {
     if (documentArtId.current !== artId) {
       setDocument(undefined); setSource(undefined); originalApproved.current = undefined;
@@ -48,6 +60,7 @@ export function CardArtwork({ artId, csrf, disabled, onChange, onBusyChange }: {
       } catch (cause) { setError((cause as Error).message); setBusy(''); return; }
       setBusy('');
     }
+    restoreEditorFocus.current = true;
     setEditor(true);
   };
   const applyPixels = async (result: PixelArtResult) => {
@@ -81,7 +94,7 @@ export function CardArtwork({ artId, csrf, disabled, onChange, onBusyChange }: {
     {artId && <div className="card-artwork__current"><img src={`/api/studio/card-art/${encodeURIComponent(artId)}.png`} alt="Your card illustration" width={72} height={72} /><span><Check size={16} />Custom image selected</span><Button type="button" className="text" disabled={disabled || !!busy || editor} onClick={() => { onChange(undefined); setDocument(undefined); setSource(undefined); setNotice('Image removed from this edit. Save the pack to keep this change.'); }}>Remove from card</Button></div>}
     <div className="card-artwork__actions">
       <Button type="button" className="secondary" disabled={disabled || !!busy || editor} onClick={() => input.current?.click()}>Upload image</Button>
-      <Button type="button" className="secondary" disabled={disabled || !!busy || editor} onClick={() => void openEditor()}>{artId ? 'Edit as pixel art' : 'Draw pixel art'}</Button>
+      <Button type="button" className="secondary" disabled={disabled || !!busy || editor} onClick={(event) => { editorTrigger.current = event.currentTarget; void openEditor(); }}>{artId ? 'Edit as pixel art' : 'Draw pixel art'}</Button>
       <Button type="button" className="text" disabled={disabled || !!busy || editor} onClick={() => void showLibrary()}>Saved images</Button>
     </div>
     <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" hidden aria-label="Upload card image" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void upload(file); }} />
