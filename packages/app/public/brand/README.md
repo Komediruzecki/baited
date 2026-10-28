@@ -18,4 +18,4 @@ The logo is user-supplied artwork, separate from the original code, illustration
 
 ## Favicon
 
-`baited-favicon.png` is an unmodified copy of the landing's favicon, `packages/landing/site/assets/brand/baited-favicon.png`, so the studio's tab carries the same B as the website. SHA-256: `6cbc8a9693aeb1d19f185eae8cfddde81f94a9e621cdc8b9fe8e4dd1662e87c1`. `bait-bomb.png` remains in this folder as earlier artwork and is no longer referenced by the interface.
+`baited-favicon.png` and `baited-favicon.svg` are unmodified copies of the landing's favicon, `packages/landing/site/assets/brand/baited-favicon.{png,svg}`: the pixel logo's B in `#160033` on the violet `#7721e5`. `index.html` (Studio, the viewer room, the OBS overlay and the card labs) links both, like the landing, so a browser tab carries the same B as the website. `card-lab.html` is published on the landing's dev site and links the landing's own copies. PNG SHA-256: `6aae09f82291b0c4af05df2f0fd14de8b76e6111490add422604202c5c9860be`. `bait-bomb.png` remains in this folder as earlier artwork and is no longer referenced by the interface.

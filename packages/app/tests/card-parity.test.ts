@@ -324,6 +324,22 @@ test('Studio and native Extension mastheads and backs resolve the approved landi
   );
 });
 
+test('every app page links the landing\'s pixel B favicon as PNG and SVG', () => {
+  const lf = (value: string) => value.replace(/\r\n/g, '\n');
+  assert.equal(
+    lf(text(appRoot, 'public/brand/baited-favicon.svg')),
+    lf(text(landingRoot, 'site/assets/brand/baited-favicon.svg')),
+  );
+  // index.html serves Studio, the viewer room, the OBS overlay and the card labs.
+  const studio = text(appRoot, 'index.html');
+  assert.match(studio, /<link rel="icon" type="image\/png" sizes="256x256" href="\/brand\/baited-favicon\.png" \/>/);
+  assert.match(studio, /<link rel="icon" type="image\/svg\+xml" sizes="any" href="\/brand\/baited-favicon\.svg" \/>/);
+  // card-lab.html is published at /card-lab/ on the landing's dev site, so it links the landing's own copies.
+  const cardLab = text(appRoot, 'card-lab.html');
+  assert.match(cardLab, /<link rel="icon" href="\/assets\/brand\/baited-favicon\.png" type="image\/png" sizes="256x256" \/>/);
+  assert.match(cardLab, /<link rel="icon" href="\/assets\/brand\/baited-favicon\.svg" type="image\/svg\+xml" sizes="any" \/>/);
+});
+
 interface FakeCanvas {
   width: number;
   height: number;
