@@ -8,7 +8,8 @@
 // comes with the hero's entrance, as the arrival curtain goes (pixels.js); after it the others take
 // turns, the first last, round and round while the hero is on screen. The squares are their colour
 // on their deep purple (styles.css), on a canvas laid behind the page where the ribbons fall, so
-// they scroll with it. Screens 1024px wide and up only, and none with reduced motion.
+// they scroll with it. Theirs stop below 1024px; ours go on, phones included, the whole drawing
+// smaller in step with the screen's width (trailScale). None with reduced motion.
 import { CLEARED_EVENT } from './pixels.js'
 
 export const TRAIL_SETTINGS = Object.freeze({
@@ -20,11 +21,16 @@ export const TRAIL_SETTINGS = Object.freeze({
   revealSeconds: 1, // a ribbon's showing, played out in this long
   exitSeconds: 1, // its going
   gapSeconds: 3, // before the next ribbon
-  minimumWidth: 1024,
+  fullWidth: 1024, // the narrowest screen they draw at full size
 })
 
+// How large the ribbons are drawn on a screen `viewportWidth` CSS px wide: whole from fullWidth up;
+// narrower, the squares and the paths' offsets from the hero shrink with the screen, as the paths'
+// widths already do, so a phone shows the 1024px drawing scaled down.
+export const trailScale = (viewportWidth) => Math.min(1, viewportWidth / TRAIL_SETTINGS.fullWidth)
+
 // Their four guide paths, and where each lies: as wide as a share of the screen up to a cap, and
-// offset in CSS px from the hero's top and from one of its sides.
+// offset from the hero's top and from one of its sides, in CSS px at full size (trailScale).
 export const TRAIL_ROUTES = [
   {
     name: 'TrailPathTwo',
@@ -97,10 +103,11 @@ export function parseGuidePoints(d) {
 // A route's guide points in page px, for a hero whose box is `anchor` (page px: left, right, top)
 // on a screen `viewportWidth` CSS px wide.
 export function routePoints(route, anchor, viewportWidth) {
+  const scale = trailScale(viewportWidth)
   const width = Math.min((viewportWidth * route.widthVw) / 100, route.maxWidth)
   const height = (width * route.viewBox[1]) / route.viewBox[0]
-  const left = route.left !== undefined ? anchor.left + route.left : anchor.right - route.right - width
-  const top = anchor.top + route.top
+  const left = route.left !== undefined ? anchor.left + route.left * scale : anchor.right - route.right * scale - width
+  const top = anchor.top + route.top * scale
   return parseGuidePoints(route.d).map(([x, y]) => [left + (x / route.viewBox[0]) * width, top + (y / route.viewBox[1]) * height])
 }
 
@@ -180,14 +187,13 @@ let entered = false // the hero's entrance has had its ribbon (once a page)
 export function initHeroScribble({ gsap, ScrollTrigger } = {}, hero = document.querySelector('.hero')) {
   if (!hero || !gsap || !ScrollTrigger) return
   gsap.registerPlugin(ScrollTrigger)
-  gsap
-    .matchMedia()
-    .add(`(min-width: ${TRAIL_SETTINGS.minimumWidth}px) and (prefers-reduced-motion: no-preference)`, () => trail(gsap, ScrollTrigger, hero))
+  gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => trail(gsap, ScrollTrigger, hero))
 }
 
-// The ribbons for as long as the screen is wide enough; returns their teardown.
+// The ribbons for as long as motion is welcome; returns their teardown.
 function trail(gsap, ScrollTrigger, hero) {
-  const { count, squareSize, color, revealSeconds, exitSeconds } = TRAIL_SETTINGS
+  const { count, color, revealSeconds, exitSeconds } = TRAIL_SETTINGS
+  let squareSize = TRAIL_SETTINGS.squareSize // drawn, in whole CSS px, for the screen as it is
   const canvas = document.createElement('canvas')
   canvas.className = 'hero-scribble'
   canvas.setAttribute('aria-hidden', 'true')
@@ -218,6 +224,7 @@ function trail(gsap, ScrollTrigger, hero) {
     const box = hero.getBoundingClientRect()
     const anchor = { left: box.left + scrollX, right: box.right + scrollX, top: box.top + scrollY }
     const width = document.documentElement.clientWidth
+    squareSize = Math.round(TRAIL_SETTINGS.squareSize * trailScale(width))
     let [low, high] = [Infinity, -Infinity]
     TRAIL_ROUTES.forEach((route, index) => {
       ribbons[index].centers = ribbonCenters(routePoints(route, anchor, width))
