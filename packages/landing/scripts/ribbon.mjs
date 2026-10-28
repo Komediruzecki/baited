@@ -3,7 +3,7 @@ import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ribbonSource = fileURLToPath(new URL('../ribbon/', import.meta.url))
-const ribbonFiles = ['ribbon.js', 'ribbon-geometry.js', 'ribbon.css']
+const ribbonFiles = ['ribbon.js', 'ribbon-geometry.js', 'ribbon-effects.js', 'ribbon.css']
 
 function replaceOnce(source, before, after) {
   if (source.split(before).length !== 2) throw new Error('Ribbon staging hook changed; refusing an incomplete preview')

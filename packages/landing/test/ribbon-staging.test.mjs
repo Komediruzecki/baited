@@ -9,7 +9,7 @@ import { installPresentedDeck } from '../scripts/presented-deck.mjs'
 import { installRibbon } from '../scripts/ribbon.mjs'
 
 const sourceFiles = ['app.js', 'index.html', 'styles.css', 'deck.js']
-const ribbonFiles = ['ribbon.js', 'ribbon-geometry.js', 'ribbon.css']
+const ribbonFiles = ['ribbon.js', 'ribbon-geometry.js', 'ribbon-effects.js', 'ribbon.css']
 
 async function fixture(t, { environment = 'dev', presentation = 'presented' } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'baited-ribbon-staging-'))

@@ -131,7 +131,7 @@ test('390px: a deliberate trusted touch opens the ribbon without descendant capt
     await dragTouch(page, client)
     await expect(page.locator('#deck-hand')).toHaveClass(/is-ribbon-open/)
     await expect.poll(() => page.evaluate(() => window.__baitedSpread.openness)).toBe(1)
-    await page.getByRole('button', { name: 'Pause', exact: true }).tap()
+    // The row comes to rest by itself: it never runs on without a hand on it.
     await expect.poll(() => mode(page)).toBe('paused')
     await decodeFaces(page)
     const state = await inspectSpread(page)
@@ -266,31 +266,18 @@ test('moving the mouse away during a small wheel scroll does not dismiss a visib
   } finally { await context.close() }
 })
 
-test('mouse opening drifts, Pause holds still, and Play resumes without hover pausing', async ({ browser }, testInfo) => {
+test('a mouse opening holds still: no drift, and nothing to pause or play', async ({ browser }, testInfo) => {
   const { context, page, errors } = await prepareDeck(browser, testInfo.project.use.baseURL)
   try {
-    const cpuRate = Number(process.env.BAITED_TOUCH_CPU_RATE || 1)
-    await (await context.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: cpuRate })
     await page.getByRole('button', { name: 'spread the deck', exact: true }).click()
-    await expect.poll(() => mode(page)).toBe('cruise')
-    const before = await page.evaluate(() => ({ position: window.__baitedSpread.position, at: performance.now() }))
-    await page.waitForTimeout(2000)
-    const afterDrift = await page.evaluate(() => ({ position: window.__baitedSpread.position, at: performance.now() }))
-    const elapsed = (afterDrift.at - before.at) / 1000
-    const speed = (afterDrift.position - before.position) / elapsed
-    await writeFile(testInfo.outputPath('cruise-timing.json'), JSON.stringify({ cpuRate, before, after: afterDrift, elapsedSeconds: elapsed, cardsPerSecond: speed }, null, 2))
-    expect(speed).toBeGreaterThanOrEqual(0.22)
-    expect(speed).toBeLessThanOrEqual(0.28)
-    expect((await inspectSpread(page)).announcements).toEqual([])
-    await page.getByRole('button', { name: 'Pause', exact: true }).click()
     await expect.poll(() => mode(page)).toBe('paused')
-    const paused = await inspectSpread(page)
-    await page.waitForTimeout(1000)
+    await expect(page.locator('.ribbon-play')).toHaveCount(0)
+    const rest = await inspectSpread(page)
+    await page.waitForTimeout(2000)
     const after = await inspectSpread(page)
-    expect(after.position).toBe(paused.position)
-    expect(after.transforms).toEqual(paused.transforms)
-    await page.getByRole('button', { name: 'Play', exact: true }).click()
-    await expect.poll(() => position(page)).toBeGreaterThan(paused.position + 0.05)
+    expect(after.position).toBe(rest.position)
+    expect(after.transforms).toEqual(rest.transforms)
+    expect(after.announcements).toEqual([])
     expect(errors).toEqual([])
   } finally { await context.close() }
 })
@@ -374,7 +361,7 @@ test('reduced motion opens a static spread and uses instant keyboard navigation 
   const { context, page, errors } = await prepareDeck(browser, testInfo.project.use.baseURL, { width: 390, height: 844, reduced: true })
   try {
     await openPaused(page)
-    await expect(page.locator('.ribbon-play')).toBeHidden()
+    await expect(page.locator('.ribbon-play')).toHaveCount(0)
     const before = await inspectSpread(page)
     await page.waitForTimeout(1000)
     expect((await inspectSpread(page)).transforms).toEqual(before.transforms)

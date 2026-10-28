@@ -67,6 +67,7 @@ export function initWhyStack({ root = document, onMode, onFront, onReveal } = {}
       cards.forEach((card, index) => {
         card.style.setProperty('--why-card-index', index)
         card.style.setProperty('--why-card-offset', `${index * step}px`)
+        card.style.setProperty('--why-card-trim', `${cards.length - 1 - index}px`)
       })
       size.stackWidth = stack.offsetWidth
       size.viewport = document.documentElement.clientHeight
@@ -166,15 +167,17 @@ export function initWhyStack({ root = document, onMode, onFront, onReveal } = {}
       const index = step + 1
       const tilt = rotatingCards ? (index % 2 === 0 ? -10 : 10) : 0
       timeline.fromTo(surface, { opacity: 0 }, { opacity: 1, duration: 0.1, immediateRender: false }, step)
+      // A card keeps its own layer once it has landed (force3D: true). With 'auto' it dropped back
+      // to a plain transform at the very end, and being drawn again into the page nudged it.
       timeline.fromTo(
         surface,
         {
           // Start just below the screen, so the card rises into its place on the stack.
           y: () => Math.max(0.2 * size.stackWidth, size.viewport - size.stickyTop - (size.offsets[index] || 0)),
           rotation: tilt,
-          force3D: 'auto',
+          force3D: true,
         },
-        { y: 0, rotation: 0, force3D: 'auto', duration: 1 },
+        { y: 0, rotation: 0, force3D: true, duration: 1 },
         step
       )
     })

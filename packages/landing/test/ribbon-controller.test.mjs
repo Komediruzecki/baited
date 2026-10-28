@@ -175,7 +175,6 @@ test('hiding halfway through a fold lands once and leaves no frames or timers to
   view.api.spread()
   view.clock.advance(700)
   assert.equal(view.api.openness, 1)
-  assert.ok(view.clock.frames > 0, 'ordinary spread is cruising before the interruption')
   view.api.gather()
   view.clock.advance(160)
   assert.equal(view.api.mode, 'folding')
@@ -200,20 +199,21 @@ test('hiding halfway through a fold lands once and leaves no frames or timers to
   assert.equal(view.clock.timers, 0)
 })
 
-test('an unattended cruising ribbon gathers after idle and stops its frame loop', t => {
+test('an open row never moves or closes by itself: no autoplay, no frame loop, no deadline', t => {
   const view = scene(t)
   view.api.spread()
   view.clock.advance(700)
-  assert.ok(view.clock.frames > 0)
-  assert.equal(view.clock.timers, 1, 'the ordinary spread has one idle deadline')
-  view.clock.advance(7_900)
-  assert.equal(view.api.mode, 'fan')
-  assert.equal(view.api.openness, 0)
+  assert.equal(view.api.openness, 1)
+  assert.equal(view.api.mode, 'paused')
   assert.equal(view.clock.frames, 0)
   assert.equal(view.clock.timers, 0)
-  assert.equal(view.settled.length, 1)
-  view.clock.advance(10_000)
-  assert.equal(view.settled.length, 1, 'idle work cannot gather a completed fan again')
+  view.clock.advance(20_000)
+  assert.equal(view.api.mode, 'paused')
+  assert.equal(view.api.position, 0)
+  assert.equal(view.api.openness, 1)
+  assert.equal(view.settled.length, 0, 'still spread out')
+  assert.equal(view.api.play, undefined, 'there is nothing to play')
+  assert.deepEqual(view.help.childNodes.map(node => node.className), ['ribbon-help-prefix', 'ribbon-toggle'], 'and no Pause button')
 })
 
 test('a reduced-motion spread stays still without an idle or frame loop', t => {
@@ -223,7 +223,6 @@ test('a reduced-motion spread stays still without an idle or frame loop', t => {
   assert.equal(view.api.openness, 1)
   assert.equal(view.clock.frames, 0)
   assert.equal(view.clock.timers, 0)
-  view.api.play()
   view.clock.advance(10_000)
   assert.equal(view.api.mode, 'paused')
   assert.equal(view.clock.frames, 0)
@@ -243,7 +242,7 @@ test('a paused ribbon refresh warms its expanded art window without advancing th
   assert.equal(view.clock.timers, 0)
   const loaded = () => view.items.filter(item => item.querySelector('.card-art img').getAttribute('src')).length
   const before = loaded()
-  const newlyVisible = view.items[17].querySelector('.card-art img')
+  const newlyVisible = view.items[16].querySelector('.card-art img')
   assert.equal(newlyVisible.getAttribute('src'), null)
   view.metrics.room = view.clock.window.innerWidth = 1440
   view.api.refresh()
@@ -279,53 +278,45 @@ test('scroll visibility is coalesced and gathers only below half a card, includi
   assert.equal(view.clock.timers, 0)
 })
 
-test('visible cruise travels at the same wall-time pace with normal and delayed frames', async t => {
+test('a thrown row coasts to a stop on a whole card, the same at any frame rate', async t => {
   const samples = []
   for (const frameInterval of [16, 50, 100]) {
     await t.test(`${frameInterval}ms visible frame interval`, subtest => {
       const view = scene(subtest)
-      view.api.spread({ paused: true })
-      view.clock.advance(700)
+      view.api.spread()
+      view.clock.advance(700, frameInterval)
       assert.equal(view.api.mode, 'paused')
-      const from = view.api.position
-      view.api.play()
-      view.clock.advance(2_000, frameInterval)
-      const startupTravel = view.api.position - from
-      assert.ok(startupTravel > 0, 'play visibly advances the cards during startup')
-      view.clock.advance(1_000, frameInterval)
-      const steadyFrom = view.api.position
-      view.clock.advance(2_000, frameInterval)
-      const steadyTravel = view.api.position - steadyFrom
-      samples.push({ frameInterval, startupTravel, steadyTravel })
-      assert.ok(Math.abs(steadyTravel - .5) < .005,
-        `${frameInterval}ms frames moved ${steadyTravel} cards in two seconds; cruise should move approximately half a card`)
-      assert.equal(view.api.mode, 'cruise')
-      assert.equal(view.clock.document.hidden, false)
+      const from = view.api.hold()
+      view.api.drag(from - .25)
+      const dragged = view.api.position
+      assert.ok(dragged < -.4, 'the row follows the drag')
+      view.api.release(from, -2)
+      assert.equal(view.api.mode, 'coast')
+      view.clock.advance(150, frameInterval)
+      assert.ok(view.api.position < dragged, 'it carries on the way it was thrown')
+      view.clock.advance(3_000, frameInterval)
+      samples.push({ frameInterval, position: view.api.position })
+      assert.equal(view.api.mode, 'paused')
+      assert.equal(Number.isInteger(view.api.position), true, 'it settles on a card')
+      assert.equal(view.clock.frames, 0)
+      assert.equal(view.clock.timers, 0)
     })
   }
-  const startup = samples.map(sample => sample.startupTravel)
-  const steady = samples.map(sample => sample.steadyTravel)
-  assert.ok(Math.max(...startup) - Math.min(...startup) < .005,
-    `startup travel must depend on elapsed time rather than frame count: ${JSON.stringify(samples)}`)
-  assert.ok(Math.max(...steady) - Math.min(...steady) < .005,
-    `steady cruise must depend on elapsed time rather than frame count: ${JSON.stringify(samples)}`)
+  const positions = samples.map(sample => sample.position)
+  assert.equal(new Set(positions).size, 1, `the throw must depend on elapsed time rather than frame count: ${JSON.stringify(samples)}`)
 })
 
-test('direct spreading starts its cruise at the same elapsed time across visible frame intervals', async t => {
-  const samples = []
+test('spreading unfolds and then holds still, whatever the frame rate', async t => {
   for (const frameInterval of [16, 50, 100, 250]) {
     await t.test(`${frameInterval}ms visible frame interval`, subtest => {
       const view = scene(subtest)
       view.api.spread()
       view.clock.advance(2_000, frameInterval)
-      samples.push({ frameInterval, position: view.api.position })
-      assert.ok(view.api.position > 0 && view.api.position < .5, 'the deck unfolds before beginning its slow cruise')
+      assert.equal(view.api.position, 0)
       assert.equal(view.api.openness, 1)
-      assert.equal(view.api.mode, 'cruise')
+      assert.equal(view.api.mode, 'paused')
+      assert.equal(view.clock.frames, 0)
       assert.equal(view.clock.document.hidden, false)
     })
   }
-  const positions = samples.map(sample => sample.position)
-  assert.ok(Math.max(...positions) - Math.min(...positions) < .005,
-    `unfold completion must not count its last frame as extra cruise time: ${JSON.stringify(samples)}`)
 })

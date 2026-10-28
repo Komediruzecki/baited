@@ -5,36 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="A Twitch game where chat gets a secret word and the streamer doesn't. Watch a staged round, see how it plays and browse the cards."
+      content="A Twitch game for streamers. Your chat gets a secret word and tries to make you say it. Watch a staged round, see how it plays and browse the cards."
     />
-    <title>baited · Chat holds the cards. Streamer takes the bait.</title>
+    <title>baited · One secret word. Your whole chat against you.</title>
     <script src="/pixel-boot.js"></script>
     <link rel="canonical" href="https://baited.maff.app/" />
     <link rel="icon" href="/assets/brand/baited-favicon.png" type="image/png" sizes="256x256" />
+    <link rel="icon" href="/assets/brand/baited-favicon.svg" type="image/svg+xml" sizes="any" />
     <link rel="preload" href="/assets/russo-one.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="/assets/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="preload" href="/assets/brand/baited-logo-black.webp" as="image" fetchpriority="high" />
+    <link rel="preload" href="/assets/brand/baited-pixel-violet.svg" as="image" fetchpriority="high" />
     <link rel="stylesheet" href="/why-stack.css" />
     <link rel="stylesheet" href="/footer.css" />
     <link rel="stylesheet" href="/pixels.css" />
     <script type="module" src="/pixels.js"></script>
+    <script type="module" src="/scrollbar.js"></script>
     <script defer src="/vendor/gsap/gsap.min.js"></script>
     <script defer src="/vendor/gsap/ScrollTrigger.min.js"></script>
     <script type="module" src="/app.js"></script>
     <script type="module" src="/player.js"></script>
   </head>
   <body>
+    <div class="page-backdrop" aria-hidden="true"></div>
     <a class="skip-link" href="#how">Skip to how to play</a>
     <header class="site-header" id="top">
       <nav class="site-nav" aria-label="Main navigation">
         <a class="nav-logo" href="#top" aria-label="baited, back to the top"
           ><span class="nav-logo__pixels" aria-hidden="true"></span
           ><img
-            src="/assets/brand/baited-logo-black.webp"
+            src="/assets/brand/baited-pixel-violet.svg"
             alt=""
-            width="764"
-            height="225"
+            width="370"
+            height="100"
             decoding="async"
             fetchpriority="high"
             draggable="false"
@@ -170,17 +173,19 @@
             <rect class="px-dot" x="2" y="3" width="1" height="1" />
             <rect class="px-dot" x="4" y="3" width="1" height="1" />
             <rect class="px-dot" x="6" y="3" width="1" height="1" /></svg
-          ><span class="nav-cta__label">Get in touch</span></a
+          ><span class="nav-cta__label">Get early access</span></a
         >
       </nav>
     </header>
     <main>
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <h1 id="hero-title">Chat holds<br />the cards.<br />Streamer takes<br />the bait.</h1>
+          <h1 id="hero-title">
+            <span class="hero-line">One <span class="hero-secret">secret<svg class="hero-secret__pixels" viewBox="0 0 13 3" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="hero-secret__ink" d="M0 1h2v1h-2zM3 1h1v1h-1zM5 1h1v1h-1zM7 1h1v1h-1zM9 1h2v1h-2zM1 2h1v1h-1zM3 2h1v1h-1zM5 2h1v1h-1zM7 2h1v1h-1zM9 2h2v1h-2z" /><path class="hero-secret__ink hero-secret__ink--3" d="M2 1h1v1h-1zM4 1h1v1h-1zM11 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM6 2h1v1h-1zM12 2h1v1h-1z" /><path class="hero-secret__ink hero-secret__ink--2" d="M11 0h2v1h-2zM6 1h1v1h-1zM8 1h1v1h-1zM12 1h1v1h-1zM4 2h1v1h-1zM11 2h1v1h-1z" /><path class="hero-secret__ink hero-secret__ink--1" d="M0 0h2v1h-2zM3 0h1v1h-1zM5 0h6v1h-6z" /></svg></span> word.</span> <span class="hero-line">Your whole chat</span>
+            <span class="hero-line hero-line--light">against you.</span>
+          </h1>
           <p class="hero-sub">
-            Chat gets a secret word and tries to make the streamer say it. The streamer doesn't know the word and has to keep talking
-            anyway.
+            <span class="hero-pill" aria-hidden="true"><svg class="hero-pill__word" viewBox="0 0 14 3" aria-hidden="true" focusable="false"><path class="hero-pill__ink" d="M0 0h1v1h-1zM0 1h2v1h-2zM3 1h1v1h-1zM5 1h2v1h-2zM8 1h1v1h-1zM11 1h1v1h-1zM13 1h1v1h-1zM0 2h2v1h-2zM3 2h1v1h-1zM6 2h3v1h-3zM11 2h3v1h-3z" /><path class="hero-pill__ink hero-pill__ink--3" d="M4 1h1v1h-1zM9 1h2v1h-2zM12 1h1v1h-1zM2 2h1v1h-1zM4 2h2v1h-2zM9 2h1v1h-1z" /><path class="hero-pill__ink hero-pill__ink--2" d="M2 1h1v1h-1zM7 1h1v1h-1z" /><path class="hero-pill__ink hero-pill__ink--1" d="M1 0h1v1h-1zM3 0h1v1h-1zM5 0h2v1h-2zM8 0h1v1h-1zM10 0h1v1h-1zM12 0h2v1h-2zM10 2h1v1h-1z" /></svg></span>They know the word. You don't. Keep talking while your viewers try to trick you into saying it. One slip, and chat wins.
           </p>
         </div>
         <div class="hero-action">
@@ -189,8 +194,15 @@
               ><svg class="px-icon px-icon--down" viewBox="0 0 7 9" aria-hidden="true" focusable="false">
                 <path d="M3 0h1v7H3zM0 5h1v1H0zM6 5h1v1H6zM1 6h1v1H1zM5 6h1v1H5zM2 7h1v1H2zM4 7h1v1H4zM3 8h1v1H3z" /></svg></span
             ><span class="px-btn__label">How to play</span></a
+          ><a class="px-btn px-btn--ghost hero-access" href="mailto:hello@irchiinnuss.com?subject=baited%20early%20access"
+            ><span class="px-btn__box" aria-hidden="true"
+              ><svg class="px-icon px-icon--chat" viewBox="0 0 9 9" aria-hidden="true" focusable="false">
+                <path d="M1 0h7v1H1zM0 1h1v5H0zM8 1h1v5H8zM1 6h7v1H1zM1 7h2v1H1zM1 8h1v1H1z" />
+                <rect class="px-dot" x="2" y="3" width="1" height="1" />
+                <rect class="px-dot" x="4" y="3" width="1" height="1" />
+                <rect class="px-dot" x="6" y="3" width="1" height="1" /></svg></span
+            ><span class="px-btn__label">Get early access</span></a
           >
-          <p class="microline">A round lasts two minutes.</p>
         </div>
         <div class="hero-stage">
           <div class="film-wrap">
@@ -234,60 +246,41 @@
             </div>
           </div>
           <p class="sr-only" id="film-state" role="status" aria-live="polite">Sound off.</p>
-          <p class="film-note">
-            A staged round with made-up names. The card panel is a concept for a Twitch Extension.
-            <button
-              class="text-button transcript-button"
-              id="read-round"
-              type="button"
-              aria-controls="round-transcript"
-              aria-expanded="false"
-            >
-              Read the round
-            </button>
-          </p>
           <div class="film-stills" id="film-stills" hidden aria-label="The round in seven frames"></div>
-          <section class="round-transcript" id="round-transcript" aria-labelledby="round-title" hidden>
-            <div class="transcript-heading">
-              <h2 id="round-title">The Spicy Mountain</h2>
-              <button id="close-transcript" class="text-button" type="button">Close</button>
-            </div>
-            <p>One staged round. No live stream or speech recognition is running on this page.</p>
-            <ol id="transcript-beats"></ol>
-          </section>
         </div>
       </section>
+
+      <!-- The film moves here and grows into it as the page scrolls (showreel.js). -->
+      <section class="showreel" id="showreel" aria-label="The example round" hidden></section>
 
       <section class="how-section why-vtg" id="how" aria-labelledby="how-title">
         <div class="why-vtg__stage">
           <div class="why-vtg__intro">
             <div class="why-vtg__intro-sticky">
-              <h2 id="how-title"><span>Chat knows the word.</span> <em>The streamer doesn't.</em></h2>
+              <h2 id="how-title"><span>Two minutes.</span> <em>One word.</em></h2>
               <div class="why-vtg__copy">
                 <p class="why-vtg__lead">
-                  baited is a game for Twitch streams. Every round, chat gets a secret word, and the streamer has no idea what it is.
+                  baited is a game for your Twitch stream. Each round, chat gets a secret word you can't see.
                 </p>
-                <p class="why-vtg__payoff">
-                  Chat has two minutes to get the streamer to say it out loud. If the clock runs out first, the streamer wins the round.
-                </p>
+                <p class="why-vtg__payoff">They have two minutes to make you say it. Outlast the clock, and the round is yours.</p>
               </div>
             </div>
           </div>
           <div class="why-stack-shell">
             <ol class="why-stack" aria-label="How a round works">
               <li class="why-card why-card--word">
-                <article class="why-card__surface">
+                <article class="why-card__surface"><span class="why-card__number" aria-hidden="true">01</span>
                   <p class="why-card__topline">Chat's screen</p>
                   <div class="why-card__copy">
-                    <h3>Chat gets a secret word</h3>
+                    <h3>Your chat gets a secret word</h3>
                     <p class="why-card__note">
-                      Viewers see the word and its off-limits clues. The streamer only sees the back of the card.
+                      Viewers see the word and its off-limits clues. You only see the back of the card.
                     </p>
                   </div>
                   <div class="why-card__scene why-deal" aria-hidden="true">
                     <div class="why-deal__tilt">
                       <div class="why-deal__card">
-                        <div class="why-deal__back"><img src="/assets/brand/baited-logo-white.webp" alt="" width="764" height="225" loading="lazy" decoding="async" /></div>
+                        <div class="why-deal__back"><img src="/assets/brand/baited-pixel-white.svg" alt="" width="370" height="100" loading="lazy" decoding="async" /></div>
                         <div class="bait-card why-deal__face">
                           <span class="card-top"
                             ><span>01<small>/ 18</small></span
@@ -311,10 +304,10 @@
                           <span class="card-question">Where would you definitely not build a house?</span>
                           <span class="card-footer"
                             ><img
-                              src="/assets/brand/baited-logo-white.webp"
+                              src="/assets/brand/baited-pixel-white.svg"
                               alt="BAITED"
-                              width="764"
-                              height="225"
+                              width="370"
+                              height="100"
                               loading="lazy"
                               decoding="async"
                               draggable="false"
@@ -326,12 +319,12 @@
                 </article>
               </li>
               <li class="why-card why-card--hints">
-                <article class="why-card__surface">
+                <article class="why-card__surface"><span class="why-card__number" aria-hidden="true">02</span>
                   <p class="why-card__topline">Twitch chat</p>
                   <div class="why-card__copy">
                     <h3>Chat drops hints</h3>
                     <p class="why-card__note">
-                      Ask questions that steer the talk toward the word. Just don't type the word or its off-limits clues.
+                      They ask questions that steer the talk toward the word. A hint with the word or an off-limits clue in it doesn't count.
                     </p>
                   </div>
                   <div class="why-card__scene why-chat" aria-hidden="true">
@@ -347,10 +340,10 @@
                             <b class="u-snacks">sir_snacks</b>:
                             <img
                               class="why-chat__emote"
-                              src="/assets/brand/baited-logo-white.webp"
+                              src="/assets/brand/baited-pixel-white.svg"
                               alt=""
-                              width="764"
-                              height="225"
+                              width="370"
+                              height="100"
                               loading="lazy"
                               decoding="async"
                             />
@@ -365,28 +358,28 @@
                             <b class="u-snacks">sir_snacks</b>:
                             <img
                               class="why-chat__emote"
-                              src="/assets/brand/baited-logo-white.webp"
+                              src="/assets/brand/baited-pixel-white.svg"
                               alt=""
-                              width="764"
-                              height="225"
+                              width="370"
+                              height="100"
                               loading="lazy"
                               decoding="async"
                             />
                             <img
                               class="why-chat__emote"
-                              src="/assets/brand/baited-logo-white.webp"
+                              src="/assets/brand/baited-pixel-white.svg"
                               alt=""
-                              width="764"
-                              height="225"
+                              width="370"
+                              height="100"
                               loading="lazy"
                               decoding="async"
                             />
                             <img
                               class="why-chat__emote"
-                              src="/assets/brand/baited-logo-white.webp"
+                              src="/assets/brand/baited-pixel-white.svg"
                               alt=""
-                              width="764"
-                              height="225"
+                              width="370"
+                              height="100"
                               loading="lazy"
                               decoding="async"
                             />
@@ -401,11 +394,11 @@
                 </article>
               </li>
               <li class="why-card why-card--streamer">
-                <article class="why-card__surface">
-                  <p class="why-card__topline">Streamer's screen</p>
+                <article class="why-card__surface"><span class="why-card__number" aria-hidden="true">03</span>
+                  <p class="why-card__topline">Your screen</p>
                   <div class="why-card__copy">
-                    <h3>The streamer keeps talking</h3>
-                    <p class="why-card__note">They can't see the word, so any answer could be the slip.</p>
+                    <h3>You keep talking</h3>
+                    <p class="why-card__note">You can't see the word, so any answer could be the slip.</p>
                   </div>
                   <div class="why-card__scene why-stream" aria-hidden="true">
                     <div class="why-stream__window">
@@ -452,7 +445,7 @@
                         </span>
                       </div>
                       <div class="why-stream__studio">
-                        <span class="why-stream__back"><img src="/assets/brand/baited-logo-white.webp" alt="" width="764" height="225" loading="lazy" decoding="async" /></span>
+                        <span class="why-stream__back"><img src="/assets/brand/baited-pixel-white.svg" alt="" width="370" height="100" loading="lazy" decoding="async" /></span>
                         <p class="why-stream__hidden"><b>Word hidden</b><span>Chat is trying to make you say it.</span></p>
                         <p class="why-stream__clock"><span>Round live</span><b data-why-clock>01:42</b></p>
                         <span class="why-stream__timer"><i data-why-timer></i></span>
@@ -462,13 +455,13 @@
                 </article>
               </li>
               <li class="why-card why-card--catch">
-                <article class="why-card__surface">
+                <article class="why-card__surface"><span class="why-card__number" aria-hidden="true">04</span>
                   <p class="why-card__topline">Round over</p>
                   <div class="why-card__copy">
-                    <h3>They say it. Chat wins.</h3>
+                    <h3>You say it. Chat wins.</h3>
                     <p class="why-card__note">
-                      Baited listens on the streamer's computer. When it hears the word, the streamer confirms the catch before chat gets the win.
-                      If the clock hits zero first, the streamer escapes.
+                      Baited listens on your computer. When it hears the word, you confirm the catch before chat gets the win. If the clock hits
+                      zero first, you escape.
                     </p>
                   </div>
                   <div class="why-card__scene why-catch" aria-hidden="true">
@@ -559,15 +552,15 @@
             ><span
               ><span class="footer-avatar"
                 ><img src="/assets/why/moss-shout.webp" alt="" width="208" height="208" loading="lazy" decoding="async" /></span
-              >Let your chat</span
+              >Ready to take</span
             ></span
           >
-          <span class="footer-title__line"><span>bait you.</span></span>
+          <span class="footer-title__line"><span>the bait?</span></span>
         </h2>
         <div class="footer-rule">
           <div class="footer-circle-spot">
-            <a class="footer-circle" href="mailto:hello@irchiinnuss.com" data-magnetic="0.3"
-              ><span class="footer-circle__label">Get in touch</span
+            <a class="footer-circle" href="mailto:hello@irchiinnuss.com?subject=baited%20early%20access" data-magnetic="0.3"
+              ><span class="footer-circle__label">Get early access</span
               ><svg class="px-icon px-icon--chat footer-circle__icon" viewBox="0 0 9 9" aria-hidden="true" focusable="false">
                 <path d="M1 0h7v1H1zM0 1h1v5H0zM8 1h1v5H8zM1 6h7v1H1zM1 7h2v1H1zM1 8h1v1H1z" />
                 <rect class="px-dot" x="2" y="3" width="1" height="1" />
@@ -577,7 +570,7 @@
           </div>
           <div class="footer-bar">
             <p class="footer-meta">
-              <span>Version 1.3.1 &copy; 2026</span><span>Made by <a href="https://irchiinnuss.com">irchiinnuss</a></span>
+              <span>Twitch is a trademark of Twitch Interactive, Inc.</span><span>Not affiliated with or endorsed by Twitch.</span>
             </p>
             <nav class="footer-links" aria-label="Footer navigation">
               <a href="#how"
@@ -597,16 +590,15 @@
         </div>
       </section>
       <div class="footer-band">
-        <a class="px-btn px-btn--ghost footer-watch" href="#top" data-magnetic="0.18"
+        <a class="px-btn px-btn--ghost footer-watch" href="#top" data-watch data-magnetic="0.18"
           ><span class="px-btn__box" aria-hidden="true"
             ><svg class="px-icon px-icon--up" viewBox="0 0 7 9" aria-hidden="true" focusable="false">
               <path d="M3 2h1v7H3zM3 0h1v1H3zM2 1h1v1H2zM4 1h1v1H4zM1 2h1v1H1zM5 2h1v1H5zM0 3h1v1H0zM6 3h1v1H6z" /></svg></span
           ><span class="px-btn__label">Watch the round</span></a
         >
       </div>
-      <p class="trademark">Twitch is a trademark of Twitch Interactive, Inc. baited isn't made or endorsed by Twitch.</p>
       <div class="footer-mark" aria-hidden="true">
-        <img src="/assets/brand/baited-logo-violet-large.webp" alt="" width="1182" height="348" loading="lazy" decoding="async" />
+        <img src="/assets/brand/baited-pixel-violet.svg" alt="" width="370" height="100" loading="lazy" decoding="async" />
       </div>
     </footer>
     <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

@@ -1,19 +1,16 @@
-// Text that arrives like chat, after monochrome-studio.com. A heading types in letter by letter
-// as it comes into view; the How it plays lead lights up word by word with the scroll, the newest
-// words in light violet, like a karaoke line. Letters and words are wrapped in plain inline spans,
-// so kerning, line breaks and screen readers see the same text; a typed heading gets its original
-// text back once it has finished. Reduced motion or no GSAP: the text is simply there.
-
-export const TYPE_STEP = 0.045 // seconds between letters
-export const TYPE_MAX = 1.4 // a whole heading types in at most this long
-export const typeStagger = (count) => (count ? Math.min(count * TYPE_STEP, TYPE_MAX) / count : 0)
+// Text is uncovered as if a highlighter lifted off it, after a highlight-marker text reveal: each
+// line of a heading or paragraph starts under a bar of colour, and once the text comes into view
+// (the hero's: as soon as the page arrives) the bars draw back one line after another. Words are
+// wrapped in plain inline spans while the bars are measured, so kerning, line breaks and screen
+// readers see the same text; the spans come out again once it is shown. Elements inside the text
+// (a button, the hidden word's mosaic) stay the same elements throughout. Reduced motion or no GSAP:
+// the text is simply there.
 
 // Splits on ordinary spaces only, so a non-breaking space keeps its words together.
 export const splitWords = (text) => text.split(/([ \t\n\r\f]+)/).filter(Boolean)
 
 // Wraps the element's letters or words in spans and returns them, with a way to undo it.
 export function splitText(element, unit = 'chars') {
-  const original = [...element.childNodes].map((node) => node.cloneNode(true))
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
   const texts = []
   while (walker.nextNode()) texts.push(walker.currentNode)
@@ -35,28 +32,120 @@ export function splitText(element, unit = 'chars') {
     }
     text.replaceWith(fragment)
   }
-  return { units, restore: () => element.replaceChildren(...original) }
+  const restore = () => {
+    for (const span of units) span.replaceWith(span.textContent)
+    element.normalize()
+  }
+  return { units, restore }
 }
 
-// The heading types in once, when it comes into view (or after a delay, for the hero).
-export function typeIn(element, gsap, { delay = 0, scrollTrigger } = {}) {
-  if (!element) return
-  const { units, restore } = splitText(element, 'chars')
-  gsap.fromTo(
-    units,
-    { opacity: 0 },
-    { opacity: 1, duration: 0.12, ease: 'none', stagger: typeStagger(units.length), delay, scrollTrigger, onComplete: restore }
-  )
+export const MARKER_SECONDS = 0.6 // a bar draws back in this long…
+export const MARKER_STAGGER = 0.1 // …starting this long after the line above it
+export const MARKER_OVERHANG = 0.12 // ems a bar reaches past the words at each end
+export const MARKER_FONT_WAIT = 1000 // ms the bars wait at most for the page's fonts
+
+// The lines of a run of words, from the words' boxes in reading order ({ left, top, right, bottom }):
+// a word that starts more than half a line lower opens a new line.
+export function lineBoxes(words) {
+  const lines = []
+  for (const word of words) {
+    const line = lines.at(-1)
+    if (line && word.top - line.top < Math.max(2, (line.bottom - line.top) / 2)) {
+      line.left = Math.min(line.left, word.left)
+      line.top = Math.min(line.top, word.top)
+      line.right = Math.max(line.right, word.right)
+      line.bottom = Math.max(line.bottom, word.bottom)
+    } else lines.push({ ...word })
+  }
+  return lines
 }
 
-// Words go from dim to light violet to their own color as the scroll passes through the range.
-export function karaoke(paragraphs, gsap, scrollTrigger) {
-  const words = paragraphs.flatMap((paragraph) => splitText(paragraph, 'words').units)
-  if (!words.length) return
-  const finals = words.map((word) => getComputedStyle(word).color)
-  gsap.set(words, { color: 'rgb(255 255 255 / 30%)' })
-  gsap
-    .timeline({ scrollTrigger: { scrub: 0.4, ...scrollTrigger } })
-    .to(words, { color: '#d5baff', duration: 1, stagger: 0.4, ease: 'none' }, 0)
-    .to(words, { color: (index) => finals[index], duration: 1, stagger: 0.4, ease: 'none' }, 1)
+// Where an element sits inside `container`, through any positioned element in between (the hidden
+// word in the hero's headline is one). Layout offsets, so a sheet still leaning in or a line sliding
+// off measures as it is laid out.
+export function offsetWithin(element, container) {
+  let left = 0
+  let top = 0
+  for (let node = element; node && node !== container; node = node.offsetParent) {
+    left += node.offsetLeft
+    top += node.offsetTop
+    const parent = node.offsetParent
+    if (parent && parent !== container) {
+      left += parent.clientLeft
+      top += parent.clientTop
+    }
+  }
+  return { left, top }
+}
+
+// Each line of the paragraphs sits under a bar (styles.css .marker-bar), laid over it again whenever
+// the lines break differently, until the trigger is reached or the delay has passed; then the bars
+// draw back toward the end of their lines, one line after another through all the paragraphs.
+// `also` names elements that are covered like words, such as a picture in a line.
+export function markerReveal(paragraphs, { gsap, ScrollTrigger }, { scrollTrigger, delay = 0, also } = {}) {
+  const parts = paragraphs.filter(Boolean).map((paragraph) => {
+    const { restore } = splitText(paragraph, 'words')
+    return { paragraph, restore, boxes: [...paragraph.querySelectorAll(also ? `.split-unit, ${also}` : '.split-unit')] }
+  })
+  if (!parts.some(({ boxes }) => boxes.length)) {
+    for (const { restore } of parts) restore()
+    return
+  }
+  let bars = []
+  let shown = false
+  const cover = () => {
+    if (shown) return
+    for (const bar of bars) bar.remove()
+    bars = parts.flatMap(({ paragraph, boxes }) => {
+      paragraph.classList.add('is-marked')
+      const overhang = MARKER_OVERHANG * parseFloat(getComputedStyle(paragraph).fontSize)
+      // Words that are not shown (the deck help's prefix on a narrow phone) have no box to cover.
+      const words = boxes
+        .filter((box) => box.getClientRects().length)
+        .map((box) => {
+          const { left, top } = offsetWithin(box, paragraph)
+          return { left, top, right: left + box.offsetWidth, bottom: top + box.offsetHeight }
+        })
+      return lineBoxes(words).map((line) => {
+        const bar = document.createElement('span')
+        bar.className = 'marker-bar'
+        bar.setAttribute('aria-hidden', 'true')
+        bar.style.cssText = `left:${line.left - overhang}px;top:${line.top}px;width:${line.right - line.left + 2 * overhang}px;height:${line.bottom - line.top}px`
+        paragraph.append(bar)
+        return bar
+      })
+    })
+  }
+  cover()
+  const lines = new ResizeObserver(cover)
+  for (const { paragraph } of parts) lines.observe(paragraph)
+  const fonts = Promise.race([document.fonts?.ready, new Promise((resolve) => setTimeout(resolve, MARKER_FONT_WAIT))])
+  fonts.then(cover)
+  let due = false
+  const show = () => {
+    if (due) return
+    due = true
+    // Measured once more with the page's own fonts, so each bar fits the line it uncovers.
+    fonts.then(() => {
+      cover()
+      shown = true
+      lines.disconnect()
+      gsap.to(bars, {
+        scaleX: 0,
+        duration: MARKER_SECONDS,
+        ease: 'power3.inOut',
+        stagger: MARKER_STAGGER,
+        onComplete: () => {
+          for (const bar of bars) bar.remove()
+          for (const { paragraph, restore } of parts) {
+            restore()
+            paragraph.classList.remove('is-marked')
+          }
+        },
+      })
+    })
+  }
+  // A page opened or reloaded below the text passes the trigger without entering it; that shows it too.
+  if (scrollTrigger) ScrollTrigger.create({ ...scrollTrigger, once: true, onEnter: show, onLeave: show })
+  else gsap.delayedCall(delay, show)
 }

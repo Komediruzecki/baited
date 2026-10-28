@@ -10,10 +10,17 @@ The upstream repository's MIT license is preserved verbatim in [LICENSE.disjoint
 
 The logo is the owner's BAITED wordmark. The owner supplied it on 26 October 2026 as a charcoal 1186 × 348 transparent PNG (SHA-256 `17826368…cefe8`), and later that day asked for the white version instead, supplied as a 354 × 104 PNG in flat `#e2dbec` (SHA-256 `a89a9406…9f632`). The two outlines match (97% overlap at 354 × 104), so the white files below keep the charcoal file's full-size alpha, trimmed of its transparent edge (1182 × 348), and take the white version's color. Letter interiors, which were 252–254 alpha, are fully opaque. When the navigation became a white bar, the owner asked for the logo there in black.
 
-- `site/assets/brand/baited-logo-black.webp` (764 × 225, lossless WebP, SHA-256 `7361d5f0…b42d5`): the logo in the navigation. It has the white file's alpha in the page's ink `#17131e`.
-- `site/assets/brand/baited-logo-white.webp` (764 × 225, lossless WebP): the logo on the Terms and Privacy pages, the two animated card backs and the example chat's branded emotes.
-- `site/assets/brand/baited-favicon.png` (256 × 256, PNG): the original white wordmark's B on the page's violet, used by the landing and both legal pages. The letter is cropped from the approved WebP without redrawing it. Rebuild with `node packages/landing/scripts/build-original-favicon.mjs` from the workspace root.
-- `site/assets/brand/baited-logo-violet-large.webp` (1182 × 348, lossless WebP, SHA-256 `bf710431…15a34`): the giant logo at the bottom of the white footer. It has the same alpha in the footer's violet `#7721e5`.
+On 27 October 2026 Paolo asked for a pixel version of the logo in every place the page showed it. `site/pixel-logo.js` holds it as a 37 × 10 grid sampled from the navigation logo, with one hand correction: sampled, the I stepped a column left in its top three rows, so it is a straight three-pixel stem and the T's crossbar starts one column later. `node packages/landing/scripts/build-pixel-logo.mjs` writes the three files below from that grid, and a test checks they still match it.
+
+- `site/assets/brand/baited-pixel-violet.svg`, `baited-pixel-white.svg` and `baited-pixel-black.svg` (370 × 100, one path, `crispEdges`): the pixel logo in the footer's violet `#7721e5`, in white and in the page's ink `#17131e`. Violet is in the navigation and the white footer. White is on the Terms and Privacy pages, the card backs and faces, the stream mock-up and the example chat's emotes. Black is on the selected cards' backs. The navigation also paints the same grid on a canvas for its hover blink (`site/nav.js`).
+- `site/assets/brand/bubble-tail.svg` (13 × 15, one path): the tail of the hero's chat bubble, used as a CSS mask in the bubble's own violet. It is a file because the page's content policy allows no `data:` images.
+- `site/assets/brand/baited-favicon.svg` (13 × 13 pixels) and `baited-favicon.png` (256 × 256, RGB): the favicon, the pixel logo's B in deep ink `#160033` on the violet `#7721e5`, which Paolo picked on 28 October 2026 from two mock-ups (the other was a violet B on white). The same build script writes both from the grid; browsers that take SVG favicons use the SVG and the rest the PNG, on the landing and both legal pages.
+
+The smooth files below are kept but no longer used by the public pages.
+
+- `site/assets/brand/baited-logo-black.webp` (764 × 225, lossless WebP, SHA-256 `7361d5f0…b42d5`): the former navigation logo. It has the white file's alpha in the page's ink `#17131e`.
+- `site/assets/brand/baited-logo-white.webp` (764 × 225, lossless WebP): the former logo on the Terms and Privacy pages, the two animated card backs and the example chat's branded emotes.
+- `site/assets/brand/baited-logo-violet-large.webp` (1182 × 348, lossless WebP, SHA-256 `bf710431…15a34`): the former giant logo at the bottom of the white footer. It has the same alpha in the footer's violet `#7721e5`.
 - `site/assets/brand/baited-logo.webp` (764 × 225, lossy WebP, quality 88): the charcoal logo, kept for light backgrounds. The page does not use it.
 
 The header's logo with its fan of card backs was removed when the logo moved into the navigation. Its styles and the masks below stay for the development-only brand lab (`site/lab/brand/`).

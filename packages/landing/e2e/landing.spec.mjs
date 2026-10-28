@@ -65,7 +65,7 @@ for (const { width, height, touch, reduced = false } of layouts) {
       else expect(stack.x - intro.x - intro.width).toBeLessThanOrEqual(70)
 
       await page.locator('.hero-cta').scrollIntoViewIfNeeded()
-      await expect(page.locator('#hero-title .split-unit')).toHaveCount(0)
+      await expect(page.locator('#hero-title :is(.split-unit, .marker-bar)')).toHaveCount(0)
       await page.screenshot({ path: testInfo.outputPath('hero.png') })
       await page.locator('.hero-cta')[touch ? 'tap' : 'click']()
       await expect
@@ -73,7 +73,7 @@ for (const { width, height, touch, reduced = false } of layouts) {
           page.evaluate(() => Math.abs(document.querySelector('#how').getBoundingClientRect().top - (innerWidth <= 700 ? 20 : 32)))
         )
         .toBeLessThan(2)
-      await expect(page.locator('#how-title .split-unit')).toHaveCount(0)
+      await expect(page.locator('#how-title :is(.split-unit, .marker-bar)')).toHaveCount(0)
       await page.screenshot({ path: testInfo.outputPath('how.png') })
 
       if (!reduced) {
@@ -90,7 +90,7 @@ for (const { width, height, touch, reduced = false } of layouts) {
             page.locator('.footer-edge i').evaluateAll((cells) => cells.every((cell) => Number(cell.style.opacity) === 0))
           )
           .toBe(true)
-        await expect(page.locator('#deck-title .split-unit')).toHaveCount(0)
+        await expect(page.locator('#deck-title :is(.split-unit, .marker-bar)')).toHaveCount(0)
         await expect
           .poll(() => page.locator('.deck-card-item.is-front .card-art img').evaluate((image) => image.complete && image.naturalWidth > 0))
           .toBe(true)

@@ -7,6 +7,7 @@
 export const CLEAR_SPREAD = 0.75 // seconds over which the squares disappear
 export const CLEAR_FADE = 0.1 // seconds each square takes to fade
 export const COVER_SPREAD = 0.5 // seconds over which the squares appear before the next page loads
+export const CLEARED_EVENT = 'pixels:cleared' // on document, once the arrival curtain has gone
 
 // Big squares: eight across a desktop screen, six on a tablet, four on a phone.
 export const pixelColumns = (width) => (width >= 992 ? 8 : width >= 576 ? 6 : 4)
@@ -61,7 +62,10 @@ function clear() {
   const element = curtain('', CLEAR_SPREAD)
   root.classList.remove('pixel-boot')
   frame(() => element.classList.add('is-clearing'))
-  setTimeout(() => element.remove(), (CLEAR_SPREAD + CLEAR_FADE + 0.1) * 1000)
+  setTimeout(() => {
+    element.remove()
+    document.dispatchEvent(new Event(CLEARED_EVENT))
+  }, (CLEAR_SPREAD + CLEAR_FADE + 0.1) * 1000)
 }
 
 // Leaving: the squares pop in at random, and the next page loads once the screen is full.
@@ -72,7 +76,12 @@ function cover(href) {
 }
 
 export function initPixels() {
-  clear()
+  // The squares start to go only once the page's own scripts have set it up: they all run before
+  // DOMContentLoaded. Clearing as soon as this script ran showed the page for a moment, or on a slow
+  // load for a second or more, in the layout it has before them (the home page's film in the hero's
+  // column instead of its tilted card). If they take too long, pixels.css fades the cover anyway.
+  if (document.readyState === 'complete') clear()
+  else document.addEventListener('DOMContentLoaded', clear, { once: true })
   document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0 || reduced()) return
     const link = event.target instanceof Element ? event.target.closest('a[href]') : null
