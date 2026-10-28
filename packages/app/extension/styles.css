@@ -92,7 +92,7 @@ h3 {
   padding: 0 2px 10px;
   min-height: 40px;
 }
-/* The original owner-supplied BAITED lettering also used by the landing. */
+/* The same approved pixel BAITED lettering as the landing and Studio. */
 .wordmark {
   width: 96px;
   flex: none;
@@ -101,10 +101,10 @@ h3 {
 .baited-glyph {
   display: block;
   width: 100%;
-  aspect-ratio: 1280 / 376;
+  aspect-ratio: 370 / 100;
   background: currentColor;
-  -webkit-mask: url('./assets/baited-original-mask.svg') center / contain no-repeat;
-  mask: url('./assets/baited-original-mask.svg') center / contain no-repeat;
+  -webkit-mask: url('./assets/baited-pixel-white.svg') center / contain no-repeat;
+  mask: url('./assets/baited-pixel-white.svg') center / contain no-repeat;
 }
 .round-index {
   font-size: 11px;

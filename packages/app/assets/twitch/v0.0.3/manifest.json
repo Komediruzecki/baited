@@ -1,0 +1,41 @@
+{
+  "extensionVersion": "0.0.3",
+  "category": "Games in Extensions",
+  "identity": "Approved landing pixel BAITED lettering and pixel B favicon, without an added hook",
+  "source": "packages/landing/site/assets/brand/baited-pixel-white.svg",
+  "sourceSha256": "5597806d4914e55c9599ff4778ea861856274799835bce6a547f38606406b92c",
+  "iconSource": "packages/landing/site/assets/brand/baited-favicon.svg",
+  "iconSourceSha256": "2eb63d56d4188979edc28f00eebc4f5fa7b60fffd61efdfa80db4261b01326e9",
+  "renderer": "librsvg rsvg-convert",
+  "licensing": "Project identity supplied by the owner. No Twitch marks or third-party game marks used. Existing A/B/C explorations preserved.",
+  "screenshots": "Capture the actual running panel and studio. No staged landing film or generated interface is included as a screenshot.",
+  "assets": [
+    {
+      "file": "logo-100.png",
+      "source": "logo-100.svg",
+      "width": 100,
+      "height": 100,
+      "bytes": 3812,
+      "sha256": "459039831c0c9f1515fd3084be7172ef46311766ff6da2e061a42af974060461",
+      "purpose": "Twitch Extension logo"
+    },
+    {
+      "file": "icon-24.png",
+      "source": "icon-24.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 176,
+      "sha256": "8ba155fd228a56a9afb40bcb2fc5113bba837b418ae71fe94d19130bc4a140ea",
+      "purpose": "Optional video-component taskbar icon; not required by the panel"
+    },
+    {
+      "file": "discovery-300x200.png",
+      "source": "discovery-300x200.svg",
+      "width": 300,
+      "height": 200,
+      "bytes": 12853,
+      "sha256": "6a7a03e3b827d436b0c3441acb962172a940775544efd04bd2d231d1d1f1a4d8",
+      "purpose": "Twitch discovery image"
+    }
+  ]
+}

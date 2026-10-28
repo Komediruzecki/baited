@@ -305,6 +305,25 @@ test('the signature is the landing\'s pixel logo, byte for byte', () => {
   assert.match(face, /<div class="cut-card__footer"><span class="cut-card__signature baited-glyph" aria-hidden="true"><\/span><\/div>/);
 });
 
+test('Studio and native Extension mastheads and backs resolve the approved landing identity', () => {
+  const approved = bytes(landingRoot, 'site/assets/brand/baited-pixel-white.svg');
+  for (const [cssPath, assetBase] of [
+    ['client/product-brand.css', 'public'],
+    ['extension/styles.css', 'extension'],
+  ]) {
+    const glyph = /\.baited-glyph\s*\{([^}]+)\}/.exec(text(appRoot, cssPath))?.[1];
+    assert.ok(glyph, `${cssPath} defines the shared masthead/back glyph`);
+    const asset = /mask:\s*url\(['"]?([^'"\)]+)['"]?\)/.exec(glyph)?.[1];
+    assert.ok(asset, `${cssPath} resolves a logo asset`);
+    assert.deepEqual(bytes(appRoot, `${assetBase}/${asset.replace(/^\.?\//, '')}`), approved);
+    assert.match(glyph, /aspect-ratio:\s*370\s*\/\s*100/);
+  }
+  assert.deepEqual(
+    bytes(appRoot, 'public/brand/baited-favicon.png'),
+    bytes(landingRoot, 'site/assets/brand/baited-favicon.png'),
+  );
+});
+
 interface FakeCanvas {
   width: number;
   height: number;

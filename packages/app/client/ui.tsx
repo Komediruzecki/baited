@@ -10,7 +10,7 @@ export const productBrand = (
 
 export const brand = (
   // Legacy example layouts set --logo-width on this wrapper. Keep their measured
-  // footprint while sharing the same original wordmark as the product surfaces.
+  // footprint while sharing the same pixel wordmark as the product surfaces.
   <span className="logo-lockup" role="img" aria-label="BAITED">
     <span className="baited-glyph" aria-hidden="true" style={{ height: '100%' }} />
   </span>
