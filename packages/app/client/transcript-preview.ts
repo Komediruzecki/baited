@@ -1,8 +1,9 @@
 import type { MoonshineLine } from './moonshine';
 import type { GameView } from '../shared/types';
 
-export function canPreviewTranscript(hostname: string, mode: GameView['mode']) {
-  return mode === 'demo' || ['localhost', '127.0.0.1', '[::1]', '::1'].includes(hostname);
+export function canPreviewTranscript(hostname: string, mode: GameView['mode'], capability = false) {
+  return mode === 'demo' || ['localhost', '127.0.0.1', '[::1]', '::1'].includes(hostname) ||
+    (hostname === 'dev-play-baited.maff.app' && capability === true);
 }
 
 export const TRANSCRIPT_PREVIEW_LIMIT = 12;

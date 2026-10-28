@@ -27,6 +27,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     throw new Error('PUBLIC_URL must be an origin without a path or credentials.');
   if (production && url.protocol !== 'https:')
     throw new Error('Production requires an HTTPS PUBLIC_URL.');
+  const speechDiagnostics = z.enum(['true', 'false'])
+    .parse(env.ENABLE_SPEECH_DIAGNOSTICS ?? 'false') === 'true';
+  if (speechDiagnostics && env.PUBLIC_URL !== 'https://dev-play-baited.maff.app')
+    throw new Error('ENABLE_SPEECH_DIAGNOSTICS requires PUBLIC_URL=https://dev-play-baited.maff.app.');
   const key = env.TOKEN_ENCRYPTION_KEY || '';
   if (key && !/^[a-f0-9]{64}$/i.test(key))
     throw new Error('TOKEN_ENCRYPTION_KEY must be 64 hexadecimal characters.');
@@ -87,6 +91,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     extensionReady: validExtensionId && !!extensionKey(extensionSecret),
     speechKey: env.DEEPGRAM_API_KEY || '',
     speechProvider: z.enum(['moonshine', 'deepgram']).parse(env.SPEECH_PROVIDER || 'moonshine'),
+    speechDiagnostics,
     dataDir: resolve(env.DATA_DIR || 'data'),
     callback: `${origin}/auth/twitch/callback`,
   };

@@ -158,6 +158,7 @@ export async function createBait(
       overlayUrl: `${config.origin}/overlay/${game.data.id}?key=${game.data.overlayKey}`,
       speechReady: speechReady(),
       speechProvider: config.speechProvider,
+      transcriptPreview: config.speechDiagnostics,
       awardBoard: game.awardBoard,
       chatBot: bot.status(game),
     };
@@ -893,6 +894,17 @@ export async function createBait(
       res
         .status(404)
         .json({ error: 'This room is unavailable. Ask the streamer for a fresh link.' });
+      return;
+    }
+    // Protect against opening one's own viewer link by accident. Public viewers
+    // stay anonymous; this is not an anti-cheat boundary for signed-out browsers.
+    const owner = !overlay && game.data.mode === 'twitch'
+      ? sessions.get(req.headers.cookie) : undefined;
+    if (owner?.userId === game.data.owner) {
+      res.status(403).json({
+        code: 'broadcaster-view',
+        error: 'This card is for your viewers. You’re signed in as the streamer. Open Studio to play.',
+      });
       return;
     }
     return game;

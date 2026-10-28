@@ -260,6 +260,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     };
   }, [receive]);
   const g = studio?.room;
+  const transcriptAllowed = !!studio && studio.speechProvider === 'moonshine' &&
+    canPreviewTranscript(window.location.hostname, studio.room.mode, studio.transcriptPreview);
+  useEffect(() => {
+    if (!transcriptAllowed) {
+      setTranscriptLines(transcriptBuffer.current.setEnabled(false));
+      setTranscriptEnabled(false);
+    }
+  }, [transcriptAllowed]);
   useEffect(() => {
     const owner = capture.current;
     if (!consent || !g || !session.csrf || !owner?.lease.active) return;
@@ -362,7 +370,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           if (
             capture.current !== owner ||
             !current ||
-            !canPreviewTranscript(window.location.hostname, current.room.mode)
+            current.speechProvider !== 'moonshine' ||
+            !canPreviewTranscript(window.location.hostname, current.room.mode, current.transcriptPreview)
           )
             return;
           const lines = transcriptBuffer.current.receive(line, segment);
@@ -911,20 +920,19 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         phase={g.phase}
                       />
                     )}
-                  {studio.speechProvider === 'moonshine' &&
-                    canPreviewTranscript(window.location.hostname, g.mode) && (
-                      <TranscriptPreview
-                        enabled={transcriptEnabled}
-                        lines={transcriptLines}
-                        listening={micStatus === 'listening'}
-                        onToggle={() => {
-                          const enabled = !transcriptEnabled;
-                          setTranscriptLines(transcriptBuffer.current.setEnabled(enabled));
-                          setTranscriptEnabled(enabled);
-                        }}
-                        onClear={() => setTranscriptLines(transcriptBuffer.current.clear())}
-                      />
-                    )}
+                  {transcriptAllowed && (
+                    <TranscriptPreview
+                      enabled={transcriptEnabled}
+                      lines={transcriptLines}
+                      listening={micStatus === 'listening'}
+                      onToggle={() => {
+                        const enabled = !transcriptEnabled;
+                        setTranscriptLines(transcriptBuffer.current.setEnabled(enabled));
+                        setTranscriptEnabled(enabled);
+                      }}
+                      onClear={() => setTranscriptLines(transcriptBuffer.current.clear())}
+                    />
+                  )}
                 </section>
                 <div className="bottom-grid">
                   <section className="panel viewer-share">
@@ -934,7 +942,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       </div>
                       <Link2 size={21} />
                     </div>
-                    <p>Viewers see the secret word here.</p>
+                    <p>{demo
+                      ? 'Viewers see the secret word here.'
+                      : 'Share this with chat. Your signed-in streamer account cannot open its own viewer room.'}</p>
                     <div className="link-field">
                       <input aria-label="Viewer room link" readOnly value={studio.viewerUrl} />
                       <CopyButton value={studio.viewerUrl} />
@@ -1694,7 +1704,9 @@ function Setup({
               </a>
               <div className="notice">
                 <Eye size={18} />
-                <p>This link reveals the word. Keep it closed while you play.</p>
+                <p>{game.mode === 'demo'
+                  ? 'This link reveals the word. Keep it closed while you play.'
+                  : 'Your signed-in streamer account cannot open its own viewer room. Share the link with chat.'}</p>
               </div>
             </div>
           </section>
@@ -2054,11 +2066,11 @@ function Privacy() {
         </p>
         <h2>Secret words</h2>
         <p>
-          The viewer page intentionally reveals the target to anyone with its link, including a
-          streamer who opens it. OBS links provide read-only game information. Keep studio sessions
-          and server credentials private.
+          The viewer page reveals the target to people with its link. It blocks the room’s streamer
+          while signed in, but a signed-out browser can still open it. OBS links provide read-only
+          game information. Keep studio sessions and server credentials private.
         </p>
-        <p className="muted">Updated October 27, 2026.</p>
+        <p className="muted">Updated October 28, 2026.</p>
       </main>
     </div>
   );

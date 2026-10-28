@@ -141,6 +141,8 @@ export interface Studio {
   overlayUrl: string;
   speechReady: boolean;
   speechProvider: SpeechProvider;
+  /** Explicitly enabled on the separate development host; never a public room field. */
+  transcriptPreview?: boolean;
   awardBoard: AwardBoard | null;
   chatBot: ChatBotStatus;
 }

@@ -13,6 +13,28 @@ test('local speech diagnostics remain available separately from target reveal', 
   assert.equal(canPreviewTranscript('preview.example.com', 'demo'), true);
 });
 
+test('hosted speech diagnostics require the exact dev host and server capability', () => {
+  assert.equal(canPreviewTranscript('dev-play-baited.maff.app', 'twitch', true), true);
+  assert.equal(canPreviewTranscript('dev-play-baited.maff.app', 'twitch'), false);
+  assert.equal(canPreviewTranscript('dev-play-baited.maff.app', 'twitch', false), false);
+  for (const host of ['play-baited.maff.app', 'dev.baited.maff.app', 'dev-play-baited.maff.app.example.com', '192.168.1.10'])
+    assert.equal(canPreviewTranscript(host, 'twitch', true), false);
+  assert.equal(canPreviewTranscript('localhost', 'twitch', false), true);
+});
+
+test('revoking diagnostic permission erases phrases and requires a fresh opt-in', () => {
+  const preview = new TranscriptPreviewBuffer();
+  preview.setEnabled(true);
+  assert.equal(preview.receive(line('1', 'before revoke'), 'round:1')?.length, 1);
+  if (!canPreviewTranscript('dev-play-baited.maff.app', 'twitch', false))
+    assert.deepEqual(preview.setEnabled(false), []);
+  assert.equal(preview.receive(line('2', 'after revoke'), 'round:1'), null);
+  assert.equal(canPreviewTranscript('dev-play-baited.maff.app', 'twitch', true), true);
+  assert.equal(preview.receive(line('3', 'permission alone does not opt in'), 'round:1'), null);
+  assert.deepEqual(preview.setEnabled(true), []);
+  assert.equal(preview.receive(line('4', 'after fresh opt-in'), 'round:1')?.length, 1);
+});
+
 test('transcript preview ignores speech until opted in and hiding erases its buffer', () => {
   const preview = new TranscriptPreviewBuffer();
   assert.equal(preview.receive(line('1', 'not collected'), 'round:1'), null);

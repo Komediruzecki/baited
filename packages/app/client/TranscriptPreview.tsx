@@ -17,7 +17,7 @@ export function TranscriptPreview({
 }) {
   const id = useId();
   return (
-    <section className="transcript-preview" aria-label="Local speech test">
+    <section className="transcript-preview" aria-label="Speech test">
       <span className="small-label">Speech test</span>
       <Button
         type="button"

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { loadConfig } from '../server/config.js';
 import { createBait } from '../server/app.js';
 
-const { hostedSettings, backendInvocation, tunnelInvocation } = await import(
+const { hostedSettings, backendInvocation, tunnelInvocation, assertBackendVolumeIdle } = await import(
   new URL('../../../ops/hosted-test.mjs', import.meta.url).href);
 const fixtures = {
   PATH: process.env.PATH,
@@ -28,6 +28,14 @@ test('Cloudflare provisioning validates an existing Proton token before configur
   assert.equal(result.status, 0, result.stderr);
 });
 
+test('the host migration preserves unrelated routes and rejects unexpected Baited routes', () => {
+  const script = new URL('../../../ops/tests/test_move_hosted_test.py', import.meta.url);
+  const result = spawnSync('python3', [script.pathname], {
+    encoding: 'utf8', timeout: 10000, env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
+  });
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test('hosted launcher fails closed on unresolved Proton credentials and unbounded duration', () => {
   assert.deepEqual(hostedSettings('backend', fixtures), { mode: 'backend', seconds: 10800 });
   assert.throws(() => hostedSettings('backend', { ...fixtures, TWITCH_CLIENT_SECRET: 'pass://dev/item/field' }), /Resolve/);
@@ -36,6 +44,7 @@ test('hosted launcher fails closed on unresolved Proton credentials and unbounde
   for (const seconds of ['0', '59', '18001', 'Infinity', 'not-a-number'])
     assert.throws(() => hostedSettings('tunnel', { ...fixtures, HOSTED_TEST_SECONDS: seconds }), /HOSTED_TEST_SECONDS/);
   assert.throws(() => hostedSettings('publish', fixtures), /Choose backend or tunnel/);
+  assert.throws(() => hostedSettings('backend', { ...fixtures, HOSTED_TEST_PROFILE: 'custom' }), /HOSTED_TEST_PROFILE/);
 });
 
 test('backend binds loopback and forwards credentials only by selected environment names', () => {
@@ -47,6 +56,7 @@ test('backend binds loopback and forwards credentials only by selected environme
   assert.ok(args.includes('ENABLE_DEMO=false'));
   assert.ok(args.includes('TRUSTED_PROXIES=127.0.0.1'));
   assert.ok(args.includes('SPEECH_PROVIDER=moonshine'));
+  assert.ok(args.includes('ENABLE_SPEECH_DIAGNOSTICS=false'));
   assert.ok(args.includes('type=volume,source=baited-hosted-test-data,target=/app/data'));
   assert.equal(args.includes('--publish'), false);
   assert.equal(args.includes('-p'), false);
@@ -56,6 +66,57 @@ test('backend binds loopback and forwards credentials only by selected environme
   assert.equal(env.CLOUDFLARE_API_TOKEN, undefined);
   assert.equal(env.TUNNEL_TOKEN, undefined);
   assert.equal(env.DEEPGRAM_API_KEY, undefined);
+});
+
+test('the dev migration changes origin, port and image while preserving the existing store', () => {
+  const { args, env } = backendInvocation({ ...fixtures, HOSTED_TEST_PROFILE: 'dev' }, 'dev-container');
+  assert.ok(args.includes('HOST=127.0.0.1'));
+  assert.ok(args.includes('PORT=3301'));
+  assert.ok(args.includes('PUBLIC_URL=https://dev-play-baited.maff.app'));
+  assert.ok(args.includes('ENABLE_SPEECH_DIAGNOSTICS=true'));
+  assert.ok(args.includes('ENABLE_DEMO=false'));
+  assert.ok(args.includes('type=volume,source=baited-hosted-test-data,target=/app/data'));
+  assert.equal(args.at(-1), 'baited-dev-test:local');
+  assert.equal(args.includes('type=volume,source=baited-dev-test-data,target=/app/data'), false);
+  assert.equal(env.CLOUDFLARE_API_TOKEN, undefined);
+  assert.equal(env.TUNNEL_TOKEN, undefined);
+  assert.equal(args.includes('--publish'), false);
+});
+
+test('backend preflight checks the shared volume without inheriting credentials and fails closed', () => {
+  for (const profile of ['current', 'dev']) {
+    assertBackendVolumeIdle({ ...fixtures, HOSTED_TEST_PROFILE: profile }, (command: string, args: string[], options: { env: NodeJS.ProcessEnv; timeout: number }) => {
+      assert.equal(command, 'docker');
+      assert.deepEqual(args, ['ps', '--filter', 'volume=baited-hosted-test-data', '--format', '{{.ID}}']);
+      assert.equal(options.timeout, 10000);
+      assert.equal(options.env.TWITCH_CLIENT_SECRET, undefined);
+      assert.equal(options.env.TUNNEL_TOKEN, undefined);
+      return { status: 0, stdout: '' };
+    });
+    assert.throws(() => assertBackendVolumeIdle({ ...fixtures, HOSTED_TEST_PROFILE: profile }, () => ({ status: 0, stdout: 'existing-container\n' })), /already mounted/);
+    for (const result of [{ status: 1, stdout: '' }, { status: null, stdout: '', error: new Error('timeout') }, { status: 0 }])
+      assert.throws(() => assertBackendVolumeIdle({ ...fixtures, HOSTED_TEST_PROFILE: profile }, () => result), /Cannot verify/);
+  }
+});
+
+test('the CLI never starts a backend when the volume check finds another writer or fails', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'bait-launch-guard-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const marker = join(dir, 'calls');
+  const docker = join(dir, 'docker');
+  const script = new URL('../../../ops/hosted-test.mjs', import.meta.url).pathname;
+  // A harmless stand-in exercises the actual launcher order. No Docker daemon,
+  // real credentials, container, volume or deployment is used by this test.
+  for (const state of ['busy', 'failed', 'idle']) {
+    await writeFile(marker, '');
+    await writeFile(docker, `#!/bin/sh\nprintf '%s\\n' "$1" >> '${marker}'\nif [ "$1" = ps ]; then\n  ${state === 'busy' ? "printf 'existing-container\\n'" : state === 'failed' ? 'exit 2' : ':'}\nfi\n`, { mode: 0o700 });
+    const result = spawnSync(process.execPath, [script, 'backend'], {
+      env: { ...fixtures, PATH: `${dir}:${fixtures.PATH}`, HOSTED_TEST_PROFILE: 'dev' },
+      encoding: 'utf8', timeout: 15000,
+    });
+    assert.equal(result.status, state === 'idle' ? 0 : 1, result.stderr);
+    assert.equal(await readFile(marker, 'utf8'), state === 'idle' ? 'ps\nrun\n' : 'ps\n');
+  }
 });
 
 test('tunnel token goes through an anonymous pipe and is removed before cloudflared starts', () => {

@@ -1,13 +1,24 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 export const hostedOrigin = 'https://play-baited.maff.app';
+export function backendProfile(env = process.env) {
+  const name = env.HOSTED_TEST_PROFILE || 'current';
+  if (!['current', 'dev'].includes(name))
+    throw new Error('HOSTED_TEST_PROFILE must be current or dev.');
+  return name === 'dev'
+    ? { name, origin: 'https://dev-play-baited.maff.app', port: 3301,
+        volume: 'baited-hosted-test-data', image: 'baited-dev-test:local', diagnostics: true }
+    : { name, origin: hostedOrigin, port: 3300,
+        volume: 'baited-hosted-test-data', image: 'baited-hosted-test:local', diagnostics: false };
+}
 export const backendSecretNames = ['TWITCH_CLIENT_ID', 'TWITCH_CLIENT_SECRET', 'TOKEN_ENCRYPTION_KEY',
   'TWITCH_EXTENSION_CLIENT_ID', 'TWITCH_EXTENSION_SECRET'];
 
 export function hostedSettings(mode, env = process.env) {
   if (!['backend', 'tunnel'].includes(mode)) throw new Error('Choose backend or tunnel.');
+  backendProfile(env);
   const seconds = Number(env.HOSTED_TEST_SECONDS || 10800);
   if (!Number.isInteger(seconds) || seconds < 60 || seconds > 18000)
     throw new Error('HOSTED_TEST_SECONDS must be 60 to 18000.');
@@ -22,20 +33,22 @@ export function hostedSettings(mode, env = process.env) {
 // A host-networked container makes the immediate proxy address deterministic on
 // this Linux PC. The app itself listens only on loopback, with no Docker port map.
 export function backendInvocation(env, containerName) {
+  const profile = backendProfile(env);
   return {
     command: 'docker',
     args: ['run', '--rm', '--init', '--pull=never', '--name', containerName,
       '--network', 'host', '--read-only', '--cap-drop', 'ALL',
       '--security-opt', 'no-new-privileges', '--stop-timeout', '10',
       '--tmpfs', '/tmp:rw,noexec,nosuid,size=32m',
-      '--mount', 'type=volume,source=baited-hosted-test-data,target=/app/data',
-      '--env', 'NODE_ENV=production', '--env', 'HOST=127.0.0.1', '--env', 'PORT=3300',
-      '--env', `PUBLIC_URL=${hostedOrigin}`, '--env', 'ENABLE_DEMO=false',
+      '--mount', `type=volume,source=${profile.volume},target=/app/data`,
+      '--env', 'NODE_ENV=production', '--env', 'HOST=127.0.0.1', '--env', `PORT=${profile.port}`,
+      '--env', `PUBLIC_URL=${profile.origin}`, '--env', 'ENABLE_DEMO=false',
+      '--env', `ENABLE_SPEECH_DIAGNOSTICS=${profile.diagnostics}`,
       '--env', 'DATA_DIR=/app/data', '--env', 'SPEECH_PROVIDER=moonshine',
       '--env', 'TRUSTED_PROXIES=127.0.0.1',
       ...backendSecretNames.flatMap(name => ['--env', name]),
       // Optional and not a secret: the chat bot's numeric Twitch user ID.
-      ...(env.TWITCH_BOT_USER_ID ? ['--env', 'TWITCH_BOT_USER_ID'] : []), 'baited-hosted-test:local'],
+      ...(env.TWITCH_BOT_USER_ID ? ['--env', 'TWITCH_BOT_USER_ID'] : []), profile.image],
     env: { ...systemEnv(env), ...Object.fromEntries(backendSecretNames.map(name => [name, env[name]])),
       ...(env.TWITCH_BOT_USER_ID ? { TWITCH_BOT_USER_ID: env.TWITCH_BOT_USER_ID } : {}) },
   };
@@ -44,6 +57,19 @@ export function backendInvocation(env, containerName) {
 function systemEnv(env) {
   return Object.fromEntries(['PATH', 'HOME', 'LANG', 'LC_ALL', 'XDG_RUNTIME_DIR', 'DOCKER_HOST', 'DOCKER_CONTEXT']
     .filter(name => env[name]).map(name => [name, env[name]]));
+}
+
+// Current and dev are alternative runtimes for one store, never two writers.
+// Check Docker's mount index without inspecting container environments or data.
+export function assertBackendVolumeIdle(env = process.env, run = spawnSync) {
+  const { volume } = backendProfile(env);
+  const result = run('docker', ['ps', '--filter', `volume=${volume}`, '--format', '{{.ID}}'], {
+    env: systemEnv(env), encoding: 'utf8', timeout: 10000, maxBuffer: 16384,
+  });
+  if (result.error || result.status !== 0 || typeof result.stdout !== 'string')
+    throw new Error('Cannot verify that the Baited data volume is idle. Check Docker before starting the backend.');
+  if (result.stdout.trim())
+    throw new Error(`The ${volume} volume is already mounted by a running container. Stop that backend before starting another profile.`);
 }
 
 export function tunnelInvocation(env) {
@@ -86,7 +112,9 @@ function relaySanitized(stream, target, secrets) {
 export async function launchHostedTest(mode, env = process.env) {
   if (process.platform !== 'linux') throw new Error('This launcher requires the Linux host network.');
   const { seconds } = hostedSettings(mode, env);
-  const containerName = `baited-hosted-test-${process.pid}`;
+  const profile = backendProfile(env);
+  if (mode === 'backend') assertBackendVolumeIdle(env);
+  const containerName = `baited-${profile.name === 'dev' ? 'dev' : 'hosted'}-test-${process.pid}`;
   const invocation = mode === 'backend' ? backendInvocation(env, containerName) : tunnelInvocation(env);
   const child = spawn(invocation.command, invocation.args, {
     env: invocation.env, stdio: ['ignore', 'pipe', 'pipe'],
@@ -94,7 +122,7 @@ export async function launchHostedTest(mode, env = process.env) {
   const secrets = [...backendSecretNames, 'TUNNEL_TOKEN'].map(name => env[name]).filter(Boolean);
   relaySanitized(child.stdout, process.stdout, secrets);
   relaySanitized(child.stderr, process.stderr, secrets);
-  console.log(`Baited hosted test ${mode}: ${hostedOrigin}. Stops after ${seconds / 60} minutes; Ctrl+C stops it now.`);
+  console.log(`Baited hosted test ${mode}: ${mode === 'backend' ? profile.origin : 'existing named tunnel'}. Stops after ${seconds / 60} minutes; Ctrl+C stops it now.`);
   let closing = false, force;
   function stop() {
     if (closing) return;
