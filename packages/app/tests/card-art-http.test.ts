@@ -35,7 +35,7 @@ test('artwork APIs enforce ownership, source approval, CSRF and per-round capabi
     return { cookie: response.headers.get('set-cookie')!.split(';')[0], csrf: (await response.json()).csrf };
   };
   const upload = (auth?: Auth, extra: Record<string, string> = {}) => fetch(base + '/api/studio/card-art', {
-    method: 'POST', headers: { Origin: config.origin, 'Content-Type': 'image/png', ...(auth ? { Cookie: auth.cookie, 'x-csrf-token': auth.csrf } : {}), ...extra }, body: bytes,
+    method: 'POST', headers: { Origin: config.origin, 'Content-Type': 'image/png', ...(auth ? { Cookie: auth.cookie, 'x-csrf-token': auth.csrf } : {}), ...extra }, body: Uint8Array.from(bytes),
   });
   const a = await login(), other = await login();
   assert.equal((await upload()).status, 401);
