@@ -31,7 +31,7 @@
   font-size: 17px;
   line-height: 1.5;
   color: var(--white);
-  background: var(--violet-night);
+  background: #130127;
 }
 * {
   box-sizing: border-box;
@@ -41,16 +41,13 @@ html {
   scroll-behavior: auto;
   scroll-padding-top: 32px;
 }
-/* One continuous ground from the hero into "How it plays": the glow fades out to nothing
-   and the base deepens over a long run, so no section edge or image edge shows a line. */
+/* One ground for the whole page: the backdrop (.page-backdrop) is fixed behind every section, so
+   no section has an edge of its own against it. The body paints nothing: the root has a
+   background, so the body's would not move to the canvas but cover every layer below z-index 0,
+   the backdrop and the hero's ribbons among them. */
 body {
   margin: 0;
   overflow-x: hidden;
-  background:
-    radial-gradient(ellipse 66% 680px at 76% 260px, #a56bff 0, #9146ff 42%, #6425bd 76%, rgb(76 32 142 / 0%) 100%) top / 100% 1080px
-      no-repeat,
-    linear-gradient(#4c208e 0, #4c208e 700px, #45198a 1150px, var(--violet-deep) 1700px) top / 100% 1700px no-repeat,
-    var(--violet-deep);
 }
 button,
 input {
@@ -214,8 +211,21 @@ input {
   z-index: 1;
   width: auto;
   max-width: none;
-  height: 22px;
+  height: 20px; /* 2px per logo pixel */
   transition: filter 0.25s ease;
+}
+/* The letters as violet pixels that blink in a loop (nav.js). The image stays in place, hidden, to
+   hold the size, and shows as before without JavaScript or in forced colors. */
+.nav-logo.has-ink img {
+  visibility: hidden;
+}
+.nav-logo__ink {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  pointer-events: none;
 }
 .nav-logo__pixels {
   position: absolute;
@@ -225,8 +235,8 @@ input {
   grid-template-rows: repeat(4, minmax(0, 1fr));
 }
 .nav-logo__pixels i {
-  background: #7721e5;
-  box-shadow: 0 0 0 1px #7721e5; /* no hairlines between neighbours */
+  background: #dccdf6; /* a deeper lavender: the violet logo keeps 4.6:1 on it */
+  box-shadow: 0 0 0 1px #dccdf6; /* no hairlines between neighbours */
   opacity: 0;
   transition: opacity 0.1s ease-in var(--d, 0s);
 }
@@ -248,7 +258,7 @@ input {
 }
 .nav-link__text {
   display: inline-block;
-  transition: transform 0.3s ease-in 0.25s;
+  transition: transform 0.3s ease-in 0.3s;
 }
 .nav-link__icon {
   position: absolute;
@@ -274,6 +284,19 @@ input {
 .nav-link__icon rect {
   opacity: 0;
   transition: opacity 0.15s linear;
+}
+/* With JavaScript the word morphs into the icon on a canvas instead (nav.js). */
+.nav-link__morph {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+.nav-link.has-morph .nav-link__icon {
+  display: none;
+}
+.nav-link.is-morphing .nav-link__text {
+  visibility: hidden;
 }
 /* The chat button: a violet square with a typing bubble, widening with its words when folded. The
    gap before the words opens with them, so the bubble alone sits in the middle of its square. */
@@ -314,10 +337,6 @@ input {
     opacity: 1;
     transition: opacity 0s var(--d, 0s);
   }
-  .nav-logo:hover img {
-    filter: brightness(0) invert(1);
-    transition: filter 0.15s ease 0.2s;
-  }
   .nav-link:hover .nav-link__text {
     transform: scale(0.1);
     transition: transform 0.3s ease-out;
@@ -328,6 +347,9 @@ input {
     transition:
       scale 0.4s ease-out,
       opacity 0.4s ease-out;
+  }
+  .nav-link.has-morph:hover .nav-link__text {
+    transform: none;
   }
   .nav-link:hover .nav-link__icon rect {
     opacity: 1;
@@ -392,8 +414,8 @@ input {
   isolation: isolate;
   padding: clamp(20px, 4svh, 48px) var(--pad) clamp(28px, 7svh, 72px);
   display: grid;
-  grid-template-columns: minmax(0, 33%) minmax(0, 1fr);
-  column-gap: 32px;
+  grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+  column-gap: clamp(32px, 4vw, 72px);
   grid-template-rows: auto auto;
   align-content: center;
   min-height: calc(100svh - 76px);
@@ -403,33 +425,50 @@ input {
   grid-row: 1;
   padding-top: 12px;
 }
-/* The owner's tagline, in four lines. "Streamer takes", the longest, is 7.33 em wide, so the size
-   follows the width of the column it lives in. */
+/* The tagline, in three lines. The size follows the width of the column it lives in, so the
+   longest line ("One secret word.") fits beside the film. */
 .hero h1 {
-  font-size: clamp(44px, 3.9vw, 80px);
+  font-size: clamp(44px, 4.6vw, 92px);
+}
+/* After 1minus1.com's "DISTINCT / ALWAYS": the headline's last line in a second, lighter cut, only
+   the letters' outline, in lilac, under the line before it. */
+.hero-line {
+  display: block;
+}
+.hero-line--light {
+  color: transparent;
+  -webkit-text-stroke: 0.03em var(--rim);
+}
+/* As the film flies out, each line slides off to the left by most of its own width (their lines
+   part to both sides; ours all go one way). showreel.js scrubs --hero-slide on the heading. */
+.hero.is-flight .hero-line {
+  width: fit-content;
+  translate: calc(var(--hero-slide, 0) * -75%) 0;
 }
 .hero-sub {
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.45;
-  max-width: 420px;
+  max-width: 380px;
   margin-top: 32px;
 }
 .hero-action {
   grid-column: 1;
   grid-row: 2;
   align-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
   margin-top: 32px;
+}
+/* The streamer's way in, beside "How to play": an outlined pixel button whose box spreads into a
+   white one on hover. Until the Extension is public it asks for early access by email. */
+.hero-access {
+  width: min(100%, 320px);
 }
 /* The hero's pixel button (pixels.css): white, with the ink box and a hopping pixel arrow. */
 .hero-cta {
   width: min(100%, 360px);
   box-shadow: 0 14px 34px rgb(29 11 69 / 35%);
-}
-.microline {
-  font-size: 14px;
-  line-height: 1.5;
-  margin-top: 18px;
-  max-width: 320px;
 }
 .hero-stage {
   grid-column: 2;
@@ -442,6 +481,14 @@ input {
   --tab-h: 32px;
   position: relative;
   isolation: isolate;
+}
+/* Beside the copy the film stays modest: at most 880px, and short enough to fit the screen with
+   its tab. */
+@media (min-width: 1151px) {
+  .film-wrap {
+    max-width: min(100%, 880px, (100svh - 200px) * 16 / 9);
+    margin-left: auto;
+  }
 }
 /* Viewfinder corners around the film, a small idea from fortnite.com: four lilac brackets hold the
    tab and the picture, close in once when the page opens and a little more on hover. */
@@ -586,6 +633,447 @@ input {
   width: 20px;
   height: 20px;
 }
+
+/* After 1minus1.com, on wide screens: the headline runs across the hero with the film as a tilted
+   card in front of it, and a small pill opens the line under it. Scrolling straightens the film
+   and grows it into the showreel below (showreel.js). .is-flight is only set while that runs;
+   otherwise the hero keeps its two columns and the film stays in it. */
+/* The pill, after 1minus1.com's, as a chat bubble (iMessage's shape, in our violet) holding the
+   secret word chat knows, pixelated past reading (the word "banana" in Inter, averaged into 14 × 3
+   squares of four strengths). Once the curtain has cleared it types in a column at a time, and its
+   paler squares keep shifting a little, like a mosaic over something that moves. */
+.hero-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin: 0 12px 0 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--violet);
+  vertical-align: 0.1em;
+}
+/* The bubble's tail, curling out of its bottom left corner (a file: the page allows no data: images). */
+.hero-pill::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -5px;
+  width: 13px;
+  height: 15px;
+  background: inherit;
+  -webkit-mask: url('/assets/brand/bubble-tail.svg') 0 0 / 100% 100% no-repeat;
+  mask: url('/assets/brand/bubble-tail.svg') 0 0 / 100% 100% no-repeat;
+}
+.hero-pill__word {
+  display: block;
+  width: 56px;
+  height: 12px;
+  fill: var(--white);
+  shape-rendering: crispEdges;
+  animation: pill-type 0.6s steps(14, end) 1s both;
+}
+.hero-pill__ink--3 {
+  --ink: 0.72;
+  opacity: var(--ink);
+  animation: pill-shimmer 2.6s steps(1, end) 2.2s infinite;
+}
+.hero-pill__ink--2 {
+  --ink: 0.5;
+  opacity: var(--ink);
+}
+.hero-pill__ink--1 {
+  --ink: 0.26;
+  opacity: var(--ink);
+  animation: pill-shimmer 3.4s steps(1, end) 3s infinite;
+}
+@keyframes pill-type {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+@keyframes pill-shimmer {
+  0%,
+  100% {
+    opacity: var(--ink);
+  }
+  50% {
+    opacity: calc(var(--ink) * 0.55);
+  }
+}
+/* The headline keeps its own secret: "secret" is there to be read aloud and found by search, but it
+   shows only as a mosaic, like the bubble's word: the word in the headline's font averaged into 13 × 3
+   squares of the same four strengths, from cap height down to the baseline (the font's ascent is
+   0.925em and its descent 0.28em). */
+.hero-secret {
+  position: relative;
+  color: transparent;
+}
+.hero-secret__pixels {
+  position: absolute;
+  top: 0.206em;
+  bottom: 0.28em;
+  left: 0;
+  width: 100%;
+  fill: var(--white);
+  shape-rendering: crispEdges;
+}
+.hero-secret__ink--3 {
+  --ink: 0.72;
+  opacity: var(--ink);
+  animation: pill-shimmer 2.6s steps(1, end) 2.6s infinite;
+}
+.hero-secret__ink--2 {
+  --ink: 0.5;
+  opacity: var(--ink);
+}
+.hero-secret__ink--1 {
+  --ink: 0.26;
+  opacity: var(--ink);
+  animation: pill-shimmer 3.4s steps(1, end) 3.4s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-pill__word,
+  .hero-pill__ink,
+  .hero-secret__ink {
+    animation: none;
+  }
+}
+/* The ribbons behind the hero (hero-scribble.js): a canvas laid behind the page where they fall, so
+   they scroll with it, just above the backdrop. A pixel of it to a CSS px, scaled up unsmoothed so
+   the squares keep sharp edges; the script places and sizes it. */
+.hero-scribble {
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+/* The film flies in front of the headline, as 1minus1's card does (the showreel is above the hero). */
+.has-showreel .hero {
+  z-index: 0;
+}
+/* The showreel, where the film lands, after the owner's mini showreel player: a player as large as
+   the screen allows at the film's own 16:9, in the middle of the screen with the page around it, on
+   every screen, phones too. The whole picture always shows; nothing of it is cropped. The frame is
+   cut with clip-path to round its corners as it flies (showreel.js), and its label and buttons
+   follow the window that shows (--win-x, --win-y). The screen then holds a moment before the first
+   sheet arrives. */
+.showreel {
+  --reel-h: 100svh;
+  --reel-gap: clamp(16px, 4vmin, 56px);
+  --reel-w: min(100vw - 2 * var(--reel-gap), (var(--reel-h) - 2 * var(--reel-gap)) * 16 / 9);
+  position: relative;
+  min-height: var(--reel-h);
+  padding-bottom: 28svh;
+}
+.showreel .film-wrap {
+  --tab-h: 0px;
+  width: var(--reel-w);
+  height: calc(var(--reel-w) * 9 / 16);
+  max-width: none;
+  margin: calc((var(--reel-h) - var(--reel-w) * 9 / 16) / 2) auto;
+  transform-origin: 50% 50%;
+}
+/* While it flies the card is too small for its buttons: a click on it plays or pauses the film, and
+   the buttons show only while it is paused or has the keyboard. */
+@media (hover: hover) {
+  .showreel:not(.is-landed) .film-frame:hover:not(.is-paused, :focus-within, .is-hud) .film-hud {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+.showreel .film-wrap::after {
+  content: none;
+}
+/* The frame's clip cuts off an outline drawn around it, so its focus ring is drawn inside the window
+   that shows, as thick on screen however small the card is (showreel.js sets --win-r, --film-scale). */
+.showreel .film-frame:focus-visible {
+  outline: none;
+}
+.showreel .film-frame:focus-visible::after {
+  content: '';
+  position: absolute;
+  z-index: 5;
+  inset: var(--win-y, 0px) var(--win-x, 0px);
+  border: calc(3px / var(--film-scale, 1)) solid var(--white);
+  border-radius: var(--win-r, 0px) 0 var(--win-r, 0px) var(--win-r, 0px);
+  pointer-events: none;
+}
+.showreel .film-frame {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  aspect-ratio: auto;
+}
+/* The frame is the film's own shape, so the picture fills it (cover only hides a rounding pixel). */
+.showreel .film-frame video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+.showreel .stage-tab {
+  position: absolute;
+  z-index: 4;
+  top: calc(var(--win-y, 0px) + 14px);
+  left: calc(var(--win-x, 0px) + 14px);
+  height: 30px;
+  border-bottom: 1px solid #c9a8ff88;
+  border-radius: 6px;
+  opacity: 0;
+  /* A label only: unseen while the film flies, it must not take clicks meant for the film. */
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.showreel.is-landed .stage-tab {
+  opacity: 1;
+}
+.showreel .film-hud {
+  right: calc(var(--win-x, 0px) + 16px);
+  bottom: calc(var(--win-y, 0px) + 16px);
+}
+.hero.is-flight .hero-copy {
+  position: relative;
+  z-index: 1;
+}
+/* The tilted card's place, after 1minus1's: a card a twelfth of the screen in from the right, at
+   the film's own 16:9 (theirs is 3:2), so it shows the whole picture. The film itself lives in the
+   showreel and is drawn here scaled down. No grid placement, so it is placed against the hero's own
+   edges rather than inside its padding. */
+.hero.is-flight .hero-stage {
+  position: absolute;
+  grid-area: auto;
+  pointer-events: none;
+}
+/* `width > 700px` rather than min-width 701px: a scaled screen can be 700.5px wide, where neither
+   side of the split matched and the card's slot, and with it the film, collapsed to nothing. */
+@media (width > 700px) {
+  .hero.is-flight {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-content: center;
+    gap: 0;
+    min-height: calc(100svh - 76px);
+  }
+  .hero.is-flight .hero-copy {
+    display: block;
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+  }
+  .hero.is-flight .hero-action {
+    display: flex;
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: 28px;
+  }
+  .hero.is-flight h1 {
+    font-size: clamp(56px, min(7.2vw, 16svh), 190px);
+    line-height: 0.94;
+  }
+  .hero.is-flight .hero-sub {
+    max-width: 30rem;
+    margin-top: 28px;
+  }
+  /* Measured from their page at 1966 × 654: 24.6% of the screen wide, its centre 78.4% across and
+     54.4% down the screen (the hero starts under the 76px header). */
+  .hero.is-flight .hero-stage {
+    top: calc(54.4svh - 76px);
+    right: 9.28vw;
+    width: 24.6vw;
+    aspect-ratio: 16 / 9;
+    translate: 0 -50%;
+  }
+}
+/* Below 1280px the card would sit on the hero's buttons, so they keep to their own width; and a
+   portrait tablet raises the card above the headline, as 1minus1 does below 1024px. */
+@media (width > 700px) and (max-width: 1279px) {
+  .hero.is-flight .hero-cta,
+  .hero.is-flight .hero-access {
+    width: auto;
+    min-width: 230px;
+  }
+}
+@media (width > 700px) and (max-width: 1023px) and (orientation: portrait) {
+  .hero.is-flight .hero-stage {
+    top: calc(22svh - 76px);
+  }
+}
+/* Phones, after 1minus1.com's: the card sits high on the right and runs off the edge, the headline
+   and the line under it fill the lower part of the screen, set from the left. The film lands across
+   the screen at its own 16:9 (theirs fills a 9:16 frame and crops the picture to a third of it). */
+@media (max-width: 700px) {
+  .hero.is-flight {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-end;
+    min-height: calc(100svh - 66px);
+    padding-bottom: 64px;
+    text-align: left;
+  }
+  /* Theirs at 375 × 812 is a 16:10 card 85.3% of the screen wide, centred 84% across and 30.7%
+     down. Ours is 16:9, smaller and a little higher, and sits behind the headline (below), so every
+     line reads over it; it still runs off the edge. The hero starts under the 66px header. */
+  .hero.is-flight .hero-stage {
+    top: calc(26svh - 66px);
+    right: -14vw;
+    width: 64vw;
+    aspect-ratio: 16 / 9;
+    translate: 0 -50%;
+  }
+  /* On a phone the words start in front of the film, as on 1minus1's phone page, and the film comes
+     forward over them as it flies: showreel.js masks the hero out where the film is. The hero lets
+     clicks through to the film except on its own links. */
+  .has-showreel .hero {
+    z-index: 2;
+    pointer-events: none;
+  }
+  .has-showreel .hero :is(a, button) {
+    pointer-events: auto;
+  }
+  .hero.is-flight .hero-line {
+    translate: calc(var(--hero-slide, 0) * -50%) 0;
+  }
+  .hero.is-flight .hero-action {
+    order: 2;
+    align-self: center;
+    justify-items: center;
+  }
+  .showreel {
+    --reel-gap: 8px;
+    padding-bottom: 20svh;
+  }
+  /* The player is a strip across the screen here, too small to carry its label: the label sits on
+     the page just above it. */
+  .showreel .stage-tab {
+    top: calc(var(--win-y, 0px) - 34px);
+    left: var(--win-x, 0px);
+    height: 24px;
+    font-size: 10px;
+  }
+  .showreel .film-hud {
+    right: calc(var(--win-x, 0px) + 10px);
+    bottom: calc(var(--win-y, 0px) + 10px);
+  }
+}
+/* After 1minus1.com's service cards, the sections are sheets dealt over each other: once the film
+   has landed the showreel stays put and "How it plays" deals in over it from the left; once its
+   steps are done they stay put and "The cards" deals in over them from the right; the footer then
+   rises over the deck. A sheet comes in leaning about its own top corner and a little off to its
+   side, and settles as it nears the top of the screen (showreel.js scrubs --deal-rot and
+   --deal-x). It stops short of the screen's edge on its own side, where its corner is round, so
+   each sheet's edge shows against the one before. Only a sheet's ground and what sits near its top
+   turn: the heading and its lines, and the deck's help under them. */
+.has-showreel .showreel {
+  /* Holds the player's margin above it inside the showreel (a margin collapsing through its top
+     moved the whole showreel down, and the player to the top of the screen once stuck). */
+  display: flow-root;
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  /* The card may run off the side of a phone; that must not widen the page. */
+  overflow-x: clip;
+}
+.hero.is-flight {
+  overflow-x: clip;
+}
+.has-showreel .how-section {
+  --sheet-radius: 24px;
+  --sheet-gap: 20px;
+  position: relative;
+  z-index: 2;
+  isolation: isolate;
+  /* A sheet leaning in sticks out at the sides; clip it there without making a scroll container. */
+  overflow-x: clip;
+}
+.has-showreel .why-vtg__stage {
+  position: relative;
+  z-index: 1;
+}
+.has-showreel .cards-anchor {
+  --sheet-gap: 40px;
+  position: relative;
+  z-index: 2;
+}
+.has-showreel .how-section::before,
+.has-showreel .cards-anchor::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  /* No shadow: while a sheet leans, its outline cuts the shadow off in a hard-edged dark patch
+     around the rounded corner. The colours and the corner make the edge. */
+  translate: var(--deal-x, 0px) 0;
+  rotate: var(--deal-rot, 0deg);
+  pointer-events: none;
+  /* A layer of its own. Painted with the rest of its sheet, the ground left squares of its colour
+     in the strip beside it once it had dealt in, which went dark a patch at a time as the page
+     scrolled and other things repainted over them. */
+  will-change: transform;
+}
+.has-showreel .how-section::before {
+  right: var(--sheet-gap);
+  left: -5%;
+  border-top-right-radius: var(--sheet-radius);
+  background-color: #2b1060;
+  transform-origin: 0 0;
+}
+.has-showreel .cards-anchor::before {
+  right: -5%;
+  left: var(--sheet-gap);
+  border-top-left-radius: var(--sheet-radius);
+  background-color: #7721e5;
+  transform-origin: 100% 0;
+}
+.has-showreel .why-vtg__intro-sticky,
+.has-showreel .why-stack-shell,
+.has-showreel .how-cards__intro,
+.has-showreel .deck-help {
+  translate: var(--deal-x, 0px) 0;
+  rotate: var(--deal-rot, 0deg);
+  transform-origin: var(--deal-ox, 0px) var(--deal-oy, 0px);
+}
+/* Under a sheet the film is out of sight, and fades out. The strip the sheet leaves at its side
+   shows the page's backdrop from the moment the sheet arrives until it has gone: the player has the
+   page around it, so the film never reaches the strip, and the strip keeps one colour throughout
+   (switching it to a darker violet once the film was covered read as a colour change on scroll). */
+.has-showreel .showreel > .film-wrap {
+  transition: opacity 0.35s ease;
+}
+.has-showreel .showreel.is-covered > .film-wrap {
+  opacity: 0;
+}
+@media (max-width: 700px) {
+  .has-showreel .how-section {
+    --sheet-radius: 14px;
+    --sheet-gap: 8px;
+  }
+  .has-showreel .cards-anchor {
+    --sheet-gap: 8px;
+  }
+}
+/* Highlighter bars over a line of text until it is uncovered (reveal.js markerReveal): each covers
+   its line in the brand violet, the same everywhere, and draws back toward the line's end. */
+.is-marked {
+  position: relative;
+}
+.marker-bar {
+  position: absolute;
+  z-index: 1;
+  background: var(--violet);
+  transform-origin: 100% 50%;
+  pointer-events: none;
+}
 .text-button {
   display: inline-flex;
   align-items: center;
@@ -601,61 +1089,6 @@ input {
 .text-button:hover {
   text-decoration: underline;
   text-underline-offset: 5px;
-}
-.transcript-button {
-  padding-block: 0;
-  font-weight: 600;
-  white-space: nowrap;
-  text-decoration: underline;
-  text-decoration-color: #c9a8ff99;
-  text-underline-offset: 4px;
-}
-.film-note {
-  font-size: 14px;
-  line-height: 1.45;
-  max-width: 760px;
-  margin-top: 14px;
-  position: relative;
-  z-index: 2;
-  color: var(--white);
-}
-.round-transcript {
-  background: var(--stage);
-  padding: 24px;
-  border: 1px solid var(--rim);
-  margin-top: 20px;
-  border-radius: 8px;
-  position: relative;
-  z-index: 5;
-}
-.transcript-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-.round-transcript h2 {
-  font-size: 26px;
-}
-.round-transcript p,
-.round-transcript li {
-  font-size: 15px;
-}
-.round-transcript > p {
-  color: var(--card-copy);
-  margin-top: 12px;
-}
-.round-transcript ol {
-  list-style: none;
-  padding: 0;
-  margin: 20px 0 0;
-  display: grid;
-  gap: 18px;
-}
-.round-transcript li strong {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--rim);
 }
 .film-stills {
   display: flex;
@@ -678,9 +1111,15 @@ input {
   font-size: 14px;
   margin-top: 8px;
 }
-.cards-anchor.is-pinned {
-  /* Keep the deck clear for a short scroll before the footer starts its wipe. */
-  padding-bottom: clamp(160px, 40svh, 420px);
+/* The page's backdrop: 1minus1.com's deep purple (#130127, sampled from their hero), flat, with the
+   hero's ribbons drawn over it in their colour (hero-scribble.js). It is fixed to the screen,
+   behind every section, and keeps its colour all the way down. */
+.page-backdrop {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background: #130127;
+  pointer-events: none;
 }
 .deck-section {
   --deck-h: 530px;
@@ -688,59 +1127,60 @@ input {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: clamp(8px, 2svh, 24px);
   min-height: 100svh;
-  padding: clamp(28px, 5svh, 64px) 0;
-  background: radial-gradient(ellipse 70% 56% at 50% 60%, #7931d6 0, #56259b 52%, var(--violet-deep) 100%);
+  padding: clamp(48px, 11svh, 140px) 0;
   overflow: hidden;
 }
-/* The deck is the second half of "How it plays"; it spans the full width under the steps. */
+/* The deck is the second half of "How it plays"; it spans the full width under the steps. It may
+   run taller than a short screen: the pin only holds it once its bottom is on screen. */
 @media (min-width: 701px) and (max-height: 880px) {
   .deck-section {
-    --deck-zoom: 0.88;
+    --deck-zoom: 0.96;
   }
 }
 @media (min-width: 701px) and (max-height: 780px) {
   .deck-section {
-    --deck-zoom: 0.78;
+    --deck-zoom: 0.9;
   }
 }
 @media (min-width: 701px) and (max-height: 680px) {
   .deck-section {
-    --deck-zoom: 0.68;
+    --deck-zoom: 0.84;
   }
 }
 .how-cards__intro {
   display: grid;
   justify-items: center;
-  gap: 16px;
-  max-width: 660px;
+  gap: 20px;
+  max-width: 820px;
   margin: 0 auto;
   padding: 0 var(--pad);
   text-align: center;
 }
 .how-cards__title {
   font:
-    400 clamp(36px, 3.6vw, 66px) / 1.04 Russo,
+    400 clamp(40px, 5vw, 100px) / 1.02 Russo,
     Impact,
     sans-serif;
   letter-spacing: -0.035em;
 }
 .how-cards__intro > p {
   max-width: 34em;
-  font-size: 18px;
-  line-height: 1.5;
+  font-size: clamp(18px, 1.2vw, 24px);
+  line-height: 1.45;
   text-wrap: pretty;
 }
 /* Card levels: a small three-column key under the deck, set like the hint above it. */
 .card-levels {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 10.5rem));
+  grid-template-columns: repeat(3, minmax(0, 12rem));
   justify-content: center;
-  gap: 0 clamp(14px, 3vw, 36px);
+  gap: 0 clamp(14px, 3vw, 48px);
   margin: 0 auto;
   padding: 0 var(--pad);
   list-style: none;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.4;
   text-align: center;
 }
@@ -754,7 +1194,7 @@ input {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1107,31 +1547,24 @@ input {
 }
 @media (min-width: 1800px) {
   .hero {
-    grid-template-columns: minmax(0, 34%) minmax(0, 1fr);
-    column-gap: 48px;
+    grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+    column-gap: 80px;
   }
   .hero h1 {
-    font-size: clamp(70px, 4vw, 96px);
+    font-size: clamp(84px, 4.6vw, 120px);
   }
   .hero-sub {
-    max-width: 520px;
-    font-size: 24px;
+    max-width: 460px;
+    font-size: 21px;
   }
   .hero-action {
     margin-top: 40px;
-  }
-  .microline {
-    font-size: 16px;
   }
   .film-wrap {
     --tab-h: 36px;
   }
   .stage-tab {
     font-size: 14px;
-  }
-  .film-note {
-    font-size: 16px;
-    max-width: 800px;
   }
   .deck-section {
     --deck-h: 600px;
@@ -1147,14 +1580,14 @@ input {
 }
 @media (max-width: 1150px) and (min-width: 701px) {
   .hero {
-    grid-template-columns: 1fr 1.7fr;
-    gap: 24px;
+    grid-template-columns: 1fr 1.25fr;
+    gap: 32px;
   }
   .hero h1 {
-    font-size: 4vw;
+    font-size: 4.6vw;
   }
   .hero-sub {
-    font-size: 17px;
+    font-size: 16px;
     margin-top: 24px;
   }
   .hero-action {
@@ -1163,12 +1596,6 @@ input {
   .stage-tab {
     font-size: 10px;
     gap: 6px;
-  }
-  .film-note {
-    font-size: 13px;
-  }
-  .hero .microline {
-    font-size: 13px;
   }
 }
 @media (max-width: 1050px) and (min-width: 701px) {
@@ -1200,8 +1627,8 @@ input {
   }
   .hero-sub {
     margin: 0;
-    max-width: 390px;
-    font-size: 18px;
+    max-width: 360px;
+    font-size: 16px;
   }
   .hero-stage {
     grid-column: 1;
@@ -1215,21 +1642,13 @@ input {
     gap: 28px;
     margin-top: 30px;
   }
-  .hero-cta {
+  .hero-cta,
+  .hero-access {
     max-width: 330px;
-  }
-  .hero .microline {
-    margin: 0;
-    font-size: 14px;
-    max-width: 280px;
   }
 
   .stage-tab {
     font-size: 12px;
-  }
-  .film-note {
-    max-width: 600px;
-    font-size: 14px;
   }
 }
 @media (max-width: 700px) {
@@ -1239,12 +1658,6 @@ input {
   }
   html {
     scroll-padding-top: 20px;
-  }
-  body {
-    background:
-      radial-gradient(ellipse 120% 570px at 80% 340px, #9146ff 0, #7132c5 60%, rgb(76 32 142 / 0%) 100%) top / 100% 910px no-repeat,
-      linear-gradient(#4c208e 0, #4c208e 700px, #45198a 1250px, var(--violet-deep) 1900px) top / 100% 1900px no-repeat,
-      var(--violet-deep);
   }
   h1 {
     font-size: clamp(40px, 13.33vw, 66px);
@@ -1340,15 +1753,6 @@ input {
     width: 44px;
     height: 44px;
   }
-  .transcript-button {
-    font-size: 12px;
-  }
-  .film-note {
-    max-width: 330px;
-    margin: 14px auto 0;
-    font-size: 12px;
-    line-height: 1.5;
-  }
   .hero-sub {
     order: 2;
     max-width: 340px;
@@ -1366,27 +1770,11 @@ input {
   }
   /* Centre the words in the space between the icon box and the right edge.
      (.hero .hero-cta, because pixels.css loads after this file.) */
-  .hero .hero-cta {
+  .hero .hero-cta,
+  .hero .hero-access {
     width: auto;
     min-width: 248px;
     padding-right: 18px;
-  }
-  .hero .microline {
-    margin: 0;
-    font-size: 13px;
-  }
-
-  .round-transcript {
-    margin: 20px 0 0;
-    padding: 20px 16px;
-    text-align: left;
-  }
-  .round-transcript h2 {
-    font-size: 23px;
-  }
-  .round-transcript p,
-  .round-transcript li {
-    font-size: 14px;
   }
   .film-stills {
     margin: 20px 0 0;
@@ -1493,9 +1881,6 @@ input {
     font-size: 8px;
     gap: 4px;
   }
-  .transcript-button {
-    font-size: 11px;
-  }
   .hero-sub {
     font-size: 15px;
   }
@@ -1519,13 +1904,6 @@ input {
 @media (max-width: 700px) {
   .deck-card-item .card-question {
     font-size: 14px;
-  }
-}
-@media (max-width: 700px) {
-  .round-transcript .text-button {
-    min-height: 44px;
-    min-width: 44px;
-    justify-content: center;
   }
 }
 @media (prefers-reduced-motion: reduce) {

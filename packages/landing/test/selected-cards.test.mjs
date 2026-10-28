@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import { runInNewContext } from 'node:vm'
 import { installSelectedCards } from '../scripts/selected-cards.mjs'
-import { cardFace, selectedCardStyle, clueStyles, exactClues, glassOptics, glassRules, parseClueStyle, pauseSelectedReveal, revealSelectedCard, settleSelectedCard, warmSelectedArt, previewArt } from '../selected-cards/selected-cards.js'
+import { cardFace, selectedCardStyle, clueStyles, exactClues, glassOptics, glassRules, parseClueStyle, pauseSelectedReveal, pixelPlan, pixelSizes, revealSelectedCard, revealEnd, settleSelectedCard, swapTime, trailCells, trailPath, TRAIL_SIZE, warmSelectedArt, previewArt } from '../selected-cards/selected-cards.js'
 import { cards } from '../site/data.js'
 import { wrapIndex } from '../site/deck.js'
 
@@ -242,20 +242,69 @@ test('art windows release old images and reveal canvases across the full catalog
   assert.equal(previewArt('/some-other-art.svg'), '/some-other-art.svg')
 })
 
+test('a picture waits as its coarsest blocks, which split coarse to fine at random until the finest clear', () => {
+  let seed = 7
+  const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+  const plan = pixelPlan({ random })
+  assert.deepEqual(plan.map((level) => level.length), pixelSizes.map((size) => size * size))
+  // The reveal starts from the blocks the picture waited as: every coarsest block is there at once.
+  assert.ok(plan[0].every(([start]) => start === 0))
+  // The picture is under the blocks before any of the finest clears, and not before a block splits.
+  assert.ok(swapTime(plan) <= Math.min(...plan.at(-1).map(([, end]) => end)))
+  assert.ok(swapTime(plan) >= Math.min(...plan[0].map(([, end]) => end)))
+  // Each finer block appears exactly when its parent splits.
+  for (let level = 1; level < pixelSizes.length; level++) {
+    const size = pixelSizes[level]
+    const ratio = size / pixelSizes[level - 1]
+    plan[level].forEach(([start, end], i) => {
+      const parent = Math.floor(Math.floor(i / size) / ratio) * pixelSizes[level - 1] + Math.floor((i % size) / ratio)
+      assert.equal(start, plan[level - 1][parent][1])
+      assert.ok(end >= start)
+    })
+  }
+  const last = Math.max(...plan.at(-1).map(([, end]) => end))
+  assert.ok(last <= revealEnd && revealEnd < 600, 'the whole reveal is over in well under a second')
+  // Blocks of different sizes are on the card at once.
+  const levelsAt = (t) => plan.filter((level) => level.some(([start, end]) => t >= start && t < end)).length
+  assert.ok([100, 150, 200, 250].some((t) => levelsAt(t) >= 2))
+})
+
+test('a mouse trail turns the blocks near the pointer, and a quick stroke leaves no gaps', () => {
+  const at = (column, row) => row * TRAIL_SIZE + column
+  const sorted = (cells) => [...cells].sort((a, b) => a - b)
+  // In a block's middle: the block and the eight around it.
+  assert.deepEqual(sorted(trailCells([3.5, 3.5])), [2, 3, 4].flatMap((row) => [2, 3, 4].map((column) => at(column, row))))
+  // On a block's corner: the four blocks around it and the eight beside those.
+  const corner = trailCells([8, 8])
+  assert.equal(corner.length, 12)
+  assert.ok([at(7, 7), at(8, 7), at(7, 8), at(8, 8)].every((cell) => corner.includes(cell)))
+  // At the picture's edge the trail stays on the picture.
+  assert.ok(trailCells([0.2, 15.9]).every((cell) => cell >= 0 && cell < TRAIL_SIZE ** 2))
+  // A stroke across the picture between two pointer events covers every block along its line.
+  const stroke = trailPath([1, 8.5], [15, 8.5])
+  for (let column = 1; column < 15; column++) assert.ok(stroke.includes(at(column, 8)), `block ${column} of the row`)
+  assert.deepEqual(sorted(trailPath([4, 4], [4, 4])), sorted(trailCells([4, 4])))
+})
+
 test('pixel reveal waits for settlement and plays only once per card per page', () => {
   const saved = Object.fromEntries(['document', 'matchMedia', 'requestAnimationFrame', 'cancelAnimationFrame'].map(key => [key, globalThis[key]]))
   const pending = new Map()
   let serial = 0
   let paints = 0
   const classes = (...values) => { const set = new Set(values); return { contains: value => set.has(value), add: value => set.add(value), remove: value => set.delete(value) } }
-  globalThis.document = { hidden: false, addEventListener() {}, removeEventListener() {} }
+  const scratch = () => {
+    const element = { width: 0, height: 0 }
+    element.getContext = () => ({ clearRect() {}, drawImage() {}, getImageData: () => ({ data: new Uint8ClampedArray(element.width * element.height * 4).fill(200) }) })
+    return element
+  }
+  globalThis.document = { hidden: false, addEventListener() {}, removeEventListener() {}, createElement: scratch }
   globalThis.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} })
   globalThis.requestAnimationFrame = fn => { pending.set(++serial, fn); return serial }
   globalThis.cancelAnimationFrame = id => pending.delete(id)
   const card = () => {
     const art = { classList: classes() }
     const image = { complete: true, naturalWidth: 100, naturalHeight: 100, closest: () => art }
-    const canvas = { getContext: () => ({ clearRect() {}, drawImage() { paints++ } }) }
+    const canvas = { getContext: () => ({ clearRect() {}, fillRect() { paints++ } }) }
     return { classList: classes('is-front'), closest: () => ({ classList: classes('is-live') }), querySelector: selector => selector === '.card-art img' ? image : canvas }
   }
   try {
@@ -266,7 +315,9 @@ test('pixel reveal waits for settlement and plays only once per card per page', 
     assert.equal(pending.size, 1)
     const [id, tick] = pending.entries().next().value
     pending.delete(id); tick(0)
-    assert.equal(paints, 1)
+    const [nextId, nextTick] = pending.entries().next().value
+    pending.delete(nextId); nextTick(100)
+    assert.ok(paints > 0, 'blocks are on the art 100ms after the reveal starts')
     pauseSelectedReveal()
     assert.equal(pending.size, 0, 'a new drag cancels in-flight drawing')
     settleSelectedCard(first)

@@ -1,4 +1,5 @@
-import { ribbonPose, blendPose, qualifiesSpread, visibleCardFraction } from './ribbon-geometry.js'
+import { ribbonPose, blendPose, qualifiesSpread, rowSpacing, visibleCardFraction } from './ribbon-geometry.js'
+import { createRibbonEffects } from './ribbon-effects.js'
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const wrap = (value, count) => ((value % count) + count) % count
@@ -9,6 +10,8 @@ const easeInOut = t => t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
 
 // The original deck remains the sole writer of card transforms. This controller
 // lends it a pose, then hands back an exact integer position when the row folds.
+// The open row never moves by itself: it follows a drag, coasts after a throw and
+// settles on the nearest card ('paused' is that resting state).
 export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal, settleReveal, warmArt, ...options }) {
   const { hand, items, reduced } = options
   const state = { p: 0, t: 0 }
@@ -16,7 +19,6 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   let open = false
   let destroyed = false
   let mode = 'fan'
-  let userPaused = false
   let gesture = null
   let anchor = 0
   let lens = 0
@@ -25,11 +27,11 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   let pMotion = null
   let frame = 0
   let lastTime = null
-  let idleTimer = 0
   let visibilityFrame = 0
   let openingTimer = 0
   let warmed = null
   let aborting = false
+  let inset = 0 // screen px at each side of the deck that its sheet leaves uncovered
   const cleanups = []
   const originalHelp = [...help.childNodes]
 
@@ -50,20 +52,20 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   const toggle = button('ribbon-toggle', 'spread the deck')
   toggle.setAttribute('aria-controls', hand.id)
   toggle.setAttribute('aria-expanded', 'false')
-  const separator = document.createElement('span')
-  separator.className = 'ribbon-help-separator'
-  separator.textContent = ' · '
-  const playButton = button('ribbon-play', 'Pause')
-  help.replaceChildren(prefix, toggle, separator, playButton)
+  help.replaceChildren(prefix, toggle)
+
+  // The row runs to the edges of its sheet, which stops short of the screen by its gap (styles.css),
+  // and is cut off there (ribbon.css).
+  function measureInset() {
+    const sheet = hand.closest?.('.cards-anchor')
+    inset = sheet && typeof getComputedStyle === 'function' ? Math.round(parseFloat(getComputedStyle(sheet).getPropertyValue('--sheet-gap')) || 0) : 0
+  }
+  const rowMetrics = metrics => ({ ...metrics, inset: inset / (metrics.zoom || 1) })
 
   function syncControls() {
     toggle.textContent = open ? 'Back to the deck' : 'spread the deck'
     toggle.setAttribute('aria-expanded', String(open))
     prefix.hidden = open
-    const hidePlay = !open || reduced.matches
-    if (hidePlay && document.activeElement === playButton) toggle.focus({ preventScroll: true })
-    playButton.hidden = separator.hidden = hidePlay
-    playButton.textContent = userPaused ? 'Play' : 'Pause'
     hand.dataset.ribbonMode = mode
   }
   function stopFrame() {
@@ -72,18 +74,14 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     lastTime = null
   }
   function clearTimers() {
-    clearTimeout(idleTimer)
     clearTimeout(openingTimer)
     cancelAnimationFrame(visibilityFrame)
-    idleTimer = openingTimer = visibilityFrame = 0
-  }
-  function idle() {
-    clearTimeout(idleTimer)
-    if (open && !userPaused && !gesture) idleTimer = setTimeout(() => gather(), 8000)
+    openingTimer = visibilityFrame = 0
   }
   function abortInput() {
     gesture = null
     clearTimeout(openingTimer)
+    openingTimer = 0
     aborting = true
     hand.dispatchEvent(new Event('ribboncancelinput'))
     aborting = false
@@ -96,14 +94,14 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     const whole = Math.round(state.p)
     if (whole === warmed) return
     warmed = whole
-    const pitch = .8 * metrics.width + (metrics.width <= 260 ? 12 : Math.round(metrics.width * .067))
-    const side = Math.min(6, Math.ceil(metrics.room / (2 * pitch)))
+    const side = Math.min(6, Math.ceil(metrics.room / (2 * rowSpacing(rowMetrics(metrics)))))
     warmArt?.(whole, side + 1, side + 2)
   }
   function renderFaces({ position, metrics, visibleIndices }) {
     if (!open) { warmArt?.(Math.round(position)); return }
     if (Math.abs(position - lens) > .58) lens = Math.round(position)
     const visible = new Set(visibleIndices)
+    const row = rowMetrics(metrics)
     for (let index = 0; index < items.length; index++) {
       const item = items[index]
       const d = offset(index, position, items.length)
@@ -112,7 +110,10 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
       const face = visible.has(index) && turn >= .5
       item.classList.toggle('is-ribbon-face', face)
       item.classList.toggle('is-ribbon-lens', face && index === wrap(lens, items.length))
-      if (visible.has(index)) item.style.setProperty('--ribbon-flip', Math.max(.04, Math.abs(Math.cos(Math.PI * turn))).toFixed(4))
+      if (!visible.has(index)) continue
+      item.style.setProperty('--ribbon-flip', Math.max(.04, Math.abs(Math.cos(Math.PI * turn))).toFixed(4))
+      // Each card turns to face the middle of the curve as the row opens (ribbon-geometry.js).
+      item.style.setProperty('--ribbon-turn', `${(ribbonPose(d, row).turn * state.t).toFixed(2)}deg`)
     }
     warm(metrics)
   }
@@ -120,16 +121,20 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     ...options,
     onSettle(index, details) { if (!open) options.onSettle?.(index, details) },
     presentation: {
-      pose(d, metrics, original) { return open ? blendPose(original, ribbonPose(d, metrics), state.t) : original },
+      pose(d, metrics, original) { return open ? blendPose(original, ribbonPose(d, rowMetrics(metrics)), state.t) : original },
       onRender: renderFaces,
     },
   })
 
+  // Speed glitch and momentum hover while the row is open (ribbon-effects.js).
+  const effects = createRibbonEffects({ hand, items, reduced })
   function draw() {
-    if (open && !destroyed) inner.drag(state.p)
+    if (!open || destroyed) return
+    inner.drag(state.p)
+    effects.move(state.p)
   }
   function needsFrame() {
-    return open && !document.hidden && (tMotion || pMotion || mode === 'cruise' || mode === 'coast')
+    return open && !document.hidden && (tMotion || pMotion || mode === 'coast')
   }
   function requestFrame() {
     if (!frame && needsFrame()) {
@@ -150,9 +155,14 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
         tMotion = null
         hand.classList.remove('is-ribbon-changing')
         if (!motion.to) return landInFan()
-        // Only the part of this frame after unfolding belongs to the drift.
+        // Only the part of this frame after unfolding belongs to a throw's coast.
         dt = Math.min(dt, Math.max(0, now - motion.start - motion.duration) / 1000)
-        mode = gesture ? 'grab' : userPaused ? 'paused' : 'coast'
+        if (gesture) mode = 'grab'
+        else if (Math.abs(velocity) > .05) mode = 'coast'
+        else {
+          mode = 'paused'
+          if (!Number.isInteger(state.p)) glide(Math.round(state.p), false, 320)
+        }
         syncControls()
       }
       if (!motion.to) state.p = motion.pFrom + (motion.pTo - motion.pFrom) * easeInOut(progress)
@@ -169,17 +179,15 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
         if (motion.announce) announce(state.p)
         syncControls()
       }
-    } else if (!gesture && !tMotion && (mode === 'coast' || mode === 'cruise')) {
-      const target = userPaused ? 0 : .25
-      const duration = mode === 'coast' ? .42 : .6
-      const difference = velocity - target
+    } else if (!gesture && !tMotion && mode === 'coast') {
+      // A thrown row slows down and settles on the card nearest where it stops.
+      const duration = .42
       const decay = Math.exp(-dt / duration)
       // Integrating the decay keeps both distance and speed tied to elapsed
       // visible time, even when a busy frame takes longer than the usual 16ms.
-      state.p += target * dt + difference * duration * (1 - decay)
-      velocity = target + difference * decay
-      if (userPaused && Math.abs(velocity) < .05) glide(Math.round(state.p), false, 320)
-      else if (!userPaused && Math.abs(velocity - target) < .01) mode = 'cruise'
+      state.p += velocity * duration * (1 - decay)
+      velocity *= decay
+      if (Math.abs(velocity) < .05) glide(Math.round(state.p), false, 320)
     }
     draw()
     requestFrame()
@@ -200,21 +208,21 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     hand.classList.add('is-ribbon-changing')
     requestFrame()
   }
-  function spread({ paused = false } = {}) {
+  function spread() {
     if (destroyed || open || document.hidden) return
     state.p = inner.suspend()
     state.t = 0
     anchor = lens = Math.round(state.p)
     warmed = null
     velocity = 0
+    measureInset()
     open = true
     mode = 'unfolding'
-    userPaused = paused || reduced.matches || !options.gsap
     pauseReveal?.()
+    effects.open()
     hand.classList.add('is-ribbon-open')
     syncControls()
     transition(1, 640)
-    idle()
   }
   function landInFan() {
     stopFrame()
@@ -224,10 +232,12 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     open = false
     mode = 'fan'
     tMotion = pMotion = null
+    effects.close()
     hand.classList.remove('is-ribbon-open', 'is-ribbon-changing')
     for (const item of items) {
       item.classList.remove('is-ribbon-face', 'is-ribbon-lens')
       item.style.removeProperty('--ribbon-flip')
+      item.style.removeProperty('--ribbon-turn')
     }
     inner.snap(state.p, { deliberate: true })
     syncControls()
@@ -251,8 +261,6 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   function glide(to, deliberate = true, duration = 420) {
     if (!open || mode === 'folding') return
     if (gesture) abortInput()
-    clearTimeout(idleTimer)
-    userPaused = true
     velocity = 0
     mode = 'glide'
     const target = Math.round(to)
@@ -268,22 +276,10 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     draw()
     syncControls()
   }
+  // Stops a coasting row on the card nearest where it is.
   function pause() {
-    if (!open) return
-    userPaused = true
-    velocity = 0
-    clearTimeout(idleTimer)
+    if (!open || mode === 'paused' || mode === 'folding' || mode === 'unfolding' || pMotion) return
     glide(Math.round(state.p), false, 320)
-  }
-  function play() {
-    if (!open || reduced.matches || !options.gsap) return
-    userPaused = false
-    pMotion = null
-    velocity = 0
-    mode = 'cruise'
-    syncControls()
-    idle()
-    requestFrame()
   }
   function maybeOpen() {
     clearTimeout(openingTimer)
@@ -301,7 +297,6 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     } else openingTimer = setTimeout(maybeOpen, 120)
   }
   function hold() {
-    clearTimeout(idleTimer)
     const from = open ? state.p : inner.hold()
     gesture = { from, last: from, unit: inner.dragUnit(), started: null, samples: [], spreadInput: from, spreadPosition: from }
     if (open) {
@@ -328,29 +323,30 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
       return
     }
     const metrics = inner.metrics
-    const pitch = .8 * metrics.width + (metrics.width <= 260 ? 12 : Math.round(metrics.width * .067))
-    state.p = gesture.spreadPosition + (position - gesture.spreadInput) * gesture.unit / (pitch * metrics.zoom)
+    state.p = gesture.spreadPosition + (position - gesture.spreadInput) * gesture.unit / (rowSpacing(rowMetrics(metrics)) * metrics.zoom)
     draw()
   }
   function release(from, speed) {
     clearTimeout(openingTimer)
+    openingTimer = 0
     const ended = gesture
     gesture = null
     if (!open) return inner.release(from, speed)
     if (mode === 'folding') return
     const metrics = inner.metrics
-    const pitch = .8 * metrics.width + (metrics.width <= 260 ? 12 : Math.round(metrics.width * .067))
-    velocity = clamp(speed * (ended?.unit ?? inner.dragUnit()) / (pitch * metrics.zoom), -6, 6)
-    if (reduced.matches || userPaused) return glide(Math.round(state.p), false, 320)
-    mode = tMotion ? 'unfolding' : 'coast'
+    velocity = clamp(speed * (ended?.unit ?? inner.dragUnit()) / (rowSpacing(rowMetrics(metrics)) * metrics.zoom), -6, 6)
+    if (reduced.matches) return glide(Math.round(state.p), false, 320)
+    if (tMotion) mode = 'unfolding'
+    else if (Math.abs(velocity) > .05) mode = 'coast'
+    else return glide(Math.round(state.p), false, 320)
     syncControls()
-    idle()
     requestFrame()
   }
   function cancel() {
     if (aborting) return
     gesture = null
     clearTimeout(openingTimer)
+    openingTimer = 0
     // Native vertical scrolling cancels a touch pointer. Release the horizontal
     // interaction, but leave the spread available and its cards stationary.
     if (open) pause()
@@ -370,10 +366,8 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     tMotion = pMotion = null
     state.t = 1
     state.p = Math.round(state.p)
-    userPaused = true
     velocity = 0
     mode = 'paused'
-    clearTimers()
     hand.classList.remove('is-ribbon-changing')
     draw()
     syncControls()
@@ -381,10 +375,9 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
 
   listen(toggle, 'click', event => {
     if (open) gather()
-    else { spread({ paused: event.detail === 0 }); if (!event.detail) status.textContent = 'Deck spread out. Use the arrow keys to move along it and Escape to gather it.' }
+    else { spread(); if (!event.detail) status.textContent = 'Deck spread out. Use the arrow keys to move along it and Escape to gather it.' }
   })
-  listen(playButton, 'click', () => userPaused ? play() : pause())
-  for (const control of [toggle, playButton]) listen(control, 'pointerdown', event => event.stopPropagation())
+  listen(toggle, 'pointerdown', event => event.stopPropagation())
   const keydown = event => {
     if (!open) return
     if (event.key === 'Escape') { event.preventDefault(); gather() }
@@ -411,15 +404,6 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
   listen(hand, 'pointerup', () => { if (gesture?.started !== null && gesture) lastRelease = performance.now() }, true)
   listen(hand, 'focusin', () => { if (open && hand.matches(':focus-visible')) pause() })
   listen(help, 'focusin', event => { if (open && event.target.matches(':focus-visible')) pause() })
-  const inside = event => {
-    const top = help.getBoundingClientRect().top - 16
-    const bottom = hand.getBoundingClientRect().bottom + 16
-    return event.clientX >= 0 && event.clientX <= window.innerWidth && event.clientY >= top && event.clientY <= bottom
-  }
-  listen(document, 'pointermove', event => {
-    if (!open || event.pointerType !== 'mouse' || gesture) return
-    if (inside(event)) idle()
-  }, { passive: true })
   listen(document, 'visibilitychange', () => {
     if (!document.hidden) return
     if (open) gather({ instant: true })
@@ -446,7 +430,7 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     // additional frame loop while the gallery is closed.
     visibilityFrame = requestAnimationFrame(checkVisibility)
   }
-  listen(window, 'scroll', () => { if (open) { idle(); queueVisibilityCheck() } }, { passive: true })
+  listen(window, 'scroll', queueVisibilityCheck, { passive: true })
   listen(window, 'resize', queueVisibilityCheck, { passive: true })
   if (window.visualViewport) {
     listen(window.visualViewport, 'resize', queueVisibilityCheck, { passive: true })
@@ -468,18 +452,18 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
     get mode() { return mode },
     get openness() { return state.t },
     get metrics() { return inner.metrics },
-    hold, drag, release, cancel, to, finish, spread, gather, pause, play,
+    hold, drag, release, cancel, to, finish, spread, gather, pause,
     next() { if (open) glide((pMotion?.to ?? Math.round(state.p)) + 1); else inner.next() },
     previous() { if (open) glide((pMotion?.to ?? Math.round(state.p)) - 1); else inner.previous() },
     dragUnit: () => inner.dragUnit(),
     refresh() {
       if (gesture && open) {
         abortInput()
-        userPaused = true
         velocity = 0
         mode = 'paused'
       }
       warmed = null
+      if (open) measureInset()
       inner.refresh()
       if (open) { draw(); syncControls(); queueVisibilityCheck() }
     },
@@ -490,6 +474,7 @@ export function createRibbonDeck({ createDeck, cards, status, help, pauseReveal,
       stopFrame()
       clearTimers()
       inner.suspend()
+      effects.destroy()
       for (const cleanup of cleanups) cleanup()
       help.replaceChildren(...originalHelp)
       delete hand.dataset.ribbonMode

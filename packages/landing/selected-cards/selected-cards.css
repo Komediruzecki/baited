@@ -12,8 +12,9 @@
 .selected-card .card-art::after { content:''; position:absolute; left:calc(0px - var(--selected-pad-x)); right:calc(0px - var(--selected-pad-x)); bottom:-8px; height:14px; background:#c9a8ff8c; border-radius:0; filter:none; clip-path:polygon(0 calc(100% - 2px),100% 0,100% 2px,0 100%); pointer-events:none; }
 .selected-card .card-art img,.selected-card__pixels { position:absolute; inset:4px; margin:0; width:calc(100% - 8px); height:calc(100% - 8px); max-height:none; object-fit:contain; image-rendering:pixelated; pointer-events:none; }
 .selected-card__pixels { display:none; }
-.selected-card .card-art.is-resolving img { opacity:0; }
-.selected-card .card-art.is-resolving .selected-card__pixels { display:block; }
+.selected-card .card-art.is-resolving img,.selected-card .card-art.is-pixelated img,.selected-card .card-art.is-trailing img { opacity:0; }
+.selected-card .card-art.is-resolving.is-swapped img { opacity:1; }
+.selected-card .card-art.is-pixelated .selected-card__pixels,.selected-card .card-art.is-resolving .selected-card__pixels,.selected-card .card-art.is-trailing .selected-card__pixels { display:block; }
 .selected-card__plate { display:flex; flex-direction:column; flex:1 0 auto; min-height:min-content; position:relative; z-index:1; margin:0 -6px -6px; padding:3px 6px 6px; background:none; }
 .selected-card .card-word { margin:0; font-size:30px; line-height:1.1; letter-spacing:-.025em; }
 .selected-card .card-word--long { font-size:25px; }
@@ -45,9 +46,11 @@
 .selected-card .card-rule,.selected-card .card-easy { margin:10px 0 0; flex:none; font:400 12px/1.42 Inter,Arial,sans-serif; color:#c9c0d1; text-align:center; text-wrap:balance; }
 .selected-card .card-term { font-weight:600; color:#fffdf7; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
 .selected-card .card-question { flex:none; margin:8px 0; min-height:0; color:#dedce3; font-size:13px; line-height:18px; }
-.selected-card .card-footer { margin-top:auto; padding-top:9px; min-height:25px; border-color:#5a4e66; }
-.selected-card .card-footer img { width:52px; }
-.selected-card__signature { display:block; flex:none; width:52px; height:16px; font-size:0; background:#bca4d6; -webkit-mask:url('/assets/brand/baited-logo-white.webp') center/contain no-repeat; mask:url('/assets/brand/baited-logo-white.webp') center/contain no-repeat; }
+/* The signature: the pixel logo centred under the question, no rule above it, in a charcoal a few
+   steps lighter than the face (2px per logo pixel). */
+.selected-card .card-footer { margin-top:auto; padding-top:10px; min-height:25px; border-top:0; justify-content:center; }
+.selected-card .card-footer img { width:74px; }
+.selected-card__signature { display:block; flex:none; width:74px; height:20px; font-size:0; background:#5c5b63; -webkit-mask:url('/assets/brand/baited-pixel-white.svg') center/contain no-repeat; mask:url('/assets/brand/baited-pixel-white.svg') center/contain no-repeat; }
 .selected-card__back,.selected-prism { background:#b8a0ec url('/assets/card-deck/back-prism.webp') center/cover no-repeat; }
 .selected-card__back { position:absolute; inset:0; display:grid; place-items:center; z-index:3; border-radius:inherit; pointer-events:none; }
 .selected-card__back::after { content:''; position:absolute; inset:7%; border:2px solid #130d1d; border-radius:5px; }
@@ -66,7 +69,7 @@
   .deck-card-item .selected-card .card-word--long { font-size:22px; }
   .deck-card-item .selected-card .card-forbidden { margin-top:8px; }
   .deck-card-item .selected-card .card-question { font-size:13px; line-height:17px; margin:6px 0; }
-  .deck-card-item .selected-card .card-footer { padding-top:7px; }
+  .deck-card-item .selected-card .card-footer { padding-top:8px; }
   .deck-card-item .selected-card .card-clues li { letter-spacing:.02em; }
   .deck-card-item .selected-card[data-clue=rail] .card-clues { column-gap:16px; }
   .deck-card-item .selected-card[data-clue=pills] .card-clues { gap:4px; }
@@ -84,13 +87,13 @@
   .deck-card-item .selected-card .card-word--long { font-size:27px; }
 }
 @media(prefers-reduced-motion:reduce) {
-  .selected-card .card-art.is-resolving img { opacity:1; }
+  .selected-card .card-art.is-resolving img,.selected-card .card-art.is-pixelated img,.selected-card .card-art.is-trailing img { opacity:1; }
   .selected-card .selected-card__pixels { display:none; }
 }
 @media(forced-colors:active) {
   .selected-card,.selected-card__plate,.selected-card__back,.selected-prism { background:Canvas; color:CanvasText; }
   .selected-glass-field,.selected-card__pixels { display:none!important; }
-  .selected-card .card-art.is-resolving img { opacity:1; }
+  .selected-card .card-art.is-resolving img,.selected-card .card-art.is-pixelated img,.selected-card .card-art.is-trailing img { opacity:1; }
   .selected-card .card-word,.selected-card .card-forbidden__label,.selected-card .card-question { color:CanvasText; }
   .selected-card { --clue-ink:CanvasText; --clue-mark:CanvasText; --clue-rule:CanvasText; --clue-rule-soft:CanvasText; }
   .selected-card .card-clues li,.selected-card .card-clues li::before,.selected-card[data-clue=pills] .card-clues li { background:Canvas; color:CanvasText; border-color:CanvasText; }

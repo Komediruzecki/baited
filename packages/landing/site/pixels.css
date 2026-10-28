@@ -11,6 +11,50 @@
   --px-white: #fffdf7;
 }
 
+/* The scrollbar, also after monochrome-studio.com (and voicetaggods.com): a 5px rounded thumb that
+   floats over the page's right edge, drawn by scrollbar.js, with the native bar hidden so the page
+   keeps its whole width. Only with a mouse or trackpad; touch screens keep their own floating bars. */
+@media (hover: hover) and (pointer: fine) {
+  html,
+  body {
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
+  }
+}
+.page-scrollbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 9998;
+  width: 5px;
+  height: 0;
+  border-radius: 5px;
+  background-color: rgb(255 255 255 / 26%);
+  opacity: 0;
+  pointer-events: none;
+  touch-action: none;
+  will-change: transform;
+  transition:
+    opacity 0.2s linear,
+    background-color 0.2s linear;
+}
+.page-scrollbar.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.page-scrollbar:hover,
+.page-scrollbar.is-dragging {
+  background-color: rgb(255 255 255 / 42%);
+}
+@media (hover: none), (pointer: coarse), print {
+  .page-scrollbar {
+    display: none;
+  }
+}
+
 /* The curtain. pixel-boot.js covers the first paint; pixels.js swaps in squares and lets them go.
    If the script never runs, the cover still fades away after 2.5 seconds. */
 html.pixel-boot::after {

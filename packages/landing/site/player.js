@@ -1,4 +1,5 @@
 import { chapters } from './data.js'
+import { CLEARED_EVENT } from './pixels.js'
 
 const video = document.getElementById('hero-film')
 const frame = document.getElementById('film-frame')
@@ -7,8 +8,6 @@ const sound = document.getElementById('film-sound')
 const state = document.getElementById('film-state')
 const bigPlay = document.getElementById('film-big-play')
 const stills = document.getElementById('film-stills')
-const transcript = document.getElementById('round-transcript')
-const readRound = document.getElementById('read-round')
 const reduced = matchMedia('(prefers-reduced-motion: reduce)')
 let ratio = 0
 let inView = false
@@ -27,6 +26,21 @@ let soundOn = false
 let triedMp4 = false
 let stillsBuilt = false
 let hudTimer
+// The film waits while the arrival curtain is up (pixels.js), so it starts from its first frame
+// once the page can be seen. If the curtain never announces it has gone, the plain cover fades by
+// itself after 2.5 s (pixels.css), and the film starts then.
+let curtainUp = !!document.querySelector('.pixel-curtain:not(.is-covering)') || document.documentElement.classList.contains('pixel-boot')
+// Under the sheet that slides over the showreel the film rests (showreel.js), and goes quiet as it
+// does when it leaves the screen; so does a round started with its sound when the page scrolls away.
+let covered = !!document.getElementById('showreel')?.classList.contains('is-covered')
+document.addEventListener('showreel:covered', (event) => {
+  covered = !!event.detail
+  if (covered && soundOn) mute()
+  reconcile()
+})
+document.addEventListener('showreel:unwatch', () => {
+  if (soundOn) mute()
+})
 
 function make(tag, text, className) {
   const element = document.createElement(tag)
@@ -34,12 +48,6 @@ function make(tag, text, className) {
   if (className) element.className = className
   return element
 }
-for (const chapter of chapters) {
-  const item = make('li')
-  item.append(make('strong', `${String(Math.floor(chapter.time)).padStart(2, '0')}s · ${chapter.label}`), make('p', chapter.text))
-  document.getElementById('transcript-beats').append(item)
-}
-
 function renderStills() {
   if (!stillsBuilt) {
     chapters.forEach((chapter, index) => {
@@ -61,29 +69,10 @@ function renderStills() {
     image.height = 720
   })
 }
-function showTranscript(open, restoreFocus = true) {
-  transcript.hidden = !open
-  readRound.setAttribute('aria-expanded', String(open))
-  if (open) {
-    document.getElementById('round-title').tabIndex = -1
-    document.getElementById('round-title').focus({ preventScroll: true })
-    transcript.scrollIntoView({
-      behavior: reduced.matches ? 'instant' : 'smooth',
-      block: 'nearest',
-    })
-  } else if (restoreFocus) readRound.focus({ preventScroll: true })
-}
-readRound.addEventListener('click', () => showTranscript(transcript.hidden))
-document.getElementById('close-transcript').addEventListener('click', () => showTranscript(false))
-transcript.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    showTranscript(false)
-  }
-})
-
 function shouldPlay() {
-  return inView && pageActive && !document.hidden && !userPaused && !blocked && !failed && !switching && (!reduced.matches || explicitPlay)
+  return (
+    inView && pageActive && !curtainUp && !covered && !document.hidden && !userPaused && !blocked && !failed && !switching && (!reduced.matches || explicitPlay)
+  )
 }
 function updateControls() {
   const active = !video.paused || pendingPlay !== null
@@ -213,6 +202,12 @@ function jumpChapter(index) {
   if (!userPaused && !reduced.matches) requestPlay()
 }
 toggle.addEventListener('click', togglePlay)
+// The footer's "Watch the round": the round from the start, with its sound on (showreel.js).
+document.addEventListener('showreel:watch', () => {
+  soundOn = true
+  video.muted = false
+  requestPlay(true)
+})
 bigPlay.addEventListener('click', () => requestPlay())
 sound.addEventListener('click', () => {
   soundOn = !soundOn
@@ -229,7 +224,8 @@ function showHud() {
 video.addEventListener('pointerup', (event) => {
   if (event.pointerType === 'mouse') {
     if (event.button === 0) togglePlay()
-  } else showHud()
+  } else if (video.paused && pendingPlay === null) requestPlay()
+  else showHud()
 })
 frame.addEventListener('focusin', () => clearTimeout(hudTimer))
 frame.addEventListener('keydown', (event) => {
@@ -282,9 +278,22 @@ function setVisibility(nextRatio) {
       reconcile()
     }, 300)
 }
-new IntersectionObserver((entries) => setVisibility(entries[0].intersectionRatio), {
-  threshold: [0, 0.25, 0.6, 1],
-}).observe(video)
+// On its own the film is in view while most of the video is. In the showreel (showreel.js) it is
+// first the hero's card, then the player in the middle of the screen, and one of the two is always
+// on screen while the hero or the showreel is; the sheet that covers it later pauses it instead
+// (covered, above).
+const flight = document.documentElement.classList.contains('has-showreel')
+const watched = flight ? [document.querySelector('.hero'), document.getElementById('showreel')].filter(Boolean) : [video]
+const ratios = new Map()
+const visibility = new IntersectionObserver(
+  (entries) => {
+    for (const entry of entries) ratios.set(entry.target, entry.isIntersecting ? entry.intersectionRatio : 0)
+    const ratio = Math.max(...ratios.values())
+    setVisibility(flight ? (ratio > 0 ? 1 : 0) : ratio)
+  },
+  { threshold: [0, 0.25, 0.6, 1] }
+)
+for (const element of watched) visibility.observe(element)
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) mute()
   reconcile()
@@ -311,5 +320,12 @@ video.defaultMuted = true
 video.playsInline = true
 video.controls = false
 video.pause()
+const curtainGone = () => {
+  if (!curtainUp) return
+  curtainUp = false
+  reconcile()
+}
+document.addEventListener(CLEARED_EVENT, curtainGone, { once: true })
+if (curtainUp) setTimeout(curtainGone, 2600)
 selectSource()
 updateControls()

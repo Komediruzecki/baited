@@ -72,7 +72,7 @@ test('a new settled card resolves from pixels once and respects reduced motion',
     window.__pixelProof = []
     new MutationObserver(() => {
       const art = document.querySelector('.deck-card-item.is-front .card-art')
-      if (art?.classList.contains('is-resolving')) window.__pixelProof.push(art.querySelector('canvas').width)
+      if (art?.classList.contains('is-resolving')) window.__pixelProof.push([art.querySelector('canvas').width, art.classList.contains('is-swapped')])
     }).observe(document.querySelector('#deck-hand'), { subtree: true, attributes: true, attributeFilter: ['class', 'width'] })
   })
   await expect(page.locator('#deck-hand')).toHaveClass(/is-live/)
@@ -80,8 +80,10 @@ test('a new settled card resolves from pixels once and respects reduced motion',
   await page.locator('#deck-hand').press('ArrowRight')
   await expect.poll(() => page.evaluate(() => window.__pixelProof.length)).toBeGreaterThan(0)
   await expect(page.locator('.card-art.is-resolving')).toHaveCount(0)
+  await expect(page.locator('.deck-card-item.is-front .card-art.is-pixelated')).toHaveCount(0)
   const sampled = await page.evaluate(() => window.__pixelProof)
-  expect(Math.max(...sampled)).toBeLessThanOrEqual(160)
+  expect(sampled.every(([width]) => width === 32)).toBe(true)
+  expect(sampled.some(([, swapped]) => !swapped) && sampled.some(([, swapped]) => swapped)).toBe(true)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.evaluate(() => { window.__pixelProof.length = 0 })
   await page.locator('#deck-hand').press('ArrowRight')

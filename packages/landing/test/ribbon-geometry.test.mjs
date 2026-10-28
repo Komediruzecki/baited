@@ -1,17 +1,21 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { fanPose, fanSpread } from '../site/deck.js'
-import { blendPose, openingDistance, qualifiesSpread, ribbonPose, visibleCardFraction } from '../ribbon/ribbon-geometry.js'
+import { blendPose, openingDistance, qualifiesSpread, ribbonPose, rowCurve, rowFit, rowGap, visibleCardFraction } from '../ribbon/ribbon-geometry.js'
 
 const near = (value, expected, tolerance = 1e-9) => assert.ok(Math.abs(value - expected) <= tolerance, `${value} differs from ${expected}`)
+// `inset` is the gap the sheet leaves at the screen's left edge (8px on phones, 40px wider up), in
+// deck px; the row is cut there and at the screen's right edge, and stands in the middle between.
 const fixtures = [
-  { viewportWidth: 320, width: 248, height: 350, room: 320, zoom: 1 },
-  { viewportWidth: 390, width: 260, height: 364, room: 390, zoom: 1 },
-  { viewportWidth: 768, width: 300, height: 420, room: 768, zoom: 1 },
-  { viewportWidth: 1440, width: 300, height: 420, room: 1440, zoom: 1 },
-  { viewportWidth: 1440, width: 300, height: 420, room: 1440 / 0.68, zoom: 0.68 },
-  { viewportWidth: 3440, width: 330, height: 462, room: 3440, zoom: 1 },
+  { viewportWidth: 320, width: 248, height: 350, room: 320, zoom: 1, inset: 8 },
+  { viewportWidth: 390, width: 260, height: 364, room: 390, zoom: 1, inset: 8 },
+  { viewportWidth: 768, width: 300, height: 420, room: 768, zoom: 1, inset: 40 },
+  { viewportWidth: 1440, width: 300, height: 420, room: 1440, zoom: 1, inset: 40 },
+  { viewportWidth: 1440, width: 300, height: 420, room: 1440 / 0.68, zoom: 0.68, inset: 40 / 0.68 },
+  { viewportWidth: 3440, width: 330, height: 462, room: 3440, zoom: 1, inset: 40 },
 ]
+// How far a card reaches either side of its centre, as drawn (turned and in perspective).
+const reach = (pose, metrics) => (pose.scale * metrics.width / 2) * Math.cos((pose.turn * Math.PI) / 180)
 
 test('gather visibility uses the card height, viewport clipping and footer coverage', () => {
   const card = { top: 200, bottom: 600 }
@@ -27,65 +31,97 @@ test('gather visibility uses the card height, viewport clipping and footer cover
   assert.equal(visibleCardFraction({ top: 0, bottom: 0 }, { bottom: 900 }), 0)
 })
 
-test('ribbon keeps the center full-size and upright, with symmetric bounded side poses', () => {
+test('the middle card stands upright at the size the row allows, the others turn to face it', () => {
   for (const metrics of fixtures) {
-    assert.deepEqual(ribbonPose(0, metrics), { x: 0, y: 0, rotate: 0, scale: 1, dim: 0, opacity: 1, visible: true })
+    const fit = rowFit(metrics)
+    const middle = metrics.inset / 2
+    assert.deepEqual(ribbonPose(0, metrics), { x: middle, y: 0, rotate: 0, scale: fit, turn: 0, dim: 0, opacity: 1, visible: true })
+    assert.equal(fit, metrics.room >= 1440 ? 1 : fit, 'desktops draw the row at the fan size')
+    assert.ok(fit >= 0.7 && fit <= 1)
+    let previous = ribbonPose(0, metrics)
     for (let offset = 0.125; offset <= 7; offset += 0.125) {
       const right = ribbonPose(offset, metrics)
       const left = ribbonPose(-offset, metrics)
-      near(left.x, -right.x)
-      near(left.rotate, -right.rotate)
-      near(left.y, right.y)
+      near(left.x - middle, middle - right.x)
+      near(left.turn, -right.turn)
+      near(left.scale, right.scale)
       assert.equal(left.visible, right.visible)
-      assert.ok(right.scale >= 0.8 && right.scale <= 1)
-      assert.ok(right.rotate >= 0 && right.rotate <= 3.5)
-      assert.ok(right.dim >= 0 && right.dim <= 0.34)
+      assert.equal(right.y, 0)
+      assert.equal(right.rotate, 0, 'the row stands upright; its cards turn about their uprights instead')
+      assert.ok(right.turn < 0 && right.turn >= -80, 'a card right of the middle turns to face left')
+      if (right.visible) assert.ok(right.x > previous.x && right.turn < previous.turn, 'further out, further turned')
+      assert.ok(right.dim >= 0 && right.dim <= 0.26)
       assert.ok(Object.values(right).every(value => typeof value === 'boolean' || Number.isFinite(value)))
+      previous = right
     }
   }
 })
 
-test('unrotated card edges retain the authored gap throughout the center swell', () => {
+test('cards toward the ends come nearer, as on the inside of a curve', () => {
   for (const metrics of fixtures) {
-    const gap = metrics.width <= 260 ? 12 : Math.round(metrics.width * 0.067)
-    for (let offset = -5; offset < 5; offset += 0.03125) {
+    const one = ribbonPose(1, metrics)
+    const two = ribbonPose(2, metrics)
+    assert.ok(two.scale > one.scale, `${metrics.room}: the second card out is drawn larger than the first`)
+  }
+})
+
+test('neighbouring cards in the row never overlap, at rest or between cards', () => {
+  for (const metrics of fixtures) {
+    for (let offset = -4; offset < 4; offset += 0.0625) {
       const left = ribbonPose(offset, metrics)
       const right = ribbonPose(offset + 1, metrics)
-      near(right.x - left.x - (right.scale + left.scale) * metrics.width / 2, gap)
+      if (!left.visible || !right.visible) continue
+      assert.ok(right.x - reach(right, metrics) - (left.x + reach(left, metrics)) >= -1e-6, `${metrics.room} at ${offset}`)
     }
   }
 })
 
-test('visibility caps six cards per side and excludes centers beyond the viewport plus one card', () => {
-  for (const metrics of fixtures) for (const fraction of [0, 0.1, 0.5, 0.9]) {
-    const visible = []
-    for (let index = -39; index <= 39; index++) {
-      const offset = index - fraction
-      const pose = ribbonPose(offset, metrics)
-      if (pose.visible) {
-        visible.push(offset)
-        assert.ok(Math.abs(offset) <= 6)
-        assert.ok(Math.abs(pose.x) <= metrics.room / 2 + metrics.width)
-        assert.equal(pose.opacity, 1)
-      } else assert.equal(pose.opacity, 0)
+test('the row turns its cards most at the edges of its sheet and draws none wholly outside the deck', () => {
+  for (const metrics of fixtures) {
+    const { half, step } = rowCurve(metrics)
+    for (const fraction of [0, 0.1, 0.5, 0.9]) {
+      const visible = []
+      for (let index = -39; index <= 39; index++) {
+        const offset = index - fraction
+        const pose = ribbonPose(offset, metrics)
+        if (pose.visible) {
+          visible.push(offset)
+          assert.ok(Math.abs(offset) <= 6)
+          assert.ok(Math.abs(pose.x) - reach(pose, metrics) < metrics.room / 2, 'some of it is inside the deck')
+          assert.equal(pose.opacity, 1)
+        } else assert.equal(pose.opacity, 0)
+      }
+      assert.ok(visible.length <= 13 && visible.length >= 2, `${metrics.room}: ${visible.length} cards`)
     }
-    assert.ok(visible.length <= 13)
+    // A card turned 38 degrees has its centre at the cuts (past the room the bigger middle card takes).
+    const edge = 38 / ((step * 180) / Math.PI)
+    const width = metrics.width * rowFit(metrics)
+    const swell = ((1 - 0.86) * width) / 2
+    if (half > width) near(ribbonPose(edge, metrics).x - metrics.inset / 2 - swell, half, 1e-6)
+    // At rest the last card drawn at either end stands across its cut, about half of it showing:
+    // its middle within 0.15 card widths of the cut, which lies half the room less half the inset
+    // out from the row's middle.
+    const cut = metrics.room / 2 - metrics.inset / 2
+    let last = 0
+    while (ribbonPose(last + 1, metrics).visible) last++
+    const out = ribbonPose(last, metrics).x - metrics.inset / 2
+    assert.ok(Math.abs(out - cut) <= 0.15 * width + 1e-6, `${metrics.room}: card ${last} stands ${Math.round(out - cut)}px from the cut`)
   }
-  const wide = fixtures.at(-1)
-  assert.equal(ribbonPose(6, wide).visible, true)
-  assert.equal(ribbonPose(6.0001, wide).visible, false)
   const phone = fixtures[1]
-  assert.equal(ribbonPose(1, phone).visible, true)
+  assert.equal(ribbonPose(1, phone).visible, true, 'on a phone the neighbours show at the sides')
   assert.equal(ribbonPose(2, phone).visible, false)
 })
 
 test('unscaled room is not divided by zoom again', () => {
   const metrics = fixtures[4]
-  const reference = ribbonPose(2, { ...metrics, zoom: 1 })
-  assert.deepEqual(ribbonPose(2, metrics), reference, 'geometry uses unscaled room independently of zoom')
-  const x = reference.x
-  near(reference.y, 0.05 * metrics.height * (x / (metrics.room / 2)) ** 2)
-  assert.notEqual(reference.y, ribbonPose(2, { ...metrics, room: metrics.room / metrics.zoom }).y)
+  assert.deepEqual(ribbonPose(2, metrics), ribbonPose(2, { ...metrics, zoom: 1 }), 'geometry uses unscaled room independently of zoom')
+  assert.notEqual(ribbonPose(2, metrics).x, ribbonPose(2, { ...metrics, room: metrics.room / metrics.zoom }).x)
+})
+
+test('the gap between row cards follows the card size', () => {
+  assert.equal(rowGap(248), 12)
+  assert.equal(rowGap(300), 20)
+  assert.equal(rowGap(330), 22)
 })
 
 test('blend endpoints preserve both poses exactly and intermediate opacity uses smoothstep', () => {
@@ -138,6 +174,7 @@ test('opening requires distance, hold time and speed together, in either directi
 test('invalid geometry is rejected rather than producing NaN, and invalid gestures stay closed', () => {
   const metrics = fixtures[1]
   for (const key of ['width', 'height', 'room']) for (const value of [0, -1, NaN, Infinity]) assert.throws(() => ribbonPose(0, { ...metrics, [key]: value }), RangeError)
+  for (const value of [-1, NaN, Infinity]) assert.throws(() => ribbonPose(0, { ...metrics, inset: value }), RangeError)
   for (const offset of [NaN, Infinity, -Infinity]) assert.throws(() => ribbonPose(offset, metrics), RangeError)
   for (const openness of [NaN, Infinity, -Infinity]) assert.throws(() => blendPose({}, {}, openness), RangeError)
   for (const key of ['width', 'room', 'zoom']) assert.throws(() => openingDistance({ ...metrics, [key]: 0 }, 390), RangeError)

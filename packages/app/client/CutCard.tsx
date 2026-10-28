@@ -27,7 +27,7 @@ function GlassField() {
 
 /**
  * The illustration resolves from pixels the first time this card shows it, as on the
- * landing. `hold` keeps the coarsest step while a face is still turning over. Offscreen
+ * landing. `hold` keeps the coarsest blocks while a face is still turning over. Offscreen
  * cards, hidden pages and reduced motion show the finished image.
  */
 function RevealArt({ word, artUrl, artPreview, hold, still }: {
@@ -123,7 +123,7 @@ export function CutCard({
   progress?: number | null;
   className?: string;
   label?: string;
-  /** Milliseconds to hold the first pixel step while the face turns into view. */
+  /** Milliseconds to hold the coarsest blocks while the face turns into view. */
   revealHold?: number;
   /** Show the finished art at once, for a card that arrives late. */
   revealStill?: boolean;

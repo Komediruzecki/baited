@@ -287,6 +287,52 @@ test('production sitemap includes only the canonical landing page', async () => 
   assertHeaders(response, true)
 })
 
+test('films answer byte ranges, so Safari plays them and every browser can seek', async () => {
+  const film = Uint8Array.from({ length: 10 }, (_, i) => i)
+  for (const { ENVIRONMENT, origin } of environments) {
+    const serve = (range, method = 'GET') =>
+      worker.fetch(new Request(`${origin}/media/hero-desktop.mp4`, { method, headers: range ? { Range: range } : {} }), {
+        ENVIRONMENT,
+        ASSETS: { fetch: async () => new Response(film, { headers: { 'Content-Type': 'video/mp4', 'Content-Length': '10' } }) },
+      })
+    for (const [range, from, to] of [['bytes=0-1', 0, 1], ['bytes=2-5', 2, 5], ['bytes=7-', 7, 9], ['bytes=-3', 7, 9], ['bytes=4-99', 4, 9], ['bytes=0-', 0, 9], ['bytes=-99', 0, 9]]) {
+      const response = await serve(range)
+      assert.equal(response.status, 206, range)
+      assert.equal(response.headers.get('content-range'), `bytes ${from}-${to}/10`)
+      assert.equal(response.headers.get('accept-ranges'), 'bytes')
+      assert.equal(response.headers.get('content-type'), 'video/mp4')
+      assert.deepEqual([...new Uint8Array(await response.arrayBuffer())], [...film.slice(from, to + 1)])
+      assertHeaders(response, ENVIRONMENT === 'prod')
+    }
+    for (const range of ['bytes=10-', 'bytes=-0']) {
+      const response = await serve(range)
+      assert.equal(response.status, 416, range)
+      assert.equal(response.headers.get('content-range'), 'bytes */10')
+      assert.equal((await response.arrayBuffer()).byteLength, 0)
+    }
+    // No range, a reversed, multi-part or foreign one, or a HEAD: the whole film, saying ranges work.
+    for (const [range, method] of [[null, 'GET'], ['bytes=5-2', 'GET'], ['bytes=0-1,4-5', 'GET'], ['items=0-1', 'GET'], ['bytes=0-1', 'HEAD']]) {
+      const response = await serve(range, method)
+      assert.equal(response.status, 200, `${method} ${range}`)
+      assert.equal(response.headers.get('accept-ranges'), 'bytes')
+      assert.equal(response.headers.get('content-range'), null)
+      assert.equal((await response.arrayBuffer()).byteLength, method === 'HEAD' ? 0 : 10)
+    }
+  }
+})
+
+test('pages, images and missing files ignore byte ranges', async () => {
+  for (const [type, status] of [['text/html', 200], ['image/avif', 200], ['video/mp4', 404]]) {
+    const response = await worker.fetch(new Request(`${origin}/media/x`, { headers: { Range: 'bytes=0-3' } }), {
+      ENVIRONMENT: 'dev',
+      ASSETS: { fetch: async () => new Response('<h1>BAIT</h1>', { status, headers: { 'Content-Type': type } }) },
+    })
+    assert.equal(response.status, status, type)
+    assert.equal(await response.text(), '<h1>BAIT</h1>')
+    assert.equal(response.headers.get('accept-ranges'), null)
+  }
+})
+
 test('HEAD keeps status and environment headers without a body', async () => {
   for (const { ENVIRONMENT, origin } of environments) {
     for (const path of ['/', '/robots.txt', '/sitemap.xml', '/missing']) {

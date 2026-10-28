@@ -45,6 +45,31 @@ const CONTENT_POLICY = [
   "form-action 'none'",
 ].join('; ')
 
+// Safari plays a film only from a server that answers byte ranges (it asks for bytes 0-1 first), and
+// every browser needs them to seek, as the film's arrow keys do. The assets binding answers a range
+// with the whole file, so a film or a sound is cut to the asked range here, and says it can be.
+async function withRange(request: Request, response: Response): Promise<Response> {
+  if (response.status !== 200 || !/^(?:video|audio)\//i.test(response.headers.get('Content-Type') ?? '')) return response
+  const headers = new Headers(response.headers)
+  headers.set('Accept-Ranges', 'bytes')
+  // One range only; a malformed, reversed or multi-part one gets the whole file, as the standard allows.
+  const range = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get('Range')?.trim() ?? '')
+  const [first = '', last = ''] = range?.slice(1) ?? []
+  if (request.method !== 'GET' || !range || (!first && !last) || (first && last && Number(last) < Number(first)))
+    return new Response(response.body, { status: 200, statusText: response.statusText, headers })
+  const body = await response.arrayBuffer()
+  const size = body.byteLength
+  const start = first ? Number(first) : Math.max(0, size - Number(last))
+  const end = first && last ? Math.min(Number(last), size - 1) : size - 1
+  headers.delete('Content-Length')
+  if (start >= size) {
+    headers.set('Content-Range', `bytes */${size}`)
+    return new Response(null, { status: 416, headers })
+  }
+  headers.set('Content-Range', `bytes ${start}-${end}/${size}`)
+  return new Response(body.slice(start, end + 1), { status: 206, headers })
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
@@ -78,6 +103,7 @@ export default {
     } else {
       response = await env.ASSETS.fetch(request)
     }
+    response = await withRange(request, response)
 
     const headers = new Headers(response.headers)
     headers.set('X-Robots-Tag', isProduction && response.ok ? 'index, follow' : 'noindex, nofollow')

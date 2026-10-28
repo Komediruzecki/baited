@@ -34,7 +34,7 @@ The current build has an external streamer studio connected to Twitch chat throu
 
 ## Brand Commitments
 
-Product name: Baited. The latest owner decision is to use the supplied plain original BAITED wordmark for product mastheads, card backs and result signatures. Earlier hook variants and bomb artwork are preserved references, not authority for the current branding. Existing product screens use violet, charcoal and limited yellow; the in-progress redesign must follow the owner's latest direction rather than treating the older palette or mascot choices as new approval.
+Product name: Baited. The latest owner decision is to use the supplied plain original BAITED wordmark for product mastheads and card backs. The card's own signature follows the landing's approved card, which signs with the pixel logo. Earlier hook variants and bomb artwork are preserved references, not authority for the current branding. Existing product screens use violet, charcoal and limited yellow; the in-progress redesign must follow the owner's latest direction rather than treating the older palette or mascot choices as new approval.
 
 The approved landing in packages/landing is the current visual reference. Extend its typography, playing cards and violet accents into useful product controls. Keep each surface's information boundary: secret card for viewers, round and microphone controls for the streamer, compact transparent broadcast graphics for OBS. Earlier Opus critiques and subsequent Codex polish are recorded in docs/product-design-review.md; they do not constitute final acceptance of the current redesign. Use product-voice for visible language.
 

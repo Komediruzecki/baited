@@ -36,7 +36,7 @@
   --why-margin: clamp(1.25rem, 4svh, 2.5rem);
   --why-card-step: clamp(0.9rem, 1.45vw, 1.35rem);
   --why-stack-depth: 0px;
-  --why-card-size: min(27rem, 38vw, calc(100svh - var(--why-stack-depth) - 2 * var(--why-margin)));
+  --why-card-size: min(32rem, 42vw, calc(100svh - var(--why-stack-depth) - 2 * var(--why-margin)));
   --why-card-height: min(calc(var(--why-card-size) * 1.14), calc(100svh - var(--why-stack-depth) - 2 * var(--why-margin)));
   --why-stack-height: calc(var(--why-card-height) + var(--why-stack-depth));
   --why-stack-top: max(var(--why-margin), calc((100svh - var(--why-stack-height)) / 2));
@@ -52,15 +52,16 @@
 /* The stage carries the page padding, so "The cards" after it can run edge to edge (and be pinned). */
 .why-vtg__stage {
   display: grid;
-  grid-template-columns: minmax(0, 34rem) minmax(0, var(--why-card-size));
+  grid-template-columns: minmax(0, 44rem) minmax(0, var(--why-card-size));
   justify-content: center;
-  column-gap: clamp(2rem, 4vw, 4rem);
+  column-gap: clamp(2rem, 5vw, 6rem);
   align-items: start;
   margin-bottom: clamp(40px, 6vw, 80px);
   padding-inline: var(--pad);
 }
+/* Sized up after lifeatspotify.com, where section headings and body copy run large. */
 .why-vtg h2 {
-  font-size: clamp(38px, 4.1vw, 70px);
+  font-size: clamp(42px, 5vw, 100px);
 }
 .why-vtg__intro {
   grid-column: 1;
@@ -75,7 +76,7 @@
   justify-content: center;
   gap: 1.75rem;
   height: var(--why-stack-height);
-  max-width: 34rem;
+  max-width: 44rem;
 }
 .why-vtg h2 > span,
 .why-vtg h2 > em {
@@ -88,15 +89,15 @@
 .why-vtg__copy {
   display: grid;
   gap: 1rem;
-  max-width: 30rem;
+  max-width: 34rem;
 }
 .why-vtg__lead {
-  font-size: 20px;
-  line-height: 1.45;
+  font-size: clamp(20px, 1.25vw, 26px);
+  line-height: 1.4;
   text-wrap: pretty;
 }
 .why-vtg__payoff {
-  font-size: 17px;
+  font-size: clamp(17px, 1.05vw, 21px);
   line-height: 1.55;
   color: #e6dcee;
   text-wrap: pretty;
@@ -168,6 +169,20 @@
   background: var(--why-card-bg);
   box-shadow: 0 -14px 30px -16px rgb(18 5 42 / 60%);
 }
+/* The step's number, giant and faint behind the card's words, after 1minus1.com's services. */
+.why-card__number {
+  position: absolute;
+  z-index: -1;
+  top: -0.12em;
+  right: 0.04em;
+  color: rgb(255 255 255 / 7%);
+  font:
+    400 clamp(7rem, 52cqi, 13rem) / 1 Russo,
+    Impact,
+    sans-serif;
+  letter-spacing: -0.04em;
+  pointer-events: none;
+}
 .why-card__topline {
   margin-bottom: clamp(0.55rem, 2.6cqi, 0.8rem);
   color: var(--why-card-muted);
@@ -186,7 +201,7 @@
 }
 .why-card h3 {
   margin: 0;
-  font-size: clamp(1.2rem, 6.4cqi, 1.6rem);
+  font-size: clamp(1.3rem, 6.8cqi, 2rem);
   font-weight: 700;
   line-height: 1.08;
   letter-spacing: -0.03em;
@@ -194,7 +209,7 @@
 }
 .why-card__note {
   color: var(--why-card-muted);
-  font-size: clamp(0.8rem, 3.4cqi, 0.9rem);
+  font-size: clamp(0.85rem, 3.6cqi, 1.05rem);
   line-height: 1.4;
   text-wrap: pretty;
 }
@@ -753,12 +768,17 @@
   }
 }
 
-/* While motion runs the cards ignore the pointer; covered cards are trimmed by a pixel. */
+/* While motion runs the cards ignore the pointer. Each card is trimmed at its sides a pixel more
+   than the card that lands on it (why-stack.js sets --why-card-trim; the last card has none), so
+   no edge of a card lower in the stack shows beside the one in front. The trims never change, so
+   nothing about a card shifts as it settles or as the next lands on it (switching the trim on as
+   the next card set off narrowed the card just landing). The clip reaches up past the card's top,
+   where its shadow falls (.why-card__surface), so the shadow stays too. */
 .why-vtg.why-motion-ready .why-card {
   pointer-events: none;
 }
-.why-vtg.why-motion-ready .why-card:has(~ .why-card[data-why-active]) .why-card__surface {
-  clip-path: inset(0 1px round var(--why-radius));
+.why-vtg.why-motion-ready .why-card__surface {
+  clip-path: inset(-2rem var(--why-card-trim, 0px) 0 round var(--why-radius));
 }
 
 /* Phones: one column; the cards stick and overlap as the page scrolls. */

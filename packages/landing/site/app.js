@@ -3,11 +3,36 @@ import { createDeck, wrapIndex, wrapOffset } from './deck.js'
 import { initWhyStack } from './why-stack.js'
 import { initWhyScenes } from './why-scenes.js'
 import { initFooter } from './footer.js'
+import { initShowreel } from './showreel.js'
+import { initHeroScribble } from './hero-scribble.js'
 import { initAnchorNavigation, initNav } from './nav.js'
-import { karaoke, typeIn } from './reveal.js'
+import { markerReveal } from './reveal.js'
+
+// GSAP 3.15 loses the scroll position when a breakpoint change re-runs a gsap.matchMedia() context
+// (why-stack.js at 840px wide and in short landscape, footer.js): the triggers the context makes
+// again clear the position its refresh would put back, so turning a phone or a tablet, or resizing a
+// window across 840px, sent the page to the top. Put the page back where it was and measure again.
+function keepScrollThroughBreakpoints(ScrollTrigger) {
+  let before = 0
+  // A revert comes first in every refresh, and first when a breakpoint changes, while the page is
+  // still where the visitor left it.
+  ScrollTrigger.addEventListener('revert', () => {
+    before = window.scrollY
+  })
+  ScrollTrigger.addEventListener('matchMedia', () => {
+    if (Math.abs(window.scrollY - before) < 1) return
+    window.scrollTo(0, before)
+    ScrollTrigger.refresh()
+  })
+}
 
 initNav()
 initAnchorNavigation()
+if (window.ScrollTrigger) keepScrollThroughBreakpoints(window.ScrollTrigger)
+// The film flies from the hero into the showreel (showreel.js); set up before the sections below
+// measure their scroll positions, since it adds the showreel to the page.
+initShowreel({ gsap: window.gsap, ScrollTrigger: window.ScrollTrigger })
+initHeroScribble({ gsap: window.gsap, ScrollTrigger: window.ScrollTrigger })
 
 // How it plays: the step cards stack up as the page scrolls, and the scene inside each card
 // plays when its card arrives. Without the stack the scenes keep their final picture.
@@ -19,19 +44,15 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)')
 const phone = matchMedia('(max-width: 700px)')
 const $ = (id) => document.getElementById(id)
 
-// Headings type in as they arrive and the How it plays lead lights up with the scroll (reveal.js).
-// The hero's headline waits for the pixel curtain to start clearing.
+// The headings below the hero and the lines under them come out from under highlighter bars, line
+// by line, as they arrive (reveal.js), all in the brand violet. The hero's own text is simply there.
+// "The cards" are set up once the deck has put its own controls in its help (below).
 const { gsap, ScrollTrigger } = window
-if (gsap && ScrollTrigger && !reduced.matches) {
+const reveals = gsap && ScrollTrigger && !reduced.matches ? { gsap, ScrollTrigger } : null
+if (reveals) {
   gsap.registerPlugin(ScrollTrigger)
-  typeIn($('hero-title'), gsap, { delay: document.querySelector('.pixel-curtain') ? 0.3 : 0.05 })
-  typeIn($('how-title'), gsap, { scrollTrigger: { trigger: '#how-title', start: 'top 85%', once: true } })
-  typeIn($('deck-title'), gsap, { scrollTrigger: { trigger: '#deck-title', start: 'top 85%', once: true } })
-  karaoke([...document.querySelectorAll('.why-vtg__lead, .why-vtg__payoff')], gsap, {
-    trigger: '.why-vtg__intro',
-    start: 'top 80%',
-    end: 'top 15%',
-  })
+  markerReveal([$('how-title')], reveals, { scrollTrigger: { trigger: '#how-title', start: 'top 85%' } })
+  markerReveal([...document.querySelectorAll('.why-vtg__lead, .why-vtg__payoff')], reveals, { scrollTrigger: { trigger: '.why-vtg__lead', start: 'top 80%' } })
 }
 
 // Leave the tab and its title asks you to keep the secret; come back and it is the page again.
@@ -40,7 +61,7 @@ document.addEventListener('visibilitychange', () => {
   document.title = document.hidden ? 'Don’t say it. · baited' : pageTitle
 })
 console.log(
-  '%c baited %c Chat holds the cards. Streamer takes the bait. Made by irchiinnuss.',
+  '%c baited %c One secret word. Your whole chat against you. Made by irchiinnuss.',
   'background:#7721e5;color:#fff;font:700 15px/2 sans-serif;padding:0 8px;border-radius:4px',
   'color:#9146ff;font:600 12px sans-serif'
 )
@@ -85,10 +106,10 @@ function cardFace(card) {
   forbidden.append(node('span', 'card-forbidden__label', 'Keep out of chat'), clues)
   const footer = node('span', 'card-footer')
   const signature = document.createElement('img')
-  signature.src = '/assets/brand/baited-logo-white.webp'
+  signature.src = '/assets/brand/baited-pixel-white.svg'
   signature.alt = 'BAITED'
-  signature.width = 764
-  signature.height = 225
+  signature.width = 370
+  signature.height = 100
   signature.draggable = false
   signature.decoding = 'async'
   footer.append(signature)
@@ -227,6 +248,14 @@ new IntersectionObserver((entries) => hand.classList.toggle('is-live', entries[0
 phone.addEventListener('change', () => deck.refresh())
 window.addEventListener('resize', () => deck.refresh(), { passive: true })
 reduced.addEventListener('change', () => deck.finish())
+
+// "The cards": its title, the line under it, then the deck's help ("Pull wide or spread the deck"),
+// each as it comes up.
+if (reveals) {
+  markerReveal([$('deck-title')], reveals, { scrollTrigger: { trigger: '#deck-title', start: 'top 85%' } })
+  markerReveal([document.querySelector('.how-cards__intro > p')], reveals, { scrollTrigger: { trigger: '.how-cards__intro > p', start: 'top 85%' } })
+  markerReveal([$('deck-help')], reveals, { scrollTrigger: { trigger: '#deck-help', start: 'top 90%' }, also: '.ribbon-toggle' })
+}
 
 // The footer rises over the deck with a pixelated edge; set up after the deck exists so it can pin it.
 initFooter({ gsap: window.gsap, ScrollTrigger: window.ScrollTrigger })

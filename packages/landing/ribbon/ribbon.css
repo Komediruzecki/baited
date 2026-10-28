@@ -1,8 +1,27 @@
 /* Dev-only ribbon presentation. The controller owns every item transform and
    shade; these rules turn the card's face independently of the semantic front. */
+/* The row stands on a curve, after a spatial cards slider: each card turns to face its middle
+   (--ribbon-turn, ribbon.js), so the ends of the row are not flat. A mouse passing over a card
+   pushes and spins it, and it springs back (--push-*, ribbon-effects.js). Both act on the face
+   inside the item, whose place the deck owns; the card itself is drawn as ever. */
 .deck-hand.is-ribbon-open .deck-card-item .bait-card {
-  transform: scaleX(var(--ribbon-flip, 1));
+  transform: translate(var(--push-x, 0px), var(--push-y, 0px)) rotate(var(--push-r, 0deg)) perspective(900px)
+    rotateY(var(--ribbon-turn, 0deg)) scaleX(var(--ribbon-flip, 1));
   transition: none;
+}
+/* The row runs to the edges of its sheet and is cut off there, as overflow is: on the left where the
+   sheet stops short of the screen (--sheet-gap, styles.css), and on the right at the screen's edge,
+   where the sheet runs off it. Up and down nothing is cut. */
+.deck-hand.is-ribbon-open {
+  clip-path: inset(-100vh 0 -100vh var(--sheet-gap, 0px));
+}
+
+/* Hp Vlct: while the row moves fast the art splits into red and cyan and leans with the motion
+   (--ribbon-glitch runs 0 to 1 with the speed). A cruising or resting row has none of it. */
+.deck-hand.is-ribbon-glitching .deck-card-item.is-ribbon-face .card-art img {
+  filter: drop-shadow(calc(var(--ribbon-glitch) * var(--ribbon-direction) * 7px) 0 0 rgb(255 40 110 / 70%))
+    drop-shadow(calc(var(--ribbon-glitch) * var(--ribbon-direction) * -7px) 0 0 rgb(40 220 255 / 70%));
+  transform: skewX(calc(var(--ribbon-glitch) * var(--ribbon-direction) * -9deg));
 }
 
 .deck-hand.is-ribbon-open.is-ribbon-changing .deck-card-item:not(.is-out) .bait-card {
@@ -50,7 +69,8 @@
 
 /* A resolving image may have been interrupted by unfolding. The ribbon shows
    the decoded illustration directly rather than a stale, half-resolved canvas. */
-.deck-hand.is-ribbon-open .deck-card-item .selected-card .card-art.is-resolving img {
+.deck-hand.is-ribbon-open .deck-card-item .selected-card .card-art.is-resolving img,
+.deck-hand.is-ribbon-open .deck-card-item .selected-card .card-art.is-pixelated img {
   opacity: 1;
 }
 
@@ -58,17 +78,20 @@
   display: none;
 }
 
+/* A face under a moving mouse leaves its pixel trail in the ribbon too: the canvas carries the
+   picture and its blocks meanwhile (selected-cards.js). */
+.deck-hand.is-ribbon-open .deck-card-item .selected-card .card-art.is-trailing .selected-card__pixels {
+  display: block;
+}
+.deck-hand.is-ribbon-open .deck-card-item .selected-card .card-art.is-trailing img {
+  opacity: 0;
+}
+
 #deck-help .ribbon-help-prefix {
   white-space: nowrap;
 }
 
-#deck-help .ribbon-help-separator {
-  margin-inline: 4px;
-  color: var(--rim);
-}
-
-#deck-help .ribbon-toggle,
-#deck-help .ribbon-play {
+#deck-help .ribbon-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -89,22 +112,18 @@
   touch-action: manipulation;
 }
 
-#deck-help .ribbon-toggle:hover,
-#deck-help .ribbon-play:hover {
+#deck-help .ribbon-toggle:hover {
   color: var(--white);
   text-decoration-thickness: 2px;
 }
 
-#deck-help .ribbon-toggle:focus-visible,
-#deck-help .ribbon-play:focus-visible {
+#deck-help .ribbon-toggle:focus-visible {
   outline: 2px solid var(--white);
   outline-offset: 2px;
 }
 
 #deck-help .ribbon-toggle[hidden],
-#deck-help .ribbon-play[hidden],
-#deck-help .ribbon-help-prefix[hidden],
-#deck-help .ribbon-help-separator[hidden] {
+#deck-help .ribbon-help-prefix[hidden] {
   display: none;
 }
 
@@ -125,8 +144,7 @@
 @media (prefers-reduced-motion: reduce) {
   .deck-hand.is-ribbon-open .bait-card,
   .deck-hand.is-ribbon-open .bait-card *,
-  #deck-help .ribbon-toggle,
-  #deck-help .ribbon-play {
+  #deck-help .ribbon-toggle {
     animation: none !important;
     transition: none !important;
   }
@@ -137,13 +155,11 @@
 }
 
 @media (forced-colors: active) {
-  #deck-help .ribbon-toggle,
-  #deck-help .ribbon-play {
+  #deck-help .ribbon-toggle {
     color: LinkText;
   }
 
-  #deck-help .ribbon-toggle:focus-visible,
-  #deck-help .ribbon-play:focus-visible {
+  #deck-help .ribbon-toggle:focus-visible {
     outline-color: Highlight;
   }
 }

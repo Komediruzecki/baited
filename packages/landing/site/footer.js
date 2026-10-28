@@ -57,17 +57,6 @@ export function initFooter({ gsap, ScrollTrigger } = {}) {
       const cleanups = []
       if (conditions.mouse) cleanups.push(magnetic(footer.querySelectorAll('[data-magnetic]'), gsap))
 
-      // The title's lines slide up into view once, as the footer arrives.
-      const lines = footer.querySelectorAll('.footer-title__line > span')
-      if (ScrollTrigger && lines.length)
-        gsap.from(lines, {
-          yPercent: 110,
-          duration: 0.9,
-          ease: 'power3.out',
-          stagger: 0.08,
-          scrollTrigger: { trigger: footer, start: 'top 55%', once: true },
-        })
-
       if (ScrollTrigger && edge && deck) {
         anchor.classList.add('is-pinned')
         let cells = []
@@ -100,7 +89,9 @@ export function initFooter({ gsap, ScrollTrigger } = {}) {
             paint(self.progress)
           },
         })
-        // Hold the complete deck before the wipe, then keep it under the rising footer.
+        // Keep the complete deck under the rising footer. The footer starts to rise the moment the
+        // deck stops: a hold before it (40% of a screen of padding) was a stretch where scrolling
+        // moved nothing at all, which read as a stuck page.
         const pin = ScrollTrigger.create({
           trigger: deck,
           start: 'bottom bottom',

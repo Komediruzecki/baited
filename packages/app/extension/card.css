@@ -163,6 +163,10 @@
 .cut-card__reveal[data-resolving='true'] > .cut-card__pixels {
   display: block;
 }
+/* The picture is under the blocks by the time the first of the finest clears. */
+.cut-card__reveal[data-resolving='true'][data-swapped='true'] > .cut-card__image {
+  opacity: 1;
+}
 
 /* Copy sits straight on the charcoal face. */
 .cut-card__plate {
@@ -276,24 +280,37 @@
   text-wrap: balance;
 }
 
-/* The signature rule. Product surfaces add the clock and draw the round's timer on it. */
+/* The signature, centred under the question as on the landing, with no rule above it. */
 .cut-card__footer {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: calc(8 * var(--cut-u));
   flex-shrink: 0;
   margin-top: auto;
-  padding-top: calc(9 * var(--cut-u));
+  padding-top: calc(10 * var(--cut-u));
   min-height: calc(25 * var(--cut-u));
+  border-top: 0;
+}
+/* Product footers carry more than the signature: the clock, the round's timer or a stamp. They
+   keep the signature on the left and their rule, which the timer runs along. */
+.cut-card__footer:has(> :not(.cut-card__signature)) {
+  justify-content: space-between;
   border-top: 1px solid #5a4e66;
 }
-/* Two classes outrank each host's full-width .baited-glyph default. */
+/* Two classes outrank each host's full-width .baited-glyph default. The signature is the
+   landing's pixel logo (assets/baited-pixel-white.svg is a copy of the landing's file), two
+   landing pixels to a logo pixel, in a charcoal a few steps lighter than the face. */
 .cut-card .cut-card__signature {
+  display: block;
   flex: none;
-  width: max(36px, calc(52 * var(--cut-u)));
-  color: #bca4d6;
+  width: max(37px, calc(74 * var(--cut-u)));
+  aspect-ratio: 370 / 100;
+  color: #5c5b63;
+  background: currentColor;
+  -webkit-mask: url('./assets/baited-pixel-white.svg') center / contain no-repeat;
+  mask: url('./assets/baited-pixel-white.svg') center / contain no-repeat;
 }
 .cut-card__timer {
   position: absolute;

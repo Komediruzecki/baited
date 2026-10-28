@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { CardBack } from '../client/CardBack';
 import { CutCard } from '../client/CutCard';
 import { cardWordSize, glassRules } from '../extension/presentation.js';
-import { PIXEL_REVEAL_MS, PIXEL_STEP_MS, PIXEL_STEPS, revealPixels } from '../extension/pixel-reveal.js';
+import { PIXEL_CLEAR_MS, PIXEL_REVEAL_MS, PIXEL_SIZES, PIXEL_SPLIT_MS, pixelPlan, revealPixels } from '../extension/pixel-reveal.js';
 import catalogue from '../shared/card-review-catalogue.json';
 
 // The landing's approved card (packages/landing/selected-cards) is the source of truth for
@@ -88,6 +88,11 @@ function font(value: string) {
   return { weight: match[1] ? Number(match[1]) : undefined, size, line: match[4] ? Number(match[3]) : Number(match[3]) * size };
 }
 const px = (value: string) => Number(/^(-?[\d.]+)px$/.exec(normal(value))?.[1]);
+/** A repeatable stand-in for Math.random. */
+const draws = () => {
+  let seed = 7;
+  return () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+};
 
 test('the app restates the landing card values in landing pixels', () => {
   // [landing selector, property, card.css selector, card.css property]
@@ -166,7 +171,10 @@ test('the app restates the landing card values in landing pixels', () => {
     ['.selected-card .card-footer', 'margin-top', '.cut-card__footer'],
     ['.selected-card .card-footer', 'padding-top', '.cut-card__footer'],
     ['.selected-card .card-footer', 'min-height', '.cut-card__footer'],
+    ['.selected-card .card-footer', 'border-top', '.cut-card__footer'],
+    ['.selected-card .card-footer', 'justify-content', '.cut-card__footer'],
     ['.selected-card__signature', 'width', '.cut-card .cut-card__signature'],
+    ['.selected-card__signature', 'mask', '.cut-card .cut-card__signature'],
     ['.selected-card__back', 'background', '.prism-back'],
     ['.selected-card__back::after', 'inset', '.prism-back::after'],
     ['.selected-card__back::after', 'border', '.prism-back::after'],
@@ -184,10 +192,11 @@ test('the app restates the landing card values in landing pixels', () => {
   assert.equal(cardValue('.cut-card__top', 'letter-spacing'), landingValue('.card-top', 'letter-spacing', landingBase));
   assert.equal(cardValue('.cut-card__top', 'justify-content'), landingValue('.card-top', 'justify-content', landingBase));
   assert.equal(cardValue('.cut-card__pips i', 'border'), landingValue('.card-pips i', 'border', landingBase));
-  assert.equal(
-    cardValue('.cut-card__footer', 'border-top'),
-    `1px solid ${landingValue('.selected-card .card-footer', 'border-color')}`,
-  );
+  // The landing's footer holds only the signature. A product footer that also carries the clock,
+  // the round's timer or a stamp keeps its rule, which the timer runs along.
+  const productFooter = '.cut-card__footer:has(>:not(.cut-card__signature))';
+  assert.equal(cardValue(productFooter, 'border-top'), '1px solid #5a4e66');
+  assert.equal(cardValue(productFooter, 'justify-content'), 'space-between');
   assert.equal(cardValue('.cut-card .cut-card__signature', 'color'), landingValue('.selected-card__signature', 'background'));
   assert.equal(
     cardValue('.cut-card__rules-label', 'margin'),
@@ -262,10 +271,12 @@ test('Glass rules, word steps and the pixel reveal are the landing\'s own', asyn
   for (const page of ['extension/viewer.html', 'extension/overlay.html'])
     assert.match(text(appRoot, page), new RegExp(`stroke-opacity="${opacity}" stroke-width="${landing.glassOptics.line}"`), page);
 
-  const steps = /const steps = \[([^\]]+)\]/.exec(source)?.[1].split(',').map(Number);
-  assert.deepEqual([...PIXEL_STEPS], steps);
-  assert.equal(PIXEL_REVEAL_MS, Number(/elapsed >= (\d+)/.exec(source)?.[1]));
-  assert.equal(PIXEL_STEP_MS, Number(/elapsed \/ (\d+)/.exec(source)?.[1]));
+  assert.deepEqual([...PIXEL_SIZES], landing.pixelSizes);
+  assert.equal(PIXEL_SPLIT_MS, landing.revealSplit);
+  assert.equal(PIXEL_CLEAR_MS, landing.revealClear);
+  assert.equal(PIXEL_REVEAL_MS, landing.revealEnd);
+  // The same random draws split and clear the same blocks at the same moments.
+  assert.deepEqual(pixelPlan({ random: draws() }), landing.pixelPlan({ random: draws() }));
 
   const threshold = Number(/card\.word\.length > (\d+)/.exec(source)?.[1]);
   assert.equal(threshold, 10);
@@ -282,6 +293,16 @@ test('the Prism back is the landing\'s image, byte for byte, on every surface', 
   const face = renderToStaticMarkup(React.createElement(CutCard, { word: 'volcano' }));
   assert.match(face, /data-edition="cut-open" data-finish="glass" data-art-frame="open"/);
   assert.match(face, /class="cut-card__reveal"><img[^>]*class="bait-card-art cut-card__image"[^>]*><canvas class="cut-card__pixels" width="1" height="1"/);
+});
+
+test('the signature is the landing\'s pixel logo, byte for byte', () => {
+  const sha = (buffer: Buffer) => createHash('sha256').update(buffer).digest('hex');
+  assert.equal(
+    sha(bytes(appRoot, 'extension/assets/baited-pixel-white.svg')),
+    sha(bytes(landingRoot, 'site/assets/brand/baited-pixel-white.svg')),
+  );
+  const face = renderToStaticMarkup(React.createElement(CutCard, { word: 'volcano' }));
+  assert.match(face, /<div class="cut-card__footer"><span class="cut-card__signature baited-glyph" aria-hidden="true"><\/span><\/div>/);
 });
 
 interface FakeCanvas {
@@ -303,16 +324,34 @@ function revealHarness({ reduced = false, hidden = false, frames = true } = {}) 
     globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => queue.push(callback);
     globalThis.cancelAnimationFrame = () => queue.splice(0);
   } else Reflect.deleteProperty(globalThis, 'requestAnimationFrame');
+  // The small canvas the picture's block colours are read from: every block reads mid-grey.
+  const scratch = {
+    width: 1,
+    height: 1,
+    getContext: () => ({
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: 'low',
+      clearRect() {},
+      drawImage() {},
+      getImageData: (_x: number, _y: number, width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4).fill(128) }),
+    }),
+  };
   Object.defineProperty(globalThis, 'document', {
     configurable: true,
-    value: { hidden, addEventListener: (name: string, fn: () => void) => listeners.set(name, fn), removeEventListener: (name: string) => listeners.delete(name) },
+    value: {
+      hidden,
+      addEventListener: (name: string, fn: () => void) => listeners.set(name, fn),
+      removeEventListener: (name: string) => listeners.delete(name),
+      createElement: () => scratch,
+    },
   });
   globalThis.matchMedia = ((query: string) => ({ matches: reduced && query.includes('reduce') })) as typeof matchMedia;
+  // `drawn` collects the width of every block painted on the card's canvas.
   const canvas: FakeCanvas = {
     width: 1,
     height: 1,
     drawn: [],
-    getContext: () => ({ imageSmoothingEnabled: true, clearRect() {}, drawImage: (_: unknown, __: number, ___: number, width: number) => canvas.drawn.push(width) }),
+    getContext: () => ({ fillStyle: '', clearRect() {}, fillRect: (_x: number, _y: number, width: number) => canvas.drawn.push(width) }),
   };
   const holder = { dataset: {} as Record<string, string> };
   const image = { complete: true, naturalWidth: 1254, naturalHeight: 1254 };
@@ -327,19 +366,36 @@ function revealHarness({ reduced = false, hidden = false, frames = true } = {}) 
     else Reflect.deleteProperty(globalThis, 'document');
   };
   const start = (hold = 0) =>
-    revealPixels({ holder: holder as unknown as HTMLElement, image: image as unknown as HTMLImageElement, canvas: canvas as unknown as HTMLCanvasElement, hold });
+    revealPixels({
+      holder: holder as unknown as HTMLElement,
+      image: image as unknown as HTMLImageElement,
+      canvas: canvas as unknown as HTMLCanvasElement,
+      hold,
+      random: draws(),
+    });
   return { canvas, holder, listeners, run, restore, start, queue };
 }
 
-test('the pixel reveal steps through the landing blocks and always empties its canvas', () => {
+test('the pixel reveal splits the landing blocks and always empties its canvas', () => {
+  // One canvas pixel per finest block, so a block's width on the canvas tells its level.
+  const finest = PIXEL_SIZES[PIXEL_SIZES.length - 1];
+  const coarsest = finest / PIXEL_SIZES[0];
   const play = revealHarness();
   try {
     play.start();
     assert.equal(play.holder.dataset.resolving, 'true');
-    assert.deepEqual(play.canvas.drawn, [8], 'the coarsest step paints at once, before any finished image shows');
-    for (let time = 0; time <= 700; time += 30) play.run(time);
-    assert.deepEqual(play.canvas.drawn, [...PIXEL_STEPS]);
+    assert.deepEqual([play.canvas.width, play.canvas.height], [finest, finest]);
+    assert.ok(play.canvas.drawn.length > 0, 'the coarsest blocks paint at once, before any finished image shows');
+    assert.ok(play.canvas.drawn.every((width) => width === coarsest), 'only the coarsest blocks show at first');
+    let swapped = false;
+    for (let time = 0; time <= PIXEL_REVEAL_MS + 30; time += 15) {
+      play.run(time);
+      swapped = swapped || play.holder.dataset.swapped === 'true';
+    }
+    assert.deepEqual(new Set(play.canvas.drawn), new Set(PIXEL_SIZES.map((size) => finest / size)), 'blocks of every size show on the way');
+    assert.ok(swapped, 'the picture comes in under the finest blocks as they clear');
     assert.equal(play.holder.dataset.resolving, 'false');
+    assert.equal(play.holder.dataset.swapped, undefined);
     assert.deepEqual([play.canvas.width, play.canvas.height], [1, 1], 'a finished reveal keeps no artwork in the canvas');
     assert.equal(play.listeners.size, 0);
   } finally {
@@ -351,7 +407,8 @@ test('the pixel reveal steps through the landing blocks and always empties its c
     const stop = stopped.start(200);
     stopped.run(0);
     stopped.run(150);
-    assert.deepEqual(stopped.canvas.drawn, [8], 'the hold keeps the coarsest step while a face turns');
+    assert.ok(stopped.canvas.drawn.every((width) => width === coarsest), 'the hold keeps the coarsest blocks while a face turns');
+    assert.equal(stopped.holder.dataset.swapped, undefined);
     stop();
     assert.deepEqual([stopped.canvas.width, stopped.canvas.height], [1, 1], 'clearing a card empties its pixels');
     assert.equal(stopped.holder.dataset.resolving, 'false');
