@@ -16,9 +16,9 @@ The Extension ZIP includes this original mask and excludes the archived B varian
 
 The eighteen `card-*.png` files are byte-identical copies of the corresponding approved illustrations in `public/cards/proofs/`: banana, penguin, microwave, dragon, volcano, monocle, pizza, robot, rocket, pirate, cactus, jellyfish, telescope, saxophone, octopus, boomerang, narwhal and parachute. They were originally generated through ChatGPT image generation for this project and approved by the owner. The source images remain unchanged.
 
-## Mosaic back, 2026-10-27
+## Prism back, 2026-10-28
 
-The overlay card is the landing's selected card: a code-drawn Glass face and the Mosaic back. `back-mosaic.webp` is a byte-identical copy of the Card Lab texture `public/card-lab/backs/back-mosaic.webp`; its generation prompt, hashes, crop and encoder settings are recorded in `docs/card-surface-assets/`.
+Every card is the landing's approved Cut Open card: a code-drawn face with the Glass finish and the Prism back. `back-prism.webp` is a byte-identical copy of the Card Lab texture `public/card-lab/backs/back-prism.webp` (SHA-256 `dc274f20475e99c4ad21720c0e5743cc870f4fedeb7cc23430a24dc7cf070ebc`), the same file the landing build copies to `/assets/card-deck/`. Its generation prompt, hashes, crop and encoder settings are recorded in `docs/card-surface-assets/`. It replaced the earlier Mosaic back (`back-mosaic.webp`), which the bundle no longer ships.
 
 ## Streak flames, 2026-10-27
 
