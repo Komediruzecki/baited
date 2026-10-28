@@ -31,7 +31,7 @@ export const lines = {
     3: [
       "BAITY ISN'T HERE RIGHT NOW. THIS IS BAEITTRICE. ROUND {round}, {time}. THE WORD IS IN THE BAITED PANEL. MAKE {channel} SAY IT, NEVER TYPE IT.",
       "THE BOW IS OFF. ROUND {round}, {time}. {losses} L'S IN A ROW. THE WORD IS IN THE BAITED PANEL. MAKE {channel} SAY IT, NEVER TYPE IT.",
-      "ROUND {round}: {time}. THE WORD IS IN THE BAITED PANEL. MAKE {channel} SAY IT, NEVER TYPE IT. REDEMPTION ARC. NOW. BAEITTRICE",
+      "ROUND {round}: {time}. THE WORD IS IN THE BAITED PANEL. MAKE {channel} SAY IT, NEVER TYPE IT. REDEMPTION ARC. NOW. BAEITTRICE.",
     ],
   },
   mission_start: {
@@ -103,7 +103,7 @@ export const lines = {
     ],
     3: [
       "{time} LEFT. BAEITTRICE IS PACING. BAEITTRICE HAS NEVER PACED BEFORE.",
-      "{time} LEFT. BAITY WOULD SAY 'YOU GOT THIS.' BAITY IS GONE. BAEITTRICE",
+      "{time} LEFT. BAITY WOULD SAY 'YOU GOT THIS.' BAITY IS GONE. BAEITTRICE.",
       "{time} LEFT. BAEITTRICE IS DRAFTING A STRONGLY WORDED LETTER.",
     ],
   },
@@ -125,7 +125,7 @@ export const lines = {
     ],
     3: [
       "TEN SECONDS. BAEITTRICE IS ALREADY DISAPPOINTED. THIS IS JUST PAPERWORK.",
-      "10 SECONDS. SURPRISE ME. YOU WON'T. BAEITTRICE",
+      "10 SECONDS. SURPRISE ME. YOU WON'T. BAEITTRICE.",
       "TEN SECONDS. CHAT. BAEITTRICE IS EMBARRASSED FOR YOU.",
     ],
   },
@@ -144,7 +144,7 @@ export const lines = {
     ],
     3: [
       "ROUND PAUSED. THE CLOCK IS FROZEN. BAEITTRICE IS NOT. USE THIS TIME TO REFLECT.",
-      "ROUND PAUSED. THE CLOCK IS FROZEN. I'LL WAIT. I'M VERY GOOD AT WAITING. BAEITTRICE",
+      "ROUND PAUSED. THE CLOCK IS FROZEN. I'LL WAIT. I'M VERY GOOD AT WAITING. BAEITTRICE.",
     ],
   },
   resume: {
@@ -162,7 +162,7 @@ export const lines = {
     ],
     3: [
       "BACK ON. {time} LEFT. BAEITTRICE EXPECTS NOTHING AND IS STILL BRACING.",
-      "BACK ON. {time} LEFT. SHOW ME SOMETHING. ANYTHING. BAEITTRICE",
+      "BACK ON. {time} LEFT. SHOW ME SOMETHING. ANYTHING. BAEITTRICE.",
     ],
   },
   review: {
@@ -231,7 +231,7 @@ export const lines = {
     ],
     3: [
       "{channel} CALLED THE BAIT AND ESCAPES.[[ IT WAS {word}.]] BAEITTRICE IS DISAPPOINTED IN YOU. AND EMBARRASSED. FOR YOU.",
-      "{channel} CALLED THE BAIT AND ESCAPES.[[ IT WAS {word}.]] SUBTLETY IS DEAD. BAEITTRICE",
+      "{channel} CALLED THE BAIT AND ESCAPES.[[ IT WAS {word}.]] SUBTLETY IS DEAD. BAEITTRICE.",
     ],
   },
   skipped: {
@@ -245,7 +245,7 @@ export const lines = {
     ],
     3: [
       "WORD SKIPPED. NEW BAIT NEXT. BAEITTRICE HAS ADDED THIS TO THE LIST.",
-      "WORD SKIPPED. NEW BAIT NEXT. FLEEING THE SCENE WON'T SAVE YOU. BAEITTRICE",
+      "WORD SKIPPED. NEW BAIT NEXT. FLEEING THE SCENE WON'T SAVE YOU. BAEITTRICE.",
     ],
   },
   ended: {
@@ -277,7 +277,7 @@ export const lines = {
     ],
     3: [
       "CATCH REJECTED. THAT ONE DOESN'T COUNT. BAEITTRICE IS NOT SURPRISED. BAEITTRICE IS NEVER SURPRISED.",
-      "CATCH REJECTED. THAT ONE DOESN'T COUNT. I GOT UP OFF THE FLOOR FOR THIS. BAEITTRICE",
+      "CATCH REJECTED. THAT ONE DOESN'T COUNT. I GOT UP OFF THE FLOOR FOR THIS. BAEITTRICE.",
     ],
   },
   reversed: {
@@ -336,7 +336,7 @@ export const lines = {
     ],
     3: [
       "SKIP VOTES: {voters}/{threshold}. TYPE !skip TO VOTE FOR A NEW WORD. BAEITTRICE IS TAKING ATTENDANCE.",
-      "{voters}/{threshold} HAVE CHOSEN SURRENDER. TYPE !skip TO VOTE FOR A NEW WORD. BAEITTRICE",
+      "{voters}/{threshold} HAVE CHOSEN SURRENDER. TYPE !skip TO VOTE FOR A NEW WORD. BAEITTRICE.",
     ],
   },
   mission_timeout: {
