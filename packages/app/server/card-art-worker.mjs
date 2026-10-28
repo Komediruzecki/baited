@@ -16,6 +16,7 @@ const require = createRequire(import.meta.url);
 setThreadsCount(1);
 setWasmPaths(dirname(require.resolve('@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm.wasm')) + sep);
 let model;
+const limits = workerData.limits;
 async function classifier() {
   if (!model) {
     const topology = JSON.stringify((await modelDefinition.modelJson()).default);
@@ -29,7 +30,7 @@ async function classifier() {
   }
   return model;
 }
-function reject() { throw Object.assign(new Error('Invalid raster'), { code: 'invalid_image' }); }
+function reject(code = 'invalid_image') { throw Object.assign(new Error('Invalid raster'), { code }); }
 function checkHeader(bytes, mime) {
   if (mime === 'image/png') {
     if (bytes.length < 33 || !bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) reject();
@@ -59,15 +60,18 @@ function checkHeader(bytes, mime) {
 parentPort.on('message', async ({ id, bytes: input, mime }) => {
   try {
     const bytes = Buffer.from(input);
-    if (!bytes.length || bytes.length > 5 * 1024 * 1024) reject();
+    if (!bytes.length || bytes.length > limits.uploadBytes) reject();
     checkHeader(bytes, mime);
-    const options = { failOn: 'warning', limitInputPixels: 2048 * 2048, limitInputChannels: 4, autoOrient: true };
-    const metadata = await sharp(bytes, options).metadata().catch(reject);
+    const options = { failOn: 'warning', limitInputPixels: limits.inputPixels, limitInputChannels: 4, autoOrient: true };
+    // Reading the header does not decode the raster. Inspect dimensions first so
+    // an excessive pixel count gets a useful error, then cap every pixel decode.
+    const metadata = await sharp(bytes, { ...options, limitInputPixels: false }).metadata().catch(() => reject());
     const formats = { 'image/png': 'png', 'image/jpeg': 'jpeg', 'image/webp': 'webp' };
-    if (metadata.format !== formats[mime] || !metadata.width || !metadata.height ||
-        metadata.width > 2048 || metadata.height > 2048 || (metadata.pages ?? 1) !== 1) reject();
-    const decoded = await sharp(bytes, options).resize({ width: 512, height: 512, fit: 'inside', withoutEnlargement: true })
-      .toColourspace('srgb').png().timeout({ seconds: 5 }).toBuffer({ resolveWithObject: true }).catch(reject);
+    if (metadata.format !== formats[mime] || !metadata.width || !metadata.height || (metadata.pages ?? 1) !== 1) reject();
+    if (metadata.width > limits.inputEdge || metadata.height > limits.inputEdge || metadata.width * metadata.height > limits.inputPixels)
+      reject('image_dimensions');
+    const decoded = await sharp(bytes, options).resize({ width: limits.outputEdge, height: limits.outputEdge, fit: 'inside', withoutEnlargement: true })
+      .toColourspace('srgb').png().timeout({ seconds: 5 }).toBuffer({ resolveWithObject: true }).catch(() => reject());
     // All metadata is removed by default. These exact bytes are stored after approval.
     const network = await classifier();
     const predictions = [];
@@ -82,6 +86,6 @@ parentPort.on('message', async ({ id, bytes: input, mime }) => {
     parentPort.postMessage({ id, ok: true, png: decoded.data, width: decoded.info.width, height: decoded.info.height, predictions });
   } catch (error) {
     // Decoder/provider diagnostics may contain data from an upload: send fixed codes only.
-    parentPort.postMessage({ id, ok: false, code: error?.code === 'invalid_image' ? 'invalid_image' : 'scan_unavailable' });
+    parentPort.postMessage({ id, ok: false, code: error?.code === 'invalid_image' || error?.code === 'image_dimensions' ? error.code : 'scan_unavailable' });
   }
 });

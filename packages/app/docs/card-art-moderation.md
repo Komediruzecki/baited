@@ -6,7 +6,7 @@ Implementation note, 28 October 2026. This work adds owner-created artwork to Ca
 
 Open a card in **Cards** and choose **Upload image** or **Draw pixel art**. Start with an image or draw pixels. The editor converts images into pixels or ASCII, with a fixed palette and a transparent background option. It stays in the browser and uses a 2D canvas, without a GPU model or external generation service.
 
-Imported images must be still PNG, JPEG or WebP files under 5 MiB and at most 2048 pixels on either side. Saving an import sends the original image for a server check first, then checks the rendered version separately. A drawing is checked when saved. If either check cannot clear the image, it cannot become card artwork. Keep the editor open to retry or use a text card.
+Imported images must be still PNG, JPEG or WebP files up to 5 MiB, 8192 pixels on either side and 32 megapixels in total. File size and pixel dimensions are separate limits: a small JPEG can contain a large photo. Accepted photos are automatically fitted without cropping or stretching. Saving an import sends the entire original image for a server check first, then checks the rendered version separately. A drawing is checked when saved. If either check cannot clear the image, it cannot become card artwork. Keep the editor open to retry or use a text card.
 
 The server stores normalized PNG images up to 512 pixels per side. It removes metadata and preserves transparency. Raw uploads and rejected images are not written to disk. The artwork raster is saved; the editable brush history is not a server document.
 
@@ -49,7 +49,7 @@ The smaller MobileNetV2 model had marked squirrel uncertain because its dark com
 
 A subsequent bounded pass screened all **100 current built-in PNGs** through both composites: **100 accepted, 0 uncertain, 0 blocked, 0 unavailable** in **15,822 ms**, with **349 MiB** process peak RSS. This is benign-art regression coverage. It does not establish detection performance on harmful uploads, and it does not replace the owner's visual review of the newest artwork.
 
-Sharp validates the declared type against PNG/JPEG/WebP signatures and decoded format, rejects animation and oversized dimensions, decodes with strict warning handling, auto-orients, converts to sRGB and re-encodes to PNG. The worker has a decoding timeout and explicit pixel/channel limits. No SVG, HTML, arbitrary URL fetch or original filename is accepted. [Sharp constructor](https://sharp.pixelplumbing.com/api-constructor/), [Sharp output and metadata defaults](https://sharp.pixelplumbing.com/api-output/)
+Sharp validates the declared type against PNG/JPEG/WebP signatures and decoded format, rejects animation and oversized dimensions, decodes with strict warning handling, auto-orients, converts to sRGB and re-encodes to PNG. Header metadata is read before pixel decoding; both the 8192-pixel edge and 32-megapixel area limits are checked there. Every raster decode retains the explicit 32-megapixel/four-channel limits, and the stored image fits inside 512 × 512 without cropping or enlargement. The worker keeps its decoding timeout, single-job processing, queue and memory settings. No SVG, HTML, arbitrary URL fetch or original filename is accepted. [Sharp constructor](https://sharp.pixelplumbing.com/api-constructor/), [Sharp output and metadata defaults](https://sharp.pixelplumbing.com/api-output/)
 
 ## API and privacy boundary
 

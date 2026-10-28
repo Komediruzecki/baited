@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, readdir, rm, mkdir, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { crc32 } from 'node:zlib';
 import sharp from 'sharp';
 import { CardArtStore, CardArtCapabilities, CardArtError } from '../server/card-art.js';
 import { CARD_ART_MODEL, screenArt } from '../server/card-art-policy.js';
@@ -71,6 +72,24 @@ test('blocked, uncertain and unavailable scans never persist image bytes or appr
     await assert.rejects(store.upload('alice', bytes, 'image/png', options), CardArtError);
     assert.deepEqual(await readdir(join(dir, 'card-art')), []);
     assert.equal(store.list('alice').art.length, 0);
+  }
+});
+
+test('dimension failures explain resizing separately from unreadable images and never persist bytes', async (t) => {
+  const bytes = await png();
+  for (const code of ['image_dimensions', 'invalid_image'] as const) {
+    const dir = await mkdtemp(join(tmpdir(), 'bait-art-input-'));
+    const store = new CardArtStore(dir, { async process() { throw new ArtProcessingError(code); } });
+    await store.load();
+    t.after(async () => { await store.close(); await rm(dir, { recursive: true, force: true }); });
+    await assert.rejects(store.upload('alice', bytes, 'image/png', options), (error: unknown) => {
+      assert.ok(error instanceof CardArtError);
+      assert.equal(error.status, 422);
+      assert.equal(error.code, code);
+      assert.match(error.message, code === 'image_dimensions' ? /32 megapixels.*8192/ : /could not be read/);
+      return true;
+    });
+    assert.deepEqual(await readdir(join(dir, 'card-art')), []);
   }
 });
 
@@ -199,9 +218,18 @@ test('round capabilities bind room, round and artwork; all projections omit priv
 
 test('real CPU worker rejects malformed/animated input and normalizes an approved fixture without metadata', { timeout: 60_000 }, async (t) => {
   const worker = new LocalArtProcessor(); t.after(() => worker.close());
-  await assert.rejects(worker.process(Buffer.from('<svg><script>alert(1)</script></svg>'), 'image/png'), ArtProcessingError);
-  const oversized = await sharp({ create: { width: 2049, height: 1, channels: 3, background: 'white' } }).png().toBuffer();
-  await assert.rejects(worker.process(oversized, 'image/png'), ArtProcessingError);
+  const rejectsAs = (code: string) => (error: unknown) => error instanceof ArtProcessingError && error.code === code;
+  await assert.rejects(worker.process(Buffer.from('<svg><script>alert(1)</script></svg>'), 'image/png'), rejectsAs('invalid_image'));
+  // A valid IHDR can advertise a huge raster in a tiny file. Reject from its
+  // header, before attempting to decode the deliberately mismatched pixel data.
+  const oversizedHeader = async (width: number, height: number) => {
+    const image = Buffer.from(await png());
+    image.writeUInt32BE(width, 16); image.writeUInt32BE(height, 20);
+    image.writeUInt32BE(crc32(image.subarray(12, 29)), 29);
+    return image;
+  };
+  await assert.rejects(worker.process(await oversizedHeader(8193, 1), 'image/png'), rejectsAs('image_dimensions'));
+  await assert.rejects(worker.process(await oversizedHeader(6000, 6000), 'image/png'), rejectsAs('image_dimensions'));
   const bytes = await readFile(new URL('../public/cards/proofs/hedgehog.png', import.meta.url));
   const result = await worker.process(bytes, 'image/png');
   assert.equal(screenArt(result.predictions), 'accepted');
@@ -210,5 +238,24 @@ test('real CPU worker rejects malformed/animated input and normalizes an approve
   assert.equal(metadata.exif, undefined); assert.equal(metadata.icc, undefined);
   // A declared APNG frame-control chunk is refused rather than silently taking its first frame.
   const animated = Buffer.concat([bytes.subarray(0, 33), Buffer.from([0, 0, 0, 0, 97, 99, 84, 76, 0, 0, 0, 0]), bytes.subarray(33)]);
-  await assert.rejects(worker.process(animated, 'image/png'), ArtProcessingError);
+  await assert.rejects(worker.process(animated, 'image/png'), rejectsAs('invalid_image'));
+});
+
+test('real worker fits large phone JPEGs without cropping and respects EXIF orientation', { timeout: 60_000 }, async (t) => {
+  const worker = new LocalArtProcessor(); t.after(() => worker.close());
+  const artwork = await readFile(new URL('../public/cards/proofs/hedgehog.png', import.meta.url));
+  for (const photo of [
+    { width: 2880, height: 3840, orientation: 1 },
+    { width: 3264, height: 2448, orientation: 6 },
+  ]) {
+    const bytes = await sharp(artwork).resize(photo.width, photo.height, { fit: 'contain', background: '#ffffff' })
+      .flatten({ background: '#ffffff' }).jpeg({ quality: 80 }).withMetadata({ orientation: photo.orientation }).toBuffer();
+    assert.ok(bytes.length < 5 * 1024 * 1024, 'compressed bytes fit the existing upload limit');
+    const result = await worker.process(bytes, 'image/jpeg');
+    assert.equal(screenArt(result.predictions), 'accepted', 'the original photo still passes both background scans');
+    assert.equal(result.width, 384); assert.equal(result.height, 512, 'the whole portrait keeps its 3:4 ratio');
+    const metadata = await sharp(result.png).metadata();
+    assert.equal(metadata.width, 384); assert.equal(metadata.height, 512);
+    assert.equal(metadata.orientation, undefined); assert.equal(metadata.exif, undefined); assert.equal(metadata.icc, undefined);
+  }
 });
