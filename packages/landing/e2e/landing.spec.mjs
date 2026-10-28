@@ -61,8 +61,10 @@ for (const { width, height, touch, reduced = false } of layouts) {
       }
       const intro = await page.locator('.why-vtg__intro-sticky').boundingBox()
       const stack = await page.locator('.why-stack-shell').boundingBox()
+      // The intro runs right up to the stack's column: nothing wider than the grid's own gap between them.
+      const columnGap = await page.locator('.why-vtg__stage').evaluate((stage) => parseFloat(getComputedStyle(stage).columnGap))
       if (width < 840) expect(stack.y - intro.y - intro.height).toBeLessThanOrEqual(32)
-      else expect(stack.x - intro.x - intro.width).toBeLessThanOrEqual(70)
+      else expect(stack.x - intro.x - intro.width).toBeLessThanOrEqual(columnGap + 1)
 
       await page.locator('.hero-cta').scrollIntoViewIfNeeded()
       await expect(page.locator('#hero-title :is(.split-unit, .marker-bar)')).toHaveCount(0)
@@ -82,9 +84,11 @@ for (const { width, height, touch, reduced = false } of layouts) {
           const wipe = ScrollTrigger.getAll().find((trigger) => trigger.trigger?.matches('.site-footer') && trigger.vars.onUpdate)
           return { start: pin.start, wipe: wipe.start, end: pin.end, wipeEnd: wipe.end }
         })
-        expect(range.wipe - range.start).toBeGreaterThanOrEqual(160)
+        // The footer starts to rise the moment the deck stops: a hold before it, where scrolling
+        // moved nothing, read as a stuck page.
+        expect(Math.abs(range.wipe - range.start)).toBeLessThan(2)
         expect(Math.abs(range.end - range.wipeEnd)).toBeLessThan(2)
-        await page.evaluate((y) => scrollTo({ top: y, behavior: 'instant' }), (range.start + range.wipe) / 2)
+        await page.evaluate((y) => scrollTo({ top: y, behavior: 'instant' }), Math.floor(range.start) - 40)
         await expect
           .poll(() =>
             page.locator('.footer-edge i').evaluateAll((cells) => cells.every((cell) => Number(cell.style.opacity) === 0))

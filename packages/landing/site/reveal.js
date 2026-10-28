@@ -1,10 +1,9 @@
 // Text is uncovered as if a highlighter lifted off it, after a highlight-marker text reveal: each
 // line of a heading or paragraph starts under a bar of colour, and once the text comes into view
-// (the hero's: as soon as the page arrives) the bars draw back one line after another. Words are
-// wrapped in plain inline spans while the bars are measured, so kerning, line breaks and screen
-// readers see the same text; the spans come out again once it is shown. Elements inside the text
-// (a button, the hidden word's mosaic) stay the same elements throughout. Reduced motion or no GSAP:
-// the text is simply there.
+// the bars draw back one line after another. Words are wrapped in plain inline spans while the bars
+// are measured, so kerning, line breaks and screen readers see the same text; the spans come out
+// again once it is shown. Elements inside the text (the deck help's button) stay the same elements
+// throughout. Reduced motion or no GSAP: the text is simply there.
 
 // Splits on ordinary spaces only, so a non-breaking space keeps its words together.
 export const splitWords = (text) => text.split(/([ \t\n\r\f]+)/).filter(Boolean)
