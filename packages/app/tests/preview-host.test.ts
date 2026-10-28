@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { request } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 const { readRuntimeConfig } = await import(new URL('../extension/client.js', import.meta.url).href);
 
 const { previewHost } = await import(new URL('../scripts/preview-host.mjs', import.meta.url).href);
@@ -17,7 +21,9 @@ test('preview host stays loopback by default and requires an explicit private IP
     assert.throws(() => previewHost(args), /Usage/);
 });
 
-test('LAN extension harness pins Host/origin and adapts only its served client', async () => {
+test('LAN extension harness pins Host/origin and adapts only its served client', async (t) => {
+  const moduleDirectory = await mkdtemp(join(tmpdir(), 'bait-preview-modules-'));
+  t.after(() => rm(moduleDirectory, { recursive: true, force: true }));
   const host = '192.168.1.10';
   const server = createExtensionPreviewServer({ host });
   await new Promise<void>((resolve, reject) => {
@@ -46,7 +52,16 @@ test('LAN extension harness pins Host/origin and adapts only its served client',
     assert.ok(runtime.body.includes(origin));
     const wrapper = await get('/client.js');
     assert.equal(wrapper.status, 200);
-    const adapted = await import(`data:text/javascript;base64,${Buffer.from(wrapper.body).toString('base64')}`);
+    const presentation = await get('/presentation.js');
+    assert.equal(presentation.status, 200);
+    // Keep the served module graph intact: data: URLs cannot resolve relative
+    // imports, while the browser resolves presentation.js beside client.js.
+    await Promise.all([
+      writeFile(join(moduleDirectory, 'package.json'), '{"type":"module"}'),
+      writeFile(join(moduleDirectory, 'client.js'), wrapper.body),
+      writeFile(join(moduleDirectory, 'presentation.js'), presentation.body),
+    ]);
+    const adapted = await import(pathToFileURL(join(moduleDirectory, 'client.js')).href);
     const config = { clientId: 'previewfixture', apiBaseUrl: origin, studioBaseUrl: origin };
     assert.deepEqual(adapted.readRuntimeConfig(config), config);
     assert.throws(() => adapted.readRuntimeConfig({ ...config, apiBaseUrl: 'http://192.168.1.11' }), /invalid/);

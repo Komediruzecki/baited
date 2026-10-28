@@ -129,14 +129,18 @@ export function Modal({
       ref={ref}
       className="modal"
       aria-label={title}
-      onCancel={onClose}
+      onCancel={(event) => {
+        // Parents may keep a dialog open while a request is in flight.
+        event.preventDefault();
+        onClose();
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="modal-heading">
         <h2>{title}</h2>
-        <button className="icon-button" aria-label="Close dialog" onClick={onClose}>
+        <button type="button" className="icon-button" aria-label="Close dialog" onClick={onClose}>
           <X size={22} />
         </button>
       </div>

@@ -3,6 +3,7 @@ import { createServer } from 'node:https';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { EXTENSION_FILES, HELPER_URL, readFrontendFile } from './build-extension.mjs';
+import { cardArtPath } from '../extension/presentation.js';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const apiPaths = new Set(['/api/extension/state', '/api/extension/config']);
@@ -125,7 +126,9 @@ export function createExtensionLocalHandler({ files, port = 3443, requestUpstrea
     }
     if (req.headers['transfer-encoding'] || (req.headers['content-length'] && req.headers['content-length'] !== '0'))
       return respond(res, 400, 'Request bodies are not supported.');
-    if (!apiPaths.has(path)) {
+    const imagePath = cardArtPath(path) !== null;
+    if (imagePath && req.method === 'OPTIONS') return respond(res, 405, 'Artwork does not accept preflight requests.');
+    if (!apiPaths.has(path) && !imagePath) {
       if (req.method === 'OPTIONS') return respond(res, 405, 'Preflight is available only for Extension API routes.');
       const body = files.get(path);
       if (!body) return respond(res, 404, 'Not found.');
@@ -140,7 +143,7 @@ export function createExtensionLocalHandler({ files, port = 3443, requestUpstrea
     if (authorization !== undefined && (authorization.length > 4103 || !/^Bearer [A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(authorization)))
       return respond(res, 401, 'Invalid Extension authorization.');
     const headers = { Host: 'localhost:3000' };
-    if (authorization) headers.Authorization = authorization;
+    if (authorization && !imagePath) headers.Authorization = authorization;
     if (req.headers.origin) headers.Origin = req.headers.origin;
     if (req.method === 'OPTIONS') {
       if (req.headers.origin !== origin || req.headers['access-control-request-method'] !== 'GET' ||
@@ -159,7 +162,7 @@ export function createExtensionLocalHandler({ files, port = 3443, requestUpstrea
         let size = 0;
         response.on('data', (chunk) => {
           size += chunk.length;
-          if (size > 1024 * 1024) {
+          if (size > (imagePath ? 2 : 1) * 1024 * 1024) {
             upstream.destroy();
             respond(res, 502, 'Extension backend response exceeded the local limit.');
           } else chunks.push(chunk);
@@ -167,6 +170,20 @@ export function createExtensionLocalHandler({ files, port = 3443, requestUpstrea
         response.on('error', () => respond(res, 502, 'Extension backend unavailable.'));
         response.on('end', () => {
           if (res.destroyed || res.writableEnded) return;
+          const body = Buffer.concat(chunks);
+          if (imagePath) {
+            const status = response.statusCode || 502;
+            if (status !== 200) return respond(res, status >= 400 && status < 600 ? status : 502, 'Artwork unavailable.');
+            if (response.headers['content-type'] !== 'image/png' ||
+                (req.method !== 'HEAD' && !body.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))))
+              return respond(res, 502, 'Invalid artwork response.');
+            const declaredLength = Number(response.headers['content-length']);
+            const length = req.method === 'HEAD' && Number.isSafeInteger(declaredLength) && declaredLength >= 0 && declaredLength <= 2 * 1024 * 1024
+              ? declaredLength : body.length;
+            res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': length,
+              'Cross-Origin-Resource-Policy': 'same-origin' });
+            return res.end(req.method === 'HEAD' ? undefined : body);
+          }
           // Do not expose backend cookies, redirects or arbitrary headers to the iframe.
           const forwarded = { 'Content-Type': 'application/json; charset=utf-8' };
           if (response.headers['access-control-allow-origin'] === origin) forwarded['Access-Control-Allow-Origin'] = origin;
@@ -175,7 +192,6 @@ export function createExtensionLocalHandler({ files, port = 3443, requestUpstrea
             if (typeof value === 'string' && value.length <= 128) forwarded[name] = value;
           }
           forwarded.Vary = 'Origin';
-          const body = Buffer.concat(chunks);
           forwarded['Content-Length'] = body.length;
           res.writeHead(response.statusCode || 502, forwarded);
           res.end(req.method === 'HEAD' ? undefined : body);

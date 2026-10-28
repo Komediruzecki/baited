@@ -8,6 +8,7 @@ import WebSocket from 'ws';
 import { createBait } from '../server/app.js';
 import { loadConfig } from '../server/config.js';
 import { Store, type Credentials } from '../server/store.js';
+import { studioPathFromTab, studioSignInPath, studioTabFromPath } from '../client/studio-navigation.js';
 
 const key = 'ab'.repeat(32);
 const twitchEnv = {
@@ -159,6 +160,77 @@ test('a streamer who never allowed the bot signs in without a second prompt', as
   });
   const first = await begin('/auth/twitch');
   assert.equal((await callback({ state: first.state, code: 'code-1' }, first.oauth)).location, '/');
+});
+
+test('Cards navigation uses a fixed sign-in destination and leaves normal Studio routes unchanged', () => {
+  for (const path of ['/studio/cards', '/studio/cards/']) {
+    assert.equal(studioTabFromPath(path), 'cards');
+    assert.equal(studioSignInPath(path), '/auth/twitch?returnTo=cards');
+  }
+  for (const path of ['/', '/studio', '/studio/community', '/studio/cards/other', '//example.com', 'https://example.com/studio/cards']) {
+    assert.equal(studioTabFromPath(path), 'studio');
+    assert.equal(studioSignInPath(path), '/auth/twitch');
+  }
+  assert.equal(studioPathFromTab('cards'), '/studio/cards');
+  assert.equal(studioPathFromTab('studio'), '/studio');
+  assert.equal(studioPathFromTab('https://example.com'), '/studio');
+});
+
+test('Cards sign-in returns to Cards using the stored destination, never callback query input', async (t) => {
+  const { begin, callback } = await oauthServer(t);
+  const started = await begin('/auth/twitch?returnTo=cards');
+  const signedIn = await callback({ state: started.state, code: 'code-1', returnTo: 'https://example.com' }, started.oauth);
+  assert.equal(signedIn.location, '/studio/cards');
+  assert.ok(signedIn.session);
+  const ordinary = await begin('/auth/twitch');
+  assert.equal((await callback({ state: ordinary.state, code: 'code-2', returnTo: 'cards' }, ordinary.oauth)).location, '/');
+});
+
+test('Cards destination survives bot permission restoration and a declined restoration', async (t) => {
+  const { twitch, begin, callback } = await oauthServer(t, { stored: ['user:read:chat', 'channel:bot'] });
+  const first = await begin('/auth/twitch?returnTo=cards');
+  const signedIn = await callback({ state: first.state, code: 'code-1' }, first.oauth);
+  assert.equal(signedIn.location, '/auth/twitch?bot=1&restore=1&returnTo=cards');
+  const second = await begin(signedIn.location, signedIn.session);
+  const declined = await callback({ state: second.state, error: 'access_denied' }, `${second.oauth}; ${signedIn.session}`);
+  assert.equal(declined.location, '/studio/cards?notice=bot-declined');
+  const retry = await begin('/auth/twitch?bot=1&restore=1&returnTo=cards', signedIn.session);
+  twitch.scopes = ['user:read:chat', 'channel:bot'];
+  assert.equal((await callback({ state: retry.state, code: 'code-2' }, `${retry.oauth}; ${signedIn.session}`)).location, '/studio/cards');
+});
+
+test('Cards cancellation and exchange errors keep the destination for a sign-in retry', async (t) => {
+  const { twitch, begin, callback } = await oauthServer(t);
+  const started = await begin(studioSignInPath('/studio/cards'));
+  const declined = await callback({ state: started.state, error: 'access_denied' }, started.oauth);
+  assert.equal(declined.location, '/studio/cards?notice=cancelled');
+  const retry = await begin(studioSignInPath(new URL(declined.location, 'http://localhost').pathname));
+  twitch.tokenStatus = 500;
+  assert.equal((await callback({ state: retry.state, code: 'code-1' }, retry.oauth)).location, '/studio/cards?notice=oauth');
+  twitch.tokenStatus = 200;
+  const final = await begin(studioSignInPath('/studio/cards'));
+  assert.equal((await callback({ state: final.state, code: 'code-2' }, final.oauth)).location, '/studio/cards');
+});
+
+test('Cards setup errors keep the destination and arbitrary return values are ignored', async (t) => {
+  const { begin, callback } = await oauthServer(t);
+  for (const value of ['https://example.com', '//example.com', '/studio/cards', 'CARDS', 'cards&returnTo=https://example.com']) {
+    const started = await begin(`/auth/twitch?returnTo=${encodeURIComponent(value)}`);
+    assert.equal((await callback({ state: started.state, code: 'code-1' }, started.oauth)).location, '/');
+  }
+  const multiple = await begin('/auth/twitch?returnTo=cards&returnTo=https://example.com');
+  assert.equal((await callback({ state: multiple.state, code: 'code-2' }, multiple.oauth)).location, '/');
+  const setup = await oauthServer(t, { env: { TWITCH_CLIENT_ID: '', TWITCH_CLIENT_SECRET: '' } });
+  assert.equal((await setup.get('/auth/twitch?returnTo=cards')).headers.get('location'), '/studio/cards?notice=setup');
+  assert.equal((await setup.get('/auth/twitch?returnTo=https://example.com')).headers.get('location'), '/?notice=setup');
+});
+
+test('the operator bot login ignores a Cards return destination', async (t) => {
+  const { twitch, begin, callback } = await oauthServer(t);
+  const started = await begin('/auth/twitch/bot?returnTo=cards');
+  twitch.userId = '999';
+  twitch.scopes = ['user:read:chat', 'user:write:chat', 'user:bot'];
+  assert.equal((await callback({ state: started.state, code: 'code-1', returnTo: 'cards' }, started.oauth)).location, '/?notice=bot-ready');
 });
 
 /** Every OAuth failure line the server logs while `run` executes, plus the run's result. */

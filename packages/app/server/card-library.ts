@@ -17,6 +17,7 @@ export interface DeckCard {
   acceptedSpellings: string[];
   cardId?: string;
   revision?: number;
+  artId?: string;
 }
 interface Library { revision: number; packs: CardPack[]; selection: DeckSelection }
 interface Snapshot { version: 1; channels: Record<string, Library> }
@@ -32,7 +33,8 @@ export class CardLibraryStore {
   private snapshot: Snapshot = { version: 1, channels: {} };
   private chain: Promise<unknown> = Promise.resolve();
   private ephemeral = new Set<string>();
-  constructor(private dir: string, private writer?: (path: string, text: string) => Promise<void>) {}
+  constructor(private dir: string, private writer?: (path: string, text: string) => Promise<void>,
+    private artValidator?: (owner: string, artId: string) => boolean) {}
   async load() {
     await mkdir(this.dir, { recursive: true });
     try {
@@ -46,7 +48,7 @@ export class CardLibraryStore {
           packs: z.array(z.object({
             id: z.string().uuid(), revision: z.number().int().positive(), name: z.string(),
             status: z.enum(['draft', 'published', 'archived']), updatedAt: z.number(),
-            cards: z.array(z.object({ id: z.string().uuid(), revision: z.number().int().positive(), target: z.string(), difficulty: z.enum(['easy', 'medium', 'hard']), blockedClues: z.array(z.string()), acceptedSpellings: z.array(z.string()) }).strict()),
+            cards: z.array(z.object({ id: z.string().uuid(), revision: z.number().int().positive(), target: z.string(), difficulty: z.enum(['easy', 'medium', 'hard']), blockedClues: z.array(z.string()), acceptedSpellings: z.array(z.string()), artId: z.string().uuid().optional() }).strict()),
           }).strict()).max(CARD_LIMITS.packs),
         }).strict().parse(value);
         for (const pack of library.packs) {
@@ -105,6 +107,8 @@ export class CardLibraryStore {
       if (body.status !== 'published' && library.selection.packId === previous?.id)
         throw new CardLibraryError(409, 'Switch to the built-in deck before making this pack a draft.');
       const cards = body.cards.map((card) => {
+        if (card.artId && !this.artValidator?.(owner, card.artId))
+          throw new CardLibraryError(400, 'Choose an approved image from your own library before saving this card.');
         const old = card.id ? previous?.cards.find((entry) => entry.id === card.id) : undefined;
         if (card.id && !old) throw new CardLibraryError(400, 'A card does not belong to this pack.');
         return { ...card, id: old?.id ?? randomUUID(), revision: (old?.revision ?? 0) + 1 };
@@ -150,7 +154,7 @@ export class CardLibraryStore {
     if (!pack) throw new CardLibraryError(409, 'Choose a published pack or switch to the built-in deck.');
     const custom = pack.cards.filter((c) => c.difficulty === difficulty);
     if (custom.length < CARD_LIMITS.minimum) throw new CardLibraryError(409, `This pack needs six ${difficulty} cards. Choose another difficulty or the built-in deck.`);
-    const cards: DeckCard[] = custom.map((card) => ({ target: card.target, difficulty: card.difficulty, blockedClues: [...card.blockedClues], acceptedSpellings: [...card.acceptedSpellings], cardId: card.id, revision: card.revision }));
+    const cards: DeckCard[] = custom.map((card) => ({ target: card.target, difficulty: card.difficulty, blockedClues: [...card.blockedClues], acceptedSpellings: [...card.acceptedSpellings], cardId: card.id, revision: card.revision, ...(card.artId ? { artId: card.artId } : {}) }));
     if (library.selection.mode === 'custom') return cards;
     // A custom target/alias wins over the corresponding built-in card. The
     // selected mixed pool still contains one meaning per accepted spelling.
@@ -169,4 +173,7 @@ export class CardLibraryStore {
     await task;
   }
   flush() { return this.chain; }
+  referencedArt(owner: string): Set<string> {
+    return new Set(this.current(owner).packs.flatMap((pack) => pack.cards.flatMap((card) => card.artId ? [card.artId] : [])));
+  }
 }

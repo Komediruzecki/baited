@@ -1,5 +1,5 @@
 import React from 'react';
-import { proofWords } from '../extension/presentation.js';
+import { cardArtSource, proofWords } from '../extension/presentation.js';
 export { proofWords } from '../extension/presentation.js';
 
 // This is an art catalogue, never a round selector. Only render a target received
@@ -7,12 +7,20 @@ export { proofWords } from '../extension/presentation.js';
 export type ProofWord = (typeof proofWords)[number];
 const available = new Set<string>(proofWords);
 
-export function CardArt({ word, className = '' }: { word?: string; className?: string }) {
-  if (!word || !available.has(word.toLowerCase())) return null;
+export function CardArt({ word, artUrl, artPreview = false, className = '' }: {
+  word?: string; artUrl?: string; artPreview?: boolean; className?: string;
+}) {
+  const uploaded = cardArtSource(artUrl, undefined, artPreview);
+  const src = uploaded ?? (word && available.has(word.toLowerCase())
+    ? `${import.meta.env?.BASE_URL ?? '/'}cards/proofs/${word.toLowerCase()}.png` : null);
+  if (!src) return null;
   return (
     <img
+      key={src}
       className={`bait-card-art ${className}`}
-      src={`${import.meta.env?.BASE_URL ?? '/'}cards/proofs/${word.toLowerCase()}.png`}
+      src={src}
+      referrerPolicy="no-referrer"
+      onError={(event) => { event.currentTarget.hidden = true; }}
       alt=""
       width="1254"
       height="1254"

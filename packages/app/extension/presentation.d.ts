@@ -77,8 +77,32 @@ export const proofWords: readonly [
   'hedgehog',
   'gramophone',
   'hourglass',
+  'balloon',
+  'guitar',
+  'carrot',
+  'cupcake',
+  'umbrella',
+  'elephant',
+  'hamburger',
+  'butterfly',
+  'pineapple',
+  'crocodile',
+  'astronaut',
+  'binoculars',
+  'seahorse',
+  'hammock',
+  'scarecrow',
+  'waterfall',
+  'chameleon',
+  'metronome',
+  'terrarium',
+  'pendulum',
+  'pomegranate',
+  'marionette',
 ];
 export function cardArtFile(word?: string): string | null;
+export function cardArtPath(value: unknown, allowPreview?: boolean): string | null;
+export function cardArtSource(value: unknown, apiOrigin?: string, allowPreview?: boolean): string | null;
 export function wordSize(word?: string): 'short' | 'medium' | 'long' | 'extended';
 export function cardWordSize(word?: string): 'short' | 'medium' | 'long' | 'extended';
 export function winLabel(wins: number): string;

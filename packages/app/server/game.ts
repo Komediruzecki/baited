@@ -187,6 +187,7 @@ interface Round {
   acceptedSpellings: string[];
   cardId?: string;
   cardRevision?: number;
+  artId?: string;
   printed: { ink?: string; example?: string };
   guessEnabled: boolean;
   guessUsed: boolean;
@@ -242,6 +243,8 @@ export class Game {
   onChange: () => void = () => {};
   onEvent: (event: GameEvent) => void = () => {};
   canRun: () => boolean = () => true;
+  /** The server creates a stable capability; Game never publishes a raw asset ID. */
+  artFor: (roundId: string, artId: string) => string | undefined = () => undefined;
   deckFor: (difficulty: Difficulty) => DeckCard[] = (difficulty) =>
     words[difficulty].map((target) => ({ target, difficulty, blockedClues: forbiddenClues(target, difficulty), acceptedSpellings: [] }));
   constructor(
@@ -318,6 +321,7 @@ export class Game {
       id: randomUUID(),
       number: this.score.played + 1,
       word,
+      ...(card.artId ? { artId: card.artId } : {}),
       startedAt: now,
       segmentAt: now,
       endsAt: now + duration,
@@ -391,6 +395,7 @@ export class Game {
       id: r.id,
       number: r.number,
       word: r.word,
+      ...(r.artId ? { artId: r.artId } : {}),
       outcome: 'review',
       elapsed: Math.round((r.duration - r.remaining) / 1000),
       participants: r.participants.size,
@@ -421,6 +426,7 @@ export class Game {
       id: r.id,
       number: r.number,
       word: r.word,
+      ...(r.artId ? { artId: r.artId } : {}),
       outcome,
       elapsed: Math.round((r.duration - remaining) / 1000),
       participants: r.participants.size,
@@ -829,7 +835,13 @@ export class Game {
   }
   view(role: 'studio' | 'viewer' | 'overlay'): GameView {
     const r = this.round;
-    let result: GameView['result'] = this.result;
+    let result: GameView['result'] = null;
+    if (this.result) {
+      const { artId, ...publicResult } = this.result;
+      const artUrl = artId && ['caught', 'escaped'].includes(this.result.outcome)
+        ? this.artFor(this.result.id, artId) : undefined;
+      result = { ...publicResult, ...(artUrl ? { artUrl } : {}) };
+    }
     if (role === 'overlay' && result && !['caught', 'escaped'].includes(result.outcome)) {
       const { word: _word, ...privateResult } = result;
       result = privateResult;
@@ -859,14 +871,18 @@ export class Game {
             guessUsed: r.guessUsed,
             wrongGuessBonus: r.wrongGuessBonus,
             ...(role === 'viewer' && ['active', 'paused', 'settling'].includes(this.phase)
-              ? { target: r.word, forbiddenClues: [...r.clues], ...r.printed }
+              ? { target: r.word, forbiddenClues: [...r.clues], ...r.printed,
+                  ...(r.artId && this.artFor(r.id, r.artId) ? { artUrl: this.artFor(r.id, r.artId) } : {}) }
               : {}),
           }
         : null,
       result,
       history: this.data.history.slice(0, 12).map((entry) => {
-        if (role !== 'overlay') return entry;
-        const { word: _word, ...publicHistory } = entry;
+        // History does not need artwork. Keep identifiers and capabilities out of
+        // every role's history, including pending/rejected result snapshots.
+        const { artId: _art, ...history } = entry;
+        if (role !== 'overlay') return history;
+        const { word: _word, ...publicHistory } = history;
         return publicHistory;
       }),
       settings: this.data.settings,

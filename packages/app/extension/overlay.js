@@ -1,4 +1,4 @@
-import { clockValue, connectToTwitch, readState } from './client.js';
+import { clockValue, connectToTwitch, nativeCardArtSource, readState } from './client.js';
 import {
   cardArtFile,
   cardWordSize,
@@ -27,11 +27,17 @@ let shownResult = { key: '', award: '', since: 0 };
 let dealtInk = { id: '', ink: '' };
 // A face's art resolves from pixels the first time it turns up, as on the landing.
 let artFile = '';
+let failedArt = '';
 let revealedArt = '';
 let stopReveal = () => {};
 let pendingReveal = null;
 
 byId('field-rules').setAttribute('d', glassRules());
+byId('front-art').addEventListener('error', () => {
+  failedArt = artFile;
+  byId('front-art').hidden = true;
+  cancelReveal();
+});
 
 const reducedMotion = () =>
   typeof window.matchMedia === 'function' &&
@@ -94,19 +100,25 @@ function setFace(face) {
   if (face === 'front') revealFront();
 }
 
-function setArt(word) {
+function setArt(word, artUrl) {
   const file = cardArtFile(word);
+  const uploaded = typeof word === 'string' ? nativeCardArtSource(artUrl) : null;
+  const source = uploaded ?? (file ? `./assets/${file}` : '');
   const art = byId('front-art');
   // The canvas holds pixels of the artwork, so it is emptied with the image.
-  if ((file ?? '') !== artFile) {
+  if (source !== artFile) {
     cancelReveal();
     revealedArt = '';
+    artFile = source;
+    failedArt = '';
+    art.removeAttribute('src');
+    if (uploaded) art.setAttribute('crossorigin', 'anonymous');
+    else art.removeAttribute('crossorigin');
+    art.setAttribute('referrerpolicy', 'no-referrer');
+    if (source) art.setAttribute('src', source);
   }
-  artFile = file ?? '';
-  art.hidden = !file;
-  // A filename can reveal the word too. Remove it whenever the face is cleared.
-  if (file) art.setAttribute('src', `./assets/${file}`);
-  else art.removeAttribute('src');
+  // Clear URLs with the face, and do not reload an unchanged capability every poll.
+  art.hidden = !source || failedArt === source;
 }
 
 function setWord(word, ink = '') {
@@ -304,7 +316,7 @@ function showRound(room) {
           : `Round ${round.number}`;
     setWord(round.target, round.ink ?? '');
     setLevel(round.difficulty);
-    setArt(round.target);
+    setArt(round.target, round.artUrl);
     setRules(round.forbiddenClues);
     byId('front-note').textContent = round.forbiddenClues.length ? '' : 'Only this word is off limits.';
     byId('front-question').textContent = round.example ?? '';
@@ -347,7 +359,7 @@ function showResult(room) {
   card.dataset.outcome = result.outcome;
   setWord(result.word, dealtInk.id === result.id ? dealtInk.ink : '');
   setLevel(null);
-  setArt(result.word);
+  setArt(result.word, ['caught', 'escaped'].includes(result.outcome) ? result.artUrl : undefined);
   setRules([]);
   setStreak(0);
   // A win shows the streak as fire coins; one that lands on a badge shows its medallion.

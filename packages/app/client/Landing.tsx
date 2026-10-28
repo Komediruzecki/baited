@@ -4,6 +4,7 @@ import { request } from './api';
 import { productBrand, botNotices, BotSignInLink, Button, Modal } from './ui';
 import { ArrowUpRight, Mic, Play, ShieldCheck } from './pixel-icons';
 import { CardBack } from './CardBack';
+import { studioPathFromTab, studioSignInPath, studioTabFromPath } from './studio-navigation';
 
 export default function Landing({ session, reload }: { session: SessionInfo; reload: () => void }) {
   const [setup, setSetup] = useState(false);
@@ -20,16 +21,17 @@ export default function Landing({ session, reload }: { session: SessionInfo; rel
   });
   const [notice] = useState(() =>
     new URLSearchParams(location.search).get('notice') === 'bot-ready' ? botNotices.ready : '');
+  const destination = studioPathFromTab(studioTabFromPath(location.pathname));
   const connect = () => {
-    if (session.authenticated) return location.assign('/studio');
-    if (session.twitchReady) location.assign('/auth/twitch');
+    if (session.authenticated) return location.assign(destination);
+    if (session.twitchReady) location.assign(studioSignInPath(location.pathname));
     else setSetup(true);
   };
   const demo = async () => {
     setBusy(true);
     try {
       await request('/api/demo/start', {});
-      if (location.pathname !== '/') location.assign('/studio');
+      if (location.pathname !== '/') location.assign(destination);
       else reload();
     } catch (reason) { setError((reason as Error).message); }
     finally { setBusy(false); }

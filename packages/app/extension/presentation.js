@@ -108,6 +108,29 @@ export function cardArtFile(word) {
   return `card-${word.toLowerCase()}.png`;
 }
 
+const artUuid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const roundArtPath = new RegExp(`^/api/card-art/round/[A-Za-z0-9_-]{1,128}/${artUuid}/${artUuid}/[A-Za-z0-9_-]{43}\\.png$`);
+const ownerArtPath = new RegExp(`^/api/studio/card-art/${artUuid}\\.png$`);
+
+/** Uploaded art is a server capability, never an arbitrary URL or filename. */
+export function cardArtPath(value, allowPreview = false) {
+  if (typeof value !== 'string' || value.length > 340 || value !== value.trim()) return null;
+  return roundArtPath.test(value) || (allowPreview && ownerArtPath.test(value)) ? value : null;
+}
+
+/** `apiOrigin` comes only from validated runtime configuration, never round data. */
+export function cardArtSource(value, apiOrigin, allowPreview = false) {
+  const path = cardArtPath(value, allowPreview);
+  if (!path) return null;
+  if (apiOrigin === undefined) return path;
+  try {
+    const origin = new URL(apiOrigin);
+    if (!['https:', 'http:'].includes(origin.protocol) || origin.username || origin.password ||
+        origin.pathname !== '/' || origin.search || origin.hash) return null;
+    return `${origin.origin}${path}`;
+  } catch { return null; }
+}
+
 export function wordSize(word = '') {
   const length = Array.from(word).length;
   return length <= 9 ? 'short' : length <= 13 ? 'medium' : length <= 18 ? 'long' : 'extended';

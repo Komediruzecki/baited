@@ -40,6 +40,59 @@ function get(port: number, path: string, headers: RequestOptions['headers'] = {}
   });
 }
 
+test('local artwork proxy accepts only round capability PNGs and forwards no browser credentials', async () => {
+  const imagePath = `/api/card-art/round/fixture-room/4891561a-8bad-459d-8e08-7f698910a72b/31ab82b5-809d-4bc4-8272-ac914b3bcc3f/${'c'.repeat(43)}.png`;
+  const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  let forwarded: IncomingHttpHeaders | undefined, calls = 0;
+  let mode: 'png' | 'html' | 'redirect' | 'large' = 'png';
+  const backend = createServer((req, res) => {
+    calls++;
+    forwarded = req.headers;
+    assert.equal(req.url, imagePath);
+    if (mode === 'redirect') { res.writeHead(302, { Location: 'https://untrusted.example' }); res.end(); return; }
+    const body = mode === 'large' ? Buffer.alloc(2 * 1024 * 1024 + 1) : mode === 'html' ? Buffer.from('<html>wrong</html>') : png;
+    res.writeHead(200, { 'Content-Type': mode === 'html' ? 'text/html' : 'image/png', 'Content-Length': body.length,
+      'Set-Cookie': 'private=fixture', Location: 'https://untrusted.example', 'X-Internal': 'private' });
+    res.end(body);
+  });
+  const backendPort = await listen(backend);
+  const server = createServer(gateway.createExtensionLocalHandler({ files: new Map(),
+    requestUpstream: (input: RequestOptions, callback: (response: IncomingMessage) => void) => request({ ...input, port: backendPort }, callback) }));
+  const port = await listen(server);
+  try {
+    const good = await get(port, imagePath, { Origin: origin, Authorization: token, Cookie: 'private=fixture' });
+    assert.equal(good.status, 200);
+    assert.equal(good.headers['content-type'], 'image/png');
+    assert.equal(good.headers['cache-control'], 'no-store');
+    assert.equal(good.headers['x-content-type-options'], 'nosniff');
+    assert.equal(forwarded?.authorization, undefined);
+    assert.equal(forwarded?.cookie, undefined);
+    assert.equal(forwarded?.host, 'localhost:3000');
+    assert.equal(good.headers['set-cookie'], undefined);
+    assert.equal(good.headers.location, undefined);
+    assert.equal(good.headers['x-internal'], undefined);
+    const head = await get(port, imagePath, {}, 'HEAD');
+    assert.equal(head.status, 200);
+    assert.equal(head.headers['content-length'], String(png.length));
+    assert.equal(head.body, '');
+    const before = calls;
+    for (const path of [`${imagePath}?x=1`, `${imagePath}#fragment`, imagePath.replace('/round/', '/round/../'),
+      imagePath.replace('.png', '.svg'), '/api/studio/card-art/31ab82b5-809d-4bc4-8272-ac914b3bcc3f.png'])
+      assert.notEqual((await get(port, path)).status, 200);
+    assert.equal((await get(port, imagePath, { Origin: 'https://untrusted.example' })).status, 403);
+    assert.equal((await get(port, imagePath, {}, 'OPTIONS')).status, 405);
+    assert.equal(calls, before);
+    mode = 'html';
+    assert.equal((await get(port, imagePath)).status, 502);
+    mode = 'redirect';
+    const redirected = await get(port, imagePath);
+    assert.equal(redirected.status, 502);
+    assert.equal(redirected.headers.location, undefined);
+    mode = 'large';
+    assert.equal((await get(port, imagePath)).status, 502);
+  } finally { await close(server); await close(backend); }
+});
+
 test('local gateway serves only its native bundle, pins Host and rejects unsafe raw paths', async () => {
   let proxied = 0;
   const handler = gateway.createExtensionLocalHandler({

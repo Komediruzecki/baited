@@ -1,4 +1,4 @@
-import { clockValue, connectToTwitch, connectionView, readState } from './client.js';
+import { clockValue, connectToTwitch, connectionView, nativeCardArtSource, readState } from './client.js';
 import { cardArtFile, cardWordSize, glassRules, streakMilestone } from './presentation.js';
 import { revealPixels } from './pixel-reveal.js';
 
@@ -15,7 +15,13 @@ let dealtInk = { id: '', ink: '' };
 let stopReveal = () => {};
 let pendingReveal = null;
 let artFile = '';
+let failedArt = '';
 byId('field-rules').setAttribute('d', glassRules());
+byId('word-art').addEventListener('error', () => {
+  failedArt = artFile;
+  byId('word-art').hidden = true;
+  cancelReveal();
+});
 
 function announce(key, text) {
   if (key === announcementKey) return;
@@ -59,16 +65,24 @@ function revealArt() {
   }
 }
 
-function setArt(word) {
+function setArt(word, artUrl) {
   const file = cardArtFile(word);
+  const uploaded = typeof word === 'string' ? nativeCardArtSource(artUrl) : null;
+  const source = uploaded ?? (file ? `./assets/${file}` : '');
   const art = byId('word-art');
   // The canvas holds pixels of the artwork, so it is emptied with the image.
-  if ((file ?? '') !== artFile) cancelReveal();
-  artFile = file ?? '';
-  art.hidden = !file;
-  // A filename can reveal the word too. Remove it when authorization or role changes.
-  if (file) art.setAttribute('src', `./assets/${file}`);
-  else art.removeAttribute('src');
+  if (source !== artFile) {
+    cancelReveal();
+    artFile = source;
+    failedArt = '';
+    art.removeAttribute('src');
+    if (uploaded) art.setAttribute('crossorigin', 'anonymous');
+    else art.removeAttribute('crossorigin');
+    art.setAttribute('referrerpolicy', 'no-referrer');
+    if (source) art.setAttribute('src', source);
+  }
+  // Stable capability URLs must not re-fetch a no-store image on every state poll.
+  art.hidden = !source || failedArt === source;
   byId('card-back').hidden = typeof word === 'string';
 }
 
@@ -182,7 +196,7 @@ function render({ configured, room }) {
     byId('card-kicker').textContent = visible ? 'Secret word' : 'Broadcaster';
     byId('phase-label').textContent = phase;
     setTitle(visible ? room.round.target : 'Your viewers have the word.', visible, room.round.ink);
-    setArt(visible ? room.round.target : null);
+    setArt(visible ? room.round.target : null, visible ? room.round.artUrl : undefined);
     setDifficulty(visible ? room.round.difficulty : null);
     setQuestion(visible ? room.round.example : null);
     // The word, clues and clock need the card during a round.
@@ -247,7 +261,7 @@ function render({ configured, room }) {
     byId('phase-label').textContent =
       result.outcome === 'review' ? 'Streamer’s call' : 'Complete';
     setTitle(result.word, true, dealtInk.id === result.id ? dealtInk.ink : '');
-    setArt(result.word);
+    setArt(result.word, ['caught', 'escaped'].includes(result.outcome) ? result.artUrl : undefined);
     setDifficulty(null);
     setQuestion(null);
     const tier =

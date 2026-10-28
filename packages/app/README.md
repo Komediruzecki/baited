@@ -49,7 +49,9 @@ Keep `PUBLIC_URL` and the address you open identical, including `localhost` vers
 - An authoritative game engine with difficulty pools, pause/resume, deadlines, cooldowns, automatic rounds, shared streaks, participation records, and `!skip` votes.
 - Twitch authorization-code OAuth, encrypted server-side tokens, refresh deduplication, startup/hourly validation, and EventSub chat over WebSockets with recovery.
 - Microphone-only PCM capture through an AudioWorklet. Moonshine runs in a browser worker by default; its proposed catches require broadcaster confirmation. Deepgram remains an optional server-side adapter for automatic scoring.
-- A [100-target built-in deck](docs/deck-100.md) with separate ChatGPT-generated pixel illustrations, reduced-motion support and opt-in Sound Lab effects adapted from Keys. The latest 22 cards and artwork await owner review; the earlier 78 illustrations remain approved. Fonts and licenses are bundled locally. Open `/card-proofs` to review the illustrated deck and audition the sounds.
+- A [100-target built-in deck](docs/deck-100.md) with separate ChatGPT-generated pixel illustrations, reduced-motion support and opt-in Sound Lab effects adapted from Keys. The owner approved the full deck for the development test. Fonts and licenses are bundled locally. Open `/card-proofs` to review the illustrated deck and audition the sounds.
+
+The Cards workbench also supports [image uploads and a pixel/ASCII editor](docs/card-art-studio.md). Artwork is screened on the backend before saving; images stay in the channel owner’s library and are attached to cards by immutable ID. The scanner reduces sexual-content risk but cannot guarantee suitability.
 
 The automated tests use Twitch and speech provider fixtures. Workspace checks do not replace a real-channel rehearsal with Twitch sign-in, a physical microphone, viewer interaction and OBS. Deepgram testing is relevant only if you deliberately enable its optional adapter; it is not a requirement for the Moonshine path.
 

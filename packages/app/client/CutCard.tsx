@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { CardArt } from './CardArt';
-import { cardArtFile, cardWordSize, glassRules } from '../extension/presentation.js';
+import { cardArtFile, cardArtPath, cardWordSize, glassRules } from '../extension/presentation.js';
 import { revealPixels } from '../extension/pixel-reveal.js';
 import catalogue from '../shared/card-review-catalogue.json';
 
@@ -30,7 +30,9 @@ function GlassField() {
  * landing. `hold` keeps the coarsest step while a face is still turning over. Offscreen
  * cards, hidden pages and reduced motion show the finished image.
  */
-function RevealArt({ word, hold, still }: { word: string; hold: number; still: boolean }) {
+function RevealArt({ word, artUrl, artPreview, hold, still }: {
+  word: string; artUrl?: string; artPreview: boolean; hold: number; still: boolean;
+}) {
   const holder = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const node = holder.current;
@@ -61,10 +63,10 @@ function RevealArt({ word, hold, still }: { word: string; hold: number; still: b
       image.removeEventListener('load', begin);
       stop();
     };
-  }, [word, hold, still]);
+  }, [word, artUrl, artPreview, hold, still]);
   return (
     <span className="cut-card__reveal" ref={holder}>
-      <CardArt word={word} className="cut-card__image" />
+      <CardArt word={word} artUrl={artUrl} artPreview={artPreview} className="cut-card__image" />
       <canvas className="cut-card__pixels" width={1} height={1} aria-hidden="true" />
     </span>
   );
@@ -86,6 +88,8 @@ export function ClueRail({ clues }: { clues: readonly string[] }) {
 
 export function CutCard({
   word,
+  artUrl,
+  artPreview = false,
   ink = inkFor(word),
   chip,
   level,
@@ -101,6 +105,9 @@ export function CutCard({
   revealStill = false,
 }: {
   word: string;
+  /** Server-issued artwork capability. Owner previews require the explicit editor flag. */
+  artUrl?: string;
+  artPreview?: boolean;
   /** A page that names the card's word as its heading. */
   wordAs?: 'strong' | 'h2';
   ink?: string;
@@ -121,7 +128,7 @@ export function CutCard({
   /** Show the finished art at once, for a card that arrives late. */
   revealStill?: boolean;
 }) {
-  const art = cardArtFile(word);
+  const art = cardArtPath(artUrl, artPreview) ?? cardArtFile(word);
   return (
     <div
       className={cx('cut-host', className)}
@@ -140,7 +147,7 @@ export function CutCard({
           <GlassField />
           {art && (
             <span className="cut-card__square">
-              <RevealArt word={word} hold={revealHold} still={revealStill} />
+              <RevealArt key={art} word={word} artUrl={artUrl} artPreview={artPreview} hold={revealHold} still={revealStill} />
             </span>
           )}
         </div>

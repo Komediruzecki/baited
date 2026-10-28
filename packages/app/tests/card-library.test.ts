@@ -68,6 +68,29 @@ test('owner library persists with revisions, is isolated and rejects stale concu
   assert.equal(deleted.view('channel-a', 'medium').packs.length, 0);
 });
 
+test('custom art attaches only with owner approval and survives reload without changing round snapshots', async (t) => {
+  const { dir } = await library(t);
+  const artId = 'a3452a88-1c33-426b-a345-32e13bc7a513';
+  const approved = (owner: string, id: string) => owner === 'channel-a' && id === artId;
+  const store = new CardLibraryStore(dir, undefined, approved); await store.load();
+  const input = pack(); input.cards[0] = { ...input.cards[0], artId };
+  await assert.rejects(new CardLibraryStore(dir).savePack('channel-a', input), /approved image/);
+  await assert.rejects(store.savePack('channel-b', input), /approved image/);
+  const id = await store.savePack('channel-a', input);
+  await store.select('channel-a', { mode: 'custom', packId: id }, 1, 'medium');
+  assert.deepEqual([...store.referencedArt('channel-a')], [artId]);
+  const snapshot = store.resolve('channel-a', 'medium');
+  assert.equal(snapshot[0].artId, artId);
+  const reloaded = new CardLibraryStore(dir, undefined, approved); await reloaded.load();
+  assert.equal(reloaded.resolve('channel-a', 'medium')[0].artId, artId);
+  const edit = editable(store.view('channel-a', 'medium').packs[0]);
+  delete edit.cards[0].artId; await store.savePack('channel-a', edit);
+  assert.equal(store.referencedArt('channel-a').size, 0);
+  assert.equal(snapshot[0].artId, artId);
+  assert.equal(store.resolve('channel-a', 'medium')[0].artId, undefined);
+  assert.equal(packInputSchema.safeParse({ ...input, cards: [{ ...input.cards[0], artId: 'https://bad.example/image.png' }] }).success, false);
+});
+
 test('quota is bounded and archived packs can be restored without consuming another slot', async (t) => {
   const { store } = await library(t);
   const single = pack({ status: 'draft', cards: pack().cards.slice(0, 1) });

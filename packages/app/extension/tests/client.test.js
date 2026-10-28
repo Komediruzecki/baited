@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readRuntimeConfig, readState, readConfiguration, clockValue, createExtensionClient, connectToTwitch } from '../client.js';
+import { readRuntimeConfig, readState, readConfiguration, clockValue, createExtensionClient, connectToTwitch, nativeCardArtSource } from '../client.js';
 
 const config = { clientId: 'baitedfixture0001', apiBaseUrl: 'https://game.example' };
 const auth = (token = 'first-token') => ({ clientId: config.clientId, channelId: '12345', token });
@@ -13,6 +13,48 @@ const state = () => ({
     round: { id: 'round-1', number: 1, duration: 60000, remaining: 45000, endsAt: 55000, target: 'Pineapple', forbiddenClues: ['Pizza', 'Fruit'] },
     result: null,
   },
+});
+const customArt = `/api/card-art/round/fixture-room/4891561a-8bad-459d-8e08-7f698910a72b/31ab82b5-809d-4bc4-8272-ac914b3bcc3f/${'c'.repeat(43)}.png`;
+
+test('uploaded artwork is validated and redacted without an active target or confirmed result', () => {
+  const value = state();
+  value.room.round.artUrl = customArt;
+  value.room.round.artId = 'internal-id-must-not-leak';
+  assert.equal(readState(value).room.round.artUrl, customArt);
+  assert.equal('artId' in readState(value).room.round, false);
+  for (const phase of ['idle', 'cooldown']) {
+    value.room.phase = phase;
+    assert.equal('artUrl' in readState(value).room.round, false);
+  }
+  value.room.phase = 'active';
+  delete value.room.round.target;
+  assert.equal('artUrl' in readState(value).room.round, false);
+  for (const outcome of ['review', 'ended', 'skipped', 'overturned', 'caught', 'escaped']) {
+    value.room.result = { id: 'r1', word: 'radish', outcome, artUrl: customArt, artId: 'private-storage-id' };
+    const parsed = readState(value).room.result;
+    assert.equal('artUrl' in parsed, ['caught', 'escaped'].includes(outcome));
+    assert.equal('artId' in parsed, false);
+  }
+  for (const artUrl of [`https://other.example${customArt}`, '//other.example/a.png', 'data:image/png;base64,AA==',
+    '/api/studio/card-art/31ab82b5-809d-4bc4-8272-ac914b3bcc3f.png', `${customArt}?x=1`, `${customArt}#x`,
+    customArt.replace('/round/', '/round/../'), customArt.replace('.png', '.svg')]) {
+    value.room.round.artUrl = artUrl;
+    assert.throws(() => readState(value), /Invalid artwork/);
+    delete value.room.round.artUrl;
+    value.room.result.artUrl = artUrl;
+    assert.throws(() => readState(value), /Invalid artwork/);
+  }
+});
+
+test('native image resolution ignores untrusted destination URLs and accepts the configured backend only', () => {
+  const previous = globalThis.window;
+  globalThis.window = { BAITED_EXTENSION_CONFIG: config };
+  try {
+    assert.equal(nativeCardArtSource(customArt), `https://game.example${customArt}`);
+    assert.equal(nativeCardArtSource(`https://other.example${customArt}`), null);
+    globalThis.window.BAITED_EXTENSION_CONFIG = { ...config, apiBaseUrl: 'javascript:alert(1)' };
+    assert.equal(nativeCardArtSource(customArt), null);
+  } finally { globalThis.window = previous; }
 });
 
 function harness() {

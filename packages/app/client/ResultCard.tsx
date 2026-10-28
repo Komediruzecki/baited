@@ -51,6 +51,7 @@ export function ResultCard({
         <CutCard
           className="result-card__face"
           word={result.word}
+          artUrl={['caught', 'escaped'].includes(result.outcome) ? result.artUrl : undefined}
           chip={verdict}
           note={outcome}
           revealHold={Math.max(0, revealAt - initialAge)}
