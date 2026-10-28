@@ -140,7 +140,7 @@ export function fixtureState(mode, role, at, now = Date.now()) {
           : {}),
       }
     : null;
-  // A confirmed catch lands chat's streak on five, the On fire badge.
+  // A confirmed catch lands chat's streak on five, the On fire badge, and the streamer picks Alex.
   const result =
     phase === 'cooldown'
       ? {
@@ -151,7 +151,7 @@ export function fixtureState(mode, role, at, now = Date.now()) {
           elapsed: 32,
           participants: 12,
           at: now - 1000,
-          ...(mode === 'caught' ? { milestone: 5, newBadge: true } : {}),
+          ...(mode === 'caught' ? { milestone: 5, newBadge: true, award: { name: 'Alex', at: now - 500 } } : {}),
         }
       : null;
   const streak = mode === 'caught' ? 5 : ['escaped', 'review'].includes(mode) ? 0 : 4;
@@ -183,6 +183,11 @@ export function fixtureState(mode, role, at, now = Date.now()) {
       voters: 1,
       voteThreshold: 3,
       leaders: [],
+      mvps: [
+        { name: 'Blake', rounds: 6, baits: 3 },
+        { name: 'Alex', rounds: 9, baits: 2 },
+        { name: 'Casey', rounds: 4, baits: 1 },
+      ],
       connection: { status: 'connected', detail: 'Local fixture. No Twitch connection.' },
       mic: 'off',
       nextAt: null,

@@ -170,6 +170,8 @@ export function spoils(text: string, word: string) {
 }
 interface Hint extends HintCandidate {
   userId: string;
+  /** The chat message's ID, so a moderator's delete can find its hint. */
+  messageId: string;
 }
 interface Mission extends Omit<MissionView, 'endsAt'> {
   endsAt: number;
@@ -481,11 +483,7 @@ export class Game {
     )
       throw new Error('Only the latest detection can be reversed before the next round.');
     this.result.outcome = 'overturned';
-    const awarded = this.awardOwners.get(this.result.id);
-    if (awarded && this.data.leaders[awarded])
-      this.data.leaders[awarded].baits = Math.max(0, (this.data.leaders[awarded].baits ?? 0) - 1);
-    this.awardOwners.delete(this.result.id);
-    delete this.result.award;
+    this.takeBackAward(this.result);
     // A reversed win takes back the badge it unlocked.
     if (this.result.milestone) {
       const unlocked = this.data.streakBadges?.[this.result.milestone];
@@ -603,7 +601,10 @@ export class Game {
       this.data.history[0].outcome !== 'caught'
     )
       return null;
-    return { ...board, candidates: board.candidates.map(({ userId: unused, ...hint }) => hint) };
+    return {
+      ...board,
+      candidates: board.candidates.map(({ userId: _user, messageId: _message, ...hint }) => hint),
+    };
   }
   award(roundId: string, hintId: string) {
     this.tick();
@@ -637,7 +638,53 @@ export class Game {
     // Choosing another hint by the same chatter changes nothing public.
     if (old !== hint.userId) this.emit({ type: 'award' });
   }
-  private rememberHint(r: Round, userId: string, name: string, text: string, spoiled: boolean) {
+  /** A moderator deleted this message. Its hint leaves the round and the review. */
+  dropMessage(messageId: string, userId: string) {
+    return this.dropHints((hint) => hint.messageId === messageId && hint.userId === userId);
+  }
+  /**
+   * A moderator banned or timed out this chatter, which clears all their messages. Their
+   * hints leave the round and the review, and an award one of them won goes too. Once a
+   * review has closed after ten minutes, its award stays.
+   */
+  dropChatter(userId: string) {
+    return this.dropHints((hint) => hint.userId === userId);
+  }
+  private dropHints(match: (hint: Hint) => boolean) {
+    this.tick();
+    let dropped = false;
+    if (this.round?.hints.some(match)) {
+      this.round.hints = this.round.hints.filter((hint) => !match(hint));
+      dropped = true;
+    }
+    const board = this.review;
+    if (board?.candidates.some(match)) {
+      const picked = board.candidates.find((hint) => hint.id === board.selectedHintId);
+      board.candidates = board.candidates.filter((hint) => !match(hint));
+      // An award belongs to its hint, so it leaves with it.
+      if (picked && match(picked)) {
+        const result = this.data.history.find((entry) => entry.id === board.roundId);
+        if (result) this.takeBackAward(result);
+        board.selectedHintId = null;
+      }
+      dropped = true;
+    }
+    if (dropped) this.changed();
+    return dropped;
+  }
+  private takeBackAward(result: Result) {
+    const owner = this.awardOwners.get(result.id);
+    if (owner && this.data.leaders[owner])
+      this.data.leaders[owner].baits = Math.max(0, (this.data.leaders[owner].baits ?? 0) - 1);
+    this.awardOwners.delete(result.id);
+    delete result.award;
+  }
+  private rememberHint(
+    r: Round,
+    message: { id: string; userId: string; name: string; text: string; at: number },
+    spoiled: boolean,
+  ) {
+    const { userId, name, text } = message;
     if (text.trim().startsWith('!')) return;
     const blocked = r.clues.filter((clue) => spoils(text, clue));
     const reason = spoiled
@@ -656,6 +703,8 @@ export class Game {
       text: text.slice(0, 500),
       eligible,
       reason,
+      at: message.at,
+      messageId: message.id,
     });
     const bucket = r.hints.filter((hint) => hint.eligible === eligible);
     if (bucket.length > (eligible ? 40 : 20))
@@ -745,7 +794,7 @@ export class Game {
     }
     if (now - (this.recentChat.get(userId) ?? -Infinity) < 3000) return false;
     const spoiled = spoils(text, r.word);
-    this.rememberHint(r, userId, name, text, spoiled);
+    this.rememberHint(r, { id, userId, name, text, at }, spoiled);
     // Spoiler text, however disguised, earns no participation credit and is never echoed by BAIT.
     if (spoiled) return false;
     this.recentChat.set(userId, now);

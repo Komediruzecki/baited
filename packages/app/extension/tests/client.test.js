@@ -105,6 +105,43 @@ test('printed ink and example question are copied only beside a target, and ink 
   assert.equal('example' in readState(value).room.round, false);
 });
 
+const decided = (result, mvps) => ({ version: '0.0.1', configured: true, room: {
+  phase: 'cooldown', channel: 'streamer', serverTime: 1, round: null, result, ...(mvps === undefined ? {} : { mvps }),
+} });
+
+test('state parser copies the streamer’s pick and the top three bait MVPs as optional fields', () => {
+  // Older backends send neither.
+  const older = readState(decided({ id: 'r1', word: 'Pineapple', outcome: 'caught' }));
+  assert.equal('award' in older.room.result, false);
+  assert.deepEqual(older.room.mvps, []);
+  const parsed = readState(decided(
+    { id: 'r1', word: 'Pineapple', outcome: 'caught', award: { name: 'Alex', at: 9000 } },
+    [
+      { name: 'Blake', rounds: 2, baits: 3 },
+      { name: 'Alex', rounds: 9, baits: 1 },
+      { name: 'Casey', rounds: 4, baits: 1 },
+      { name: 'Drew', rounds: 1, baits: 1 },
+    ],
+  ));
+  assert.deepEqual(parsed.room.result.award, { name: 'Alex', at: 9000 });
+  assert.deepEqual(parsed.room.mvps, [{ name: 'Blake', baits: 3 }, { name: 'Alex', baits: 1 }, { name: 'Casey', baits: 1 }]);
+  assert.deepEqual(readState(decided({ id: 'r1', word: 'Pineapple', outcome: 'caught', award: { name: 'Alex' } })).room.result.award, { name: 'Alex' });
+});
+
+test('an award is kept only on a confirmed catch, and malformed award or MVP data is rejected', () => {
+  for (const outcome of ['review', 'overturned', 'escaped']) {
+    const parsed = readState(decided({ id: 'r1', word: 'Pineapple', outcome, award: { name: 'Alex' } }));
+    assert.equal('award' in parsed.room.result, false, outcome);
+  }
+  for (const award of [null, 'Alex', {}, { name: '' }, { name: 'x'.repeat(41) }, { name: 'Alex', at: 'soon' }]) {
+    assert.throws(() => readState(decided({ id: 'r1', word: 'Pineapple', outcome: 'caught', award })), /Invalid result/, JSON.stringify(award));
+  }
+  const many = Array.from({ length: 11 }, (_, i) => ({ name: `Viewer${i}`, baits: 1 }));
+  for (const mvps of [null, {}, 'Alex', [{ name: 'Alex' }], [{ name: 'Alex', baits: 0 }], [{ name: '', baits: 1 }], [{ name: 'Alex', baits: 1.5 }], many]) {
+    assert.throws(() => readState(decided(null, mvps)), /Invalid MVPs/, JSON.stringify(mvps));
+  }
+});
+
 test('state parser carries only a valid public streak and badge', () => {
   const room = (result, score) => ({ version: '0.0.1', configured: true, room: {
     phase: 'cooldown', channel: 'streamer', serverTime: 1, round: null, result, ...(score === undefined ? {} : { score }),

@@ -33,6 +33,7 @@ For a persistent data directory, preserve its existing encryption key across dep
 | `SPEECH_PROVIDER` | `moonshine` for local browser recognition, or `deepgram` for the optional cloud adapter |
 | `DEEPGRAM_API_KEY` | Required only for Deepgram; omit its reference for Moonshine |
 | `TWITCH_BOT_USER_ID` | Optional. Numeric user ID of the chat bot account; not a secret. See [Chat bot](chat-bot.md) |
+| `TWITCH_BOT_IS_STREAMER` | Optional. Set to `1` only when a streamer runs the bot on their own account. Unset, the bot account is refused at the streamer sign-in, so it never gets a room of its own |
 
 The current proxy configuration accepts an explicit IP/CIDR allowlist. Do not use `true`, a hop count, `/0`, or an unbounded network range. Trust a loopback address only when the actual proxy connects from that address. The proxy must overwrite incoming forwarding headers and prevent clients reaching the app directly while spoofing a trusted path. Verify the resulting client identity through the real deployment before a large audience joins.
 

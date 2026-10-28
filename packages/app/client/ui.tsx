@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Copy, Eye, MessageSquare, Mic, ShieldCheck, X } from './icons';
+import { ArrowUpRight, Check, Copy, Eye, MessageSquare, Mic, ShieldCheck, X } from './icons';
+import type { Phase } from '../shared/types';
 
 export const productBrand = (
   <span className="product-brand" role="img" aria-label="BAITED">
@@ -22,8 +23,49 @@ export const botNotices = {
       'That Twitch account is not the bot account this server expects. Sign in as the bot account, in a private window if you are signed in as a streamer.',
     'bot-setup':
       'This server has no bot account configured. Set TWITCH_BOT_USER_ID, then sign in as the bot.',
+    'bot-oauth':
+      'The bot account sign-in did not finish. Sign in as the bot account again.',
+    'bot-declined':
+      'Baity stopped posting in your chat: you signed in without the bot permission. Allow the bot in Stream setup to bring Baity back.',
+    'bot-as-streamer':
+      "That is the chat bot's Twitch account. Sign in with the streamer's account, in a private window if Twitch keeps picking the bot.",
   } as Record<string, string>,
 };
+/** Notices whose fix is the operator signing in as the bot account again. */
+const botRetryNotices = new Set(['bot-oauth', 'bot-account']);
+export function BotSignInLink({ notice }: { notice: string }) {
+  if (!botRetryNotices.has(notice)) return null;
+  return (
+    <a className="button secondary bot-signin-link" href="/auth/twitch/bot">
+      Sign in as the bot account <ArrowUpRight size={16} />
+    </a>
+  );
+}
+/**
+ * Allowing the bot is a Twitch round trip that replaces the studio session. A running round would
+ * lose its microphone lease and pause, so the button waits until the round is over.
+ */
+export function AllowBotButton({ phase }: { phase: Phase }) {
+  const running = phase === 'active' || phase === 'paused' || phase === 'settling';
+  return (
+    <div className="connection-buttons">
+      <Button
+        className="primary"
+        disabled={running}
+        aria-describedby={running ? 'allow-bot-wait' : undefined}
+        onClick={() => location.assign('/auth/twitch?bot=1')}
+      >
+        Allow the bot in your chat <ArrowUpRight size={16} />
+      </Button>
+      {running && (
+        <p id="allow-bot-wait" className="muted">
+          Finish the round first. Allowing the bot signs you in again, which turns off your microphone and
+          pauses the round.
+        </p>
+      )}
+    </div>
+  );
+}
 export function Button({
   children,
   className = '',

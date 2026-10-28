@@ -55,7 +55,17 @@ import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
 import './style.css';
 import Landing from './Landing';
-import { productBrand as brand, botNotices, Button, Tag, CopyButton, Modal, HowTo } from './ui';
+import {
+  productBrand as brand,
+  botNotices,
+  AllowBotButton,
+  BotSignInLink,
+  Button,
+  Tag,
+  CopyButton,
+  Modal,
+  HowTo,
+} from './ui';
 import './brand.css';
 import {
   MissionStatus,
@@ -160,9 +170,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [notice, setNotice] = useState(() => {
       const code = new URLSearchParams(location.search).get('notice') ?? '';
       return code === 'bot-ready'
-        ? { text: botNotices.ready, ok: true }
+        ? { text: botNotices.ready, ok: true, code }
         : botNotices.errors[code]
-          ? { text: botNotices.errors[code], ok: false }
+          ? { text: botNotices.errors[code], ok: false, code }
           : null;
     });
   const [micStatus, setMicStatus] = useState('off'),
@@ -490,6 +500,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <div className={cx('error-banner', notice.ok && 'info-banner')} role="status">
               {notice.ok ? <Check size={17} /> : <AlertTriangle size={17} />}
               <span>{notice.text}</span>
+              <BotSignInLink notice={notice.code} />
               <button aria-label="Dismiss notice" onClick={() => setNotice(null)}>
                 <X size={16} />
               </button>
@@ -1740,11 +1751,7 @@ function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
           It never posts the word while a round is live, because you read your chat too.
         </p>
         {game.mode === 'twitch' && bot.mode === 'twitch' && !bot.channelAllowed && (
-          <div className="connection-buttons">
-            <Button className="primary" onClick={() => location.assign('/auth/twitch?bot=1')}>
-              Allow the bot in your chat <ArrowUpRight size={16} />
-            </Button>
-          </div>
+          <AllowBotButton phase={game.phase} />
         )}
         <p className="setup-commands">
           Chat can type <code>!bait help</code>, <code>!bait score</code>, <code>!bait top</code> and{' '}

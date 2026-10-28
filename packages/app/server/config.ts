@@ -38,6 +38,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   const botUserId = env.TWITCH_BOT_USER_ID || '';
   if (botUserId && !/^[1-9]\d{0,19}$/.test(botUserId))
     throw new Error('TWITCH_BOT_USER_ID must be the numeric Twitch user ID of the bot account.');
+  // A streamer may run the bot on their own account. Otherwise the bot account cannot sign in as a streamer.
+  const botIsStreamer = env.TWITCH_BOT_IS_STREAMER === '1';
   const host = env.HOST || '127.0.0.1';
   const previewLanHost = env.LOCAL_PREVIEW_HOST || null;
   if (previewLanHost && (
@@ -77,6 +79,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     clientSecret,
     twitchReady: !!(key && clientId && clientSecret),
     botUserId,
+    botIsStreamer,
     botReady: !!(key && clientId && clientSecret && botUserId),
     extensionClientId,
     extensionSecret,

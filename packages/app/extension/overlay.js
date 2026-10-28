@@ -22,7 +22,7 @@ let announcementKey = '';
 let dealtRound = '';
 let turnTimer = null;
 let landing;
-let shownResult = { key: '', since: 0 };
+let shownResult = { key: '', award: '', since: 0 };
 // The ink a viewer's card was dealt with, kept for the same card's reveal.
 let dealtInk = { id: '', ink: '' };
 // A face's art resolves from pixels the first time it turns up, as on the landing.
@@ -175,6 +175,31 @@ function setMedal(tier) {
   } else byId('front-medal-art').removeAttribute('src');
 }
 
+/** The streamer's pick: one chatter's name, never their hint. */
+function setAward(award) {
+  byId('front-award').hidden = !award;
+  byId('front-award').textContent = award ? `Streamer’s pick: @${award.name}` : '';
+}
+
+/** Chat's top three bait MVPs on a won card, on one line when the names allow. */
+function setMvps(mvps) {
+  byId('front-mvps').hidden = mvps.length === 0;
+  byId('front-mvp-list').replaceChildren(
+    ...mvps.map((mvp) => {
+      const item = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = `@${mvp.name}`;
+      const count = document.createElement('span');
+      count.textContent = ` ${mvp.baits}`;
+      const unit = document.createElement('span');
+      unit.className = 'sr-only';
+      unit.textContent = mvp.baits === 1 ? ' pick' : ' picks';
+      item.replaceChildren(name, count, unit);
+      return item;
+    }),
+  );
+}
+
 /** Removes every secret the front face may hold: word, ink, artwork filename, clues and question. */
 function clearFront() {
   setWord('');
@@ -187,6 +212,8 @@ function clearFront() {
   setRules([]);
   setRow(0);
   setMedal(null);
+  setAward(null);
+  setMvps([]);
 }
 
 function setVisible(visible) {
@@ -249,7 +276,10 @@ function deal(roundId, face) {
 function resultVisible(result) {
   if (result.outcome === 'review') return true;
   const key = `${result.id}:${result.outcome}`;
-  if (shownResult.key !== key) shownResult = { key, since: Date.now() };
+  const award = result.award ? `${result.award.name}:${result.award.at ?? ''}` : '';
+  // A new streamer's pick brings the finished card back to show it; a pick taken back does not.
+  if (shownResult.key !== key || (award && award !== shownResult.award))
+    shownResult = { key, award, since: Date.now() };
   return Date.now() - shownResult.since < RESULT_MS;
 }
 
@@ -262,6 +292,8 @@ function showRound(room) {
   delete card.dataset.outcome;
   setRow(0);
   setMedal(null);
+  setAward(null);
+  setMvps([]);
   setStreak(room.score.streak);
   if (visible) {
     byId('front-chip').textContent =
@@ -324,6 +356,9 @@ function showResult(room) {
   const next = caught ? nextStreakTier(streak) : null;
   setRow(caught ? streak : 0);
   setMedal(tier);
+  const award = caught ? result.award : undefined;
+  setAward(award);
+  setMvps(caught ? room.mvps : []);
   byId('front-chip').textContent = tier ? (result.newBadge ? 'New streak badge' : 'Streak badge') : copy[0];
   byId('front-note').textContent = tier ? `${tier.name} · ${tier.count} in a row` : copy[1];
   byId('front-question').textContent = !caught || streak < 1
@@ -335,8 +370,8 @@ function showResult(room) {
   if (!dealtRound) dealtRound = result.id;
   setFace('front');
   announce(
-    `result:${result.id}:${result.outcome}`,
-    `${copy[0]}. The word was ${result.word}.${tier ? ` Streak badge: ${tier.name}.` : ''}`,
+    `result:${result.id}:${result.outcome}:${award?.name ?? ''}`,
+    `${copy[0]}. The word was ${result.word}.${tier ? ` Streak badge: ${tier.name}.` : ''}${award ? ` Streamer’s pick: @${award.name}.` : ''}`,
   );
 }
 

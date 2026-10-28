@@ -9,6 +9,7 @@ import { Store, type Credentials } from '../server/store.js';
 import { loadConfig } from '../server/config.js';
 import { ChatBot, LIMITS } from '../server/chatbot.js';
 import {
+  badgeAnnouncement,
   eventAnnouncement,
   finalAnnouncement,
   halfwayAnnouncement,
@@ -137,6 +138,54 @@ test("none of Baity's lines can say a target word, in any mood", () => {
         assert.equal(spoils(line.replace(/\{\w+\}/g, ' '), word), false, `${word} in: ${line}`);
 });
 
+// Twitch chat is plain text: Baity keeps her voice in words and punctuation, never in
+// emoji or pictographs, and signs as Baeittrice without an em dash.
+const pictograph = /[\u{2190}-\u{2BFF}\u{1F000}-\u{1FAFF}\u{FE0F}]/u;
+
+test("Baity's lines and every chat-copy post are free of emoji", () => {
+  const all = Object.values(lines as Record<string, readonly string[] | Record<string, readonly string[]>>).flatMap(
+    (set) => (Array.isArray(set) ? set : Object.values(set).flat()),
+  );
+  for (const line of all) {
+    assert.doesNotMatch(line, pictograph, `emoji in: ${line}`);
+    assert.doesNotMatch(line, /\u2014/, `em dash in: ${line}`);
+  }
+  const f = fixture();
+  f.game.data.leaders = { a: { name: 'Alex', rounds: 9, baits: 2 } };
+  const texts: string[] = [];
+  f.game.onEvent = (event) => {
+    const view = f.game.view('overlay');
+    const announcement = eventAnnouncement(view, event);
+    if (announcement) texts.push(announcement.text);
+    const badge = event.type === 'finish' ? badgeAnnouncement(view) : null;
+    if (badge) texts.push(badge.text);
+  };
+  const commands = () => {
+    const view = f.game.view('overlay');
+    texts.push(helpText(view), whoText(view), scoreText(view), topText(view), streakText(view));
+  };
+  // Every mood: three wins for the streak badges, then four losses into Baeittrice and a comeback.
+  for (const win of [true, true, true, false, false, false, false, true]) {
+    f.game.begin();
+    const view = f.game.view('overlay');
+    texts.push(halfwayAnnouncement(view)!.text, finalAnnouncement(view).text);
+    const struggling = strugglingAnnouncement(view);
+    if (struggling) texts.push(struggling.text);
+    f.game.pause();
+    f.game.resume();
+    commands();
+    if (win) f.game.transcript(f.transcript());
+    else {
+      f.advance(f.game.round!.duration + 1);
+      f.game.tick();
+    }
+    commands();
+    f.advance(60000);
+  }
+  assert.ok(texts.length > 80, `${texts.length} posts`);
+  for (const text of texts) assert.doesNotMatch(text, pictograph, `emoji in: ${text}`);
+});
+
 test('!bait top shows the bait MVPs once the streamer has picked someone', () => {
   const f = fixture();
   f.game.data.leaders = { a: { name: 'Alex', rounds: 9 }, b: { name: 'Blake', rounds: 2, baits: 2 } };
@@ -173,7 +222,7 @@ test('Baity gets louder while chat loses, and cute again when chat wins', () => 
   assert.match(whoText(f.game.view('overlay')), /BAEITTRICE/);
   f.game.transcript(f.transcript());
   assert.equal(shouting(texts.at(-1)!), false, `the comeback is cute: ${texts.at(-1)}`);
-  assert.match(texts.at(-1)!, /🎀/);
+  assert.match(texts.at(-1)!, /the bow is back on|all the yelling|Baity is back/);
   f.advance(60000);
   f.game.begin();
   assert.equal(shouting(texts.at(-1)!), false, 'a win resets the mood');
@@ -227,14 +276,15 @@ test('demo rooms preview posts in the studio with Twitch pacing and newest-wins 
   now += LIMITS.channelGap;
   bot.tick(f.game);
   assert.equal(recent().length, 2);
-  assert.match(recent()[0].text, /^⏸ .*the clock is frozen/i);
+  assert.match(recent()[0].text, /^(round )?paused[.!] the clock is frozen/i);
   now += LIMITS.channelGap;
   bot.tick(f.game);
   assert.equal(recent().length, 2);
   // At most channelCount posts per window, however many keys are waiting.
-  for (const text of ['!bait help', '!bait score', '!bait top']) bot.chat(f.game, message(text));
+  for (const [i, text] of ['!bait help', '!bait score', '!bait top'].entries())
+    bot.chat(f.game, message(text, { userId: `viewer-${i}` }));
   // The same command again inside its cooldown gets no second answer.
-  bot.chat(f.game, message('!bait help'));
+  bot.chat(f.game, message('!bait help', { userId: 'viewer-9' }));
   for (let i = 0; i < 4; i++) {
     now += LIMITS.channelGap;
     bot.tick(f.game);
@@ -257,6 +307,129 @@ test('demo rooms preview posts in the studio with Twitch pacing and newest-wins 
   assert.ok(recent().every((post) => !matches(post.text, f.game.round!.word)));
 });
 
+test('one chatter cycling commands gets one answer, and replies never crowd out announcements', async (t) => {
+  const store = await tempStore(t);
+  let now = 3_000_000;
+  const f = fixture();
+  f.game.data.settings.chatBot = true;
+  const bot = new ChatBot({ config: loadConfig({}), store, ready: () => null, clock: () => now });
+  f.game.onEvent = (event) => bot.event(f.game, event);
+  const recent = () => bot.status(f.game).recent;
+  const step = () => {
+    now += LIMITS.channelGap;
+    bot.tick(f.game);
+  };
+  f.game.begin();
+  assert.equal(recent().length, 1);
+  // Cycling every command from one account earns a single answer per cooldown.
+  for (const text of ['!bait help', '!bait score', '!bait streak', '!bait top', '!bait who'])
+    bot.chat(f.game, message(text, { userId: 'cycler' }));
+  for (let i = 0; i < 5; i++) step();
+  assert.equal(recent().length, 2);
+  assert.match(recent()[0].text, /!bait top · !bait who$/);
+  // Other chatters fill the reply lane; a round post that arrives after them goes out first.
+  for (const [i, text] of ['!bait score', '!bait streak', '!bait top', '!bait who'].entries())
+    bot.chat(f.game, message(text, { userId: `viewer-${i}` }));
+  f.game.pause();
+  step();
+  assert.match(recent()[0].text, /the clock is frozen/i);
+  for (let i = 0; i < 6; i++) step();
+  // Replies use at most their share of the channel budget, so a result still has room.
+  assert.equal(recent().length, 2 + LIMITS.channelReplyCount);
+  f.game.resume();
+  step();
+  assert.equal(recent().length, LIMITS.channelCount);
+  assert.match(recent()[0].text, /^(back on|unpaused)\b/i);
+  // The cycler can ask again once their own cooldown has passed.
+  now += LIMITS.chatterCooldown;
+  bot.chat(f.game, message('!bait score', { userId: 'cycler' }));
+  step();
+  assert.match(recent()[0].text, /^(chat's record|scoreboard): /);
+});
+
+test('a flood in three channels cannot hold back a fourth channel', async (t) => {
+  const store = await tempStore(t);
+  const owners = ['1', '2', '3', '4'];
+  for (const owner of owners)
+    await store.setCredentials(owner, credentials({ userId: owner, login: `channel${owner}`, name: `Channel${owner}` }));
+  await store.setCredentials(
+    botKey('999'),
+    credentials({ userId: '999', login: 'baitedbot', name: 'BaitedBot', scope: ['user:write:chat', 'user:bot'] }),
+  );
+  const config = loadConfig({
+    TWITCH_CLIENT_ID: 'client-test',
+    TWITCH_CLIENT_SECRET: 'secret-test',
+    TOKEN_ENCRYPTION_KEY: key,
+    TWITCH_BOT_USER_ID: '999',
+  });
+  let now = 11_000_000;
+  const posts: { at: number; channel: string; text: string }[] = [];
+  const bot = new ChatBot({
+    config,
+    store,
+    ready: () => null,
+    clock: () => now,
+    fetcher: (async (url: string, init?: RequestInit) => {
+      if (String(url).endsWith('/oauth2/token')) return tokenReply();
+      const body = JSON.parse(String(init?.body));
+      posts.push({ at: now, channel: body.broadcaster_id, text: body.message });
+      return sent();
+    }) as typeof fetch,
+  });
+  const games = owners.map((owner) => {
+    const game = new Game(saved({ id: `room-${owner}`, owner, channel: `channel${owner}` }));
+    game.onEvent = (event) => bot.event(game, event);
+    return game;
+  });
+  const enqueue = (bot as unknown as { enqueue: (game: Game, announcement: { key: string; text: string; ttl: number }) => void })
+    .enqueue.bind(bot);
+  // Fetch the app token first, so each post is timed when the scheduler sends it.
+  await (bot as unknown as { token: (force: boolean) => Promise<string> }).token(false);
+  let load = 0;
+  const flood = async () => {
+    for (const game of games.slice(0, 3))
+      for (let i = 0; i < 2; i++) enqueue(game, { key: `load-${load++}`, text: `load ${load}`, ttl: 30000 });
+    await flush();
+  };
+  const step = async (ms = 100) => {
+    now += ms;
+    for (const game of games) bot.tick(game);
+    await flush();
+  };
+  // The first three channels flood for ten seconds and use every slot they can.
+  for (let i = 0; i < 100; i++) {
+    if (i % 5 === 0) await flood();
+    await step();
+  }
+  const flooded = posts.length;
+  assert.ok(flooded >= LIMITS.globalCount - LIMITS.globalReserve, `${flooded} posts`);
+  // The fourth channel's round post goes out within a few seconds, not after a full window.
+  const quiet = games[3];
+  const before = now;
+  enqueue(quiet, { key: 'start', text: 'round 1 is live', ttl: 20000 });
+  await flush();
+  for (let i = 0; i < 30 && !posts.some((post) => post.channel === '4'); i++) {
+    await flood();
+    await step();
+  }
+  const fourth = posts.find((post) => post.channel === '4');
+  assert.ok(fourth, 'the fourth channel posted');
+  assert.ok(fourth.at - before <= 3000, `waited ${fourth.at - before} ms`);
+  // Keep flooding for two more windows: every Twitch limit still holds.
+  for (let i = 0; i < 600; i++) {
+    if (i % 5 === 0) await flood();
+    await step();
+  }
+  for (const post of posts) {
+    const window = posts.filter((other) => other.at > post.at - LIMITS.globalWindow && other.at <= post.at);
+    assert.ok(window.length <= LIMITS.globalCount, `${window.length} posts in 30 s`);
+    const channel = window.filter((other) => other.channel === post.channel);
+    assert.ok(channel.length <= LIMITS.channelCount, `${channel.length} posts in one channel in 30 s`);
+    const previous = posts.filter((other) => other.channel === post.channel && other.at < post.at).at(-1);
+    if (previous) assert.ok(post.at - previous.at >= LIMITS.channelGap, `posts stay apart: ${post.channel} ${previous.at} ${post.at}`);
+  }
+});
+
 test('timer nudges fire once per round: halfway and the final ten seconds', async (t) => {
   const store = await tempStore(t);
   const f = fixture();
@@ -274,12 +447,12 @@ test('timer nudges fire once per round: halfway and the final ten seconds', asyn
   step(59000);
   assert.equal(bot.status(f.game).recent.length, 1);
   step(2000);
-  assert.match(bot.status(f.game).recent[0].text, /^⏱ halfway.*0:59.*nobody is baiting yet/i);
+  assert.match(bot.status(f.game).recent[0].text, /^halfway.*0:59.*nobody is baiting yet/i);
   step(2000);
   step(46000);
   assert.equal(bot.status(f.game).recent.length, 2, 'a chat that has not lost gets no struggling nudge');
   step(2000);
-  assert.match(bot.status(f.game).recent[0].text, /^🔥 (10|ten) seconds/i);
+  assert.match(bot.status(f.game).recent[0].text, /^(10|ten) seconds/i);
   step(1000);
   assert.equal(bot.status(f.game).recent.length, 3);
 });
@@ -302,7 +475,7 @@ test('a losing chat gets one struggling nudge three quarters in', async (t) => {
   step(60000);
   f.game.begin();
   step(61000);
-  assert.match(bot.status(f.game).recent[0].text, /^⏱ HALFWAY/);
+  assert.match(bot.status(f.game).recent[0].text, /^HALFWAY/);
   step(29000);
   const struggling = bot.status(f.game).recent[0].text;
   assert.match(struggling, /0:30 LEFT/);
@@ -390,7 +563,7 @@ test('Twitch delivery uses an app token, the bot as sender, and refreshes once o
   assert.equal(calls.filter((call) => call.url.endsWith('/oauth2/token')).length, 2);
   const reply = calls.filter((call) => call.url.endsWith('/helix/chat/messages')).at(-1)!;
   assert.equal(JSON.parse(String(reply.init?.body)).reply_parent_message_id, 'parent-message');
-  assert.match(JSON.parse(String(reply.init?.body)).message, /^📊 .*0 won.*0 played/);
+  assert.match(JSON.parse(String(reply.init?.body)).message, /^(chat's record|scoreboard): 0 won.*0 played/);
 });
 
 test('held, refused and rate-limited messages surface in the studio without retry storms', async (t) => {
@@ -438,7 +611,7 @@ test('held, refused and rate-limited messages surface in the studio without retr
   await flush();
   assert.equal(posts(), limited + 1);
   assert.equal(bot.status(game).recent[0].status, 'sent');
-  assert.match(bot.status(game).recent[0].text, /^▶ .*left/);
+  assert.match(bot.status(game).recent[0].text, /^(back on|unpaused)\b.*left/i);
   assert.equal(bot.status(game).problem, null);
 });
 
@@ -461,6 +634,34 @@ test('the bot stays silent until it is configured, authorized, allowed and switc
   off.bot.chat(off.game, message('!bait help'));
   await flush();
   for (const { calls } of [unconfigured, unauthorized, notAllowed, off]) assert.equal(calls.length, 0);
+});
+
+test('queued posts are dropped once the bot may no longer post in the channel', async (t) => {
+  for (const lose of ['setting', 'grant'] as const) {
+    const { bot, game, calls, store, advance } = await twitchBot(t, (url) =>
+      url.endsWith('/oauth2/token') ? tokenReply() : sent(),
+    );
+    const posts = () => calls.filter((call) => call.url.endsWith('/helix/chat/messages')).length;
+    game.begin();
+    await flush();
+    assert.equal(posts(), 1);
+    // Inside the per-channel gap, these wait in the queue.
+    game.pause();
+    bot.chat(game, message('!bait score', { id: 'parent' }));
+    if (lose === 'setting') game.data.settings.chatBot = false;
+    else await store.setCredentials('123', credentials({ scope: ['user:read:chat'] }));
+    advance(LIMITS.channelGap);
+    bot.tick(game);
+    await flush();
+    assert.equal(posts(), 1, `${lose}: nothing queued goes out`);
+    // Allowing the bot again does not post what was queued before.
+    if (lose === 'setting') game.data.settings.chatBot = true;
+    else await store.setCredentials('123', credentials());
+    advance(LIMITS.channelGap);
+    bot.tick(game);
+    await flush();
+    assert.equal(posts(), 1, `${lose}: the old queue is gone`);
+  }
 });
 
 test('moderator commands need the setting, a moderator and the studio readiness', async (t) => {
@@ -529,7 +730,7 @@ test('EventSub hands commands on with badges and drops the bot account’s own m
       },
     },
   });
-  assert.equal(connection.acceptNotification(notification('999', '🎣 Round 1 is live', 'a')), false);
+  assert.equal(connection.acceptNotification(notification('999', 'Round 1 is live', 'a')), false);
   assert.equal(game.view('studio').participants, 0, 'bot posts never count as play');
   assert.equal(connection.acceptNotification(notification('456', '!bait pause', 'b')), true);
   assert.deepEqual(seen.map((m) => [m.userId, m.text, m.badges]), [['456', '!bait pause', ['moderator']]]);

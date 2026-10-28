@@ -88,6 +88,28 @@ function setDifficulty(value) {
   }));
 }
 
+/** The streamer's pick: one chatter's name, never their hint. */
+function setAward(award) {
+  byId('card-award').hidden = !award;
+  byId('card-award').textContent = award ? `Streamer’s pick: @${award.name}` : '';
+}
+
+/** Chat's top three bait MVPs. Shown between rounds, when the card has room for them. */
+function setMvps(mvps) {
+  byId('mvps').hidden = mvps.length === 0;
+  byId('mvp-list').replaceChildren(
+    ...mvps.map((mvp) => {
+      const item = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = `@${mvp.name}`;
+      const picks = document.createElement('span');
+      picks.textContent = mvp.baits === 1 ? ' 1 pick' : ` ${mvp.baits} picks`;
+      item.replaceChildren(name, picks);
+      return item;
+    }),
+  );
+}
+
 function deal(roundId) {
   if (dealtRound === roundId) return;
   dealtRound = roundId;
@@ -124,6 +146,8 @@ function clearCard(title, detail, label = 'Waiting', resetAnnouncement = true) {
   byId('card-detail').hidden = false;
   byId('forbidden').hidden = true;
   byId('forbidden-list').replaceChildren();
+  setAward(null);
+  setMvps([]);
   byId('clock').hidden = true;
   byId('round-index').textContent = "Chat's secret";
   byId('card-stamp').textContent = 'Only chat will know';
@@ -161,6 +185,9 @@ function render({ configured, room }) {
     setArt(visible ? room.round.target : null);
     setDifficulty(visible ? room.round.difficulty : null);
     setQuestion(visible ? room.round.example : null);
+    // The word, clues and clock need the card during a round.
+    setAward(null);
+    setMvps([]);
     dealtInk = visible ? { id: room.round.id, ink: room.round.ink ?? '' } : { id: '', ink: '' };
     byId('card-detail').hidden = visible;
     byId('card-detail').textContent = !visible
@@ -225,12 +252,27 @@ function render({ configured, room }) {
     setQuestion(null);
     const tier =
       result.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
-    byId('card-detail').textContent = tier
-      ? `${copy[1]} 🔥 ${result.newBadge ? 'New streak badge' : 'Streak badge'}: ${tier.name}, ${tier.count} in a row.`
-      : copy[1];
+    if (tier) {
+      // The flame is an image, never a text glyph, so it draws the same everywhere.
+      const flame = document.createElement('img');
+      flame.className = 'card-detail__flame';
+      flame.setAttribute('src', './assets/streak-flame.svg');
+      flame.setAttribute('alt', '');
+      flame.setAttribute('aria-hidden', 'true');
+      flame.setAttribute('width', '12');
+      flame.setAttribute('height', '14');
+      byId('card-detail').replaceChildren(
+        `${copy[1]} `,
+        flame,
+        ` ${result.newBadge ? 'New streak badge' : 'Streak badge'}: ${tier.name}, ${tier.count} in a row.`,
+      );
+    } else byId('card-detail').textContent = copy[1];
     byId('card-detail').hidden = false;
     byId('forbidden').hidden = true;
     byId('forbidden-list').replaceChildren();
+    const award = result.outcome === 'caught' ? result.award : undefined;
+    setAward(award);
+    setMvps(room.mvps);
     byId('clock').hidden = true;
     byId('card-stamp').textContent =
       result.outcome === 'caught'
@@ -244,8 +286,8 @@ function render({ configured, room }) {
         : 'The next secret appears here when the streamer starts again.';
     byId('skip-note').hidden = true;
     announce(
-      `result:${result.id}:${result.outcome}`,
-      `${copy[0]} The word was ${result.word}. ${copy[1]}`,
+      `result:${result.id}:${result.outcome}:${award?.name ?? ''}`,
+      `${copy[0]} The word was ${result.word}. ${copy[1]}${award ? ` Streamer’s pick: @${award.name}.` : ''}`,
     );
     return;
   }
@@ -255,6 +297,7 @@ function render({ configured, room }) {
     'Waiting',
     false,
   );
+  setMvps(room.mvps);
   announce('idle', 'Waiting for the next round.');
 }
 

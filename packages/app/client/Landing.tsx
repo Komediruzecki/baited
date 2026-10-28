@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import type { SessionInfo } from '../shared/types';
 import { request } from './api';
-import { productBrand, botNotices, Button, Modal } from './ui';
+import { productBrand, botNotices, BotSignInLink, Button, Modal } from './ui';
 import { ArrowUpRight, Mic, Play, ShieldCheck } from './pixel-icons';
 import { CardBack } from './CardBack';
 
 export default function Landing({ session, reload }: { session: SessionInfo; reload: () => void }) {
   const [setup, setSetup] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [code] = useState(() => new URLSearchParams(location.search).get('notice') ?? '');
   const [error, setError] = useState(() => {
     const messages: Record<string, string> = {
       oauth: 'Twitch sign-in failed. Try again.',
@@ -41,6 +42,7 @@ export default function Landing({ session, reload }: { session: SessionInfo; rel
         <h1 id="signin-title">Run baited on your channel.</h1>
         <p>Chat gets a secret word. You keep talking.</p>
         {error && <p className="signin-error" role="alert">{error}</p>}
+        {error && <BotSignInLink notice={code} />}
         {notice && <p className="signin-notice" role="status">{notice}</p>}
         <Button className="primary" onClick={connect}><Play size={20} />{session.authenticated ? 'Open Studio' : 'Connect Twitch'}</Button>
         {session.demoAvailable && !session.authenticated && <Button className="secondary" disabled={busy} onClick={() => void demo()}>{busy ? 'Opening demo…' : 'Try the local demo'}<ArrowUpRight size={18} /></Button>}

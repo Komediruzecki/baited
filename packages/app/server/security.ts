@@ -67,18 +67,56 @@ export class Sessions {
     for (const [id, s] of this.entries) if (s.expiresAt <= Date.now()) this.entries.delete(id);
   }
 }
+export interface LimiterOptions {
+  /** Length of each key's counting window, in milliseconds. */
+  window?: number;
+  /** Keys per generation. The table never holds more than twice this. */
+  maxKeys?: number;
+  now?: () => number;
+}
+/**
+ * A fixed-window count per key, kept in two generations. Every window the newer
+ * generation becomes the older one, and the older one is dropped: all of its windows
+ * have ended by then. A key that is hit again moves into the newer generation with its
+ * count. When the newer generation is full it turns early, so keys that were not hit
+ * since the last turn start over. That can give an idle key a fresh allowance early,
+ * but a new key is never refused because the table is full, and a key that keeps
+ * hitting keeps its count through any flood of new keys.
+ */
 export class Limiter {
-  private entries = new Map<string, { count: number; until: number }>();
-  hit(key: string, limit: number, window = 60_000) {
-    const now = Date.now();
-    if (this.entries.size > 10000) {
-      for (const [k, v] of this.entries) if (v.until < now) this.entries.delete(k);
-      if (this.entries.size > 10000) return false;
-    }
-    let entry = this.entries.get(key);
-    if (!entry || entry.until < now) {
-      entry = { count: 0, until: now + window };
-      this.entries.set(key, entry);
+  private current = new Map<string, { count: number; until: number }>();
+  private previous = new Map<string, { count: number; until: number }>();
+  private readonly window: number;
+  private readonly maxKeys: number;
+  private readonly now: () => number;
+  private turnAt: number;
+  // Measured on Node 25: both generations full at the default hold 15 MB.
+  constructor({ window = 60_000, maxKeys = 50_000, now = () => performance.now() }: LimiterOptions = {}) {
+    this.window = window;
+    this.maxKeys = maxKeys;
+    this.now = now;
+    this.turnAt = now() + window;
+  }
+  get size() {
+    return this.current.size + this.previous.size;
+  }
+  private turn(now: number) {
+    // Every window in the newer generation started before turnAt, so after two quiet
+    // windows they have all ended as well.
+    this.previous = now >= this.turnAt + this.window ? new Map() : this.current;
+    this.current = new Map();
+    this.turnAt = now + this.window;
+  }
+  hit(key: string, limit: number) {
+    const now = this.now();
+    if (now >= this.turnAt) this.turn(now);
+    let entry = this.current.get(key);
+    if (!entry) {
+      entry = this.previous.get(key);
+      this.previous.delete(key);
+      if (!entry || entry.until <= now) entry = { count: 0, until: now + this.window };
+      if (this.current.size >= this.maxKeys) this.turn(now);
+      this.current.set(key, entry);
     }
     return ++entry.count <= limit;
   }
