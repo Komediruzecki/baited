@@ -1,0 +1,20 @@
+{
+  "name": "@baited/cloud-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "bundle": "esbuild src/index.ts --bundle --format=esm --platform=neutral --external:cloudflare:* --outfile=dist/worker.mjs"
+  },
+  "dependencies": { "@cloudflare/containers": "0.3.7" },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261028.1",
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.3",
+    "wrangler": "4.129.1"
+  }
+}

@@ -5,6 +5,8 @@ import { z, ZodError } from 'zod';
 import { WebSocketServer } from 'ws';
 import { Game, defaults } from './game.js';
 import { Store } from './store.js';
+import { CloudStorage } from './cloud-storage.js';
+import { CloudEdge } from './cloud-edge.js';
 import { CardLibraryStore, CardLibraryError } from './card-library.js';
 import { CardArtStore, CardArtError, CardArtCapabilities, artUploadOptionsSchema } from './card-art.js';
 import type { CardArtProcessor } from './card-art-scanner.js';
@@ -84,16 +86,18 @@ function oauthErrorFields(error: unknown) {
 export async function createBait(
   config: Config,
   developmentHmr = false,
-  options: { socketFactory?: SocketFactory; artProcessor?: CardArtProcessor } = {},
+  options: { socketFactory?: SocketFactory; artProcessor?: CardArtProcessor; storageFetch?: typeof fetch } = {},
 ) {
+  const cloudStorage = config.storageBackend === 'cloudflare' ? new CloudStorage(options.storageFetch) : undefined;
+  const cloudEdge = config.storageBackend === 'cloudflare' ? new CloudEdge(config.key) : undefined;
   const app = express(),
     server = createServer(app),
-    store = new Store(config.dataDir, config.key);
+    store = new Store(config.dataDir, config.key, cloudStorage);
   await store.load();
-  const cardArt = new CardArtStore(config.dataDir, options.artProcessor);
+  const cardArt = new CardArtStore(config.dataDir, options.artProcessor, cloudStorage);
   await cardArt.load();
   const artCapabilities = new CardArtCapabilities(config.key);
-  const cardLibrary = new CardLibraryStore(config.dataDir, undefined, (owner, id) => cardArt.canAttach(owner, id));
+  const cardLibrary = new CardLibraryStore(config.dataDir, undefined, (owner, id) => cardArt.canAttach(owner, id), cloudStorage);
   await cardLibrary.load();
   const rooms = new Map<string, Game>(),
     sessions = new Sessions(config.production),
@@ -146,7 +150,9 @@ export async function createBait(
         })
         .catch(() => {
           storageError = true;
-          console.error('State could not be saved. Check DATA_DIR permissions and disk space.');
+          console.error(config.storageBackend === 'cloudflare'
+            ? 'State could not be saved. Check the storage binding and restart to reload durable state.'
+            : 'State could not be saved. Check DATA_DIR permissions and disk space.');
         });
     }, 150);
   }
@@ -297,6 +303,7 @@ export async function createBait(
   const startupValidation = validateAll(true);
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustedProxies);
+  if (cloudEdge) app.use(cloudEdge.middleware());
   app.use(
     helmet({
       contentSecurityPolicy: config.production
@@ -423,9 +430,10 @@ export async function createBait(
         disarm(game.data.id, s);
     });
   }
-  app.get('/api/health', (_req, res) =>
-    res.status(storageError ? 503 : 200).json({ ok: !storageError, version: '1.0.0' }),
-  );
+  app.get('/api/health', (_req, res) => {
+    const ok = !storageError && (cloudStorage?.healthy ?? true);
+    res.status(ok ? 200 : 503).json({ ok, version: '1.0.0' });
+  });
   app.get('/api/session', (req, res) => {
     const s = sessions.get(req.headers.cookie);
     res.json({
@@ -954,6 +962,11 @@ export async function createBait(
   });
   const wss = new WebSocketServer({ noServer: true, maxPayload: 32768 });
   server.on('upgrade', (req, socket, head) => {
+    if (cloudEdge && !cloudEdge.clientIp(req)) {
+      socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+      socket.destroy();
+      return;
+    }
     const url = new URL(req.url || '/', config.origin);
     // Vite validates its own HMR token. Only the development entry point enables this path.
     if (
@@ -1075,11 +1088,12 @@ export async function createBait(
       store.snapshot.rooms = [...rooms.values()]
         .filter((r) => r.data.mode === 'twitch')
         .map((r) => r.data);
-      await store.save();
-      await store.flush();
-      await cardLibrary.flush();
-      await cardArt.close();
-      await new Promise<void>((resolve) => server.close(() => resolve()));
+      const shutdown = await Promise.allSettled([
+        store.save(), cardLibrary.flush(), cardArt.close(),
+        new Promise<void>((resolve) => server.close(() => resolve())),
+      ]);
+      const failure = shutdown.find((result) => result.status === 'rejected');
+      if (failure?.status === 'rejected') throw failure.reason;
     },
   };
 }

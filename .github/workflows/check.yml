@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [app, landing, review-host]
+        package: [app, landing, review-host, cloud-host]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,3 +53,10 @@ jobs:
         run: |
           pnpm --filter @irchiinnuss/review-host check
           pnpm --filter @irchiinnuss/review-host test:run
+      - name: Check Cloudflare hosting preparation
+        if: matrix.package == 'cloud-host'
+        run: |
+          pnpm --filter @baited/cloud-host check
+          pnpm --filter @baited/cloud-host test
+          pnpm --filter @baited/cloud-host bundle
+          python ops/cloudflare-costs.py

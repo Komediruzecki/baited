@@ -6,6 +6,7 @@ import { CARD_ART_LIMITS, cardArtIdPattern, type CardArtErrorCode, type CardArtL
 import { CARD_ART_MODEL, CARD_ART_POLICY, screenArt } from './card-art-policy.js';
 import { ArtProcessingError, LocalArtProcessor, type CardArtProcessor } from './card-art-scanner.js';
 import { equal } from './security.js';
+import type { CloudStorage } from './cloud-storage.js';
 
 export class CardArtError extends Error {
   constructor(public status: number, public code: CardArtErrorCode, message: string) { super(message); }
@@ -21,6 +22,8 @@ const recordSchema = z.object({
   createdAt: z.number().int().positive(), model: z.string(), policy: z.string(),
 }).strict();
 type ArtRecord = z.infer<typeof recordSchema>;
+const pendingUploadKey = 'state/card-art/pending.json';
+const pendingUploadSchema = z.object({ version: z.literal(1), upload: recordSchema.nullable() }).strict();
 export interface ArtUploadOptions { purpose: CardArtPurpose; source: CardArtSource; sourceId?: string }
 export const artUploadOptionsSchema = z.object({
   purpose: z.enum(['source', 'card']).default('card'),
@@ -40,31 +43,69 @@ export class CardArtStore {
   private generations = new Map<string, number>();
   private unavailable = new Set<string>();
   private dir: string;
-  constructor(dataDir: string, private processor: CardArtProcessor = new LocalArtProcessor()) {
+  constructor(dataDir: string, private processor: CardArtProcessor = new LocalArtProcessor(), private cloud?: CloudStorage) {
     this.dir = join(dataDir, 'card-art');
   }
   async load() {
-    await mkdir(this.dir, { recursive: true, mode: 0o700 });
+    if (!this.cloud) await mkdir(this.dir, { recursive: true, mode: 0o700 });
+    let next = new Map<string, ArtRecord>();
     try {
-      const saved = z.object({ version: z.literal(1), records: z.array(recordSchema) }).strict()
-        .parse(JSON.parse(await readFile(join(this.dir, 'index.json'), 'utf8')));
-      if (new Set(saved.records.map((entry) => entry.id)).size !== saved.records.length) throw new Error('Duplicate artwork ID.');
-      const next = new Map(saved.records.map((entry) => [entry.id, entry]));
-      for (const record of next.values()) {
-        if (record.sourceId) {
-          const source = next.get(record.sourceId);
-          if (!source || source.owner !== record.owner || source.purpose !== 'source' || source.sha256 !== record.sourceSha256)
-            throw new Error('Invalid artwork source reference.');
+      const bytes = this.cloud ? await this.cloud.read('state/card-art/index.json') : await readFile(join(this.dir, 'index.json'));
+      if (bytes !== undefined) {
+        const saved = z.object({ version: z.literal(1), records: z.array(recordSchema) }).strict()
+          .parse(JSON.parse(Buffer.from(bytes).toString('utf8')));
+        if (new Set(saved.records.map((entry) => entry.id)).size !== saved.records.length) throw new Error('Duplicate artwork ID.');
+        next = new Map(saved.records.map((entry) => [entry.id, entry]));
+        for (const record of next.values()) {
+          if (record.sourceId) {
+            const source = next.get(record.sourceId);
+            if (!source || source.owner !== record.owner || source.purpose !== 'source' || source.sha256 !== record.sourceSha256)
+              throw new Error('Invalid artwork source reference.');
+          }
         }
       }
-      this.records = next;
-      for (const record of next.values()) {
-        try {
-          const info = await lstat(join(this.dir, `${record.id}.png`));
-          if (!info.isFile() || info.size !== record.bytes) this.unavailable.add(record.id);
-        } catch { this.unavailable.add(record.id); }
-      }
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    this.records = next;
+    // Startup runs before accepting traffic and only after the previous writer
+    // has stopped. Recover the one serialized upload before any account deletion.
+    if (this.cloud) await this.recoverUpload();
+    for (const record of next.values()) {
+      if (this.cloud) {
+        const image = await this.cloud.read(`art/${record.id}.png`);
+        if (!image || image.byteLength !== record.bytes || hash(image) !== record.sha256) this.unavailable.add(record.id);
+        continue;
+      }
+      try {
+        const info = await lstat(join(this.dir, `${record.id}.png`));
+        if (!info.isFile() || info.size !== record.bytes) this.unavailable.add(record.id);
+      } catch { this.unavailable.add(record.id); }
+    }
+  }
+  private async writePendingUpload(upload: ArtRecord | null) {
+    await this.cloud!.write(pendingUploadKey, Buffer.from(JSON.stringify({ version: 1, upload })));
+  }
+  private async recoverUpload() {
+    const bytes = await this.cloud!.read(pendingUploadKey);
+    if (bytes === undefined) return; // Existing local migrations have no pending upload.
+    const { upload } = pendingUploadSchema.parse(JSON.parse(Buffer.from(bytes).toString('utf8')));
+    if (!upload) return;
+    const committed = this.records.get(upload.id);
+    if (committed) {
+      if (JSON.stringify(committed) !== JSON.stringify(upload))
+        throw new Error('Artwork upload recovery does not match its saved record.');
+    } else {
+      const key = `art/${upload.id}.png`, image = await this.cloud!.read(key);
+      if (image) {
+        if (image.byteLength !== upload.bytes || hash(image) !== upload.sha256)
+          throw new Error('Artwork upload recovery does not match its saved image.');
+      }
+      // A timed-out create-only upload may still be reaching storage. Tombstone
+      // even an absent image so that delayed PUT cannot resurrect private bytes.
+      await this.cloud!.delete(key);
+    }
+    // If cleanup fails or its response is lost, retain the intent and fail
+    // startup. A fresh process can safely recheck either committed outcome.
+    await this.writePendingUpload(null);
   }
   markEphemeral(owner: string) { this.ephemeral.add(owner); }
   activateOwner(owner: string) { this.deleted.delete(owner); }
@@ -140,14 +181,29 @@ export class CardArtStore {
       const next = new Map(this.records).set(record.id, record);
       const path = join(this.dir, `${record.id}.png`);
       try {
+        this.cloud?.assertWritable('state/card-art/index.json');
         if (!this.ephemeral.has(owner)) {
-          await writeFile(`${path}.tmp`, png, { mode: 0o600, flag: 'wx' });
-          await rename(`${path}.tmp`, path);
+          if (this.cloud) {
+            // This transaction queue permits one unfinished upload. Record its
+            // owner and exact bytes before persisting anything outside the index.
+            await this.writePendingUpload(record);
+            await this.cloud.write(`art/${record.id}.png`, png);
+          }
+          else {
+            await writeFile(`${path}.tmp`, png, { mode: 0o600, flag: 'wx' });
+            await rename(`${path}.tmp`, path);
+          }
         }
         await this.persist(next);
+        if (this.cloud && !this.ephemeral.has(owner)) await this.writePendingUpload(null);
       } catch {
-        await Promise.all([rm(path, { force: true }), rm(`${path}.tmp`, { force: true })]).catch(() => {});
-        throw new CardArtError(503, 'art_storage', 'The artwork could not be saved. Keep your editor open and try again.');
+        // A lost remote index response may hide a committed record. Retain its
+        // PNG and durable intent for startup recovery; blind rollback could
+        // corrupt that record. CloudStorage freezes all writes after a failure.
+        if (!this.cloud) await Promise.all([rm(path, { force: true }), rm(`${path}.tmp`, { force: true })]).catch(() => {});
+        throw new CardArtError(503, 'art_storage', this.cloud
+          ? 'The artwork could not be saved. Keep your editor open and let the host know.'
+          : 'The artwork could not be saved. Keep your editor open and try again.');
       }
       if (this.ephemeral.has(owner)) this.ephemeralBytes.set(record.id, png);
       this.records = next;
@@ -158,8 +214,9 @@ export class CardArtStore {
     const record = this.records.get(id);
     if (!record || record.owner !== owner || record.policy !== CARD_ART_POLICY || record.model !== CARD_ART_MODEL || this.deleted.has(owner) || this.unavailable.has(id)) throw missing();
     try {
-      const bytes = this.ephemeralBytes.get(id) ?? await readFile(join(this.dir, `${record.id}.png`));
-      if (bytes.length !== record.bytes || hash(bytes) !== record.sha256) throw missing();
+      const bytes = this.ephemeralBytes.get(id) ?? (this.cloud
+        ? await this.cloud.read(`art/${record.id}.png`) : await readFile(join(this.dir, `${record.id}.png`)));
+      if (!bytes || bytes.length !== record.bytes || hash(bytes) !== record.sha256) throw missing();
       return bytes;
     } catch { throw missing(); }
   }
@@ -173,10 +230,17 @@ export class CardArtStore {
       // Remove bytes first. If disk deletion fails, the record stays available for
       // a retry; an index-first deletion would strand private bytes forever.
       try {
-        await rm(join(this.dir, `${id}.png`), { force: true });
+        this.cloud?.assertWritable('state/card-art/index.json');
+        if (this.cloud) {
+          // A lost deletion response can mean the image is already gone.
+          this.unavailable.add(id);
+          if (!this.ephemeral.has(owner)) await this.cloud.delete(`art/${id}.png`);
+        } else await rm(join(this.dir, `${id}.png`), { force: true });
         this.unavailable.add(id);
         await this.persist(next);
-      } catch { throw new CardArtError(503, 'art_storage', 'This image could not be removed. Try again.'); }
+      } catch { throw new CardArtError(503, 'art_storage', this.cloud
+        ? 'This image could not be removed. Let the host know before trying again.'
+        : 'This image could not be removed. Try again.'); }
       this.records = next;
       this.ephemeralBytes.delete(id);
       this.unavailable.delete(id);
@@ -190,8 +254,11 @@ export class CardArtStore {
       const entries = [...this.records.values()].filter((entry) => entry.owner === owner);
       const next = new Map([...this.records].filter(([, entry]) => entry.owner !== owner));
       try {
+        this.cloud?.assertWritable('state/card-art/index.json');
         for (const entry of entries) {
-          await rm(join(this.dir, `${entry.id}.png`), { force: true });
+          if (this.cloud) {
+            if (!this.ephemeral.has(owner)) await this.cloud.delete(`art/${entry.id}.png`);
+          } else await rm(join(this.dir, `${entry.id}.png`), { force: true });
           this.unavailable.add(entry.id);
         }
         await this.persist(next);
@@ -204,6 +271,10 @@ export class CardArtStore {
   private async persist(records: Map<string, ArtRecord>) {
     const path = join(this.dir, 'index.json');
     const snapshot = { version: 1, records: [...records.values()].filter((entry) => !this.ephemeral.has(entry.owner)) };
+    if (this.cloud) {
+      await this.cloud.write('state/card-art/index.json', Buffer.from(JSON.stringify(snapshot)));
+      return;
+    }
     await writeFile(`${path}.tmp`, JSON.stringify(snapshot), { mode: 0o600 });
     await rename(`${path}.tmp`, path);
   }

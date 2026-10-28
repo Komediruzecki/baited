@@ -9,6 +9,7 @@ import {
 import type { Difficulty } from '../shared/types.js';
 import { words } from './words.js';
 import { forbiddenClues } from './cards.js';
+import type { CloudStorage } from './cloud-storage.js';
 
 export interface DeckCard {
   target: string;
@@ -34,11 +35,13 @@ export class CardLibraryStore {
   private chain: Promise<unknown> = Promise.resolve();
   private ephemeral = new Set<string>();
   constructor(private dir: string, private writer?: (path: string, text: string) => Promise<void>,
-    private artValidator?: (owner: string, artId: string) => boolean) {}
+    private artValidator?: (owner: string, artId: string) => boolean, private cloud?: CloudStorage) {}
   async load() {
-    await mkdir(this.dir, { recursive: true });
+    if (!this.cloud) await mkdir(this.dir, { recursive: true });
     try {
-      const parsed: unknown = JSON.parse(await readFile(join(this.dir, 'card-library.json'), 'utf8'));
+      const bytes = this.cloud ? await this.cloud.read('state/card-library.json') : await readFile(join(this.dir, 'card-library.json'));
+      if (bytes === undefined) return;
+      const parsed: unknown = JSON.parse(Buffer.from(bytes).toString('utf8'));
       const raw = z.object({ version: z.literal(1), channels: z.record(z.string(), z.unknown()) }).strict().parse(parsed);
       const channels: Record<string, Library> = {};
       for (const [owner, value] of Object.entries(raw.channels)) {
@@ -84,14 +87,17 @@ export class CardLibraryStore {
     const text = JSON.stringify({ ...snapshot, channels: Object.fromEntries(Object.entries(snapshot.channels).filter(([owner]) => !this.ephemeral.has(owner))) });
     const path = join(this.dir, 'card-library.json');
     try {
-      if (this.writer) await this.writer(path, text);
+      if (this.cloud) await this.cloud.write('state/card-library.json', Buffer.from(text));
+      else if (this.writer) await this.writer(path, text);
       else {
         const temporary = `${path}.tmp`;
         await writeFile(temporary, text, { mode: 0o600 });
         await rename(temporary, path);
       }
     } catch {
-      throw new CardLibraryError(503, 'Your pack could not be saved. Keep this page open and try again.');
+      throw new CardLibraryError(503, this.cloud
+        ? 'Your pack could not be saved. Keep this page open and let the host know.'
+        : 'Your pack could not be saved. Keep this page open and try again.');
     }
   }
   async savePack(owner: string, input: unknown) {

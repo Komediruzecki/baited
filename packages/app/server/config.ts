@@ -21,6 +21,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
       throw new Error('TRUSTED_PROXIES must contain explicit IP addresses or non-global CIDR ranges.');
   }
   const production = env.NODE_ENV === 'production';
+  const storageBackend = z.enum(['local', 'cloudflare']).parse(env.STORAGE_BACKEND || 'local');
   const origin = (env.PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, '');
   const url = new URL(origin);
   if (url.pathname !== '/' || url.search || url.hash || url.username || url.password)
@@ -30,6 +31,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   const key = env.TOKEN_ENCRYPTION_KEY || '';
   if (key && !/^[a-f0-9]{64}$/i.test(key))
     throw new Error('TOKEN_ENCRYPTION_KEY must be 64 hexadecimal characters.');
+  if (storageBackend === 'cloudflare' && !key)
+    throw new Error('Cloudflare storage requires TOKEN_ENCRYPTION_KEY for signed edge requests.');
   const clientId = env.TWITCH_CLIENT_ID || '',
     clientSecret = env.TWITCH_CLIENT_SECRET || '';
   const extensionClientId = env.TWITCH_EXTENSION_CLIENT_ID || '';
@@ -68,6 +71,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     .parse(env.PORT ?? 3000);
   return {
     production,
+    storageBackend,
     trustedProxies,
     origin,
     port,

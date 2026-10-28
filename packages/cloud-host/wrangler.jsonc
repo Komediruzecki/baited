@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "baited-cloud-stage",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-28",
+  "workers_dev": false,
+  "preview_urls": false,
+  "limits": { "cpu_ms": 100 },
+  "observability": { "enabled": false },
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "containers": [{
+    "class_name": "BaitedContainer",
+    "image": "../../Dockerfile",
+    "image_build_context": "../..",
+    "instance_type": "basic",
+    "max_instances": 1
+  }],
+  "durable_objects": { "bindings": [{ "name": "GAME", "class_name": "BaitedContainer" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["BaitedContainer"] }],
+  "r2_buckets": [{ "binding": "STATE", "bucket_name": "baited-cloud-stage-state" }],
+  "vars": {
+    "DEPLOYMENT_ENABLED": "false",
+    "PUBLIC_URL": "https://stage-play-baited.maff.app",
+    "TWITCH_BOT_USER_ID": "",
+    "TWITCH_BOT_IS_STREAMER": "0"
+  },
+  // No DNS routes or automatic deploy job until paid staging and recovery tests pass.
+  // Production gets a separate Worker/DO namespace and bucket, preserving the app hostname.
+  "env": {
+    "production": {
+      "name": "baited-cloud",
+      "triggers": { "crons": ["*/5 * * * *"] },
+      "containers": [{
+        "class_name": "BaitedContainer", "image": "../../Dockerfile",
+        "image_build_context": "../..", "instance_type": "basic", "max_instances": 1
+      }],
+      "durable_objects": { "bindings": [{ "name": "GAME", "class_name": "BaitedContainer" }] },
+      "r2_buckets": [{ "binding": "STATE", "bucket_name": "baited-cloud-state" }],
+      "vars": {
+        "DEPLOYMENT_ENABLED": "false", "PUBLIC_URL": "https://play-baited.maff.app",
+        "TWITCH_BOT_USER_ID": "", "TWITCH_BOT_IS_STREAMER": "0"
+      }
+    }
+  }
+}

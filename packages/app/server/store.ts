@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { SavedGame } from './game.js';
+import type { CloudStorage } from './cloud-storage.js';
 export interface Credentials {
   access_token: string;
   refresh_token: string;
@@ -34,11 +35,14 @@ export class Store {
   constructor(
     private dir: string,
     private key: string,
+    private cloud?: CloudStorage,
   ) {}
   async load() {
-    await mkdir(this.dir, { recursive: true });
+    if (!this.cloud) await mkdir(this.dir, { recursive: true });
     try {
-      const raw = JSON.parse(await readFile(join(this.dir, 'bait.json'), 'utf8'));
+      const bytes = this.cloud ? await this.cloud.read('state/bait.json') : await readFile(join(this.dir, 'bait.json'));
+      if (bytes === undefined) return;
+      const raw = JSON.parse(Buffer.from(bytes).toString('utf8'));
       if (raw.version !== 1 || !Array.isArray(raw.rooms) || !raw.vault)
         throw new Error('Invalid state file.');
       this.snapshot = raw;
@@ -47,6 +51,7 @@ export class Store {
     }
   }
   credentials(id: string) {
+    this.cloud?.assertWritable('state/bait.json');
     return this.snapshot.vault[id]
       ? unseal<Credentials>(this.snapshot.vault[id], this.key)
       : undefined;
@@ -64,6 +69,10 @@ export class Store {
     const task = this.chain
       .catch(() => {})
       .then(async () => {
+        if (this.cloud) {
+          await this.cloud.write('state/bait.json', Buffer.from(text));
+          return;
+        }
         const temp = join(this.dir, 'bait.json.tmp');
         await writeFile(temp, text, { mode: 0o600 });
         await rename(temp, join(this.dir, 'bait.json'));
