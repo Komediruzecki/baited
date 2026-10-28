@@ -201,10 +201,12 @@ test('preview serves a bounded allowlist, requires exact Host/origin, and keeps 
     assert.match(viewer.body, /\/__preview\/helper.js/);
     assert.equal(viewer.body.includes(HELPER_URL), false);
     assert.ok((await readFrontendFile('viewer.html')).toString().includes(HELPER_URL));
-    const wordmark = await get('/assets/baited-original-mask.svg');
+    const wordmark = await get('/assets/baited-pixel-white.svg');
     assert.equal(wordmark.status, 200);
     assert.equal(wordmark.headers['content-type'], 'image/svg+xml');
-    assert.match(wordmark.body, /BAITED original wordmark/);
+    assert.match(wordmark.body, /<title>BAITED<\/title>/);
+    // The angular lettering is earlier artwork now; the bundle carries one logo.
+    assert.equal((await get('/assets/baited-original-mask.svg')).status, 404);
     const runtime = await get('/runtime-config.js');
     assert.match(runtime.body, new RegExp(`http://127.0.0.1:${port}`));
     assert.match(runtime.body, /studioBaseUrl/);

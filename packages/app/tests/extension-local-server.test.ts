@@ -98,7 +98,7 @@ test('local gateway serves only its native bundle, pins Host and rejects unsafe 
   const handler = gateway.createExtensionLocalHandler({
     files: new Map([['/viewer.html', Buffer.from('native viewer')], ['/config.html', Buffer.from('native setup')],
       ['/overlay.html', Buffer.from('native overlay')], ['/styles.css', Buffer.from('body {}')],
-      ['/assets/baited-original-mask.svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')]]),
+      ['/assets/baited-pixel-white.svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>')]]),
     requestUpstream: () => { proxied++; throw new Error('unexpected'); },
   });
   const server = createServer(handler);
@@ -108,7 +108,7 @@ test('local gateway serves only its native bundle, pins Host and rejects unsafe 
     assert.equal(index.status, 200);
     assert.equal(index.body, 'native viewer');
     assert.equal(index.headers['cache-control'], 'no-store');
-    const wordmark = await get(port, '/assets/baited-original-mask.svg');
+    const wordmark = await get(port, '/assets/baited-pixel-white.svg');
     assert.equal(wordmark.status, 200);
     assert.equal(wordmark.headers['content-type'], 'image/svg+xml');
     assert.match(index.headers['content-security-policy'] as string, /https:\/\/extension-files\.twitch\.tv/);
