@@ -254,7 +254,7 @@ reduced.addEventListener('change', () => deck.finish())
 if (reveals) {
   markerReveal([$('deck-title')], reveals, { scrollTrigger: { trigger: '#deck-title', start: 'top 85%' } })
   markerReveal([document.querySelector('.how-cards__intro > p')], reveals, { scrollTrigger: { trigger: '.how-cards__intro > p', start: 'top 85%' } })
-  markerReveal([$('deck-help')], reveals, { scrollTrigger: { trigger: '#deck-help', start: 'top 90%' } })
+  markerReveal([$('deck-help')], reveals, { scrollTrigger: { trigger: '#deck-help', start: 'top 90%' }, also: '.ribbon-toggle' })
 }
 
 // The footer rises over the deck with a pixelated edge; set up after the deck exists so it can pin it.

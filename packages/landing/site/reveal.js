@@ -2,17 +2,22 @@
 // line of a heading or paragraph starts under a bar of colour, and once the text comes into view
 // the bars draw back one line after another. Words are wrapped in plain inline spans while the bars
 // are measured, so kerning, line breaks and screen readers see the same text; the spans come out
-// again once it is shown. Elements inside the text (the deck help's button) stay the same elements
-// throughout. Reduced motion or no GSAP: the text is simply there.
+// again once it is shown. A control inside the text (the deck help's button) is covered whole and
+// keeps its own label untouched. Reduced motion or no GSAP: the text is simply there.
 
 // Splits on ordinary spaces only, so a non-breaking space keeps its words together.
 export const splitWords = (text) => text.split(/([ \t\n\r\f]+)/).filter(Boolean)
 
-// Wraps the element's letters or words in spans and returns them, with a way to undo it.
-export function splitText(element, unit = 'chars') {
+// Wraps the element's letters or words in spans and returns them, with a way to undo it. Text inside
+// an element matching `keep` stays whole: taking a button's label apart can drop a click on it (the
+// span pressed is gone by the time the button is released), and a flex button loses its spaces.
+export function splitText(element, unit = 'chars', keep) {
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
   const texts = []
-  while (walker.nextNode()) texts.push(walker.currentNode)
+  while (walker.nextNode()) {
+    const kept = keep && walker.currentNode.parentElement?.closest(keep)
+    if (!kept || !element.contains(kept)) texts.push(walker.currentNode)
+  }
   const units = []
   for (const text of texts) {
     const fragment = document.createDocumentFragment()
@@ -80,10 +85,11 @@ export function offsetWithin(element, container) {
 // Each line of the paragraphs sits under a bar (styles.css .marker-bar), laid over it again whenever
 // the lines break differently, until the trigger is reached or the delay has passed; then the bars
 // draw back toward the end of their lines, one line after another through all the paragraphs.
-// `also` names elements that are covered like words, such as a picture in a line.
+// `also` names elements that are covered whole, like words, such as a button in a line; their own
+// text is left as it is.
 export function markerReveal(paragraphs, { gsap, ScrollTrigger }, { scrollTrigger, delay = 0, also } = {}) {
   const parts = paragraphs.filter(Boolean).map((paragraph) => {
-    const { restore } = splitText(paragraph, 'words')
+    const { restore } = splitText(paragraph, 'words', also)
     return { paragraph, restore, boxes: [...paragraph.querySelectorAll(also ? `.split-unit, ${also}` : '.split-unit')] }
   })
   if (!parts.some(({ boxes }) => boxes.length)) {
@@ -103,7 +109,18 @@ export function markerReveal(paragraphs, { gsap, ScrollTrigger }, { scrollTrigge
         .filter((box) => box.getClientRects().length)
         .map((box) => {
           const { left, top } = offsetWithin(box, paragraph)
-          return { left, top, right: left + box.offsetWidth, bottom: top + box.offsetHeight }
+          const edges = { left, top, right: left + box.offsetWidth, bottom: top + box.offsetHeight }
+          if (box.classList.contains('split-unit')) return edges
+          // A whole element is covered over its content, not its padding: the deck help's button
+          // pads its one line of text out to a 44px target.
+          const style = getComputedStyle(box)
+          const side = (name) => parseFloat(style[name]) || 0
+          return {
+            left: edges.left + side('borderLeftWidth') + side('paddingLeft'),
+            top: edges.top + side('borderTopWidth') + side('paddingTop'),
+            right: edges.right - side('borderRightWidth') - side('paddingRight'),
+            bottom: edges.bottom - side('borderBottomWidth') - side('paddingBottom'),
+          }
         })
       return lineBoxes(words).map((line) => {
         const bar = document.createElement('span')
