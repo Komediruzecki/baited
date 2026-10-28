@@ -98,6 +98,7 @@ export function CutCard({
   question,
   footer,
   progress,
+  urgent = false,
   className,
   label,
   wordAs: Word = 'strong',
@@ -121,6 +122,8 @@ export function CutCard({
   footer?: React.ReactNode;
   /** Time left, 0 to 1, drawn along the footer rule. */
   progress?: number | null;
+  /** Time is running out: the rule becomes the Studio's round progress bar. */
+  urgent?: boolean;
   className?: string;
   label?: string;
   /** Milliseconds to hold the coarsest blocks while the face turns into view. */
@@ -136,7 +139,7 @@ export function CutCard({
       role={label ? 'img' : undefined}
       aria-label={label}
     >
-      <div className="cut-card" data-edition="cut-open" data-finish="glass" data-art-frame="open">
+      <div className="cut-card" data-edition="cut-open" data-finish="glass" data-art-frame="open" data-urgent={urgent ? 'true' : undefined}>
         <div className="cut-card__top">
           {chip && <span className="cut-card__chip">{chip}</span>}
           {level ? (

@@ -319,6 +319,33 @@
   height: 2px;
   background: var(--b-lilac);
 }
+/* Time running out: the timer turns into the Studio's round progress (client/studio-m3.css), a
+   thick, round bar with a highlight along the fill, in the urgent yellow over its own track, in
+   place of the rule. Hosts flag it with data-urgent on the card, on what holds the card, or on
+   the footer itself. */
+:is([data-urgent='true'] .cut-card__footer, .cut-card__footer[data-urgent='true']) {
+  border-top-color: transparent;
+}
+:is([data-urgent='true'] .cut-card__footer, .cut-card__footer[data-urgent='true'])::before {
+  content: '';
+  position: absolute;
+  top: calc(-4 * var(--cut-u));
+  left: 0;
+  right: 0;
+  height: calc(9 * var(--cut-u));
+  border-radius: 999px;
+  background: #38323f;
+}
+:is([data-urgent='true'] .cut-card__footer, .cut-card__footer[data-urgent='true']) > :is(.cut-card__timer, .timer-rule) {
+  z-index: 1;
+  top: calc(-4 * var(--cut-u));
+  min-width: calc(9 * var(--cut-u));
+  height: calc(9 * var(--cut-u));
+  border-radius: 999px;
+  background:
+    linear-gradient(#ffffff80, #ffffff80) calc(6 * var(--cut-u)) calc(2 * var(--cut-u)) / calc(100% - 12 * var(--cut-u)) calc(2 * var(--cut-u)) no-repeat,
+    var(--b-urgent);
+}
 
 /* The Prism back: foil lattice, an inked frame and the wordmark printed in ink. */
 .prism-back {

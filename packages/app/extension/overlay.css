@@ -212,11 +212,9 @@ body[data-surface='overlay'] {
   height: 2px;
   background: var(--b-lilac);
 }
+/* card.css turns the rule into the Studio's round progress. */
 .playing-card[data-urgent='true'] .face-clock {
   color: var(--b-urgent);
-}
-.playing-card[data-urgent='true'] .timer-rule {
-  background: var(--b-urgent);
 }
 .playing-card:is([data-state='result'], [data-state='review']) :is(.face-clock, .timer-rule) {
   visibility: hidden;

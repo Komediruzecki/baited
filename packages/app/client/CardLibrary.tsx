@@ -51,7 +51,7 @@ function CardPreview({ card }: { card: EditableCard }) {
     <div className="card-maker__preview-stage">
       {state === 'waiting' || !word ? <div className="card-maker__back-preview"><CardBack /><span className="sr-only">{word ? 'The card stays hidden until the round starts.' : 'Enter a target word to see its card.'}</span></div> :
         <CutCard key={`${word}-${card.artId}-${replay}`} word={word} artUrl={card.artId ? `/api/studio/card-art/${card.artId}.png` : undefined} artPreview chip={title} level={difficulties.indexOf(card.difficulty) + 1}
-          clues={card.blockedClues.filter(Boolean)} progress={state === 'urgent' ? 0.1 : state === 'result' ? 0 : 0.725}
+          clues={card.blockedClues.filter(Boolean)} progress={state === 'urgent' ? 0.1 : state === 'result' ? 0 : 0.725} urgent={state === 'urgent'}
           footer={state === 'urgent' ? '0:12' : state === 'result' ? 'Caught' : state === 'paused' ? 'Paused' : '1:27'}
           className={state === 'urgent' ? 'is-urgent' : ''} />}
     </div>
