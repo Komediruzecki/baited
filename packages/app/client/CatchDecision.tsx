@@ -3,6 +3,7 @@ import type { ResultView } from '../shared/types';
 import { Button } from './ui';
 import { ChevronDown, RotateCcw } from './icons';
 import { PublicAward } from './mechanics';
+import { StreakFlame } from './streak';
 import { streakMilestone, wordSize } from '../extension/presentation.js';
 
 export function CatchDecision({
@@ -67,7 +68,7 @@ export function CatchDecision({
         </p>
         {tier && (
           <p className="studio-result__streak">
-            🔥 {result.newBadge ? 'New streak badge' : 'Streak badge'}: <strong>{tier.name}</strong>,{' '}
+            <StreakFlame size={14} /> {result.newBadge ? 'New streak badge' : 'Streak badge'}: <strong>{tier.name}</strong>,{' '}
             {tier.count} in a row.
           </p>
         )}

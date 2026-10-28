@@ -9,6 +9,7 @@ import { Store, type Credentials } from '../server/store.js';
 import { loadConfig } from '../server/config.js';
 import { ChatBot, LIMITS } from '../server/chatbot.js';
 import {
+  badgeAnnouncement,
   eventAnnouncement,
   finalAnnouncement,
   halfwayAnnouncement,
@@ -137,6 +138,54 @@ test("none of Baity's lines can say a target word, in any mood", () => {
         assert.equal(spoils(line.replace(/\{\w+\}/g, ' '), word), false, `${word} in: ${line}`);
 });
 
+// Twitch chat is plain text: Baity keeps her voice in words and punctuation, never in
+// emoji or pictographs, and signs as Baeittrice without an em dash.
+const pictograph = /[\u{2190}-\u{2BFF}\u{1F000}-\u{1FAFF}\u{FE0F}]/u;
+
+test("Baity's lines and every chat-copy post are free of emoji", () => {
+  const all = Object.values(lines as Record<string, readonly string[] | Record<string, readonly string[]>>).flatMap(
+    (set) => (Array.isArray(set) ? set : Object.values(set).flat()),
+  );
+  for (const line of all) {
+    assert.doesNotMatch(line, pictograph, `emoji in: ${line}`);
+    assert.doesNotMatch(line, /\u2014/, `em dash in: ${line}`);
+  }
+  const f = fixture();
+  f.game.data.leaders = { a: { name: 'Alex', rounds: 9, baits: 2 } };
+  const texts: string[] = [];
+  f.game.onEvent = (event) => {
+    const view = f.game.view('overlay');
+    const announcement = eventAnnouncement(view, event);
+    if (announcement) texts.push(announcement.text);
+    const badge = event.type === 'finish' ? badgeAnnouncement(view) : null;
+    if (badge) texts.push(badge.text);
+  };
+  const commands = () => {
+    const view = f.game.view('overlay');
+    texts.push(helpText(view), whoText(view), scoreText(view), topText(view), streakText(view));
+  };
+  // Every mood: three wins for the streak badges, then four losses into Baeittrice and a comeback.
+  for (const win of [true, true, true, false, false, false, false, true]) {
+    f.game.begin();
+    const view = f.game.view('overlay');
+    texts.push(halfwayAnnouncement(view)!.text, finalAnnouncement(view).text);
+    const struggling = strugglingAnnouncement(view);
+    if (struggling) texts.push(struggling.text);
+    f.game.pause();
+    f.game.resume();
+    commands();
+    if (win) f.game.transcript(f.transcript());
+    else {
+      f.advance(f.game.round!.duration + 1);
+      f.game.tick();
+    }
+    commands();
+    f.advance(60000);
+  }
+  assert.ok(texts.length > 80, `${texts.length} posts`);
+  for (const text of texts) assert.doesNotMatch(text, pictograph, `emoji in: ${text}`);
+});
+
 test('!bait top shows the bait MVPs once the streamer has picked someone', () => {
   const f = fixture();
   f.game.data.leaders = { a: { name: 'Alex', rounds: 9 }, b: { name: 'Blake', rounds: 2, baits: 2 } };
@@ -173,7 +222,7 @@ test('Baity gets louder while chat loses, and cute again when chat wins', () => 
   assert.match(whoText(f.game.view('overlay')), /BAEITTRICE/);
   f.game.transcript(f.transcript());
   assert.equal(shouting(texts.at(-1)!), false, `the comeback is cute: ${texts.at(-1)}`);
-  assert.match(texts.at(-1)!, /🎀/);
+  assert.match(texts.at(-1)!, /the bow is back on|all the yelling|Baity is back/);
   f.advance(60000);
   f.game.begin();
   assert.equal(shouting(texts.at(-1)!), false, 'a win resets the mood');
@@ -227,7 +276,7 @@ test('demo rooms preview posts in the studio with Twitch pacing and newest-wins 
   now += LIMITS.channelGap;
   bot.tick(f.game);
   assert.equal(recent().length, 2);
-  assert.match(recent()[0].text, /^⏸ .*the clock is frozen/i);
+  assert.match(recent()[0].text, /^(round )?paused[.!] the clock is frozen/i);
   now += LIMITS.channelGap;
   bot.tick(f.game);
   assert.equal(recent().length, 2);
@@ -290,12 +339,12 @@ test('one chatter cycling commands gets one answer, and replies never crowd out 
   f.game.resume();
   step();
   assert.equal(recent().length, LIMITS.channelCount);
-  assert.match(recent()[0].text, /^▶ /);
+  assert.match(recent()[0].text, /^(back on|unpaused)\b/i);
   // The cycler can ask again once their own cooldown has passed.
   now += LIMITS.chatterCooldown;
   bot.chat(f.game, message('!bait score', { userId: 'cycler' }));
   step();
-  assert.match(recent()[0].text, /^📊 /);
+  assert.match(recent()[0].text, /^(chat's record|scoreboard): /);
 });
 
 test('a flood in three channels cannot hold back a fourth channel', async (t) => {
@@ -398,12 +447,12 @@ test('timer nudges fire once per round: halfway and the final ten seconds', asyn
   step(59000);
   assert.equal(bot.status(f.game).recent.length, 1);
   step(2000);
-  assert.match(bot.status(f.game).recent[0].text, /^⏱ halfway.*0:59.*nobody is baiting yet/i);
+  assert.match(bot.status(f.game).recent[0].text, /^halfway.*0:59.*nobody is baiting yet/i);
   step(2000);
   step(46000);
   assert.equal(bot.status(f.game).recent.length, 2, 'a chat that has not lost gets no struggling nudge');
   step(2000);
-  assert.match(bot.status(f.game).recent[0].text, /^🔥 (10|ten) seconds/i);
+  assert.match(bot.status(f.game).recent[0].text, /^(10|ten) seconds/i);
   step(1000);
   assert.equal(bot.status(f.game).recent.length, 3);
 });
@@ -426,7 +475,7 @@ test('a losing chat gets one struggling nudge three quarters in', async (t) => {
   step(60000);
   f.game.begin();
   step(61000);
-  assert.match(bot.status(f.game).recent[0].text, /^⏱ HALFWAY/);
+  assert.match(bot.status(f.game).recent[0].text, /^HALFWAY/);
   step(29000);
   const struggling = bot.status(f.game).recent[0].text;
   assert.match(struggling, /0:30 LEFT/);
@@ -514,7 +563,7 @@ test('Twitch delivery uses an app token, the bot as sender, and refreshes once o
   assert.equal(calls.filter((call) => call.url.endsWith('/oauth2/token')).length, 2);
   const reply = calls.filter((call) => call.url.endsWith('/helix/chat/messages')).at(-1)!;
   assert.equal(JSON.parse(String(reply.init?.body)).reply_parent_message_id, 'parent-message');
-  assert.match(JSON.parse(String(reply.init?.body)).message, /^📊 .*0 won.*0 played/);
+  assert.match(JSON.parse(String(reply.init?.body)).message, /^(chat's record|scoreboard): 0 won.*0 played/);
 });
 
 test('held, refused and rate-limited messages surface in the studio without retry storms', async (t) => {
@@ -562,7 +611,7 @@ test('held, refused and rate-limited messages surface in the studio without retr
   await flush();
   assert.equal(posts(), limited + 1);
   assert.equal(bot.status(game).recent[0].status, 'sent');
-  assert.match(bot.status(game).recent[0].text, /^▶ .*left/);
+  assert.match(bot.status(game).recent[0].text, /^(back on|unpaused)\b.*left/i);
   assert.equal(bot.status(game).problem, null);
 });
 
@@ -681,7 +730,7 @@ test('EventSub hands commands on with badges and drops the bot account’s own m
       },
     },
   });
-  assert.equal(connection.acceptNotification(notification('999', '🎣 Round 1 is live', 'a')), false);
+  assert.equal(connection.acceptNotification(notification('999', 'Round 1 is live', 'a')), false);
   assert.equal(game.view('studio').participants, 0, 'bot posts never count as play');
   assert.equal(connection.acceptNotification(notification('456', '!bait pause', 'b')), true);
   assert.deepEqual(seen.map((m) => [m.userId, m.text, m.badges]), [['456', '!bait pause', ['moderator']]]);

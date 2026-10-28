@@ -252,9 +252,21 @@ function render({ configured, room }) {
     setQuestion(null);
     const tier =
       result.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
-    byId('card-detail').textContent = tier
-      ? `${copy[1]} 🔥 ${result.newBadge ? 'New streak badge' : 'Streak badge'}: ${tier.name}, ${tier.count} in a row.`
-      : copy[1];
+    if (tier) {
+      // The flame is an image, never a text glyph, so it draws the same everywhere.
+      const flame = document.createElement('img');
+      flame.className = 'card-detail__flame';
+      flame.setAttribute('src', './assets/streak-flame.svg');
+      flame.setAttribute('alt', '');
+      flame.setAttribute('aria-hidden', 'true');
+      flame.setAttribute('width', '12');
+      flame.setAttribute('height', '14');
+      byId('card-detail').replaceChildren(
+        `${copy[1]} `,
+        flame,
+        ` ${result.newBadge ? 'New streak badge' : 'Streak badge'}: ${tier.name}, ${tier.count} in a row.`,
+      );
+    } else byId('card-detail').textContent = copy[1];
     byId('card-detail').hidden = false;
     byId('forbidden').hidden = true;
     byId('forbidden-list').replaceChildren();

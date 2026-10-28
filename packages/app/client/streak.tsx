@@ -19,6 +19,7 @@ export function StreakFlame({ size = 20, className = '' }: { size?: number; clas
       className={cx('streak-flame', className)}
       src="/brand/streak-flame.svg"
       alt=""
+      aria-hidden="true"
       width={size}
       height={Math.round(size * 1.125)}
     />

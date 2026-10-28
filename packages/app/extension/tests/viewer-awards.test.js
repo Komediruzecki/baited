@@ -11,7 +11,7 @@ class Element extends EventTarget {
   style = {};
   content = '';
   set textContent(value) { this.content = String(value); this.children = []; }
-  get textContent() { return this.content + this.children.map((child) => child.textContent).join(''); }
+  get textContent() { return this.content + this.children.map((child) => (typeof child === 'string' ? child : child.textContent)).join(''); }
   set innerHTML(_) { throw new Error('Untrusted state must not be inserted as HTML.'); }
   replaceChildren(...children) { this.children = children; this.content = ''; }
   setAttribute(name, value) { this.attributes.set(name, value); }
@@ -73,6 +73,17 @@ test('the panel shows the streamer’s pick and the top three MVPs between round
     await show(caught(null));
     assert.equal(award().hidden, true);
     assert.equal(award().textContent, '');
+
+    // A win that lands on a badge draws the flame as an image, not a text glyph.
+    await show(room({ result: { id: 'round-badge', word: 'VOLCANO', outcome: 'caught', milestone: 3, newBadge: true },
+      score: { streak: 3, best: 3 } }));
+    const detail = elements.get('card-detail');
+    assert.equal(detail.textContent, 'The streamer confirmed it. Chat got the word.  New streak badge: Heating up, 3 in a row.');
+    const flame = detail.children.find((child) => typeof child !== 'string');
+    assert.equal(flame.attributes.get('src'), './assets/streak-flame.svg');
+    assert.equal(flame.attributes.get('alt'), '');
+    assert.equal(flame.attributes.get('aria-hidden'), 'true');
+    assert.doesNotMatch(detail.textContent, /[\u{2190}-\u{2BFF}\u{1F000}-\u{1FAFF}\u{FE0F}]/u);
 
     // A live round needs the room for the word, clues and clock.
     await show(live);

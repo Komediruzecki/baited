@@ -200,6 +200,12 @@ h3 {
   line-height: 1.5;
   text-wrap: pretty;
 }
+.card-detail__flame {
+  display: inline-block;
+  height: auto;
+  image-rendering: pixelated;
+  vertical-align: -0.15em;
+}
 .secret-card .cut-card__footer {
   margin-top: 10px;
 }
