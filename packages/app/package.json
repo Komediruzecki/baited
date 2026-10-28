@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "tsx watch server/index.ts",
-    "build": "tsx scripts/build-review-catalogue.ts --check && tsc --noEmit && vite build && tsup server/index.ts --format esm --platform node --target node22 --out-dir dist/server --external vite",
+    "build": "tsx scripts/build-review-catalogue.ts --check && tsc --noEmit && vite build && tsup server/index.ts --format esm --platform node --target node22 --out-dir dist/server --external vite && node scripts/copy-card-art-runtime.mjs",
     "start": "node --env-file-if-exists=.env dist/server/index.js --static",
     "preview:local": "node scripts/preview-local.mjs",
     "preview:concept": "node scripts/preview-concept.mjs",
@@ -25,11 +25,15 @@
   },
   "dependencies": {
     "@moonshine-ai/moonshine-wasm": "0.1.5",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-backend-wasm": "^4.22.0",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "jose": "^6",
+    "nsfwjs": "4.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "sharp": "0.35.2",
     "ws": "^8.18.0",
     "zod": "^4.6.7"
   },

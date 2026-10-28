@@ -9,6 +9,8 @@ export interface LibraryCard {
   difficulty: Difficulty;
   blockedClues: string[];
   acceptedSpellings: string[];
+  /** Immutable, owner-approved artwork. Never an arbitrary remote URL. */
+  artId?: string;
 }
 export interface CardPack {
   id: string;
@@ -42,6 +44,7 @@ const cardSchema = z.object({
   difficulty: z.enum(['easy', 'medium', 'hard']),
   blockedClues: z.array(word).max(4),
   acceptedSpellings: z.array(word).max(3).default([]),
+  artId: z.string().uuid().optional(),
 }).strict().superRefine((card, ctx) => {
   const count = { easy: 0, medium: 2, hard: 4 }[card.difficulty];
   if (card.blockedClues.length !== count)

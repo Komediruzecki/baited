@@ -1,3 +1,5 @@
+import { cardArtPath, cardArtSource } from './presentation.js';
+
 const VERSION = '0.0.1';
 const phases = new Set(['idle', 'active', 'paused', 'settling', 'cooldown']);
 const outcomes = new Set(['caught', 'escaped', 'skipped', 'ended', 'overturned', 'review']);
@@ -24,6 +26,13 @@ export function readRuntimeConfig(value) {
   return { clientId: value.clientId, apiBaseUrl, studioBaseUrl };
 }
 
+/** Resolve a round capability only against this build's validated backend origin. */
+export function nativeCardArtSource(path) {
+  if (!cardArtPath(path)) return null;
+  try { return cardArtSource(path, readRuntimeConfig(window.BAITED_EXTENSION_CONFIG).apiBaseUrl); }
+  catch { return null; }
+}
+
 // Copy only fields this display uses. Never insert server strings as HTML.
 export function readState(value) {
   if (!object(value) || value.version !== VERSION || typeof value.configured !== 'boolean') throw new Error('Invalid state.');
@@ -40,8 +49,10 @@ export function readState(value) {
     // The printed ink lands in a style property, so only a plain hex colour is accepted.
     if (q.ink !== undefined && !(typeof q.ink === 'string' && /^#[0-9a-f]{6}$/i.test(q.ink))) throw new Error('Invalid ink.');
     if (q.example !== undefined && !string(q.example, 160)) throw new Error('Invalid example.');
+    if (q.artUrl !== undefined && !cardArtPath(q.artUrl)) throw new Error('Invalid artwork.');
     round = { id: q.id, number: q.number, duration: q.duration, remaining: q.remaining, endsAt: q.endsAt, difficulty: q.difficulty, target: q.target, forbiddenClues: q.forbiddenClues ?? [],
-      ...(q.target !== undefined && q.ink ? { ink: q.ink } : {}), ...(q.target !== undefined && q.example ? { example: q.example } : {}) };
+      ...(q.target !== undefined && q.ink ? { ink: q.ink } : {}), ...(q.target !== undefined && q.example ? { example: q.example } : {}),
+      ...(q.target !== undefined && ['active', 'paused', 'settling'].includes(r.phase) && q.artUrl ? { artUrl: q.artUrl } : {}) };
   }
   let result = null;
   if (r.result !== null) {
@@ -51,10 +62,12 @@ export function readState(value) {
     // Stays self-contained for the LAN harness; screens ignore counts that are not a tier.
     if (resultValue.milestone !== undefined && !(count(resultValue.milestone) && resultValue.milestone >= 2)) throw new Error('Invalid result.');
     if (resultValue.newBadge !== undefined && typeof resultValue.newBadge !== 'boolean') throw new Error('Invalid result.');
+    if (resultValue.artUrl !== undefined && !cardArtPath(resultValue.artUrl)) throw new Error('Invalid artwork.');
     // The streamer's pick carries a chatter's name, never their hint. Only a confirmed catch shows one.
     const award = resultValue.award;
     if (award !== undefined && !(object(award) && string(award.name, 40) && (award.at === undefined || number(award.at)))) throw new Error('Invalid result.');
     result = { id: resultValue.id, word: resultValue.word, outcome: resultValue.outcome, ...(resultValue.reason ? { reason: resultValue.reason } : {}),
+      ...(resultValue.artUrl && ['caught', 'escaped'].includes(resultValue.outcome) ? { artUrl: resultValue.artUrl } : {}),
       ...(resultValue.milestone ? { milestone: resultValue.milestone, newBadge: resultValue.newBadge === true } : {}),
       ...(award && resultValue.outcome === 'caught' ? { award: { name: award.name, ...(award.at !== undefined ? { at: award.at } : {}) } } : {}) };
   }

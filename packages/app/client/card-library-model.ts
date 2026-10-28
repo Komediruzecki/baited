@@ -11,6 +11,7 @@ export interface EditableCard {
   difficulty: Difficulty;
   blockedClues: string[];
   aliasesText: string;
+  artId?: string;
 }
 export interface EditablePack {
   id?: string;
@@ -31,6 +32,7 @@ export const packPayload = (pack: EditablePack, status = pack.status) => ({
   name: pack.name.trim(), status,
   cards: pack.cards.map((card) => ({
     ...(card.id ? { id: card.id } : {}),
+    ...(card.artId ? { artId: card.artId } : {}),
     target: card.target.trim().toLowerCase(), difficulty: card.difficulty,
     blockedClues: card.blockedClues.map((clue) => clue.trim().toLowerCase()),
     acceptedSpellings: acceptedSpellings(card),

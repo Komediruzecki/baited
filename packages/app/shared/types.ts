@@ -22,6 +22,8 @@ export interface Result {
   id: string;
   number: number;
   word: string;
+  /** Private immutable artwork snapshot. Projected URLs are added only for confirmed results. */
+  artId?: string;
   outcome: Outcome;
   elapsed: number;
   participants: number;
@@ -34,7 +36,7 @@ export interface Result {
   /** ...and unlocked that badge for the first time in this room. */
   newBadge?: boolean;
 }
-export type ResultView = Omit<Result, 'word'> & { word?: string };
+export type ResultView = Omit<Result, 'word' | 'artId'> & { word?: string; artUrl?: string };
 export interface Leader {
   name: string;
   rounds: number;
@@ -80,6 +82,8 @@ export interface GameView {
     settleUntil: number | null;
     epoch: number;
     target?: string;
+    /** Short-lived access to this round's artwork, only beside an authorized viewer target. */
+    artUrl?: string;
     forbiddenClues?: string[];
     /** The card's printed word colour and example question; sent only with `target`. */
     ink?: string;

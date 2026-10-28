@@ -1165,7 +1165,7 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
   return (
     <div className="result-row">
       <span className={cx('result-icon', r.outcome === 'caught' && 'win')}>
-        <CardArt word={r.word} />
+        <CardArt word={r.word} artUrl={['caught', 'escaped'].includes(r.outcome) ? r.artUrl : undefined} />
       </span>
       <strong>{r.word}</strong>
       <span className="result-time">{r.outcome === 'caught' ? `${r.elapsed}s` : '—'}</span>
@@ -1907,6 +1907,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             <CutCard
               className="viewer-card"
               word={visibleWord}
+              artUrl={playing ? g.round?.artUrl : g.result && ['caught', 'escaped'].includes(g.result.outcome) ? g.result.artUrl : undefined}
               wordAs="h2"
               chip={active && !stale ? `Round ${g.round?.number}` : stateLabel}
               level={playing && g.round ? { easy: 1, medium: 2, hard: 3 }[g.round.difficulty] : null}

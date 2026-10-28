@@ -6,6 +6,9 @@ import { WebSocketServer } from 'ws';
 import { Game, defaults } from './game.js';
 import { Store } from './store.js';
 import { CardLibraryStore, CardLibraryError } from './card-library.js';
+import { CardArtStore, CardArtError, CardArtCapabilities, artUploadOptionsSchema } from './card-art.js';
+import type { CardArtProcessor } from './card-art-scanner.js';
+import { CARD_ART_LIMITS, cardArtIdPattern } from '../shared/card-art.js';
 import { archiveInputSchema, selectInputSchema } from '../shared/card-library.js';
 import { Sessions, Limiter, cookies, equal, isLoopback, randomKey } from './security.js';
 import {
@@ -81,13 +84,16 @@ function oauthErrorFields(error: unknown) {
 export async function createBait(
   config: Config,
   developmentHmr = false,
-  options: { socketFactory?: SocketFactory } = {},
+  options: { socketFactory?: SocketFactory; artProcessor?: CardArtProcessor } = {},
 ) {
   const app = express(),
     server = createServer(app),
     store = new Store(config.dataDir, config.key);
   await store.load();
-  const cardLibrary = new CardLibraryStore(config.dataDir);
+  const cardArt = new CardArtStore(config.dataDir, options.artProcessor);
+  await cardArt.load();
+  const artCapabilities = new CardArtCapabilities(config.key);
+  const cardLibrary = new CardLibraryStore(config.dataDir, undefined, (owner, id) => cardArt.canAttach(owner, id));
   await cardLibrary.load();
   const rooms = new Map<string, Game>(),
     sessions = new Sessions(config.production),
@@ -199,8 +205,14 @@ export async function createBait(
   }
   function register(game: Game) {
     rooms.set(game.data.id, game);
-    if (game.data.mode === 'demo') cardLibrary.markEphemeral(game.data.owner);
+    cardArt.activateOwner(game.data.owner);
+    if (game.data.mode === 'demo') {
+      cardLibrary.markEphemeral(game.data.owner);
+      cardArt.markEphemeral(game.data.owner);
+    }
     game.deckFor = (difficulty) => cardLibrary.resolve(game.data.owner, difficulty);
+    game.artFor = (roundId, artId) => cardArt.canAttach(game.data.owner, artId)
+      ? artCapabilities.path(game.data.id, roundId, artId) : undefined;
     game.canRun = () => microphoneReady(game);
     game.onChange = () => {
       const bridge = speech.get(game.data.id);
@@ -307,7 +319,7 @@ export async function createBait(
                   : []),
               ],
               styleSrc: ["'self'", "'unsafe-inline'"],
-              imgSrc: ["'self'", 'data:'],
+              imgSrc: ["'self'", 'data:', 'blob:'],
               connectSrc: ["'self'", ...(config.speechProvider === 'moonshine' ? ['https://download.moonshine.ai'] : [])],
               workerSrc: ["'self'"],
               fontSrc: ["'self'"],
@@ -627,7 +639,9 @@ export async function createBait(
   });
   app.post('/api/studio/cards/pack', protect, async (req, res) => {
     const game = gameFor(res);
-    const savedPackId = await cardLibrary.savePack(game.data.owner, req.body);
+    const ids = Array.isArray(req.body?.cards) ? req.body.cards.flatMap((card: { artId?: unknown }) =>
+      typeof card?.artId === 'string' ? [card.artId] : []) : [];
+    const savedPackId = await cardArt.withReferences(game.data.owner, ids, () => cardLibrary.savePack(game.data.owner, req.body));
     broadcast(game);
     res.json({ ...cardLibrary.view(game.data.owner, game.data.settings.difficulty), savedPackId });
   });
@@ -644,6 +658,57 @@ export async function createBait(
     }, body.expectedRevision, game.data.settings.difficulty);
     broadcast(game);
     res.json(cardLibrary.view(game.data.owner, game.data.settings.difficulty));
+  });
+  app.get('/api/studio/card-art', session, (_req, res) => res.json(cardArt.list(gameFor(res).data.owner)));
+  app.post('/api/studio/card-art', protect, (req, res, next) => {
+    if (!limiter.hit(`art:${gameFor(res).data.owner}`, 12)) {
+      res.status(429).json({ code: 'art_busy', error: 'Take a moment before checking another image.' });
+      return;
+    }
+    next();
+  }, express.raw({ type: ['image/png', 'image/jpeg', 'image/webp'], limit: CARD_ART_LIMITS.uploadBytes, inflate: false }), async (req, res) => {
+    if (!Buffer.isBuffer(req.body)) throw new CardArtError(422, 'invalid_image', 'Choose a still PNG, JPEG or WebP image.');
+    const settings = artUploadOptionsSchema.parse({
+      purpose: req.headers['x-art-purpose'], source: req.headers['x-art-source'], sourceId: req.headers['x-art-source-id'],
+    });
+    const art = await cardArt.upload(gameFor(res).data.owner, req.body, String(req.headers['content-type']).split(';')[0].trim().toLowerCase(), settings);
+    res.status(201).json({ art, limits: CARD_ART_LIMITS });
+  });
+  app.get('/api/studio/card-art/:file', session, async (req, res) => {
+    const file = String(req.params.file), id = file.endsWith('.png') ? file.slice(0, -4) : '';
+    if (!cardArtIdPattern.test(id)) throw new CardArtError(404, 'art_missing', 'This artwork is no longer available.');
+    res.type('png').send(Buffer.from(await cardArt.read(gameFor(res).data.owner, id)));
+  });
+  app.delete('/api/studio/card-art/:id', protect, async (req, res) => {
+    const owner = gameFor(res).data.owner;
+    await cardArt.remove(owner, String(req.params.id), () => {
+      const references = cardLibrary.referencedArt(owner);
+      for (const game of rooms.values()) if (game.data.owner === owner) {
+        if (game.round?.artId) references.add(game.round.artId);
+        for (const result of game.data.history) if (result.artId) references.add(result.artId);
+      }
+      return references;
+    });
+    res.json(cardArt.list(owner));
+  });
+  app.get('/api/card-art/round/:room/:round/:art/:file', async (req, res) => {
+    const { room, round, art, file } = req.params;
+    const token = file.endsWith('.png') ? file.slice(0, -4) : '';
+    if (Object.keys(req.query).length || !artCapabilities.verify(room, round, art, token))
+      throw new CardArtError(404, 'art_missing', 'This artwork is no longer available.');
+    const game = rooms.get(room);
+    const live = game?.round?.id === round && game.round.artId === art && ['active', 'paused', 'settling'].includes(game.phase);
+    const revealed = game?.data.history.some((result) => result.id === round && result.artId === art && ['caught', 'escaped'].includes(result.outcome));
+    if (!game || (!live && !revealed) || !cardArt.canAttach(game.data.owner, art))
+      throw new CardArtError(404, 'art_missing', 'This artwork is no longer available.');
+    const origin = req.headers.origin;
+    if (origin && origin !== config.origin && !config.extensionOrigins.includes(origin)) {
+      res.status(403).end(); return;
+    }
+    if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+    res.vary('Origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.type('png').send(Buffer.from(await cardArt.read(game.data.owner, art)));
   });
   app.get('/api/studio', session, (_req, res) => res.json(studio(gameFor(res))));
   app.get('/api/studio/events', session, (req, res) =>
@@ -812,7 +877,7 @@ export async function createBait(
     store.snapshot.rooms = [...rooms.values()]
       .filter((g) => g.data.mode === 'twitch')
       .map((g) => g.data);
-    await Promise.all([store.save(), revoking, cardLibrary.deleteOwner(s.userId)]);
+    await Promise.all([store.save(), revoking, cardLibrary.deleteOwner(s.userId), cardArt.deleteOwner(s.userId)]);
     sessions.clear(res, s.id);
     res.json({ ok: true });
   });
@@ -935,6 +1000,14 @@ export async function createBait(
       res.status(error.status).json({ error: error.message });
       return;
     }
+    if (error instanceof CardArtError) {
+      res.status(error.status).json({ code: error.code, error: error.message });
+      return;
+    }
+    if (req.path.startsWith('/api/studio/card-art') && (error as { type?: string })?.type === 'entity.too.large') {
+      res.status(413).json({ code: 'invalid_image', error: 'Choose an image under 5 MB.' });
+      return;
+    }
     if (error instanceof ZodError && req.path.startsWith('/api/studio/cards')) {
       res.status(400).json({ error: 'Check the highlighted card details.', issues: error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })) });
       return;
@@ -980,6 +1053,7 @@ export async function createBait(
     bot,
     startupValidation,
     cardLibrary,
+    cardArt,
     async close() {
       closed = true;
       clearInterval(ticker);
@@ -998,6 +1072,7 @@ export async function createBait(
       await store.save();
       await store.flush();
       await cardLibrary.flush();
+      await cardArt.close();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },
   };

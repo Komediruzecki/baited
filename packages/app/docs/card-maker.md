@@ -10,7 +10,7 @@ Use **Cards** to make words for your channel, check their pronunciation and choo
 2. Choose **New pack** and give it a name. Start with one target word. Use **Add card** when that card is complete.
 3. Choose Easy, Medium or Hard. Easy keeps only the target and its accepted spellings out of chat. Medium adds two off-limits words; Hard adds four.
 4. If needed, open **Accepted spellings** and add up to three comma-separated spellings of the same word. These also trigger speech catches and private guesses, and stay out of chat. Use spelling alternatives, not synonyms.
-5. Check **Chat's card** beside the editor. Switch between Live, Urgent, Paused, Waiting and Result, or replay the reveal. It uses the same Cut Open card as the viewer, with the Glass finish and Prism back. Existing Baited artwork appears for a known illustrated word; new words have a text-led face.
+5. Check **Chat's card** beside the editor. Switch between Live, Urgent, Paused, Waiting and Result, or replay the reveal. It uses the same Cut Open card as the viewer, with the Glass finish and Prism back. Add optional artwork with **Upload image** or **Draw pixel art**. Without an image, existing Baited artwork appears for a known word; other words have a text-led face.
 6. Choose **Save draft**. Every card in the pack must have a valid target and the required clues before the draft can be saved. A draft can contain fewer than six cards.
 7. Add six distinct cards at the same difficulty, then choose **Save and make playable**. “Playable” makes the pack available to your channel. It does not publish it to a public gallery.
 8. Match the difficulty in **Game settings** to a ready difficulty in the pack. Choose **Use this pack** or **Mix with built-in cards**, then return to Studio and start the next round.
@@ -67,6 +67,6 @@ Baity checks outgoing posts against the live target and its spellings, including
 
 ## What comes later
 
-Optional example questions, artwork uploads, custom finishes, trusted teammate authoring, viewer proposals and public pack discovery remain planned. This version does not generate artwork, accept uploads or share packs between channels. The [card maker plan](../../../docs/card-maker-plan.md) preserves those follow-ups.
+Optional example questions, custom finishes, trusted teammate authoring, viewer proposals and public pack discovery remain planned. The image editor supports uploads and local pixel/ASCII conversion, not generative AI or public sharing. See [Card artwork](card-art-studio.md) for its checks and limits. The [card maker plan](../../../docs/card-maker-plan.md) preserves the follow-ups.
 
 The first live acceptance step is one broadcaster making six cards, rehearsing them with a real microphone, then playing a Hosted Test round with a second viewer and OBS. Automated persistence, revision, authorization, small-deck, alias, projection and bot tests do not replace that rehearsal.
