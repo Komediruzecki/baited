@@ -1,3 +1,4 @@
+import type { SelectedDeck } from './card-library.js';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type SpeechProvider = 'moonshine' | 'deepgram';
 export type Phase = 'idle' | 'active' | 'paused' | 'settling' | 'cooldown';
@@ -129,6 +130,8 @@ export interface ChatBotStatus {
   recent: ChatBotPost[];
 }
 export interface Studio {
+  /** Selected deck summary only. Full custom words are fetched by the private editor. */
+  deck?: SelectedDeck;
   room: GameView;
   viewerUrl: string;
   overlayUrl: string;

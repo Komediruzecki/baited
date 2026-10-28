@@ -17,7 +17,7 @@ test('the public sample is ten distinct canonical cards with all three difficult
     const original = cards.find(card => card.word === sample.word)
     assert.deepEqual({ ...sample, index: original.index }, original)
   }
-  assert.equal(cards.length, 78, 'sampling does not shrink the game or design catalogue')
+  assert.equal(cards.length, 100, 'sampling does not shrink the game or design catalogue')
 })
 
 for (const environment of ['dev', 'prod']) {

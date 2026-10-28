@@ -10,7 +10,7 @@ const check = process.argv.includes('--check');
 if (process.argv.slice(2).some((arg) => arg !== '--check'))
   throw new Error('Usage: node scripts/sync-card-art.mjs [--check]');
 const source = new URL('../public/cards/proofs/', import.meta.url);
-const manifests = ['manifest', 'expansion-a', 'expansion-b', 'expansion-60-a', 'expansion-60-b'];
+const manifests = ['manifest', 'expansion-a', 'expansion-b', 'expansion-60-a', 'expansion-60-b', 'expansion-100'];
 const assets = (await Promise.all(manifests.map(async (name) =>
   JSON.parse(await readFile(new URL(`${name}.json`, source), 'utf8'))
 ))).flatMap(({ assets }) => assets);

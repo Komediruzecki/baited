@@ -16,7 +16,7 @@ When a live round reaches zero while the microphone is listening, the server all
 | Medium     | Two                      |
 | Hard       | Four                     |
 
-The existing difficulty pools contain 72 targets. Every target has four original related clues in `server/cards.ts`. The active subset appears only on the viewer card. The studio and OBS do not receive it.
+The built-in difficulty pools contain 100 targets: 35 easy, 34 medium and 31 hard. Every target has four original related clues in `server/cards.ts`. The active subset appears only on the viewer card. The studio and OBS do not receive it. See [the 100-card deck notes](deck-100.md) for the latest additions and checks.
 
 For PENGUIN, the four clues are bird, ice, Antarctica and waddle. Medium reveals the first two; Hard cards reveal all four clues for their own target pool. The checker recognizes a listed word, common plural and possessive, and the usual disguises (`spoils` in `server/game.ts`): any case or accent, look-alike letters from other scripts, digits or symbols for letters (pengu1n, b!rd), stretched letters, letters typed one at a time (p e n g u i n, p.e.n.g.u.i.n), and a word split in two or three (snow man). A longer word that only contains the listed one stays clean: discord does not spoil DISCO, and birdwatching is not bird. It is a literal rule checker, not a semantic detector.
 

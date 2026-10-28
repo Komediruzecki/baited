@@ -9,8 +9,8 @@ import { forbiddenClues } from '../../app/server/cards.ts'
 import { cardArtFile, proofWords } from '../../app/extension/presentation.js'
 
 test('the expanded gallery covers the playable deck with accurate restrictions and usable example hints', () => {
-  assert.equal(cards.length, 78)
-  assert.equal(expansion.length, 60)
+  assert.equal(cards.length, 100)
+  assert.equal(expansion.length, 82)
   assert.equal(new Set(cards.map(({ word }) => word)).size, cards.length)
   assert.deepEqual(new Set(cards.map(({ word }) => word)), new Set(Object.values(words).flat()))
   assert.deepEqual(new Set(proofWords), new Set(cards.map(({ word }) => word)))
@@ -25,7 +25,7 @@ test('the expanded gallery covers the playable deck with accurate restrictions a
 })
 
 test('each card is an unchanged, recorded image in the landing, app and native Extension', async () => {
-  const manifests = await Promise.all(['manifest', 'expansion-a', 'expansion-b', 'expansion-60-a', 'expansion-60-b'].map(async (name) =>
+  const manifests = await Promise.all(['manifest', 'expansion-a', 'expansion-b', 'expansion-60-a', 'expansion-60-b', 'expansion-100'].map(async (name) =>
     JSON.parse(await readFile(new URL(`../../app/public/cards/proofs/${name}.json`, import.meta.url), 'utf8'))
   ))
   const assets = manifests.flatMap(({ assets }) => assets)

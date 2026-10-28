@@ -227,9 +227,9 @@ test('reduced motion and forced colors preserve clue readability and hide words 
 // the public landing. This private test fixture exists only in the test browser.
 // Each width gets its own page/trace and the normal 45-second test budget.
 for (const width of [320, 390, 1440, 1920]) {
-  test(`${width}px: all 78 native landing cards fit all four proposed clue styles`, async ({ page }, testInfo) => {
+  test(`${width}px: all 100 native landing cards fit all four proposed clue styles`, async ({ page }, testInfo) => {
     const catalogue = JSON.parse(readFileSync(new URL('../../app/shared/card-review-catalogue.json', import.meta.url), 'utf8'))
-    expect(catalogue).toHaveLength(78)
+    expect(catalogue).toHaveLength(100)
     await page.route('**/data.js', async route => {
       const response = await route.fetch()
       const source = await response.text()
@@ -328,8 +328,8 @@ for (const width of [320, 390, 1440, 1920]) {
         await page.screenshot({ path: testInfo.outputPath(`native-cards-${width}-${treatment}.png`) })
       }
     }
-    const geometryPath = testInfo.outputPath('native-all-78-clue-geometry.json')
+    const geometryPath = testInfo.outputPath('native-all-100-clue-geometry.json')
     writeFileSync(geometryPath, JSON.stringify(measurements))
-    await testInfo.attach('native-all-78-clue-geometry.json', { path: geometryPath, contentType: 'application/json' })
+    await testInfo.attach('native-all-100-clue-geometry.json', { path: geometryPath, contentType: 'application/json' })
   })
 }

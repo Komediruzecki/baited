@@ -15,6 +15,8 @@ import { words } from './words.js';
 import { forbiddenClues } from './cards.js';
 import { streakMilestone, streakTiers } from '../extension/presentation.js';
 import catalogue from '../shared/card-review-catalogue.json';
+import { matchesCustomTarget, targetForms } from '../shared/card-library.js';
+import { CardLibraryError, type DeckCard } from './card-library.js';
 
 // Each card's printed ink and example question. Both identify the word, so they
 // travel only beside a viewer's target.
@@ -68,19 +70,8 @@ export const tokens = (s: string): string[] =>
     .match(/[\p{L}\p{N}]+(?:['’][\p{L}]+)?/gu) ?? [];
 // These spellings name the same target. Keep speech, spoiler checks and private
 // guesses consistent without treating synonyms or longer words as a catch.
-const spellingGroups: readonly (readonly string[])[] = [
-  ['donut', 'doughnut'],
-  ['yogurt', 'yoghurt'],
-  ['mustache', 'moustache'],
-];
-const spellings = (word: string): readonly string[] => {
-  const lower = word.toLowerCase();
-  return spellingGroups.find((group) => group.includes(lower)) ?? [lower];
-};
-export const matches = (text: string, word: string) => {
-  const forms = spellings(word);
-  return tokens(text).some((token) => forms.includes(token));
-};
+const spellings = (word: string): readonly string[] => targetForms(word);
+export const matches = (text: string, word: string) => matchesCustomTarget(text, word);
 // Chat disguises a word to slip it past the streamer: letters from other scripts that
 // pass for Latin ones, and digits or symbols typed in place of a letter.
 const lookalikes: Record<string, string> = {
@@ -193,6 +184,10 @@ interface Round {
   previousStreak: number;
   difficulty: Difficulty;
   clues: string[];
+  acceptedSpellings: string[];
+  cardId?: string;
+  cardRevision?: number;
+  printed: { ink?: string; example?: string };
   guessEnabled: boolean;
   guessUsed: boolean;
   wrongGuessBonus: number;
@@ -207,6 +202,8 @@ export interface SavedGame {
   overlayKey: string;
   settings: Settings;
   history: Result[];
+  /** Private repeat history; never included in a Studio, viewer or OBS projection. */
+  recentCardForms?: { roundId: string; forms: string[] }[];
   priorWins: number;
   priorPlayed: number;
   priorBest: number;
@@ -245,6 +242,8 @@ export class Game {
   onChange: () => void = () => {};
   onEvent: (event: GameEvent) => void = () => {};
   canRun: () => boolean = () => true;
+  deckFor: (difficulty: Difficulty) => DeckCard[] = (difficulty) =>
+    words[difficulty].map((target) => ({ target, difficulty, blockedClues: forbiddenClues(target, difficulty), acceptedSpellings: [] }));
   constructor(
     public data: SavedGame,
     private clock = Date.now,
@@ -280,9 +279,20 @@ export class Game {
     if (this.phase === 'cooldown' && this.nextAt !== null && this.clock() < this.nextAt)
       throw new Error('Let the cooldown finish first.');
     this.bestBeforeRound = this.data.priorBest;
-    const pool = words[this.data.settings.difficulty].filter(
-      (w) => !this.data.history.slice(0, 12).some((h) => h.word === w),
-    );
+    const deck = this.deckFor(this.data.settings.difficulty);
+    if (!deck.length) throw new CardLibraryError(409, 'Choose a playable deck before starting.');
+    const window = Math.min(12, Math.max(0, deck.length - 1));
+    const pastForms = (entry: Result) =>
+      this.data.recentCardForms?.find((record) => record.roundId === entry.id)?.forms ?? targetForms(entry.word);
+    const recent = new Set(this.data.history.slice(0, window).flatMap(pastForms));
+    const overlaps = (card: DeckCard, forms: Set<string>) =>
+      targetForms(card.target, card.acceptedSpellings).some((form) => forms.has(form));
+    const eligible = deck.filter((card) => !overlaps(card, recent));
+    // Editing aliases can make several recent cards overlap a new pool. Relax
+    // older exclusions first, keeping the last word out whenever possible.
+    const latest = new Set(this.data.history[0] ? pastForms(this.data.history[0]) : []);
+    const fallback = deck.filter((card) => !overlaps(card, latest));
+    const pool = eligible.length ? eligible : fallback.length ? fallback : deck;
     const now = this.clock();
     if (this.mission?.status !== 'active') {
       this.mission =
@@ -302,7 +312,8 @@ export class Game {
       this.mission?.status === 'active'
         ? Math.max(0, this.mission.endsAt - now)
         : this.data.settings.duration * 1000;
-    const word = pool[this.choose(pool.length)];
+    const card = pool[this.choose(pool.length)];
+    const word = card.target;
     this.round = {
       id: randomUUID(),
       number: this.score.played + 1,
@@ -319,7 +330,10 @@ export class Game {
       seen: new Set(),
       previousStreak: this.streak,
       difficulty: this.data.settings.difficulty,
-      clues: forbiddenClues(word, this.data.settings.difficulty),
+      clues: [...card.blockedClues],
+      acceptedSpellings: [...card.acceptedSpellings],
+      ...(card.cardId ? { cardId: card.cardId, cardRevision: card.revision } : {}),
+      printed: card.cardId ? {} : { ...printed.get(word) },
       guessEnabled: this.data.settings.callBait,
       guessUsed: false,
       wrongGuessBonus: 0,
@@ -435,6 +449,10 @@ export class Game {
         : null;
     r.hints = [];
     this.data.history.unshift(this.result);
+    this.data.recentCardForms = [
+      { roundId: r.id, forms: targetForms(r.word, r.acceptedSpellings) },
+      ...(this.data.recentCardForms ?? []),
+    ].slice(0, 12);
     // Retain 100 outcomes while retaining aggregate scores for older rounds.
     if (this.data.history.length > 100) {
       const old = this.data.history.pop()!;
@@ -559,8 +577,15 @@ export class Game {
       if (
         (this.data.settings.auto || this.mission?.status === 'active') &&
         (this.data.mode === 'demo' || (this.connection.status === 'connected' && this.canRun()))
-      )
-        this.begin();
+      ) {
+        // Editing a selected pack can remove a difficulty between rounds. Stop
+        // safely and let Studio show the pack error instead of crashing the ticker.
+        try { this.begin(); }
+        catch (error) {
+          if (!(error instanceof CardLibraryError)) throw error;
+          this.phase = 'idle'; this.nextAt = null; this.changed();
+        }
+      }
     }
   }
   guess(roundId: string, epoch: number, text: string) {
@@ -574,7 +599,7 @@ export class Game {
     if (guess.length !== 1 || guess[0].length > 40)
       throw new Error('Only one word can be submitted.');
     r.guessUsed = true;
-    if (matches(guess[0], r.word)) {
+    if (matchesCustomTarget(guess[0], r.word, r.acceptedSpellings)) {
       this.finish('escaped', 'guess');
       return { correct: true, bonus: 0 };
     }
@@ -738,7 +763,7 @@ export class Game {
     ];
     const matched = candidates.some(
       (word) =>
-        matches(word.text, r.word) &&
+        matchesCustomTarget(word.text, r.word, r.acceptedSpellings) &&
         Number.isFinite(word.confidence) &&
         word.confidence >= 0.8 &&
         Number.isFinite(word.capturedAt) &&
@@ -793,7 +818,7 @@ export class Game {
       return true;
     }
     if (now - (this.recentChat.get(userId) ?? -Infinity) < 3000) return false;
-    const spoiled = spoils(text, r.word);
+    const spoiled = targetForms(r.word, r.acceptedSpellings).some((form) => spoils(text, form));
     this.rememberHint(r, { id, userId, name, text, at }, spoiled);
     // Spoiler text, however disguised, earns no participation credit and is never echoed by BAIT.
     if (spoiled) return false;
@@ -834,7 +859,7 @@ export class Game {
             guessUsed: r.guessUsed,
             wrongGuessBonus: r.wrongGuessBonus,
             ...(role === 'viewer' && ['active', 'paused', 'settling'].includes(this.phase)
-              ? { target: r.word, forbiddenClues: [...r.clues], ...printed.get(r.word) }
+              ? { target: r.word, forbiddenClues: [...r.clues], ...r.printed }
               : {}),
           }
         : null,
