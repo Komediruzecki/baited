@@ -27,6 +27,8 @@ export const botNotices = {
       'The bot account sign-in did not finish. Sign in as the bot account again.',
     'bot-declined':
       'Baity stopped posting in your chat: you signed in without the bot permission. Allow the bot in Stream setup to bring Baity back.',
+    'bot-as-streamer':
+      "That is the chat bot's Twitch account. Sign in with the streamer's account, in a private window if Twitch keeps picking the bot.",
   } as Record<string, string>,
 };
 /** Notices whose fix is the operator signing in as the bot account again. */

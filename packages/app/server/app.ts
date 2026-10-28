@@ -12,6 +12,7 @@ import {
   AuthRevoked,
   AuthSuperseded,
   BotAccountMismatch,
+  BotAsStreamer,
   IdentityMismatch,
   ScopeMissing,
   StoreFailed,
@@ -57,6 +58,10 @@ function oauthErrorFields(error: unknown) {
   if (error instanceof BotAccountMismatch) {
     const id = (value: string) => (/^\d{1,20}$/.test(value) ? value : 'invalid');
     return `reason=bot_account_mismatch received=${id(error.received)} expected=${id(error.expected)} ${kind}`;
+  }
+  if (error instanceof BotAsStreamer) {
+    const id = /^\d{1,20}$/.test(error.received) ? error.received : 'invalid';
+    return `reason=bot_as_streamer received=${id} ${kind}`;
   }
   if (error instanceof AuthSuperseded) return `reason=superseded ${kind}`;
   if (error instanceof ScopeMissing) return `reason=scope_missing ${kind}`;
@@ -604,7 +609,7 @@ export async function createBait(
         res.redirect('/auth/twitch?bot=1&restore=1');
       else res.redirect('/');
     } catch (e) {
-      failed(oauthErrorFields(e), 'oauth');
+      failed(oauthErrorFields(e), e instanceof BotAsStreamer ? 'bot-as-streamer' : 'oauth');
     }
   });
   app.get('/api/studio', session, (_req, res) => res.json(studio(gameFor(res))));

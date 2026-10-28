@@ -94,6 +94,12 @@ export class TwitchAuth {
       await this.revokeToken(token.access_token);
       throw new BotAccountMismatch(user.id, this.config.botUserId);
     }
+    // The bot account signing in as a streamer would get a room of its own. Refuse it before
+    // anything is stored, unless this server runs the bot on the streamer's own account.
+    if (kind === 'broadcaster' && this.config.botUserId && user.id === this.config.botUserId && !this.config.botIsStreamer) {
+      await this.revokeToken(token.access_token);
+      throw new BotAsStreamer(user.id);
+    }
     const key = kind === 'bot' ? botKey(user.id) : user.id;
     // What this account had granted before, read before the new grant replaces it.
     let previousScope: string[] = [];
@@ -254,6 +260,13 @@ export class BotAccountMismatch extends Error {
     public expected = '',
   ) {
     super('That Twitch account is not the configured bot account.');
+  }
+}
+/** The configured bot account tried the streamer sign-in on a server where it is not a streamer. */
+export class BotAsStreamer extends Error {
+  /** Numeric Twitch user ID of the account that signed in. */
+  constructor(public received = '') {
+    super("That is the chat bot's Twitch account, not a streamer's.");
   }
 }
 /** The token lacks a scope this flow needs. Treated as a revoked authorization by callers. */

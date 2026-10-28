@@ -35,6 +35,8 @@ interface FakeTwitch {
   userStatus: number;
   /** Runs while Twitch is answering the user lookup, before the grant is stored. */
   duringLookup?: () => void;
+  /** Access tokens the server asked Twitch to revoke. */
+  revoked: string[];
 }
 
 async function oauthServer(
@@ -48,7 +50,7 @@ async function oauthServer(
     await seed.setCredentials('123', grant({ scope: options.stored }));
     await seed.flush();
   }
-  const twitch: FakeTwitch = { scopes: ['user:read:chat'], userId: '123', tokenStatus: 200, userStatus: 200 };
+  const twitch: FakeTwitch = { scopes: ['user:read:chat'], userId: '123', tokenStatus: 200, userStatus: 200, revoked: [] };
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -58,6 +60,10 @@ async function oauthServer(
         return Response.json({ access_token: 'app-token', expires_in: 3600 });
       if (twitch.tokenStatus !== 200) return new Response('', { status: twitch.tokenStatus });
       return Response.json({ access_token: 'new-access', refresh_token: 'new-refresh', expires_in: 3600, scope: twitch.scopes });
+    }
+    if (url.endsWith('/oauth2/revoke')) {
+      twitch.revoked.push(new URLSearchParams(String(init?.body)).get('token') ?? '');
+      return new Response('', { status: 200 });
     }
     if (url.endsWith('/oauth2/validate'))
       return Response.json({
@@ -305,4 +311,29 @@ test('a bot sign-in that loses its pending state lands on the bot notice', async
   const cancelled = await begin('/auth/twitch/bot');
   const declined = await logged(t, () => callback({ state: cancelled.state, error: 'access_denied' }, cancelled.oauth));
   assert.equal(declined.result.location, '/?notice=bot-oauth');
+});
+
+test('the chat bot account cannot sign in as a streamer and get its own room', async (t) => {
+  const { twitch, begin, callback, store, bait } = await oauthServer(t);
+  twitch.userId = '999';
+  const started = await begin('/auth/twitch');
+  const { result, lines } = await logged(t, () => callback({ state: started.state, code: 'code-1' }, started.oauth));
+  assert.equal(result.location, '/?notice=bot-as-streamer');
+  assert.equal(result.session, '', 'no studio session');
+  assert.deepEqual(lines, ['OAuth sign-in failed: flow=broadcaster reason=bot_as_streamer received=999 error=BotAsStreamer']);
+  assert.equal(store.credentials('999'), undefined, 'no grant stored');
+  assert.equal([...bait.rooms.values()].some((game) => game.data.owner === '999'), false, 'no room');
+  assert.deepEqual(twitch.revoked, ['new-access'], 'the new grant is revoked');
+});
+
+test('TWITCH_BOT_IS_STREAMER=1 lets a streamer use their own account as the bot', async (t) => {
+  const { twitch, begin, callback, store, bait } = await oauthServer(t, { env: { TWITCH_BOT_IS_STREAMER: '1' } });
+  twitch.userId = '999';
+  const started = await begin('/auth/twitch');
+  const signedIn = await callback({ state: started.state, code: 'code-1' }, started.oauth);
+  assert.equal(signedIn.location, '/');
+  assert.ok(signedIn.session);
+  assert.equal(store.credentials('999')?.userId, '999');
+  assert.equal([...bait.rooms.values()].some((game) => game.data.owner === '999'), true);
+  assert.deepEqual(twitch.revoked, []);
 });
