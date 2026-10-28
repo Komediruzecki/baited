@@ -1,6 +1,7 @@
 import { Worker } from 'node:worker_threads';
 import { randomUUID } from 'node:crypto';
 import { CARD_ART_MODEL, CARD_ART_MODEL_SHA256 } from './card-art-policy.js';
+import { CARD_ART_LIMITS } from '../shared/card-art.js';
 
 export interface ProcessedArt {
   png: Uint8Array;
@@ -14,7 +15,7 @@ export interface CardArtProcessor {
   close?(): Promise<void>;
 }
 export class ArtProcessingError extends Error {
-  constructor(public code: 'invalid_image' | 'scan_unavailable' | 'art_busy') { super(code); }
+  constructor(public code: 'invalid_image' | 'image_dimensions' | 'scan_unavailable' | 'art_busy') { super(code); }
 }
 
 /** One CPU-only worker; a small queue and deadline keep artwork away from game timing. */
@@ -40,7 +41,7 @@ export class LocalArtProcessor implements CardArtProcessor {
     if (!this.worker) {
       const worker = new Worker(new URL('./card-art-worker.mjs', import.meta.url), {
         resourceLimits: { maxOldGenerationSizeMb: 192, stackSizeMb: 4 },
-        stdout: true, stderr: true, workerData: { modelSha256: CARD_ART_MODEL_SHA256 },
+        stdout: true, stderr: true, workerData: { modelSha256: CARD_ART_MODEL_SHA256, limits: CARD_ART_LIMITS },
         env: {}, execArgv: [],
       });
       worker.on('error', () => {});
@@ -66,7 +67,7 @@ export class LocalArtProcessor implements CardArtProcessor {
         if (result.id !== id) return;
         cleanup();
         if (!result.ok) {
-          reject(new ArtProcessingError(result.code === 'invalid_image' ? 'invalid_image' : 'scan_unavailable'));
+          reject(new ArtProcessingError(result.code === 'invalid_image' || result.code === 'image_dimensions' ? result.code : 'scan_unavailable'));
           return;
         }
         if (!(result.png instanceof Uint8Array) || !Number.isInteger(result.width) || !Number.isInteger(result.height)) {

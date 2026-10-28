@@ -1,7 +1,8 @@
 /** Raster uploads remain private until an authorized game projection exposes a round image. */
 export const CARD_ART_LIMITS = {
   uploadBytes: 5 * 1024 * 1024,
-  inputEdge: 2048,
+  inputEdge: 8192,
+  inputPixels: 32_000_000,
   outputEdge: 512,
   outputBytes: 2 * 1024 * 1024,
   assets: 400,
@@ -30,7 +31,7 @@ export interface CardArtLibraryView {
   bytes: number;
   limits: typeof CARD_ART_LIMITS;
 }
-export type CardArtErrorCode = 'invalid_image' | 'blocked_image' | 'uncertain_image' |
+export type CardArtErrorCode = 'invalid_image' | 'image_dimensions' | 'blocked_image' | 'uncertain_image' |
   'scan_unavailable' | 'art_busy' | 'art_quota' | 'art_storage' | 'art_missing' | 'art_referenced';
 export interface CardArtErrorView { error: string; code: CardArtErrorCode }
 

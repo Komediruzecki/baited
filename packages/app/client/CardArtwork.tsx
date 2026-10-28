@@ -41,11 +41,11 @@ export function CardArtwork({ artId, csrf, disabled, onChange, onBusyChange }: {
   }, [artId]);
   const feedback = () => { setError(''); setNotice(''); };
   const upload = async (file: File) => {
-    setBusy('Checking image…'); feedback();
+    setBusy('Fitting and checking image…'); feedback();
     try {
       const result = await uploadCardArt(file, csrf);
       onChange(result.art.id); setDocument(undefined); setSource(undefined);
-      setNotice('Image added to this edit. Save the pack to use it.');
+      setNotice(`Image added at ${result.art.width} × ${result.art.height} px, fitted without cropping. Save the pack to use it.`);
     } catch (cause) { setError((cause as Error).message); }
     finally { setBusy(''); }
   };
@@ -98,7 +98,8 @@ export function CardArtwork({ artId, csrf, disabled, onChange, onBusyChange }: {
       <Button type="button" className="text" disabled={disabled || !!busy || editor} onClick={() => void showLibrary()}>Saved images</Button>
     </div>
     <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" hidden aria-label="Upload card image" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void upload(file); }} />
-    <p className="card-artwork__policy">PNG, JPEG or WebP. Up to 5 MB and {CARD_ART_LIMITS.inputEdge} × {CARD_ART_LIMITS.inputEdge} px. Use images you have permission to share. Sexual imagery is not allowed; images are checked before saving. Checks can miss content or reject a harmless image.</p>
+    <p className="card-maker__hint">Large photos are resized to fit the card. Nothing is cropped or stretched.</p>
+    <p className="card-artwork__policy">PNG, JPEG or WebP. Up to 5 MB, {CARD_ART_LIMITS.inputEdge} px per side and {CARD_ART_LIMITS.inputPixels / 1_000_000} megapixels. Use images you have permission to share. Sexual imagery is not allowed; images are checked before saving. Checks can miss content or reject a harmless image.</p>
     {!!busy && <p role="status" className="card-artwork__status">{busy}</p>}
     {!!error && <p role="alert" className="card-maker__field-error">{error}</p>}
     {!!notice && <p role="status" className="card-artwork__status">{notice}</p>}

@@ -129,12 +129,43 @@ test('raster preflight reads PNG, JPEG and WebP dimensions before decoding', () 
 });
 
 test('import rejects large files, oversized dimensions and non-raster data before touching browser APIs', async () => {
-  assert.throws(() => rasterDimensions(pngHeader(2049, 100)), /2048/);
-  assert.throws(() => rasterDimensions(pngHeader(1, 100_000)), /2048/);
+  assert.deepEqual(rasterDimensions(pngHeader(2448, 3264)), { width: 2448, height: 3264, mime: 'image/png' });
+  assert.deepEqual(rasterDimensions(pngHeader(2880, 3840)), { width: 2880, height: 3840, mime: 'image/png' });
+  assert.throws(() => rasterDimensions(pngHeader(8193, 100)), /8192/);
+  assert.throws(() => rasterDimensions(pngHeader(1, 100_000)), /8192/);
+  assert.throws(() => rasterDimensions(pngHeader(6000, 6000)), /32 megapixels/);
   assert.throws(() => rasterDimensions(pngHeader(0, 100)), /valid PNG/);
   assert.throws(() => rasterDimensions(new TextEncoder().encode('<svg><script>bad()</script></svg>').buffer), /valid PNG/);
   await assert.rejects(importPixelImage(new Blob([new Uint8Array(MAX_PIXEL_IMPORT_BYTES + 1)]), 32, 'original', false), /5 MB/);
-  await assert.rejects(importPixelImage(new Blob([pngHeader(4096, 4096)]), 32, 'original', false), /2048/);
+  await assert.rejects(importPixelImage(new Blob([pngHeader(8000, 8000)]), 32, 'original', false), /32 megapixels/);
+});
+
+test('a large portrait fits the whole pixel grid and releases its decoded bitmap', async () => {
+  const originals = new Map(['createImageBitmap', 'document'].map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+  let closed = false;
+  const bitmap = { width: 2880, height: 3840, close: () => { closed = true; } };
+  const draws: unknown[][] = [];
+  const context = {
+    clearRect() {}, drawImage: (...args: unknown[]) => draws.push(args),
+    getImageData: () => ({ data: new Uint8ClampedArray(32 * 32 * 4) }),
+  };
+  Object.defineProperty(globalThis, 'createImageBitmap', { configurable: true, value: async () => bitmap });
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: () => ({ getContext: () => context }) } });
+  try {
+    const result = await importPixelImage(new Blob([pngHeader(2880, 3840)]), 32, 'original', false);
+    assert.equal(result.size, 32);
+    assert.deepEqual(draws, [[bitmap, 4, 0, 24, 32]], 'draw the entire portrait centered inside the square, with no source crop');
+    assert.equal(closed, true);
+    closed = false; bitmap.width = 6000; bitmap.height = 6000;
+    await assert.rejects(importPixelImage(new Blob([pngHeader(100, 100)]), 32, 'original', false), /32 megapixels/);
+    assert.equal(closed, true, 'a decoder/header mismatch also releases its bitmap');
+    assert.equal(draws.length, 1, 'over-limit decoded pixels never reach the canvas');
+  } finally {
+    for (const [name, descriptor] of originals) {
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else Reflect.deleteProperty(globalThis, name);
+    }
+  }
 });
 
 test('Canvas2D rendering clears previous artwork and exports only occupied cells', () => {

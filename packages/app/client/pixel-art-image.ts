@@ -1,7 +1,12 @@
 import { asciiPixels, pixelsFromRgba, PIXEL_PALETTES, type PixelDocument, type PixelPalette, type PixelSize } from './pixel-art-model';
+import { CARD_ART_LIMITS } from '../shared/card-art';
 
-export const MAX_PIXEL_IMPORT_BYTES = 5 * 1024 * 1024;
-export const MAX_PIXEL_IMPORT_SIDE = 2048;
+export const MAX_PIXEL_IMPORT_BYTES = CARD_ART_LIMITS.uploadBytes;
+export const MAX_PIXEL_IMPORT_SIDE = CARD_ART_LIMITS.inputEdge;
+function checkDimensions(width: number, height: number) {
+  if (width > MAX_PIXEL_IMPORT_SIDE || height > MAX_PIXEL_IMPORT_SIDE || width * height > CARD_ART_LIMITS.inputPixels)
+    throw new Error(`This photo is too large to open. Use up to ${MAX_PIXEL_IMPORT_SIDE} pixels per side and ${CARD_ART_LIMITS.inputPixels / 1_000_000} megapixels.`);
+}
 export function rasterDimensions(buffer: ArrayBuffer): { width: number; height: number; mime: string } {
   const b = new Uint8Array(buffer), view = new DataView(buffer);
   const text = (at: number, n: number) => String.fromCharCode(...b.slice(at, at + n));
@@ -36,8 +41,7 @@ export function rasterDimensions(buffer: ArrayBuffer): { width: number; height: 
     }
   }
   if (!width || !height || !mime) throw new Error('Choose a valid PNG, JPEG or WebP image.');
-  if (width > MAX_PIXEL_IMPORT_SIDE || height > MAX_PIXEL_IMPORT_SIDE)
-    throw new Error('Use an image up to 2048 pixels on each side.');
+  checkDimensions(width, height);
   return { width, height, mime };
 }
 
@@ -56,8 +60,8 @@ export async function importPixelImage(file: Blob, size: PixelSize, palette: Pix
     }
     const width = 'naturalWidth' in source ? source.naturalWidth : source.width;
     const height = 'naturalHeight' in source ? source.naturalHeight : source.height;
-    if (!width || !height || width > MAX_PIXEL_IMPORT_SIDE || height > MAX_PIXEL_IMPORT_SIDE)
-      throw new Error('The decoded image is too large. Use an image up to 2048 pixels per side.');
+    if (!width || !height) throw new Error('This image could not be read. Choose a still PNG, JPEG or WebP.');
+    checkDimensions(width, height);
     const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) throw new Error('This browser could not open the image editor. Try another browser.');

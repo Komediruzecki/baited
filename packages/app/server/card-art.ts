@@ -106,13 +106,15 @@ export class CardArtStore {
     if (this.deleted.has(owner)) throw missing();
     const generation = this.generations.get(owner) ?? 0;
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(mime) || !bytes.byteLength || bytes.byteLength > CARD_ART_LIMITS.uploadBytes)
-      throw new CardArtError(422, 'invalid_image', 'Choose a PNG, JPEG or WebP under 5 MB and 2048 pixels per side.');
+      throw new CardArtError(422, 'invalid_image', 'Choose a still PNG, JPEG or WebP up to 5 MB.');
     this.sourceFor(owner, options.sourceId);
     let result;
     try { result = await this.processor.process(bytes, mime); }
     catch (error) {
+      if (error instanceof ArtProcessingError && error.code === 'image_dimensions')
+        throw new CardArtError(422, 'image_dimensions', 'This image has too many pixels. Resize it to 32 megapixels or fewer, with neither side above 8192 pixels, then try again.');
       if (error instanceof ArtProcessingError && error.code === 'invalid_image')
-        throw new CardArtError(422, 'invalid_image', 'This image could not be read. Use a still PNG, JPEG or WebP up to 2048 pixels per side.');
+        throw new CardArtError(422, 'invalid_image', 'This image could not be read. Try exporting a still PNG, JPEG or WebP, then choose the new file.');
       if (error instanceof ArtProcessingError && error.code === 'art_busy')
         throw new CardArtError(429, 'art_busy', 'Another image is being checked. Try again in a moment.');
       throw new CardArtError(503, 'scan_unavailable', 'The image check is unavailable. Your artwork is still here; try saving again.');
