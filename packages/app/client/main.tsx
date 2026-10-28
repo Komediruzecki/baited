@@ -49,7 +49,7 @@ import { CardBack } from './CardBack';
 import { CatchDecision } from './CatchDecision';
 import { ObsHud } from './ObsHud';
 import { nextStreakTier, streakMilestone } from '../extension/presentation.js';
-import { GlassCard } from './GlassCard';
+import { CutCard } from './CutCard';
 import { StreakBadge, StreakBadges, StreakCelebration, StreakCount, StreakRow } from './streak';
 import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
@@ -81,7 +81,8 @@ import {
 } from './transcript-preview';
 import './transcript-preview.css';
 import './product-brand.css';
-import './glass-card.css';
+import '../extension/card.css';
+import './cut-card.css';
 import './result-card.css';
 import '../extension/tokens.css';
 import './studio-refresh.css';
@@ -1867,8 +1868,8 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
       <div className="viewer-game">
         <div className="viewer-table">
           {visibleWord ? <section className={cx('target-card', won && 'target-win')} aria-label="Secret card">
-            <GlassCard
-              className="viewer-glass"
+            <CutCard
+              className="viewer-card"
               word={visibleWord}
               wordAs="h2"
               chip={active && !stale ? `Round ${g.round?.number}` : stateLabel}

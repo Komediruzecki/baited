@@ -1,4 +1,4 @@
-/* Viewer and broadcast hosts. Cards are the landing's selected Glass face and Mosaic back. */
+/* Viewer and broadcast hosts. Cards are the landing's approved Cut Open face and Prism back. */
 .viewer-room { width: 100%; max-width: 1168px; min-height: 100vh; margin: 0 auto; padding: 0 24px; background: var(--b-night); color: var(--b-copy); font-family: var(--b-ui); }
 .viewer-room * { box-sizing: border-box; }
 .viewer-room .viewer-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 72px; padding: 14px 0; border-bottom: 1px solid var(--b-line); }
@@ -9,15 +9,15 @@
 .viewer-room .viewer-main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px 48px; max-width: none; margin: 32px 0 0; padding: 0; }
 .viewer-room .viewer-game, .viewer-room .viewer-support { min-width: 0; }
 .viewer-room .viewer-table { display: grid; place-items: center; min-height: 620px; padding: 40px 24px; border-radius: 10px; background: var(--b-table-night); box-shadow: inset 0 0 0 1px #4a2a8a; }
-/* The secret is the landing's Glass card (glass-card.css), as on the stream overlay. */
+/* The secret is the landing's card (extension/card.css, cut-card.css), as on the stream overlay. */
 .viewer-room .target-card { position: relative; display: grid; justify-items: center; gap: 16px; width: min(360px, 100%); margin: 0; padding: 0; border: 0; background: none; clip-path: none; box-shadow: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.viewer-room .viewer-glass { --glass-card-width: min(360px, 100%); }
+.viewer-room .viewer-card { --cut-card-width: min(360px, 100%); }
 .viewer-room .viewer-card-clock { display: inline-flex; align-items: center; gap: 1.667cqw; color: var(--b-paper); }
 .viewer-room .viewer-card-clock > svg { width: max(12px, 4cqw); height: max(12px, 4cqw); color: var(--b-lilac); }
 .viewer-room .viewer-card-clock > span { font: 600 max(13px, 5cqw)/1 var(--b-ui); font-variant-numeric: tabular-nums; }
 .viewer-room .viewer-card-clock > small { color: var(--b-muted); font: 400 max(9px, 3cqw)/1.4 var(--b-ui); }
 .viewer-room.viewer-urgent .viewer-card-clock > span { color: var(--b-urgent); }
-.viewer-room.viewer-urgent .glass-card__timer { background: var(--b-urgent); }
+.viewer-room.viewer-urgent .cut-card__timer { background: var(--b-urgent); }
 .viewer-room .target-card > .clue-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .viewer-room .clue-card > div { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--b-muted); }
 .viewer-room .clue-card > div > svg, .viewer-room .clue-card > div > span { display: none; }
@@ -138,7 +138,7 @@
   .viewer-room .viewer-header .tag { font-size: 11px; }
   .viewer-room .viewer-main { margin-top: 0; gap: 24px; }
   .viewer-room .viewer-table { min-height: 0; margin-inline: -16px; padding: 24px 16px 28px; border-radius: 0; box-shadow: none; }
-  .viewer-room .target-card, .viewer-room .viewer-glass { --glass-card-width: min(320px, 100%); width: min(320px, 100%); }
+  .viewer-room .target-card, .viewer-room .viewer-card { --cut-card-width: min(320px, 100%); width: min(320px, 100%); }
   .viewer-room .viewer-back { width: min(220px, 100%); }
   .viewer-room .viewer-card-waiting > p { font-size: 13px; margin-top: 22px; }
   .viewer-room .viewer-state h1 { font-size: 28px; }

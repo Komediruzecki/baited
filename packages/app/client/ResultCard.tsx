@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { GameView } from '../shared/types';
 import { CardBack } from './CardBack';
-import { GlassCard } from './GlassCard';
+import { CutCard } from './CutCard';
 
 // Only a server-authorized result belongs here. OBS must never render a review.
 export function ResultCard({
@@ -14,6 +14,9 @@ export function ResultCard({
   age?: number;
 }) {
   const [initialAge] = useState(age);
+  // The art resolves from pixels as the face turns into view: straight away in the studio,
+  // after the deal on OBS. A card that arrives after that moment shows finished art.
+  const revealAt = broadcast ? 480 : 150;
   if (!result.word) return null;
   if (broadcast && !['caught', 'escaped'].includes(result.outcome)) return null;
   const caught = result.outcome === 'caught';
@@ -45,7 +48,14 @@ export function ResultCard({
         <div className="result-card__back" aria-hidden="true">
           <CardBack />
         </div>
-        <GlassCard className="result-card__face" word={result.word} chip={verdict} note={outcome} />
+        <CutCard
+          className="result-card__face"
+          word={result.word}
+          chip={verdict}
+          note={outcome}
+          revealHold={Math.max(0, revealAt - initialAge)}
+          revealStill={initialAge > revealAt}
+        />
       </div>
     </div>
   );

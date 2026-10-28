@@ -1,0 +1,56 @@
+/* App hosts for the landing's approved card, drawn by extension/card.css: the viewer
+   room, studio results, the OBS reveal and the face-down card on the studio desk and the
+   sign-in table. Each host is the card's container, so the card scales from its width;
+   at 300 px wide it is the landing's own 300 × 420 card. */
+.cut-host {
+  position: relative;
+  width: var(--cut-card-width, 190px);
+  max-width: 100%;
+  aspect-ratio: 5 / 7;
+  flex: none;
+  container-type: size;
+  color: var(--b-paper);
+  text-align: center;
+}
+.cut-host > .cut-card {
+  position: absolute;
+  inset: 0;
+}
+/* A word without an illustration keeps the field at the landing's minimum art height
+   (80 px at 300 wide) and centres its lines between the field and the footer. */
+.cut-host[data-art='word'] .cut-card {
+  --cut-art: calc(80 * var(--cut-u));
+}
+.cut-host[data-art='word'] .cut-card__word {
+  margin-top: auto;
+}
+
+/* A small card keeps its word and art; its secondary lines step aside. */
+@container (max-height: 300px) {
+  .cut-card__question,
+  .cut-card__rules-label {
+    display: none;
+  }
+}
+@container (max-height: 200px) {
+  .cut-host .cut-card {
+    --cut-top: 0px;
+    padding-bottom: calc(18 * var(--cut-u));
+  }
+  .cut-card__top,
+  .cut-card__note,
+  .cut-card__footer {
+    display: none;
+  }
+  .cut-card__plate {
+    flex-grow: 0;
+    margin-top: auto;
+  }
+}
+
+/* The face-down card: the landing's Prism back, sized by whoever holds it. */
+.card-back {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+}

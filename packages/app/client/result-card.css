@@ -1,9 +1,5 @@
-/* One authored payoff: the landing's card turns over in Studio and OBS. The face is
-   glass-card.css; this file only deals and turns it. */
-.result-deal,
-.studio-card-slot {
-  --card-r: 9px 15px 9px 9px;
-}
+/* One authored payoff: the landing's card turns over in Studio and OBS. The face and
+   back are extension/card.css; this file only deals and turns them. */
 .result-deal {
   width: 190px;
   perspective: 1200px;
@@ -26,40 +22,22 @@
   transform: rotateY(180deg);
 }
 .result-card__face {
-  --glass-card-width: 100%;
+  --cut-card-width: 100%;
 }
-.result-card .glass-card__note {
-  margin-top: 2.667cqw;
+.result-card .cut-card__note {
+  margin-top: calc(8 * var(--cut-u));
   color: var(--b-paper);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.result-card[data-outcome='caught'] .glass-card__note {
+.result-card[data-outcome='caught'] .cut-card__note {
   color: var(--b-lilac);
 }
-.result-card[data-outcome='caught'] .glass-card__chip {
+.result-card[data-outcome='caught'] .cut-card__chip {
   animation: verdict-stamp 220ms cubic-bezier(0.16, 1, 0.3, 1) 520ms both;
 }
-/* A decided win catches the light once, like the landing's front card. */
-.result-card[data-outcome='caught'] .glass-card__face::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  background: linear-gradient(
-    105deg,
-    transparent 34%,
-    rgb(255 255 255 / 16%) 46%,
-    rgb(213 186 255 / 20%) 50%,
-    rgb(255 255 255 / 0%) 60%
-  );
-  transform: translateX(-120%);
-  animation: card-glint 1.1s cubic-bezier(0.3, 0.6, 0.2, 1) 0.6s both;
-  pointer-events: none;
-}
 .result-deal--broadcast {
-  --card-r: 14px 24px 14px 14px;
   position: absolute;
   top: 196px;
   left: 40px;
@@ -69,21 +47,13 @@
 .result-deal--broadcast .result-card {
   animation: result-turn 520ms cubic-bezier(0.22, 1, 0.36, 1) calc(360ms + var(--result-age)) both;
 }
-.result-deal--broadcast .result-card[data-outcome='caught'] .glass-card__chip {
+.result-deal--broadcast .result-card[data-outcome='caught'] .cut-card__chip {
   animation-delay: calc(900ms + var(--result-age));
 }
 @keyframes verdict-stamp {
   from {
     opacity: 0;
     transform: scale(1.12);
-  }
-}
-@keyframes card-glint {
-  from {
-    transform: translateX(-120%);
-  }
-  to {
-    transform: translateX(120%);
   }
 }
 @keyframes result-turn {
@@ -124,11 +94,7 @@
 @media (prefers-reduced-motion: reduce) {
   .result-deal,
   .result-card,
-  .glass-card__chip,
-  .glass-card__face::after {
+  .cut-card__chip {
     animation: none !important;
-  }
-  .result-card .glass-card__face::after {
-    display: none;
   }
 }
