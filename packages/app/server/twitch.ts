@@ -95,11 +95,10 @@ export class TwitchAuth {
       throw new BotAccountMismatch(user.id, this.config.botUserId);
     }
     // The bot account signing in as a streamer would get a room of its own. Refuse it before
-    // anything is stored, unless this server runs the bot on the streamer's own account.
-    if (kind === 'broadcaster' && this.config.botUserId && user.id === this.config.botUserId && !this.config.botIsStreamer) {
-      await this.revokeToken(token.access_token);
+    // anything is stored, unless this server runs the bot on the streamer's own account. The token
+    // is dropped, not revoked: Twitch does not say a revoke spares the bot's own stored grant.
+    if (kind === 'broadcaster' && this.config.botUserId && user.id === this.config.botUserId && !this.config.botIsStreamer)
       throw new BotAsStreamer(user.id);
-    }
     const key = kind === 'bot' ? botKey(user.id) : user.id;
     // What this account had granted before, read before the new grant replaces it.
     let previousScope: string[] = [];

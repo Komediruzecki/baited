@@ -323,7 +323,7 @@ test('the chat bot account cannot sign in as a streamer and get its own room', a
   assert.deepEqual(lines, ['OAuth sign-in failed: flow=broadcaster reason=bot_as_streamer received=999 error=BotAsStreamer']);
   assert.equal(store.credentials('999'), undefined, 'no grant stored');
   assert.equal([...bait.rooms.values()].some((game) => game.data.owner === '999'), false, 'no room');
-  assert.deepEqual(twitch.revoked, ['new-access'], 'the new grant is revoked');
+  assert.deepEqual(twitch.revoked, [], "the bot's own grant is never put at risk");
 });
 
 test('TWITCH_BOT_IS_STREAMER=1 lets a streamer use their own account as the bot', async (t) => {
