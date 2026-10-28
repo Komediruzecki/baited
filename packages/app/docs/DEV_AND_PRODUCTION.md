@@ -2,7 +2,11 @@
 
 Prepared 28 October 2026. The owner chose to move the existing PC test to the development hostname, preserving its cards, scores and authorization store. This document describes the cutover and rollback; it is not proof that either has been performed. Record the actual health, authorization and Twitch checks separately.
 
-Current preparation receipt: the additional dev OAuth callback was saved in Twitch; the Docker image and dev-targeted ZIP were built and checked. Cloudflare's read-only migration preflight passed. No DNS/tunnel mutation or backend restart has happened. Extension 0.0.3 is back in Hosted Test with the owner's `overlay.html` setting; its uploaded ZIP was not replaced. The owner will update Twitch themselves. Coordinate that upload and allowlists with the host cutover so the existing Extension keeps its API connection.
+Cutover completed on 28 October 2026 at about 21:21 Europe/Zagreb after the owner confirmed uploading the dev ZIP and updating allowlists. The PC now serves `https://dev-play-baited.maff.app` on loopback port 3301 using image `baited-dev-test:local` (image ID `sha256:1302d798e5e10a026a69400e1233166eecc1a5a237072e5cc22a0d8077549c65`, app source commit `726401f7b2b10c9080025e3f77831078ea3e71f9`). The old backend was stopped first; the existing `baited-hosted-test-data` volume and encryption key were retained. A stopped-volume copy, `baited-test-before-dev-20261028-2025`, was verified by file count, sizes, permissions and ownership (11 files, 739512 bytes); credential-bearing contents were not displayed.
+
+The existing Cloudflare tunnel now routes dev to port 3301 and returns an explicit 404 for old `play-baited`. Its connector was restarted with a fresh three-hour deadline. No paid compute or release was activated. No Twitch browser settings were touched during this cutover; the matching ZIP/allowlists remain owner-confirmed rather than independently inspected.
+
+Public checks passed: dev health, Studio shell and Moonshine worker/module/WASM returned 200; unauthenticated private Studio JSON/SSE returned 401; demo remained disabled; the served client contains the transcript capability and exact dev-host gate. The runtime explicitly enables Moonshine diagnostics. CI for the source commit passed all three jobs. Signed-in transcript display, live microphone recognition and Twitch rendering still need the owner's test. The three-hour backend/tunnel sessions expire around 00:21 on 29 October Europe/Zagreb; restart them together when needed.
 
 ## One PC test, with a rollback profile
 
