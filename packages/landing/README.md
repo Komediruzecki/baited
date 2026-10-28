@@ -16,7 +16,7 @@ The Twitch Extension, Streamer Studio, game server, Moonshine integration and th
 
 ## Motion
 
-Motion uses GSAP 3.15.0 with ScrollTrigger, self-hosted in `site/vendor/gsap/` so the self-only content policy still applies. Both files load with `defer` before the page modules. Without GSAP, the steps show as a plain list, the deck changes cards without animation and headings appear at once.
+Motion uses GSAP 3.15.0 with ScrollTrigger, self-hosted in `site/vendor/gsap/` so the self-only content policy still applies. Both files load with `defer` before the page modules. Without GSAP, the steps show as a plain list, the deck changes cards without animation and headings appear at once. Every page eases the mouse wheel and trackpad with Lenis 1.3.23, self-hosted in `site/vendor/lenis/`, in the owner's chosen feel: `lerp` 0.165 and the wheel × 1.25, with touch scrolling left to the phone (`site/smooth-scroll.js`). On the home page it runs on GSAP's ticker and passes every scroll to ScrollTrigger, GSAP keeps its default lag smoothing, and the scrubbed scenes follow Lenis's scroll directly (`scrub: true`) rather than easing it a second time. Section links, “Watch the round” and the drawn scrollbar go through it too, and any other scroll (the keyboard, focus, find in page) takes over from its easing at once instead of being undone by it. Reduced motion keeps the browser's own scrolling.
 
 The page has no yellow: at the owner's request the palette is the brand violets, white and ink. The only warm colors left are the cards' own item colors (BANANA is yellow, VOLCANO orange) and the speech check, which marks VOLCANO in its card's orange. The hero film was rendered again with VOLCANO in the same orange (see ASSETS.md).
 

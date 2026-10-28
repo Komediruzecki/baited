@@ -82,4 +82,4 @@ The display face is Russo One, chosen to echo the BAIT mark's angular shapes. In
 - `site/assets/russo-one.ttf`: [SIL Open Font License](site/licenses/RussoOne-OFL.txt).
 - `site/assets/inter-latin.woff2`: [SIL Open Font License](site/licenses/Inter-OFL.txt).
 
-There are no remote scripts, remote fonts or provider keys. GSAP 3.15.0 (`gsap.min.js` and `ScrollTrigger.min.js`, unchanged from the npm package) is self-hosted in `site/vendor/gsap/` under GreenSock's [Standard “no charge” license](https://gsap.com/standard-license). GSAP was also used in the private film-rendering source.
+There are no remote scripts, remote fonts or provider keys. GSAP 3.15.0 (`gsap.min.js` and `ScrollTrigger.min.js`, unchanged from the npm package) is self-hosted in `site/vendor/gsap/` under GreenSock's [Standard “no charge” license](https://gsap.com/standard-license). GSAP was also used in the private film-rendering source. Lenis 1.3.23 (`lenis.min.js` with its source map and `lenis.css`, unchanged from the npm package) is self-hosted in `site/vendor/lenis/` under the MIT license, whose text is kept beside it in `LICENSE`.

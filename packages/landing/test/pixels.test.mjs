@@ -10,6 +10,7 @@ import { PIXEL_LOGO,PIXEL_LOGO_COLS, pixelCircleRows, pixelCircleSvg, pixelLogoC
 import { PIXEL_LOGO_INKS } from '../scripts/build-pixel-logo.mjs'
 import { lineBoxes, splitWords } from '../site/reveal.js'
 import { THUMB_MIN, thumbFor } from '../site/scrollbar.js'
+import { catchUp, initSmoothScroll, LENIS_OPTIONS, yieldToOtherScrolls } from '../site/smooth-scroll.js'
 
 // The pixel layer: the curtain between pages, the floating navigation and the text reveals.
 // Their drawing and timing are checked in a browser.
@@ -317,6 +318,67 @@ test('highlighter bars cover each line of words from its first word to its last'
   // A picture that opens a line (the footer's avatar) sits lower than the letters beside it; the
   // bar still starts at the top of the letters.
   assert.deepEqual(lineBoxes([{ left: 0, top: 10, right: 30, bottom: 34 }, word(40, 2, 90)]), [{ left: 0, top: 2, right: 90, bottom: 34 }])
+})
+
+test('every page eases the wheel with Lenis, self-hosted, after GSAP on the home page', async () => {
+  assert.deepEqual({ ...LENIS_OPTIONS }, { lerp: 0.165, wheelMultiplier: 1.25 }, 'the chosen settings')
+  const site = new URL('../site/', import.meta.url)
+  assert.match(await readFile(new URL('vendor/lenis/lenis.min.js', site), 'utf8'), /^\(function\(\)\{var e=`1\.3\.23`/, 'Lenis 1.3.23, unchanged')
+  for (const page of ['index.html', 'terms/index.html', 'privacy/index.html']) {
+    const html = await readFile(new URL(page, site), 'utf8')
+    const head = html.slice(0, html.indexOf('</head>'))
+    assert.match(head, /<link rel="stylesheet" href="\/vendor\/lenis\/lenis\.css" \/>/, `${page} has Lenis's styles`)
+    assert.match(head, /<script defer src="\/vendor\/lenis\/lenis\.min\.js"><\/script>/, `${page} loads Lenis`)
+  }
+  const home = await readFile(new URL('index.html', site), 'utf8')
+  const order = ['/vendor/gsap/ScrollTrigger.min.js', '/vendor/lenis/lenis.min.js', '/app.js'].map((src) => home.indexOf(`src="${src}"`))
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'Lenis after GSAP, and both before app.js starts it')
+})
+
+test("Lenis runs on GSAP's ticker, tells ScrollTrigger of every scroll and leaves GSAP its lag smoothing", () => {
+  const saved = { matchMedia: globalThis.matchMedia, addEventListener: globalThis.addEventListener }
+  const listeners = []
+  globalThis.matchMedia = () => ({ matches: false })
+  globalThis.addEventListener = (type) => listeners.push(type)
+  try {
+    const calls = []
+    class Lenis {
+      constructor(options) {
+        this.options = options
+      }
+      on(event, listener) {
+        calls.push(['on', event, listener])
+      }
+      raf(time) {
+        calls.push(['raf', time])
+      }
+    }
+    let tick = null
+    const gsap = { ticker: { add: (listener) => (tick = listener), lagSmoothing: (...args) => calls.push(['lagSmoothing', ...args]) } }
+    const ScrollTrigger = { update() {} }
+    const lenis = initSmoothScroll({ Lenis, gsap, ScrollTrigger })
+    assert.deepEqual(lenis.options, { ...LENIS_OPTIONS, autoRaf: false }, 'driven by the ticker, not its own frames')
+    tick(2.5)
+    assert.deepEqual(calls, [['on', 'scroll', ScrollTrigger.update], ['lagSmoothing', 500, 33], ['raf', 2500]])
+    assert.deepEqual(listeners, ['scroll'], 'it watches for scrolls not its own')
+    assert.equal(initSmoothScroll({ Lenis, gsap, ScrollTrigger }), lenis, 'one a page')
+  } finally {
+    Object.assign(globalThis, saved)
+  }
+})
+
+test('a scroll Lenis did not make takes over from its easing, and every trip sets off from where the page is', () => {
+  const calls = []
+  const lenis = (isScrolling, animatedScroll) => ({ isScrolling, animatedScroll, scrollTo: (y, options) => calls.push([y, options]) })
+  yieldToOtherScrolls(lenis('smooth', 2018.4), 2019) // its own frame, rounded by the browser
+  yieldToOtherScrolls(lenis('smooth', 2018.4), 6000) // a script's jump while it eased
+  yieldToOtherScrolls(lenis(false, 2018), 6000) // at rest Lenis follows the page's events by itself
+  yieldToOtherScrolls(lenis('native', 2018), 6000)
+  assert.deepEqual(calls.splice(0), [[6000, { immediate: true }]])
+  // A click before the event of a jump to the foot of the page: Lenis is brought there first.
+  catchUp(lenis(false, 5064), 6405)
+  catchUp(lenis(false, 5064), 5065)
+  assert.deepEqual(calls, [[6405, { immediate: true }]])
 })
 
 test('every page loads the curtain early, and nothing on the site is yellow', async () => {

@@ -7,6 +7,7 @@ import { initShowreel } from './showreel.js'
 import { initHeroScribble } from './hero-scribble.js'
 import { initAnchorNavigation, initNav } from './nav.js'
 import { markerReveal } from './reveal.js'
+import { initSmoothScroll, scrollPageTo } from './smooth-scroll.js'
 
 // GSAP 3.15 loses the scroll position when a breakpoint change re-runs a gsap.matchMedia() context
 // (why-stack.js at 840px wide and in short landscape, footer.js): the triggers the context makes
@@ -21,11 +22,13 @@ function keepScrollThroughBreakpoints(ScrollTrigger) {
   })
   ScrollTrigger.addEventListener('matchMedia', () => {
     if (Math.abs(window.scrollY - before) < 1) return
-    window.scrollTo(0, before)
+    scrollPageTo(before, { smooth: false })
     ScrollTrigger.refresh()
   })
 }
 
+// Smooth wheel scrolling (smooth-scroll.js) comes first: the scrubbed scenes below follow it as it is.
+initSmoothScroll({ gsap: window.gsap, ScrollTrigger: window.ScrollTrigger })
 initNav()
 initAnchorNavigation()
 if (window.ScrollTrigger) keepScrollThroughBreakpoints(window.ScrollTrigger)

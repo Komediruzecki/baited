@@ -6,6 +6,7 @@
 // The styles are in styles.css (.site-nav); without JavaScript the bar simply stays open.
 
 import { PIXEL_LOGO_COLS, PIXEL_LOGO_ROWS, pixelLogoCells } from './pixel-logo.js'
+import { scrollPageTo } from './smooth-scroll.js'
 
 export const FLOAT_AT = 80 // px scrolled before the bar becomes a pill
 export const FOLD_AT = 320 // px scrolled before scrolling down folds it
@@ -24,6 +25,7 @@ export const navAway = (footerTop) => footerTop <= AWAY_AT
 
 // Smooth only deliberate navigation. Global CSS smoothing also animates the browser's reload
 // restoration and ScrollTrigger's measurement scrolls, leaving fragment links at the wrong place.
+// Where Lenis eases the wheel (smooth-scroll.js) it eases these trips too.
 export function initAnchorNavigation() {
   document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
@@ -39,7 +41,7 @@ export function initAnchorNavigation() {
       target.addEventListener('blur', () => target.removeAttribute('tabindex'), { once: true })
     }
     target.focus({ preventScroll: true })
-    target.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+    scrollPageTo(target, { smooth: !matchMedia('(prefers-reduced-motion: reduce)').matches })
   })
 }
 
