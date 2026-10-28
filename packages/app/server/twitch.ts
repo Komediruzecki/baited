@@ -531,9 +531,13 @@ export class TwitchConnection {
     return accepted;
   }
   /**
-   * These events name no Shared Chat source channel. They still follow the chat rule: only
-   * messages sent here become hints, and Twitch gives a partner channel's copy of a message
-   * its own message ID, so a delete or clear can only reach this channel's own hints.
+   * Twitch's EventSub reference gives channel.chat.message a message_id plus a separate
+   * source_message_id for a Shared Chat copy. channel.chat.message_delete and
+   * channel.chat.clear_user_messages carry no Shared Chat source field, and the reference does
+   * not say whether a partner channel's moderation reaches this channel's subscription.
+   * Only messages sent in this channel become hints, so the worst case is a partner channel's
+   * ban or delete removing a hint (and, during the 10-minute review, its award). That is
+   * accepted.
    */
   private acceptModeration(
     type: typeof MESSAGE_DELETE | typeof CLEAR_USER,
