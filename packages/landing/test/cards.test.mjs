@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { cards } from '../site/data.js'
+import { STEP_CARD } from '../selected-cards/selected-cards.js'
 
 // The card faces: every secret word has its item's color, and that color reads well on the card.
 
@@ -26,9 +27,16 @@ test('every secret word has its own color with at least 4.5:1 on the card face',
   }
 })
 
-test('the VOLCANO card in How it plays uses the same face as the deck', async () => {
+test("the BIRTHDAY card in How it plays is the trailer's card, with the same face as the deck", async () => {
   const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8')
-  assert.match(html, /class="card-word card-word--volcano">VOLCANO</)
+  const birthday = cards.find((card) => card.word === 'birthday')
+  assert.match(html, /class="card-word card-word--birthday">BIRTHDAY</)
   assert.match(html, /card-forbidden__label">Keep out of chat</)
+  // An easy card: only the word itself is off limits, as the deck shows it.
+  assert.deepEqual(birthday.clues, [])
+  assert.match(html, /<span class="card-clues"><span class="no-clues">Only the word itself<\/span><\/span>/)
+  assert.ok(html.includes(`<span class="card-question">${birthday.question}</span>`))
   assert.doesNotMatch(html, /card-hook|bait-bomb-logo\.png" alt=""/)
+  // The face the page builds over it says the same as the catalogue.
+  for (const key of ['difficulty', 'clues', 'question']) assert.deepEqual(STEP_CARD[key], birthday[key], key)
 })

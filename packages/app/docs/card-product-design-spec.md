@@ -1,16 +1,16 @@
-# Opus card and product design specification, 26 October 2026
+# Card and product design specification, 26 October 2026
 
 Status: design proposals for local implementation and owner review. Not a release or final visual acceptance.
 
-Opus 5.5 inspection completed successfully in 26m59s using the owner-authorized default personal subscription login. Max effort and a 45-minute deadline were explicitly requested; effective effort telemetry is unavailable. Source baseline d93edb9. The full original response follows. Measurements and asset-margin claims are hypotheses until verified in the rendered implementation. Codex retains the current card edition until owner choice, the safer hide-stale-reveal reconnect behavior, and real-only loading progress. Archived branding remains preserved.
+The design inspection completed successfully in 26m59s, within a 45-minute deadline. Source baseline d93edb9. The full original response follows. Measurements and asset-margin claims are hypotheses until verified in the rendered implementation. The implementation retains the current card edition until owner choice, the safer hide-stale-reveal reconnect behavior, and real-only loading progress. Archived branding remains preserved.
 
 # Baited design spec: card editions, Card Lab and product screens
 
-I've specified seven new card editions, plus the current card as a reference, for a local Card Lab. I've also set one product shell for Studio, viewers, native panel, config and OBS, so Codex can build it while you choose.
+I've specified seven new card editions, plus the current card as a reference, for a local Card Lab. I've also set one product shell for Studio, viewers, native panel, config and OBS, so the implementation can proceed while you choose.
 
 The shell rule: **violet is the table, charcoal is the card and the controls, and yellow appears only in the final 15 seconds.** Product surfaces keep the current readable card until you pick an edition; switching is one constant.
 
-**What this is based on:** I read the source and looked at the screenshots. I didn't run a browser, so every pixel figure below comes from source values plus a font-width estimate (about 0.74 em per Russo One capital). Codex needs to measure them.
+**What this is based on:** I read the source and looked at the screenshots. I didn't run a browser, so every pixel figure below comes from source values plus a font-width estimate (about 0.74 em per Russo One capital). The implementation needs to measure them.
 
 **What I didn't read in full:** `style.css` (4,207 lines), `mechanics.css`, `angular.css`, `refinement.css`, `landing-game.css`, the landing footer and why-stack scripts, and most of the 25 Oct screenshots. I used `landing-v1.1.0.png` only to confirm it is outdated, not as a reference.
 
@@ -27,7 +27,7 @@ The shell rule: **violet is the table, charcoal is the card and the controls, an
 | 3 | Yellow is the default emphasis | Target word uses `#fffc79` (`public-refresh.css:130`, `extension/styles.css:401-403,417-419`, `studio-refresh.css:1735`). OBS win uses it for border, word, outcome and logo (`result-card.css:97,136-143`, `public-refresh.css:582-584`, `obs-1920-caught-volcano.png`). Also mission pips (`public-refresh.css:608-612`), signature (`extension/styles.css:351-358`) and focus rings (`studio-refresh.css:240-243`, `extension/styles.css:51-55`). | Contradicts "very little yellow". The landing's `styles.css` uses none in its UI. | confirmed |
 | 4 | Studio review can ask "Did you say it?" without showing the word | On desktop, `.studio-result__word{display:none}` (`studio-refresh.css:1564-1566`). The word appears only after a 520 ms card turn (`result-card.css:17`). `studio-1440-review-final.png` shows the card back. | The decision depends on an animation finishing. | needs_validation; fix regardless |
 | 5 | Focusing the review heading draws an input-like box | `CatchDecision.tsx:42` (`tabIndex={-1}`); see `studio-1440-review-final.png`. | The heading looks editable and pulls focus away from the two buttons. | confirmed |
-| 6 | Old brand marks still present | `ui.tsx:10-19` uses the old "BAIT" PNG for loading, viewer header and privacy (`main.tsx:377,1643,1683,1909,2016`). Bomb in `CardBack.tsx:7`, `main.tsx:1800`, `viewer.html:37`, `config.html:30`. "bait them." in `viewer.html:61` and `app.js:87`. Hook SVG in `Landing.tsx:91`. "bait!" in `CardProofs.tsx:18,43`. | Codex's cleanup covers these. Listed only so the new designs don't build on them. | confirmed |
+| 6 | Old brand marks still present | `ui.tsx:10-19` uses the old "BAIT" PNG for loading, viewer header and privacy (`main.tsx:377,1643,1683,1909,2016`). Bomb in `CardBack.tsx:7`, `main.tsx:1800`, `viewer.html:37`, `config.html:30`. "bait them." in `viewer.html:61` and `app.js:87`. Hook SVG in `Landing.tsx:91`. "bait!" in `CardProofs.tsx:18,43`. | The separate branding cleanup covers these. Listed only so the new designs don't build on them. | confirmed |
 | 7 | Two icon languages | The product uses Material Icons Outlined (`icons.tsx:1`). The landing uses square-pixel icons (`index.html` SVG library, `pixels.css`). | The product looks like a generic dashboard next to the landing. | confirmed |
 | 8 | Masthead type sizes differ | "Sound" renders larger than the tabs (`studio-1440-active.png`), although `studio-refresh.css:140-148` sets 12 px. | Likely a cascade conflict across 11 stylesheets. | needs_validation |
 | 9 | Operating screens use page-hero and instruction patterns | Studio h1 "Your round." plus subtitle (`main.tsx:456-472`). A ~70 px demo banner. Numbered "How to play" (`main.tsx:1845-1861`). Setup steps 01–04. Community stat tiles (`main.tsx:1382-1407`). | The round gets pushed down, and the viewer repeats its rules three or four times. | confirmed |
@@ -97,10 +97,10 @@ The shell rule: **violet is the table, charcoal is the card and the controls, an
 .bc[data-urgent] .bc__foot::before{background:linear-gradient(90deg,var(--b-urgent) calc(var(--left)*100%),#48414f 0)}
 .bc[data-state=paused] .bc__foot::before{background:repeating-linear-gradient(90deg,#8f84a0 0 6px,transparent 6px 10px)}
 @supports not (width:1cqi){.bc{--fit:calc(252px / (var(--chars,8) * var(--b-adv)))}.bc[data-size=l]{--fit:calc(316px / (var(--chars,8) * var(--b-adv)))}}
-:root{--b-adv:.74} /* Codex: replace with the measured max width/(chars×size) over all 78 words, plus 3% */
+:root{--b-adv:.74} /* Replace with the measured max width/(chars×size) over all 78 words, plus 3% */
 ```
 
-Codex should also confirm in the browser that `100cqi` resolves to the card's content box.
+The implementation should also confirm in the browser that `100cqi` resolves to the card's content box.
 
 **Type, in px size/line-height, S · L.** Inter is weight 600 unless noted; clocks use tabular figures.
 
@@ -134,7 +134,7 @@ Each block lists the composition (top to bottom), materials, motion, accessibili
 
 #### 00 Current — reference only
 
-The landing's `.bait-card` as it stands after Codex's cleanup, at its existing sizes. Product surfaces render this edition until you pick.
+The landing's `.bait-card` as it stands after the branding cleanup, at its existing sizes. Product surfaces render this edition until you pick.
 
 #### 01 Table — recommended everyday
 
@@ -367,7 +367,7 @@ KALEIDOSCOPE is 249 px of tiles at S against 252 px available. Tight, but it fit
 - **Time left:** a 0–120 s slider (shows the 15 s threshold); round number; a mission "Word n of 3" toggle (lab only).
 - **Context:** one of six frames.
   - **Landing deck** (300×420): a static fan using `deck.js` FAN poses.
-  - **Twitch panel**: 318×500 at 1:1 with `#0e0e10` around it, a fold line at 500, and a lab-only overflow badge ("Fits" / "Overflows 23 px" via ResizeObserver). Its caption says it is a mock, and Codex verifies in the real extension preview.
+  - **Twitch panel**: 318×500 at 1:1 with `#0e0e10` around it, a fold line at 500, and a lab-only overflow badge ("Fits" / "Overflows 23 px" via ResizeObserver). Its caption says it is a mock, and the implementation is verified in the real extension preview.
   - **Phone viewer** (320×640).
   - **Desktop viewer** (scaled, captioned "shown at 60%").
   - **Studio review** (XS card plus decision column).
@@ -427,7 +427,7 @@ White on `#9146ff` computes to about 4.65:1, which passes.
 **Type:**
 - Inter for everything functional: 12/13/14/16/18/24.
 - Russo One only for state headings (28), the review word (40), timers (48/64) and card words.
-- Timers use fixed digit cells to stop width jitter: `.d{display:inline-block;width:.66em;text-align:center}` (Codex measures the actual digit advance).
+- Timers use fixed digit cells to stop width jitter: `.d{display:inline-block;width:.66em;text-align:center}` (the implementation measures the actual digit advance).
 - State pills use sentence case ("Live", "Paused", "Your call", "Ready", "Setup needed", "Checking"), not tracked uppercase.
 
 **Icons:** new `client/pixel-icons.tsx` with the same export names as `icons.tsx`, so it is a drop-in swap. Icons use the landing's 10×10 grid at 2 px per unit (20 px). New icons:
@@ -624,7 +624,7 @@ The HUD is 540 wide on `#242426` with a 1 px `#68616f` border, radius 12 and a l
    - Retire `studio-refresh.css` rules as each area moves over.
 5. **Viewer.** Rework the `PublicRoom` viewer branch and add `viewer.css`; retire the viewer rules in `public-refresh.css`.
 6. **Native.** Update `viewer.html`, `config.html`, `styles.css` (page chrome only), `viewer.js`, `config.js` and `client.js` (`difficulty`). Then:
-   - Remove the bomb from `EXTENSION_FILES` after Codex's cleanup.
+   - Remove the bomb from `EXTENSION_FILES` after the branding cleanup.
    - The preview harness reads `?edition=` only when its helper is present; that helper is excluded from the ZIP.
    - Add fixtures: kaleidoscope, marshmallow, alchemy, and a 240 px width.
    - No ZIP upload.

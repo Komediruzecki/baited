@@ -1,4 +1,4 @@
-// The pixel curtain, after monochrome-studio.com. A page arrives behind a screen of violet squares
+// The pixel curtain, after the owner's reference. A page arrives behind a screen of violet squares
 // that disappear one by one in random order; following a link to another page of the site first
 // fills the screen with squares, then loads it. pixel-boot.js covers the very first paint so the
 // page never flashes before the curtain. Reduced motion: no curtain, links behave as usual.

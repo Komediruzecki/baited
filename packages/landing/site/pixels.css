@@ -1,5 +1,5 @@
 /*
- * Pixels, after monochrome-studio.com: the pixel curtain between pages, square-pixel icons, and
+ * Pixels, after the owner's reference: the pixel curtain between pages, square-pixel icons, and
  * buttons whose dark icon box spreads over the whole button on hover while the icon plays a small
  * loop (an arrow hops, a chat bubble's dots bounce). Colors stay in the baited palette: the
  * curtain is the Material 3 primary violet #7721e5 (the footer's color and its pixel edge); the
@@ -11,7 +11,7 @@
   --px-white: #fffdf7;
 }
 
-/* The scrollbar, also after monochrome-studio.com (and voicetaggods.com): a 5px rounded thumb that
+/* The scrollbar, after the same reference: a 5px rounded thumb that
    floats over the page's right edge, drawn by scrollbar.js, with the native bar hidden so the page
    keeps its whole width. Only with a mouse or trackpad; touch screens keep their own floating bars. */
 @media (hover: hover) and (pointer: fine) {

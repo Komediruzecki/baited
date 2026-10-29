@@ -1,7 +1,5 @@
 # baited
 
-<!-- impeccable:product-schema 1 -->
-
 ## Platform
 
 web
@@ -36,9 +34,9 @@ The current build has an external streamer studio connected to Twitch chat throu
 
 Product name: Baited. The latest owner decision is to use the supplied plain original BAITED wordmark for product mastheads and card backs. The card's own signature follows the landing's approved card, which signs with the pixel logo. Earlier hook variants and bomb artwork are preserved references, not authority for the current branding. Existing product screens use violet, charcoal and limited yellow; the in-progress redesign must follow the owner's latest direction rather than treating the older palette or mascot choices as new approval.
 
-The approved landing in packages/landing is the current visual reference. Extend its typography, playing cards and violet accents into useful product controls. Keep each surface's information boundary: secret card for viewers, round and microphone controls for the streamer, compact transparent broadcast graphics for OBS. Earlier Opus critiques and subsequent Codex polish are recorded in docs/product-design-review.md; they do not constitute final acceptance of the current redesign. Use product-voice for visible language.
+The approved landing in packages/landing is the current visual reference. Extend its typography, playing cards and violet accents into useful product controls. Keep each surface's information boundary: secret card for viewers, round and microphone controls for the streamer, compact transparent broadcast graphics for OBS. Earlier design critiques and the subsequent polish are recorded in docs/product-design-review.md; they do not constitute final acceptance of the current redesign. Use product-voice for visible language.
 
-The card and product-surface redesign is in progress with Opus leading the specification. The owner will choose the card edition. Preserve the current behavior and readable-clue baseline while that decision is pending; do not invent or present an unapproved visual direction as settled.
+The card and product-surface redesign is in progress, following the written design specification. The owner will choose the card edition. Preserve the current behavior and readable-clue baseline while that decision is pending; do not invent or present an unapproved visual direction as settled.
 
 ## Evidence on Hand
 

@@ -1,8 +1,9 @@
 // The small scenes inside the "How it plays" step cards, animated with GSAP:
-//   1. Chat's screen: the VOLCANO card is dealt and flips face up.
+//   1. Chat's screen: the BIRTHDAY card is dealt and flips face up.
 //   2. Twitch chat: hints keep arriving and the chat scrolls up, a seamless endless loop.
-//   3. Streamer's screen: the facecam talks, the volcano smokes and the round clock runs.
-//   4. Round over: the speech check hears VOLCANO, boxes it and tags it "Detected".
+//   3. Streamer's screen: the facecam talks over the fishing game and the round clock runs.
+//   4. Round over: the speech check hears BIRTHDAY, boxes it and tags it "Detected".
+// The round is the trailer's (media/hero-desktop.*): streamer bateoh, his chat and his slip.
 //
 // why-stack.js says when the cards move (mode), which card is at the front (front) and when a
 // card has arrived (reveal). Loops run only for the front card while the section is on screen.
@@ -12,7 +13,7 @@
 export const CHAT_PACE = [1.25, 0.9, 1.6, 1.05, 0.75, 1.4, 1.15, 0.85, 1.7, 1.0, 1.3, 0.95] // seconds between messages
 export const TALK_BEATS = [0.22, 0.12, 0.18, 0.1, 0.3, 0.14, 0.2, 0.55, 0.16, 0.1, 0.24, 0.12, 0.34, 0.8] // talk, rest, talk, rest...
 export const ROUND_LENGTH = 120 // a round lasts two minutes
-export const ROUND_SECONDS = 102 // time left when the scene starts: 01:42, as in the film
+export const ROUND_SECONDS = 102 // time left when the scene starts: 01:42
 
 // 01:42 style clock text for a number of seconds.
 export function clockText(seconds) {
@@ -145,18 +146,16 @@ function chatScene(card, gsap) {
   }
 }
 
-// 3. A PNGtuber-style facecam (talk and rest poses), a smoking crater and a ticking round clock.
+// 3. A facecam that talks (two frames of the trailer's, mouth shut and open) and a ticking round clock.
 function streamScene(card, gsap) {
   const cam = card.querySelector('.why-stream__cam')
   const clock = card.querySelector('[data-why-clock]')
-  const smoke = card.querySelector('.why-stream__smoke')
   const timer = card.querySelector('[data-why-timer]')
   let seconds = ROUND_SECONDS
   let beat = 0
   let talking = false
   let tick = null
   let mouth = null
-  let puff = null
   let running = false
 
   function countDown() {
@@ -170,19 +169,11 @@ function streamScene(card, gsap) {
     cam.classList.toggle('is-talking', talking)
     mouth = gsap.delayedCall(TALK_BEATS[beat++ % TALK_BEATS.length], speak)
   }
-  function ready() {
-    puff ??= gsap
-      .timeline({ repeat: -1, repeatDelay: 0.5, paused: true })
-      .fromTo(smoke, { y: 6, scale: 0.55, opacity: 0 }, { y: -10, scale: 1, opacity: 0.95, duration: 1.2, ease: 'sine.out' })
-      .to(smoke, { y: -28, scale: 1.25, opacity: 0, duration: 1.3, ease: 'sine.in' })
-  }
   return {
-    ready,
+    ready() {},
     play() {
       if (running) return
       running = true
-      ready()
-      puff.play()
       if (tick) tick.resume()
       else tick = gsap.delayedCall(1, countDown)
       if (mouth) mouth.resume()
@@ -191,28 +182,25 @@ function streamScene(card, gsap) {
     pause() {
       if (!running) return
       running = false
-      puff?.pause()
       tick?.pause()
       mouth?.pause()
     },
     finish() {
       running = false
-      puff?.kill()
       tick?.kill()
       mouth?.kill()
-      puff = tick = mouth = null
+      tick = mouth = null
       talking = false
       cam.classList.remove('is-talking')
       seconds = ROUND_SECONDS
       clock.textContent = clockText(seconds)
       gsap.killTweensOf(timer)
       gsap.set(timer, { clearProps: 'transform' })
-      gsap.set(smoke, { clearProps: 'transform,opacity' })
     },
   }
 }
 
-// 4. The new line of speech arrives as plain text; then VOLCANO lights up, the box draws and the tag pops.
+// 4. The new line of speech arrives as plain text; then BIRTHDAY lights up, the box draws and the tag pops.
 function catchScene(card, gsap) {
   const scene = card.querySelector('.why-catch')
   const quote = card.querySelector('.why-catch__quote')
@@ -236,7 +224,7 @@ function catchScene(card, gsap) {
       intro = gsap
         .timeline({ delay: 0.2 })
         .to(quote, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' }, 0)
-        .to(word, { color: '#ff743c', duration: 0.25 }, 0.45) // VOLCANO's own color
+        .to(word, { color: '#f8a7d4', duration: 0.25 }, 0.45) // BIRTHDAY's own color
         .to(word, { '--draw': 1, duration: 0.5, ease: 'power2.inOut' }, 0.45)
         .to(tag, { opacity: 1, scale: 1, duration: 0.35, ease: 'back.out(2.2)' }, 0.85)
         .to(result, { opacity: 1, y: 0, duration: 0.3, stagger: 0.12, ease: 'power2.out' }, 1.1)

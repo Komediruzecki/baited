@@ -1,5 +1,5 @@
-// The landing's pixel reveal (packages/landing/selected-cards/selected-cards.js), after
-// 1minus1.com's case-study cards: the first time a card face is shown, its illustration shows
+// The landing's pixel reveal (packages/landing/selected-cards/selected-cards.js), after the
+// owner's reference cards: the first time a card face is shown, its illustration shows
 // as blocks of its own colours (each the average of its patch), 8 across, which split into 16
 // and 32 at random moments until the finest clear to the picture, so blocks of every size are
 // on the card at once. It takes 400 ms. Reduced motion, a hidden page or a cleared card shows

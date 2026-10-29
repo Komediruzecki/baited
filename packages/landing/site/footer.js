@@ -2,9 +2,9 @@
 // top edge breaks up into square pixels that fill in as it rises, after the owner's pixelated
 // scroll transition reference. The pixels nearest the footer fill first; each one has its own
 // random moment and fades in over a short stretch, so some are half filled on the way.
-// The circle and the film button are magnetic on a mouse, as on dennissnellenberg.com. At the
-// very end, the giant logo assembles from square pixels as it scrolls into view (after the pixel
-// work on monochrome-studio.com): squares of the footer's color sit over it and clear at random.
+// The circle and the film button are magnetic on a mouse. At the very end, the giant logo
+// assembles from square pixels as it scrolls into view: squares of the footer's color sit over it
+// and clear at random.
 //
 // Reduced motion, or no GSAP: no pin and no pixels, a plain edge and a plain logo; the buttons
 // stay still.

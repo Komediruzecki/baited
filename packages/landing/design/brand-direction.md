@@ -5,7 +5,7 @@
 
 ## Direction and source
 
-The owner supplied a tall, black, angular BAITED wordmark and requested a few ChatGPT image-generation variants with a hook incorporated into a letter, paired with three small playing cards. Opus led the lettering brief, prompt writing, composition and motion specification. The consultation completed using `claude-opus-5-5`, with explicit Max effort requested and a 45-minute ceiling. The CLI did not independently report effective effort. Codex implemented and checked the result.
+The owner supplied a tall, black, angular BAITED wordmark and requested a few AI-generated variants with a hook incorporated into a letter, paired with three small playing cards. The lettering brief, prompts, composition and motion specification were written first; the implementation was then checked against them.
 
 The six-letter silhouette, uneven tops, cut counters and tight spacing carry the identity. B, with a short hook in the T, was approved for development, then superseded by the owner's 26 October decision: use the supplied original image, without an added hook, and retain the three-card fan. The original JPEG is now tracked unchanged; its SVG display mask supplies the page's existing ink color. A/B/C remain saved explorations, not the default or final vector masters.
 

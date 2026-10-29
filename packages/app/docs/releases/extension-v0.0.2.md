@@ -31,7 +31,7 @@ All eight existing Card Lab editions remain. Two studies were added: **Table Rev
 From a checkout containing this change:
 
 ```sh
-rtk proxy pass-cli run --env-file /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/docs/baited.hosted-extension.env.tmpl -- node /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/scripts/build-extension.mjs --version 0.0.2
+pass-cli run --env-file /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/docs/baited.hosted-extension.env.tmpl -- node /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/scripts/build-extension.mjs --version 0.0.2
 ```
 
 This writes `packages/app/dist/baited-v0.0.2.zip`. Only public connection settings enter the ZIP. Do not use `--local-preview` for Twitch upload. Keep previous artifacts intact.
@@ -50,11 +50,11 @@ This writes `packages/app/dist/baited-v0.0.2.zip`. Only public connection settin
 Restart each service in its own terminal, from any directory:
 
 ```sh
-rtk proxy pass-cli run --env-file /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/docs/baited.hosted-backend.env.tmpl -- node /home/maff/foss/worktrees/baited/card-expansion-60/ops/hosted-test.mjs backend
+pass-cli run --env-file /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/docs/baited.hosted-backend.env.tmpl -- node /home/maff/foss/worktrees/baited/card-expansion-60/ops/hosted-test.mjs backend
 ```
 
 ```sh
-rtk proxy pass-cli run --env-file /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/docs/baited.hosted-tunnel.env.tmpl -- node /home/maff/foss/worktrees/baited/card-expansion-60/ops/hosted-test.mjs tunnel
+pass-cli run --env-file /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/docs/baited.hosted-tunnel.env.tmpl -- node /home/maff/foss/worktrees/baited/card-expansion-60/ops/hosted-test.mjs tunnel
 ```
 
 Do not delete the persistent volume or rotate its encryption key as part of a restart. If port 3300 is occupied, reuse the intended running test or stop that exact session before restarting.

@@ -27,7 +27,7 @@ for (const { width, height, touch, reduced = false } of [
       })
       if (!reduced) await expect(page.locator('.why-deal__card')).toHaveClass(/is-glinting/)
       const face = page.locator('.why-deal__face')
-      await expect(face.locator('.card-word')).toHaveText('VOLCANO')
+      await expect(face.locator('.card-word')).toHaveText('BIRTHDAY')
       await expect.poll(() => face.locator('.card-art img').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true)
       // The gallery controller fades this full-face dimmer. The independent
       // How scene must not inherit an opaque layer over its word and artwork.

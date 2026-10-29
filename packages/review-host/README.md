@@ -9,8 +9,8 @@ It has no runtime package dependencies and no connection to the old monorepo at 
 From the baited workspace root:
 
 ```sh
-rtk pnpm --filter @irchiinnuss/review-host check
-rtk pnpm --filter @irchiinnuss/review-host test:run
+pnpm --filter @irchiinnuss/review-host check
+pnpm --filter @irchiinnuss/review-host test:run
 ```
 
 Both its TypeScript configuration and the landing's configuration are standalone. Neither extends a configuration in disjoint-colliders.

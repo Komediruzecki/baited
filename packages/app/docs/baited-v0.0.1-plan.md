@@ -16,17 +16,17 @@ Prepared 25 October 2026. This is a production and test plan, not a completed re
 | Extension shared secret | Not supplied among the three field names. Still unverified. It is different from the OAuth client secret. |
 | Broadcaster authorization | Still needs the real browser consent flow and chat test. App-token validation does not prove this step. |
 | Current code | Reviewed game lineage is `feat/bait-v2-mockup`, source baseline `e8cd329`. It contains studio, viewer room, EventSub chat, Moonshine and OBS overlay, but no native Extension build or Extension JWT endpoints. |
-| Design lead | Existing Opus v2 direction is available. A fresh `irch` / Opus 5.5 / Max request had a 2,700-second allowance but returned a session-limit error immediately. It reported reset at 22:30 Europe/Zagreb. No new Opus brand proposal was produced. |
+| Design lead | The existing v2 design direction is available. A fresh design request with a 2,700-second allowance returned a session-limit error immediately. It reported reset at 22:30 Europe/Zagreb. No new brand proposal was produced. |
 
 Credential values were not displayed or written to this document. The account check held its app token only in process memory. The numerical IDs above came from [Twitch Get Users](https://dev.twitch.tv/docs/api/reference/#get-users).
 
 ## Brand production plan
 
-The owner has settled the name and palette. Opus should lead the remaining shape and typography decisions, using the taste skill, the approved [v2 direction](v2/landing-plan.md), and the existing bomb reference. The following is the execution brief, not an approved replacement logo.
+The owner has settled the name and palette. A dedicated design pass should lead the remaining shape and typography decisions, using the taste guide, the approved [v2 direction](v2/landing-plan.md), and the existing bomb reference. The following is the execution brief, not an approved replacement logo.
 
 - Spell the product **baited**, in lowercase. Use **Bait them.** on the cards. Keep **irchiinnuss** as the developer credit rather than a competing product name.
 - Build a separate wordmark and bomb mark. The existing mascot's fishhook, rounded body and censor-strip mouth are recognizable. Its eye shapes also contain the old “ba / it” lettering: redesign those as expressive eyes rather than forcing six letters into the face.
-- Keep `#9146FF` as the main brand accent, `#FFFC79` as a small highlight, and charcoal as the primary card/UI surface. Preserve the approved orange mascot as the comparison baseline. Ask Opus to compare an evolved orange mascot with one restrained purple treatment before selecting a replacement.
+- Keep `#9146FF` as the main brand accent, `#FFFC79` as a small highlight, and charcoal as the primary card/UI surface. Preserve the approved orange mascot as the comparison baseline. Have the design pass compare an evolved orange mascot with one restrained purple treatment before selecting a replacement.
 - Produce a deliberate small icon. At 24 px retain the body, hook and one readable facial gesture; remove fine shading, tiny symbols and wordmark text. Inspect at actual size, not only enlarged.
 - Keep the existing 18 approved card illustrations intact. Apply the new wordmark to card backs/brand positions after approval; this is not permission to regenerate the whole deck.
 - Keep the current repo name, domain, route names, client IDs and stored-data identifiers during this first pass. Change visible branding, page titles, alt text, metadata and listing copy deliberately. A new name does not require a new OAuth application or Extension ID.
@@ -45,13 +45,13 @@ The upload dimensions and conditional taskbar requirement come from [Version Det
 
 Production sequence:
 
-1. **Opus design pass.** Read the prepared brief and inspect the existing bomb, wordmark, cards and v2 page. Specify lettering, proportions, negative space, color coverage and the two candidate proof compositions. Do not substitute an unrelated stock bomb.
-2. **ChatGPT image-generation proofs.** Use the existing approved bomb as an editing reference. Show the owner the wordmark + mascot, a monochrome silhouette, and 100 px / 24 px previews together. Check all six letters, remove stray text, inspect transparency and compare on light/dark backgrounds. Treat generated typography as a proof; finalize exact lettering in editable form if necessary.
+1. **Design pass.** Read the prepared brief and inspect the existing bomb, wordmark, cards and v2 page. Specify lettering, proportions, negative space, color coverage and the two candidate proof compositions. Do not substitute an unrelated stock bomb.
+2. **Image-generation proofs.** Use the existing approved bomb as an editing reference. Show the owner the wordmark + mascot, a monochrome silhouette, and 100 px / 24 px previews together. Check all six letters, remove stray text, inspect transparency and compare on light/dark backgrounds. Treat generated typography as a proof; finalize exact lettering in editable form if necessary.
 3. **Export and integrate the chosen proof.** Validate dimensions, file types, alpha, clipping and file sizes. Update visible branding in an isolated branch. Show a local preview before any deployment. Produce truthful listing screenshots only once the native panel actually works.
 
 The current landing movie uses a staged Extension concept. It is not a review screenshot or proof that the Extension has run. Final screenshots must come from the real test, without tokens, secret-bearing URLs or unrelated account details.
 
-Suggested motion brief for Opus: a short hook twitch on an intentional card reveal, then a single result reaction after host confirmation. Keep the mascot still during ordinary reading. Provide a static reduced-motion state. Sound remains separately opt-in; icon or logo animation must not enable audio.
+Suggested motion brief for the design pass: a short hook twitch on an intentional card reveal, then a single result reaction after host confirmation. Keep the mascot still during ordinary reading. Provide a static reduced-motion state. Sound remains separately opt-in; icon or logo animation must not enable audio.
 
 Listing copy draft, for use after the described panel is built:
 
@@ -147,4 +147,4 @@ Publish truthful data handling: the selected Moonshine path performs recognition
 
 Next implementation milestone: repair Moonshine setup, build the panel/config/auth bundle, verify the real mic and OBS locally, then show the owner the working local installation and branding proofs. Choose the remote test route after that. Review submission, public release and deployment remain separate actions.
 
-Opus's new-brand brief is saved with the task evidence. Retry that exact design task after the account limit resets; keep the owner-requested 45-minute allowance and Max request. The first-test engineering plan can proceed independently of selecting final artwork.
+The new-brand design brief is saved with the task evidence. Retry that exact design task after the account limit resets; keep the owner-requested 45-minute allowance. The first-test engineering plan can proceed independently of selecting final artwork.

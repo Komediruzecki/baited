@@ -1,12 +1,12 @@
-# Opus collectible-card design inspection
+# Collectible-card design inspection
 
-27 October 2026. Successful read-only Opus 5.5 run, 23m36s. Max effort was explicitly requested; effective effort was not reported by the CLI. Some deployment observations describe the source at the start of inspection and have since been addressed by the parallel dev-only build work. Recommendations remain proposals pending browser and owner review.
+27 October 2026. Successful read-only design run, 23m36s. Some deployment observations describe the source at the start of inspection and have since been addressed by the parallel dev-only build work. Recommendations remain proposals pending browser and owner review.
 
 I've specified a set of 4 generated fronts and 3 generated backs. Fronts are **Prism, Engraved, Velvet and Spotlight**; backs are **Mosaic, Prism and Seal**. Code-only baselines are **Stock and Dither** for fronts and **Current and Dither** for backs. A finish only paints materials and never changes a box, so every edition keeps its current panel and phone fit. My suggested first pairing for the owner is **Table Reveal × Engraved × Mosaic back**. It's a proposal only and doesn't set the game's edition.
 
-I read the sources, all six listed screenshots, the two back captures and six illustrations. I didn't run a browser, take measurements or generate images, so every visual outcome below is a hypothesis until Codex inspects it.
+I read the sources, all six listed screenshots, the two back captures and six illustrations. I didn't run a browser, take measurements or generate images, so every visual outcome below is a hypothesis until the implementation is inspected.
 
-A subsequent [Glass design inspection](card-glass-opus-design.md) adds a seventh code-only front finish. The collection below records this earlier six-finish specification.
+A subsequent [Glass design inspection](card-glass-design.md) adds a seventh code-only front finish. The collection below records this earlier six-finish specification.
 
 ## 1. Critique
 

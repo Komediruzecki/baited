@@ -3,7 +3,7 @@
   "fps": 30,
   "durationSeconds": 32,
   "finalFps": 30,
-  "artApproval": "Opus accepted source art with code/CSS fixes; applied. Opus page/film review completed with required changes; film changes implemented and frame-checked by Codex. Owner acceptance pending.",
+  "artApproval": "Art review accepted source art with code/CSS fixes; applied. Page/film design review completed with required changes; film changes implemented and frame-checked. Owner acceptance pending.",
   "audio": "Optional Sound Lab deal at 1.9s and confirmed catch at 23.3s; no voice",
   "staged": true,
   "renderTool": "HyperFrames 0.8.198",
@@ -264,7 +264,7 @@
     }
   ],
   "visualChecks": {
-    "reviewer": "Codex",
+    "reviewer": "implementer",
     "chapterTimes": [
       2.5,
       5.8,

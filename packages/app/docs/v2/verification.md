@@ -2,7 +2,7 @@
 
 This page records implementation evidence, not approval to integrate or release.
 
-Status at this checkpoint on 25 October 2026: all seven changes required by Opus are implemented and checked by Codex. The corrected page and final media are available for owner mockup review. Final source checks passed. [Check BAIT](https://github.com/Komediruzecki/bait/actions/runs/40222946327) passed tests and build for implementation commit `d8732aa`. No hosted landing change has been made.
+Status at this checkpoint on 25 October 2026: all seven changes required by the design review are implemented and checked. The corrected page and final media are available for owner mockup review. Final source checks passed. [Check BAIT](https://github.com/Komediruzecki/bait/actions/runs/40222946327) passed tests and build for implementation commit `d8732aa`. No hosted landing change has been made.
 
 ## Completed checks
 
@@ -22,13 +22,13 @@ The earlier gallery drag finding is closed by the subsequent cleanup and handler
 
 Eight changed JS/MJS files passed final syntax checks, and all page formatting checks passed. The copied approved bomb and VOLCANO assets match their source hashes. A final read-only page/player/server review found one small accessible-label issue: returning to an inspected card could announce “Put this card back” after inspection had ended. The label now resets when selection changes; the browser sequence inspect A, select B, return to A passed. The existing game, client, server, public assets, previous bomb concept and workflows have no diff. The master plan's existing formatting warning was also reproduced on HEAD, so it was not reformatted. The private branch implementation passed Check BAIT at `d8732aa`.
 
-## Opus verdict and fix checklist
+## Design-review verdict and fix checklist
 
-**Opus verdict: “needs specific changes, then it's ready for owner mockup review.”** Opus inspected page captures, draft film frames and source. It ran no build and checked no motion, device, touch, sound or 30 fps playback. Its confidence was medium. The implementation checks below were performed by Codex after that conditional review. They are not a second Opus approval or release acceptance.
+**Review verdict: “needs specific changes, then it's ready for owner mockup review.”** The reviewer inspected page captures, draft film frames and source. It ran no build and checked no motion, device, touch, sound or 30 fps playback. Its confidence was medium. The implementation checks below were performed after that conditional review. They are not a second review approval or release acceptance.
 
-The review completed successfully on irch from **18:08:45 to 18:21:08 UTC**, within a 45-minute limit, with no permission denials. Max effort was requested; effective effort was not reported.
+The review completed successfully from **18:08:45 to 18:21:08 UTC**, within a 45-minute limit, with no permission denials.
 
-| Item                     | Required change                                                                                                           | Codex implementation check                                                                                                                                                                                                                                                                                                                                         |
+| Item                     | Required change                                                                                                           | Implementation check                                                                                                                                                                                                                                                                                                                                               |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1. Blocking hero overlap | Anchor the peeking card to the film wrapper, not the entire stage containing controls and notes.                          | Implemented and visually checked at 1440×900 and 1366×768. The card ends about 8.69 px above the film's bottom edge and no longer crosses the rail or note. No visible text overlap. The exact requested 24 px text clearance was not measured. The card is hidden at phone widths. The final inset is −20 px with 12 px hover travel, adding space from the copy. |
 | 2. Stream fragment       | Replace the grey CSS mountain with the Little Isle hut/crater scene and a readable hint scrim.                            | Implemented with the film's Little Isle artwork, a pixelated crop and the hint scrim. The artwork loads in the browser; source and rendered-fragment checks passed.                                                                                                                                                                                                |
@@ -44,7 +44,7 @@ The optional polish is also implemented: the phone ending preserves the game, fa
 
 ## Art and media status
 
-Opus accepted the three new art sheets **with specific fixes**, including masking/cropping, sprite alignment, eruption treatment and framing. No regeneration was required by that review. It did not approve the final film or deployment. The irch review ran from 17:36:25 to 17:53:58 UTC on 25 October, within a 45-minute budget. Max effort was requested; effective effort was not reported.
+The art review accepted the three new art sheets **with specific fixes**, including masking/cropping, sprite alignment, eruption treatment and framing. No regeneration was required by that review. It did not approve the final film or deployment. The review ran from 17:36:25 to 17:53:58 UTC on 25 October, within a 45-minute budget.
 
 One art-review observation was incorrect: the mossbyte and effects sprite sheets do have transparency. Direct inspection confirms RGBA with alpha range 0–254 for both; Little Isle is an RGB scene. Code/CSS crops, registration and alpha treatment preserve the source PNGs. All three generated source PNG hashes still match [art provenance](../../concepts/bait-v2/film/art-provenance.json).
 
@@ -63,19 +63,19 @@ The [media receipt](../../concepts/bait-v2/media/render-status.json) records has
 
 ## Differences from the proposal
 
-- The implementation rewrites **11** gallery questions: Opus's eight, plus BANANA, ROCKET and PIRATE to meet the all-four-clue writing rule. The three Easy originals were legal under current gameplay, which has no forbidden clues.
+- The implementation rewrites **11** gallery questions: the design review's eight, plus BANANA, ROCKET and PIRATE to meet the all-four-clue writing rule. The three Easy originals were legal under current gameplay, which has no forbidden clues.
 - Film layout selection uses a **700 px viewport breakpoint**, rather than the proposed 600 px stage-width threshold.
 - Sound unmutes the existing video track; it does not switch to a separate film file. Sound is nonpersistent and returns muted after leaving the page or hero.
 - The film changes the score and plays the catch cue after confirmation at 23.3 seconds. Its visible celebration is staged from about 24.4 to 28.4 seconds. That shortened shot is not the game's full 5.5-second celebration window.
-- Opus accepts the 700 px breakpoint, one opt-in AAC track, shorter celebration edit, still page chrome and phone button after the film. It accepts the connector line/lift in place of a travelling card once item 2 is fixed. These are accepted design choices within a conditional review, not overall build approval.
-- Opus's original geometry remains a design target. Final media sizes and the remaining measurement limits are recorded above.
+- The design review accepts the 700 px breakpoint, one opt-in AAC track, shorter celebration edit, still page chrome and phone button after the film. It accepts the connector line/lift in place of a travelling card once item 2 is fixed. These are accepted design choices within a conditional review, not overall build approval.
+- The proposal's original geometry remains a design target. Final media sizes and the remaining measurement limits are recorded above.
 
 ## Remaining gates
 
 | Gate                                                      | Status                                                                                                                                                                                                                                     |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Opus page and rendered-film review                        | **Completed with required changes.** The exact conditional verdict and limits are recorded above. Opus has not re-reviewed the final exports.                                                                                              |
-| Required-fix implementation                               | **Complete for local review.** Codex checked the corrected page, card hand and film frames. Owner design acceptance is pending.                                                                                                            |
+| Page and rendered-film design review                      | **Completed with required changes.** The exact conditional verdict and limits are recorded above. The reviewer has not re-reviewed the final exports.                                                                                      |
+| Required-fix implementation                               | **Complete for local review.** The corrected page, card hand and film frames were checked. Owner design acceptance is pending.                                                                                                             |
 | Final media                                               | **Complete.** Corrected 30 fps MP4/WebM files, posters and stills exported; codecs, sizes, hashes and decode results recorded.                                                                                                             |
 | Final media playback and visual checks                    | **Local browser and frame checks complete.** Final WebM playback, MP4 fallback, sound lifecycle and reduced-motion stills checked; physical Safari and subjective sound acceptance remain pending.                                         |
 | Focused final source checks and private branch CI         | **Passed for implementation `d8732aa`.** Eight final JS/MJS syntax checks, page formatting, 49 asset URLs and media byte ranges passed. Check BAIT passed tests and build. Existing game CI does not replace static mockup/browser checks. |
@@ -92,6 +92,6 @@ Evidence is stored outside the source tree in the registered run. These links ar
 - Final [desktop hero](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/evidence/v2-final-desktop-hero.png), [card hand](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/evidence/v2-final-desktop-deck.png), [390 px phone hero](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/evidence/v2-final-phone-hero.png) and [320 px phone hero](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/evidence/v2-final-small-phone-hero.png)
 - Final film contact sheets: [desktop](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/f71786283a6048d2a80723d7a9588f08/evidence/desktop-video-reviewed/contact-sheet.jpg), [phone](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/f71786283a6048d2a80723d7a9588f08/evidence/phone-video-reviewed/contact-sheet.jpg)
 - [Final source review](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/evidence/final-source-review.md), followed by the accessible-label correction recorded above
-- [Art review](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/deliverables/opus-art-review.md) and [execution receipt](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/evidence/opus-art-review-receipt.json)
-- [Completed conditional page/film review](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/deliverables/opus-mockup-review.md)
-- [Gameplay and question fact review](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/evidence/opus-fact-review.md) and [earlier page source review](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/evidence/page-source-review.md)
+- Art review and its execution receipt, in the same run's `deliverables/` and `evidence/` folders
+- Completed conditional page/film review, in the same run's `deliverables/` folder
+- Gameplay and question fact review, in the same run's `evidence/` folder, and [earlier page source review](/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/294e4e7a1daa4229bba131af507d24bc/evidence/page-source-review.md)

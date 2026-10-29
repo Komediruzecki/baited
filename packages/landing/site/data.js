@@ -32,40 +32,42 @@ export const cards = [
   art: `/cards/proofs/${word}.png`,
 }))
 
+// The trailer's moments: where the arrow keys skip to, and what the still frames show
+// (media/chapter-NN.avif) when the film does not play.
 export const chapters = [
   {
-    time: 2.5,
+    time: 2,
     label: 'The deal',
-    text: 'Chat gets VOLCANO. LAVA and ERUPTION are off limits. Moss keeps building a hut beside a smoking mountain.',
+    text: 'Chat gets BIRTHDAY. The streamer only sees the back of the card, and chat has two minutes to make him say it.',
   },
   {
-    time: 5.8,
-    label: 'Two screens',
-    text: 'Viewers see the word. The streamer’s studio keeps it hidden while the round is live.',
+    time: 5.3,
+    label: 'Lock in',
+    text: 'bateoh: “Ayy, LOCK IN, CHAT! It’s gon’ be straight cinema.” Chat swears to act natural.',
   },
   {
-    time: 10.4,
-    label: 'Chat steers',
-    text: 'fernbrake: “build your hut RIGHT next to it, best view.” Moss: “Why does everyone care about my view? It’s a nice mountain.”',
+    time: 8.9,
+    label: 'The gift',
+    text: 'Reaper gifts ten subs: “happy special day king.” bateoh: “…What special day?”',
   },
   {
-    time: 16.5,
-    label: 'The dodge',
-    text: 'Moss: “Nope. I’m not naming the spicy mountain.” deadlinedog says LAVA, an off-limits clue. Their hint cannot receive the streamer’s pick.',
+    time: 18.4,
+    label: 'Cake',
+    text: 'Chat spams make a wish and cake. bateoh: “Hold up. Why’s chat spamming cake?”',
   },
   {
-    time: 19.7,
+    time: 20.4,
+    label: 'Calling the bait',
+    text: 'bateoh calls the bait: CAKE. Wrong, so chat gets fifteen more seconds.',
+  },
+  {
+    time: 29.7,
     label: 'The slip',
-    text: 'The mountain erupts in the fictional game. Moss: “THE VOLCANO IS GOING OFF!” The round stops for review. This is not a scored win yet.',
+    text: 'bateoh: “It ain’t even my BIRTHDAY!” …oh no. That was the word, and Baity checks the catch.',
   },
   {
-    time: 22.3,
-    label: 'The catch',
-    text: 'The streamer checks what Moonshine heard and presses Confirm catch. Only then does chat win the round.',
-  },
-  {
-    time: 30.3,
-    label: 'The pick',
-    text: 'The streamer gives fernbrake’s clean hint the credit. The hint containing LAVA stays ineligible.',
+    time: 34.2,
+    label: 'They said it',
+    text: 'Chat wins, two in a row, and the streamer’s pick is Reaper. bateoh: “Reaper… you SNAKE.”',
   },
 ]

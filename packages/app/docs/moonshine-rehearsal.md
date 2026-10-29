@@ -8,7 +8,7 @@ Moonshine Tiny Streaming English is the default. The model runs in a worker in t
 
 A candidate catch stops the round before revealing the target. **Confirm catch** awards the win; **Not said** rejects it and ends the exposed word. Auto play and mission time wait for this decision. The viewer and overlay say **Check this catch** until confirmation. Deepgram remains an optional automatic-scoring adapter.
 
-The six approved illustrations have twelve additions, all generated with ChatGPT’s built-in image tool. Original files are unchanged. `/card-proofs` shows the eighteen cards with a staged reveal. The same artwork appears on the viewer’s active target when one of these words is dealt. Artwork does not expose an active target to the studio.
+The six approved illustrations have twelve additions, all generated with the same image model. Original files are unchanged. `/card-proofs` shows the eighteen cards with a staged reveal. The same artwork appears on the viewer’s active target when one of these words is dealt. Artwork does not expose an active target to the studio.
 
 Six Sound Lab cues are adapted from Keys: deal, countdown, catch (Supernova), escape (Confetti), correction and a Blackhole alternative for audition. Sound requires an explicit enable each visit. The studio is the automatic output; the OBS overlay is silent. Pending catches are silent, confirmed catches sound once, and new rounds cancel any remaining boom. Browser locks prevent duplicate outputs within one browser profile, not across different browsers or OBS processes.
 
@@ -50,4 +50,4 @@ Evidence is in the registered run `/run/media/maff/Game_Shared/agent-out-live/tw
 3. Connect the intended Twitch broadcaster account using vault-injected credentials. Use a second viewer to check real chat and the shared viewer page. A localhost viewer link only works on this computer; remote play needs a separately approved hosted game.
 4. Record a full round with the actual game, camera and audio scene. Check recognition, dropped frames, sound mix, reconnect behavior and capture privacy. No Twitch broadcast or deployment occurred in this pass.
 
-The Impeccable mechanical scan found only two body-font warnings for Inter. It is retained to match the existing studio body type; card headlines and the BAIT mark use Russo One. The scan was not treated as a visual acceptance test.
+The mechanical design scan found only two body-font warnings for Inter. It is retained to match the existing studio body type; card headlines and the BAIT mark use Russo One. The scan was not treated as a visual acceptance test.

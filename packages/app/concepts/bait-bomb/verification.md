@@ -10,7 +10,7 @@ One preview tab crashed during testing; a fresh tab completed playback and inter
 
 A separate reviewer inspected source, desktop/mobile renders, PRODUCT.md, DESIGN.md and the composition references. No remaining material blocker was found for this local mockup. Core text contrast was measured from 5.2:1 to 13.9:1.
 
-The Impeccable detector ran once. Its border warning combined the speech bubble's triangular tail with a separate card's two-pixel corner radius; it did not identify a thick accent border on a rounded card. Its Inter warning is accepted for body text: Russo One carries the display type and card identity.
+The design-lint detector ran once. Its border warning combined the speech bubble's triangular tail with a separate card's two-pixel corner radius; it did not identify a thick accent border on a rounded card. Its Inter warning is accepted for body text: Russo One carries the display type and card identity.
 
 JavaScript syntax and whitespace checks passed. The timeline also passed a focused mocked-DOM check covering pause position, replay, card changes, background pause and reduced motion. The local server's malformed URL handling was repaired and verified: it returns 400 and keeps serving subsequent requests. Unexpected hosts, methods and unlisted paths are rejected; an occupied port fails without choosing another one.
 

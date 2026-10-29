@@ -1,6 +1,6 @@
 # Third-party notices
 
-Original BAIT code and SVG illustration are MIT licensed. Sound Lab engine modules and recipes are adapted from Keys in disjoint-colliders (MIT, copyright2025 Dnzzk2). The full notice, pinned source revision and adaptations are documented in `client/sound-lab/PROVENANCE.md` and its bundled legal notice. The card illustrations were generated with ChatGPT image generation; batch manifests, prompts and source hashes are documented in `public/cards/proofs/README.md`. Moonshine WASM and the pinned English model use their upstream MIT license; see `licenses/moonshine/` and `docs/moonshine.md`. The project owner supplied `public/brand/baitlogo.png`; the original is retained, a transparent derivative is used in the UI, and both are documented separately in `public/brand/README.md`. The following dependencies retain their own licenses. Full texts found in installed packages are copied into `licenses/dependencies/`; `licenses/dependencies.json` records exact versions. Build and test tools are included in this inventory.
+Original BAIT code and SVG illustration are MIT licensed. Sound Lab engine modules and recipes are adapted from Keys in disjoint-colliders (MIT, copyright2025 Dnzzk2). The full notice, pinned source revision and adaptations are documented in `client/sound-lab/PROVENANCE.md` and its bundled legal notice. The card illustrations were generated with an AI image model; batch manifests, prompts and source hashes are documented in `public/cards/proofs/README.md`. Moonshine WASM and the pinned English model use their upstream MIT license; see `licenses/moonshine/` and `docs/moonshine.md`. The project owner supplied `public/brand/baitlogo.png`; the original is retained, a transparent derivative is used in the UI, and both are documented separately in `public/brand/README.md`. The following dependencies retain their own licenses. Full texts found in installed packages are copied into `licenses/dependencies/`; `licenses/dependencies.json` records exact versions. Build and test tools are included in this inventory.
 
 The interface uses Russo One, Inter and Inter Tight from Google Fonts under SIL Open Font License 1.1. Earlier unused Barlow Condensed, DM Sans and Space Grotesk font files are retained with their licenses. Full copyright and license notices are in `licenses/fonts/`. Font files are unmodified.
 
@@ -160,6 +160,7 @@ Google Material Icons Outlined are bundled as SVG components under Apache 2.0. T
 | js-tokens | 4.0.0 | MIT |
 | jsesc | 3.1.0 | MIT |
 | json5 | 2.2.3 | MIT |
+| lenis | 1.3.23 | MIT |
 | lilconfig | 3.1.4 | MIT |
 | lines-and-columns | 1.2.4 | MIT |
 | load-tsconfig | 0.2.5 | MIT |

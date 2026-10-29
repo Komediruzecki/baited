@@ -13,7 +13,7 @@
 
 ## Design direction
 
-Opus 5.5 completed a bounded inspection in 26m59s. The request specified Max effort and a 45-minute limit. The CLI receipt confirms the model but does not attest the effective effort level. The resulting specification is in `card-product-design-spec.md`.
+A bounded design inspection completed in 26m59s, within a 45-minute limit. The resulting specification is in `card-product-design-spec.md`.
 
 One deliberate deviation: while OBS reconnects, the current implementation hides old word/result presentation, freezes the clock and labels retained scores as last known. It does not keep a result animation running across a disconnect. This preserves the existing reconnect behavior until fresh state arrives.
 
@@ -35,6 +35,6 @@ One deliberate deviation: while OBS reconnects, the current implementation hides
 - This redesign working inside the current Twitch Hosted Test or a native OBS Browser source. Neither was replaced or restarted.
 - A controlled OBS reconnect test, the deferred Firefox blank-panel issue, or broader microphone/browser acceptance.
 - An online Devpost save: the connector requires reauthentication, and the browser edit link redirects to sign-in. The saved local drafts remain the handoff.
-- Final submission gallery approval, a working Twitch + Codex YouTube demo, public Extension installation, or final submission/review.
+- Final submission gallery approval, a working Twitch and build-session YouTube demo, public Extension installation, or final submission/review.
 
 The repo stays private. No production tag, deployment, Twitch ZIP upload or review submission is part of this pass.

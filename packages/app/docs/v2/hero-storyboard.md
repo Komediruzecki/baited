@@ -1,4 +1,4 @@
-> Design proposal by Claude Opus 5.5, completed 25 October 2026 using the irch account. Max effort was requested; the CLI did not report an effective effort level. This is a local review study. Gameplay additions, live integration and release remain pending owner review. The original full response is preserved separately; see README.md for evidence and implementation corrections.
+> Design proposal, completed 25 October 2026. This is a local review study. Gameplay additions, live integration and release remain pending owner review. The original full response is preserved separately; see README.md for evidence and implementation corrections.
 
 # HERO STORYBOARD: "The Spicy Mountain"
 
@@ -88,6 +88,6 @@ The staged clock follows the film timeline: 02:00 at 0.8 s, a stop at 19.6 s wit
 - The player sprite with two hammer frames.
 - Three emotes.
 
-All are generated with ChatGPT image generation from one prompt family, on transparent PNG, matching the card palette, outlines and pixel scale (VIS-05, VIS-19).
+All are generated with an image model from one prompt family, on transparent PNG, matching the card palette, outlines and pixel scale (VIS-05, VIS-19).
 
 ---

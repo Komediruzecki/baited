@@ -2,27 +2,27 @@
   "assets": [
     {
       "file": "mossbyte-poses.png",
-      "generator": "ChatGPT image generation",
+      "generator": "AI image generation",
       "generatedFile": "exec-45539545-5880-4606-a2da-e54e40ec2df5.png",
       "sha256": "97b4b5c8e72d44e60700e8b60f5417c1a9b2320c2f3966124d70e32b07b3f938",
       "modified": false,
-      "approval": "Opus accepted with code/CSS fixes; source PNG unchanged"
+      "approval": "Art review accepted with code/CSS fixes; source PNG unchanged"
     },
     {
       "file": "little-isle.png",
-      "generator": "ChatGPT image generation",
+      "generator": "AI image generation",
       "generatedFile": "exec-b6c9bfaa-3d57-4e37-a076-d51eb2a9693f.png",
       "sha256": "3b2aed2d9dfb5980094f0136953fd768f7c515b8a52c59c23417e4f2050e695c",
       "modified": false,
-      "approval": "Opus accepted with code/CSS fixes; source PNG unchanged"
+      "approval": "Art review accepted with code/CSS fixes; source PNG unchanged"
     },
     {
       "file": "effects-sheet.png",
-      "generator": "ChatGPT image generation",
+      "generator": "AI image generation",
       "generatedFile": "exec-7e1e23d7-449b-45ee-acf5-b40df971452c.png",
       "sha256": "83f1a929e55697b1738fc3d0b62c0bb2dc4e4260a8cb3c9f27a500ec6ef45946",
       "modified": false,
-      "approval": "Opus accepted with code/CSS fixes; source PNG unchanged"
+      "approval": "Art review accepted with code/CSS fixes; source PNG unchanged"
     }
   ],
   "existingApprovedAssets": [

@@ -153,8 +153,8 @@ input {
   z-index: 60;
   height: 76px;
 }
-/* The navigation, after monochrome-studio.com's header (and the owner's screen recording of it): a
-   white bar centred at the top. The violet pixel logo sits in a lavender cell; on hover a wave runs
+/* The navigation, after the owner's screen recording of a reference header: a white bar centred
+   at the top. The violet pixel logo sits in a lavender cell; on hover a wave runs
    through its columns while the cell fills with deeper lavender pixels. A link's word turns into a
    pixel icon on a violet square; the chat button is a violet square whose dots keep typing. While
    the visitor scrolls down the links fold away and the chat button widens with its words; scrolling
@@ -433,8 +433,8 @@ input {
 .hero h1 {
   font-size: clamp(44px, 4.6vw, 92px);
 }
-/* After 1minus1.com's "DISTINCT / ALWAYS": the headline's last line in a second, lighter cut, only
-   the letters' outline, in lilac, under the line before it. */
+/* The headline's last line in a second, lighter cut: only the letters' outline, in lilac, under
+   the line before it. */
 .hero-line {
   display: block;
 }
@@ -442,8 +442,8 @@ input {
   color: transparent;
   -webkit-text-stroke: 0.03em var(--rim);
 }
-/* As the film flies out, each line slides off to the left by most of its own width (their lines
-   part to both sides; ours all go one way). showreel.js scrubs --hero-slide on the heading. */
+/* As the film flies out, each line slides off to the left by most of its own width (all one way,
+   rather than parting to both sides). showreel.js scrubs --hero-slide on the heading. */
 .hero.is-flight .hero-line {
   width: fit-content;
   translate: calc(var(--hero-slide, 0) * -75%) 0;
@@ -493,8 +493,8 @@ input {
     margin-left: auto;
   }
 }
-/* Viewfinder corners around the film, a small idea from fortnite.com: four lilac brackets hold the
-   tab and the picture, close in once when the page opens and a little more on hover. */
+/* Viewfinder corners around the film: four lilac brackets hold the tab and the picture, close in
+   once when the page opens and a little more on hover. */
 .film-wrap::after {
   --arm: 18px;
   --line: 3px;
@@ -590,7 +590,8 @@ input {
   width: 30px;
   height: 30px;
 }
-/* Pause and sound sit in the corner of the film. They show on hover, focus or a tap, and stay while paused. */
+/* The sound button sits in the corner of the film. It shows on hover, focus or a tap, and stays while
+   the film is stopped. There is no pause: the trailer runs by itself (player.js). */
 .film-hud {
   position: absolute;
   right: 12px;
@@ -636,15 +637,92 @@ input {
   width: 20px;
   height: 20px;
 }
+/* The sound button's word shows only while it sits in the middle (below). */
+.film-sound__label {
+  display: none;
+}
+/* Sound is half of the trailer. While it is off and the film has the screen (landed in the
+   showreel, or a plain player where there is no flight), the sound button sits large in the middle
+   of the picture, with its word, so turning it on is the obvious thing to do; once on, it goes back
+   to the corner. The play button takes the middle instead while the film is stopped. */
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-hud {
+  inset: var(--win-y, 0px) var(--win-x, 0px);
+  display: grid;
+  place-items: center;
+  opacity: 1;
+  transform: none;
+  pointer-events: none;
+}
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: auto;
+  height: 56px;
+  padding: 0 24px 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  font:
+    18px / 1 Russo,
+    Impact,
+    sans-serif;
+  letter-spacing: 0.02em;
+  pointer-events: auto;
+  animation: sound-call 2.4s ease-in-out infinite;
+}
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound:hover {
+  background: #efe6ff;
+}
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound .icon {
+  width: 24px;
+  height: 24px;
+}
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound__label {
+  display: inline;
+}
+/* On a phone the landed player is a strip across the screen: the button keeps to a third of it. */
+@media (max-width: 700px) {
+  :is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound {
+    gap: 9px;
+    height: 44px;
+    padding: 0 18px 0 15px;
+    font-size: 15px;
+  }
+  :is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound .icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+/* A slow ring goes out from the button, like a speaker. */
+@keyframes sound-call {
+  0% {
+    box-shadow:
+      0 10px 32px rgb(16 6 36 / 45%),
+      0 0 0 0 rgb(255 253 247 / 50%);
+  }
+  70%,
+  100% {
+    box-shadow:
+      0 10px 32px rgb(16 6 36 / 45%),
+      0 0 0 14px rgb(255 253 247 / 0%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .film-sound {
+    animation: none !important;
+  }
+}
 
-/* After 1minus1.com, on wide screens: the headline runs across the hero with the film as a tilted
-   card in front of it, and a small pill opens the line under it. Scrolling straightens the film
-   and grows it into the showreel below (showreel.js). .is-flight is only set while that runs;
-   otherwise the hero keeps its two columns and the film stays in it. */
-/* The pill, after 1minus1.com's, as a chat bubble (iMessage's shape, in our violet) holding the
-   secret word chat knows, pixelated past reading (the word "banana" in Inter, averaged into 14 × 3
-   squares of four strengths). Once the curtain has cleared it types in a column at a time, and its
-   paler squares keep shifting a little, like a mosaic over something that moves. */
+/* On wide screens, after the owner's reference: the headline runs across the hero with the film as
+   a tilted card in front of it, and a small pill opens the line under it. Scrolling straightens
+   the film and grows it into the showreel below (showreel.js). .is-flight is only set while that
+   runs; otherwise the hero keeps its two columns and the film stays in it. */
+/* The pill, as a chat bubble in our violet, holding the secret word chat knows, pixelated past
+   reading (the word "banana" in Inter, averaged into 14 × 3 squares of four strengths). Once the
+   curtain has cleared it types in a column at a time, and its paler squares keep shifting a
+   little, like a mosaic over something that moves. */
 .hero-pill {
   position: relative;
   display: inline-flex;
@@ -754,7 +832,7 @@ input {
   image-rendering: pixelated;
   pointer-events: none;
 }
-/* The film flies in front of the headline, as 1minus1's card does (the showreel is above the hero). */
+/* The film flies in front of the headline (the showreel is above the hero). */
 .has-showreel .hero {
   z-index: 0;
 }
@@ -780,8 +858,8 @@ input {
   margin: calc((var(--reel-h) - var(--reel-w) * 9 / 16) / 2) auto;
   transform-origin: 50% 50%;
 }
-/* While it flies the card is too small for its buttons: a click on it plays or pauses the film, and
-   the buttons show only while it is paused or has the keyboard. */
+/* While it flies the card is too small for its button: a click on it turns the sound on or off, and
+   the button shows only while the film is stopped or has the keyboard. */
 @media (hover: hover) {
   .showreel:not(.is-landed) .film-frame:hover:not(.is-paused, :focus-within, .is-hud) .film-hud {
     opacity: 0;
@@ -846,10 +924,10 @@ input {
   position: relative;
   z-index: 1;
 }
-/* The tilted card's place, after 1minus1's: a card a twelfth of the screen in from the right, at
-   the film's own 16:9 (theirs is 3:2), so it shows the whole picture. The film itself lives in the
-   showreel and is drawn here scaled down. No grid placement, so it is placed against the hero's own
-   edges rather than inside its padding. */
+/* The tilted card's place, after the owner's reference: a card a twelfth of the screen in from the
+   right, at the film's own 16:9 (the reference's is 3:2), so it shows the whole picture. The film
+   itself lives in the showreel and is drawn here scaled down. No grid placement, so it is placed
+   against the hero's own edges rather than inside its padding. */
 .hero.is-flight .hero-stage {
   position: absolute;
   grid-area: auto;
@@ -886,8 +964,8 @@ input {
     max-width: 30rem;
     margin-top: 28px;
   }
-  /* Measured from their page at 1966 × 654: 24.6% of the screen wide, its centre 78.4% across and
-     54.4% down the screen (the hero starts under the 76px header). */
+  /* Measured from the reference at 1966 × 654: 24.6% of the screen wide, its centre 78.4% across
+     and 54.4% down the screen (the hero starts under the 76px header). */
   .hero.is-flight .hero-stage {
     top: calc(54.4svh - 76px);
     right: 9.28vw;
@@ -897,7 +975,7 @@ input {
   }
 }
 /* Below 1280px the card would sit on the hero's buttons, so they keep to their own width; and a
-   portrait tablet raises the card above the headline, as 1minus1 does below 1024px. */
+   portrait tablet raises the card above the headline, as the reference does below 1024px. */
 @media (width > 700px) and (max-width: 1279px) {
   .hero.is-flight .hero-cta,
   .hero.is-flight .hero-access {
@@ -910,9 +988,10 @@ input {
     top: calc(22svh - 76px);
   }
 }
-/* Phones, after 1minus1.com's: the card sits high on the right and runs off the edge, the headline
-   and the line under it fill the lower part of the screen, set from the left. The film lands across
-   the screen at its own 16:9 (theirs fills a 9:16 frame and crops the picture to a third of it). */
+/* Phones, after the owner's reference: the card sits high on the right and runs off the edge, the
+   headline and the line under it fill the lower part of the screen, set from the left. The film
+   lands across the screen at its own 16:9 (the reference fills a 9:16 frame and crops the picture
+   to a third of it). */
 @media (max-width: 700px) {
   .hero.is-flight {
     display: flex;
@@ -923,9 +1002,9 @@ input {
     padding-bottom: 64px;
     text-align: left;
   }
-  /* Theirs at 375 × 812 is a 16:10 card 85.3% of the screen wide, centred 84% across and 30.7%
-     down. Ours is 16:9, smaller and a little higher, and sits behind the headline (below), so every
-     line reads over it; it still runs off the edge. The hero starts under the 66px header. */
+  /* The reference's card at 375 × 812 is 16:10, 85.3% of the screen wide, centred 84% across and
+     30.7% down. Ours is 16:9, smaller and a little higher, and sits behind the headline (below), so
+     every line reads over it; it still runs off the edge. The hero starts under the 66px header. */
   .hero.is-flight .hero-stage {
     top: calc(26svh - 66px);
     right: -14vw;
@@ -933,15 +1012,19 @@ input {
     aspect-ratio: 16 / 9;
     translate: 0 -50%;
   }
-  /* On a phone the words start in front of the film, as on 1minus1's phone page, and the film comes
-     forward over them as it flies: showreel.js masks the hero out where the film is. The hero lets
-     clicks through to the film except on its own links. */
+  /* On a phone the words start in front of the film, as on the reference's phone page, and the
+     film comes forward over them as it flies: showreel.js masks the hero out where the film is.
+     The hero lets clicks through to the film except on its own links. */
   .has-showreel .hero {
     z-index: 2;
     pointer-events: none;
   }
   .has-showreel .hero :is(a, button) {
     pointer-events: auto;
+  }
+  /* All the way forward, the film is in front of the hero rather than seen through its mask. */
+  .has-showreel .hero.is-behind {
+    z-index: 0;
   }
   .hero.is-flight .hero-line {
     translate: calc(var(--hero-slide, 0) * -50%) 0;
@@ -954,6 +1037,20 @@ input {
   .showreel {
     --reel-gap: 8px;
     padding-bottom: 20svh;
+  }
+  /* Out of its card, the film waits fixed in the middle of the screen, where the showreel holds it
+     once stuck, so the page scrolls on under it with nothing to follow the scroll (showreel.js flies
+     it there in its own time). Its place in the showreel stays taken. */
+  .has-showreel .showreel.is-holding > .film-wrap {
+    position: fixed;
+    top: calc((var(--reel-h) - var(--reel-w) * 9 / 16) / 2);
+    left: calc((100% - var(--reel-w)) / 2);
+    margin: 0;
+  }
+  .has-showreel .showreel.is-holding::before {
+    content: '';
+    display: block;
+    height: var(--reel-h);
   }
   /* The player is a strip across the screen here, too small to carry its label: the label sits on
      the page just above it. */
@@ -968,7 +1065,7 @@ input {
     bottom: calc(var(--win-y, 0px) + 10px);
   }
 }
-/* After 1minus1.com's service cards, the sections are sheets dealt over each other: once the film
+/* After the owner's reference, the sections are sheets dealt over each other: once the film
    has landed the showreel stays put and "How it plays" deals in over it from the left; once its
    steps are done they stay put and "The cards" deals in over them from the right; the footer then
    rises over the deck. A sheet comes in leaning about its own top corner and a little off to its
@@ -1114,8 +1211,8 @@ input {
   font-size: 14px;
   margin-top: 8px;
 }
-/* The page's backdrop: 1minus1.com's deep purple (#130127, sampled from their hero), flat, with the
-   hero's ribbons drawn over it in their colour (hero-scribble.js). It is fixed to the screen,
+/* The page's backdrop: a deep purple (#130127, sampled from the owner's reference), flat, with the
+   hero's ribbons drawn over it in their own violet (hero-scribble.js). It is fixed to the screen,
    behind every section, and keeps its colour all the way down. */
 .page-backdrop {
   position: fixed;
@@ -1308,7 +1405,7 @@ input {
   isolation: isolate;
 }
 /* A foil glint sweeps over a card when it comes to the front, like a trading card catching the
-   light (the shimmer on monochrome-studio.com's boxes). The deck plays it once it is on screen. */
+   light. The deck plays it once it is on screen. */
 .bait-card::after {
   content: '';
   position: absolute;
@@ -1701,8 +1798,8 @@ input {
     margin-left: 10px;
     opacity: 1;
   }
-  /* On a phone the hero is centred, after fortnite.com's phone page: the film first, inside the
-     margins and its viewfinder corners, then the headline, the line under it and "How to play". */
+  /* On a phone the hero is centred: the film first, inside the margins and its viewfinder corners,
+     then the headline, the line under it and "How to play". */
   .hero {
     display: flex;
     flex-direction: column;
