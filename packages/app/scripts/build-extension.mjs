@@ -56,7 +56,8 @@ export function publicConfig(clientId, apiBaseUrl, localPreview = false, studioB
 
 export function runtimeConfigSource(config) {
   const publicFields = { clientId: config.clientId, apiBaseUrl: config.apiBaseUrl,
-    studioBaseUrl: config.studioBaseUrl ?? config.apiBaseUrl };
+    studioBaseUrl: config.studioBaseUrl ?? config.apiBaseUrl,
+    ...(config.transport === 'edge' ? { transport: 'edge' } : {}) };
   return `// Public Extension configuration. No credentials belong in this file.\nwindow.BAITED_EXTENSION_CONFIG = Object.freeze(${JSON.stringify(publicFields)});\n`;
 }
 
@@ -92,9 +93,10 @@ async function verifyOutputDirectory(root, prefix = '') {
   }
 }
 
-export async function buildExtension({ sourceDir = resolve(project, 'extension'), outDir, zipPath, version, clientId, apiBaseUrl, studioBaseUrl, localPreview = false }) {
+export async function buildExtension({ sourceDir = resolve(project, 'extension'), outDir, zipPath, version, clientId, apiBaseUrl, studioBaseUrl, localPreview = false, transport }) {
   ({ version, outDir, zipPath } = extensionBuildPaths({ version, outDir, zipPath, localPreview }));
-  const config = publicConfig(clientId, apiBaseUrl, localPreview, studioBaseUrl);
+  if (transport !== undefined && transport !== 'edge') throw new Error('EXTENSION_TRANSPORT must be edge or unset.');
+  const config = { ...publicConfig(clientId, apiBaseUrl, localPreview, studioBaseUrl), ...(transport === 'edge' ? { transport } : {}) };
   if ((await lstat(sourceDir)).isSymbolicLink()) throw new Error('Extension source files must not be symlinks.');
   const source = await realpath(sourceDir);
   if (outDir === source || within(source, outDir) || within(outDir, source) ||
@@ -150,7 +152,7 @@ async function main() {
   }
   const result = await buildExtension({ outDir, zipPath, version, localPreview,
     clientId: process.env.TWITCH_EXTENSION_CLIENT_ID, apiBaseUrl: process.env.EXTENSION_API_BASE_URL,
-    studioBaseUrl: process.env.EXTENSION_STUDIO_BASE_URL });
+    studioBaseUrl: process.env.EXTENSION_STUDIO_BASE_URL, transport: process.env.EXTENSION_TRANSPORT });
   console.log(JSON.stringify(result, null, 2));
 }
 

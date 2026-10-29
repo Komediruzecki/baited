@@ -1,4 +1,23 @@
-export async function request<T>(path: string, body?: unknown, csrf?: string): Promise<T> {
+import { EdgeRoomTransport, edgeStudio, type EdgeBootstrap, type SpeechSocket } from './edge-transport';
+
+let edgeMode = false;
+let studioTransport: EdgeRoomTransport | undefined;
+let overlayTransport: EdgeRoomTransport | undefined;
+export const isEdgeRuntime = () => edgeMode;
+export const canAuthorizeEdgeBot = () => edgeMode && studioTransport?.bootstrap?.bot?.canAuthorize === true;
+
+export async function authorizeEdgeBot(): Promise<string> {
+  const transport = studioEdge();
+  await transport.state();
+  if (!canAuthorizeEdgeBot()) throw new Error('The pilot operator connects the bot account.');
+  const result = await direct<{ url: string }>('/api/bot/authorize', {}, transport.bootstrap?.csrf);
+  const url = new URL(result.url);
+  if (url.protocol !== 'https:' || url.hostname !== 'id.twitch.tv' || url.pathname !== '/oauth2/authorize')
+    throw new Error('The bot sign-in link could not be verified. Try again.');
+  return url.href;
+}
+
+async function direct<T>(path: string, body?: unknown, csrf?: string): Promise<T> {
   const response = await fetch(path, {
     method: body === undefined ? 'GET' : 'POST',
     headers: {
@@ -12,4 +31,85 @@ export async function request<T>(path: string, body?: unknown, csrf?: string): P
     .catch(() => ({ error: 'The server did not respond. Try again.' }));
   if (!response.ok) throw new Error(data.error || 'Request failed.');
   return data;
+}
+
+function studioEdge() {
+  return studioTransport ??= new EdgeRoomTransport({ origin: location.origin,
+    bootstrap: () => direct<EdgeBootstrap>('/api/edge/session') });
+}
+function overlayEdge(channelId: string) {
+  if (overlayTransport) return overlayTransport;
+  const fragment = new URLSearchParams(location.hash.slice(1));
+  const key = fragment.get('key');
+  if (!key || !/^[A-Za-z0-9_-]{32,256}$/.test(key)) throw new Error('Copy a fresh OBS link from Stream setup.');
+  // The capability never enters a request URL, referrer or server access log.
+  return overlayTransport = new EdgeRoomTransport({ origin: location.origin,
+    bootstrap: () => direct<EdgeBootstrap>('/api/edge/overlay', { channelId, key }) });
+}
+function clearEdge() {
+  studioTransport?.destroy(); overlayTransport?.destroy();
+  studioTransport = overlayTransport = undefined;
+}
+
+export function subscribeEdge<T>(path: string, state: (value: T) => void, error: (lost: boolean) => void) {
+  if (path === '/api/studio/events') {
+    const transport = studioEdge();
+    return transport.subscribe((snapshot) => {
+      try { state(edgeStudio(snapshot, transport.bootstrap!) as T); } catch { error(true); }
+    }, error);
+  }
+  const overlay = /^\/api\/rooms\/([1-9][0-9]{0,24})\/events\/overlay$/.exec(path);
+  if (overlay) return overlayEdge(overlay[1]).subscribe((snapshot) => {
+    if (snapshot.room) state(snapshot.room as T); else error(true);
+  }, error);
+  error(true);
+  return () => {};
+}
+export function edgeSpeechSocket(round: string, epoch: number, leaseId: string): SpeechSocket | undefined {
+  return edgeMode ? studioEdge().speechSocket(round, epoch, leaseId) : undefined;
+}
+
+export async function request<T>(path: string, body?: unknown, csrf?: string): Promise<T> {
+  if (path === '/api/session') {
+    const session = await direct<T & { runtime?: string; authenticated?: boolean }>(path);
+    edgeMode = session.runtime === 'edge';
+    if (!session.authenticated) clearEdge();
+    return session;
+  }
+  if (!edgeMode) return direct(path, body, csrf);
+  if (path === '/api/logout' || path.startsWith('/api/account/')) {
+    const result = await direct<T>(path, body, csrf); clearEdge(); return result;
+  }
+  if (path === '/api/studio' || path.startsWith('/api/studio/')) {
+    const transport = studioEdge();
+    let snapshot = await transport.state();
+    if (body !== undefined) {
+      const value = body as Record<string, unknown>;
+      if (path === '/api/studio/action' && ['connect', 'disconnect'].includes(String(value.action))) {
+        await direct('/api/edge/chat', { connected: value.action === 'connect' }, transport.bootstrap?.csrf);
+        snapshot = await transport.refresh();
+        return edgeStudio(snapshot, transport.bootstrap!) as T;
+      }
+      let action: Record<string, unknown>;
+      if (path === '/api/studio/action') {
+        const type = String(value.action);
+        action = ['pause', 'resume', 'end', 'skip'].includes(type)
+          ? { type, roundId: snapshot.room?.round?.id, epoch: snapshot.room?.round?.epoch }
+          : type === 'reverse' ? { type, roundId: snapshot.room?.result?.id } : { type };
+      } else if (path === '/api/studio/settings') action = { type: 'settings', settings: body };
+      else if (path === '/api/studio/guess') action = { type: 'guess', roundId: value.roundId, epoch: value.epoch, text: value.word };
+      else if (path === '/api/studio/catch') action = { type: 'catch', ...value };
+      else if (path === '/api/studio/award') action = { type: 'award', ...value };
+      else if (path === '/api/studio/microphone') action = { type: 'microphone', ...value, renew: value.renew === true };
+      else throw new Error('The pilot uses the Baited deck. Card making is available in the local app.');
+      snapshot = await transport.command(action);
+      if (path === '/api/studio/microphone') return { armed: value.armed === true } as T;
+      if (path === '/api/studio/guess') return { correct: snapshot.room?.result?.reason === 'guess',
+        bonus: snapshot.room?.round?.wrongGuessBonus ?? 0, studio: edgeStudio(snapshot, transport.bootstrap!) } as T;
+    }
+    return edgeStudio(snapshot, transport.bootstrap!) as T;
+  }
+  const overlay = /^\/api\/rooms\/([1-9][0-9]{0,24})\/overlay$/.exec(path);
+  if (overlay) return (await overlayEdge(overlay[1]).state()).room as T;
+  return direct(path, body, csrf);
 }

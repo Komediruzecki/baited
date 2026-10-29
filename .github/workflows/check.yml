@@ -53,7 +53,7 @@ jobs:
         run: |
           pnpm --filter @irchiinnuss/review-host check
           pnpm --filter @irchiinnuss/review-host test:run
-      - name: Check edge proof locally (no provider credentials)
+      - name: Check edge pilot locally (no provider credentials)
         if: matrix.package == 'edge-game'
         env:
           BAITED_EDGE_TEST_OUTPUT: ${{ runner.temp }}/baited-edge-tests
@@ -61,3 +61,4 @@ jobs:
           pnpm --filter @baited/edge-game check
           pnpm --filter @baited/edge-game build
           pnpm --filter @baited/edge-game test
+          pnpm --filter @baited/edge-game build:pilot-assets

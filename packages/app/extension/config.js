@@ -23,7 +23,7 @@ const client = connectToTwitch({
   },
   onStatus(status) {
     connectionView(status);
-    check.disabled = !['connected', 'reconnecting'].includes(status.kind);
+    check.disabled = !['connected', 'reconnecting', 'unavailable'].includes(status.kind);
     if (['invalid', 'authorization', 'forbidden', 'connecting'].includes(status.kind)) {
       byId('open-studio').hidden = true;
       byId('open-studio').removeAttribute('href');
@@ -36,6 +36,7 @@ const client = connectToTwitch({
     if (status.kind === 'reconnecting')
       byId('channel-detail').textContent =
         'The last connection check failed. Reconnecting to the game service.';
+    if (status.kind === 'unavailable') byId('channel-detail').textContent = status.message;
   },
 });
 check.addEventListener('click', () => client?.refresh());

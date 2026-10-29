@@ -1,5 +1,7 @@
-/** Browser auth only. There is deliberately no HTTP token minting endpoint. */
-export interface AuthEnv {
+import type { PilotEnv } from './pilot-policy.js';
+
+/** Credentials are verified before the gateway accesses a channel object. */
+export interface AuthEnv extends PilotEnv {
   EDGE_POC_ENABLED?: string;
   EDGE_ALLOWED_HOSTS?: string;
   EDGE_ALLOWED_ORIGINS?: string;
@@ -21,8 +23,9 @@ const AUTH_PREFIX = 'baited.auth.';
 const MAX_TOKEN_BYTES = 4096;
 
 export interface AuthIdentity {
-  authKind: 'twitch-extension' | 'local-fixture' | 'staging-capability';
+  authKind: 'twitch-extension' | 'local-fixture' | 'staging-capability' | 'pilot-session';
   channelId: string;
+  sessionId?: string;
   subject: string;
   role: 'viewer' | 'studio' | 'overlay';
   stableIdentity: boolean;
@@ -180,11 +183,11 @@ export async function authenticateRequest(
   channelId: string,
   options: { nowMs?: number } = {},
 ): Promise<AuthResult> {
-  if (env.EDGE_POC_ENABLED !== 'true') return denied(503);
+  if (env.EDGE_POC_ENABLED !== 'true' && env.EDGE_PILOT_ENABLED !== 'true') return denied(503);
   const nowMs = options.nowMs ?? Date.now();
   const url = new URL(request.url);
   if (!Number.isFinite(nowMs) || nowMs < 0 || !/^[1-9][0-9]{0,24}$/.test(channelId) ||
-      !configuredValues(env.EDGE_ALLOWED_CHANNELS).includes(channelId) ||
+      (env.EDGE_PILOT_ENABLED !== 'true' && !configuredValues(env.EDGE_ALLOWED_CHANNELS).includes(channelId)) ||
       !configuredValues(env.EDGE_ALLOWED_HOSTS).includes(url.host) ||
       (url.protocol !== 'https:' && !(url.protocol === 'http:' && isLoopback(url))) ||
       (request.headers.has('host') && request.headers.get('host') !== url.host)) return denied(403);
@@ -207,16 +210,24 @@ export async function authenticateRequest(
     if (claims.iss === LOCAL_FIXTURE_ISSUER) {
       if (env.EDGE_LOCAL_FIXTURE_AUTH !== 'true' || !isLoopback(url)) return denied(401);
       if (!originAllowed(request, env, true)) return denied(403);
-      secret = independentSecret(env.EDGE_FIXTURE_SECRET_B64, [env.EDGE_STAGING_SECRET_B64, env.TWITCH_EXTENSION_SECRET_B64]);
+      secret = independentSecret(env.EDGE_FIXTURE_SECRET_B64, [env.EDGE_STAGING_SECRET_B64, env.TWITCH_EXTENSION_SECRET_B64, env.EDGE_PILOT_SECRET_B64]);
       identity = capabilityIdentity(claims, 'local-fixture', LOCAL_FIXTURE_AUDIENCE);
     } else if (claims.iss === STAGING_CAPABILITY_ISSUER) {
       if (env.EDGE_STAGING_AUTH !== 'true' || url.protocol !== 'https:') return denied(401);
       if (!originAllowed(request, env, false)) return denied(403);
-      secret = independentSecret(env.EDGE_STAGING_SECRET_B64, [env.EDGE_FIXTURE_SECRET_B64, env.TWITCH_EXTENSION_SECRET_B64]);
+      secret = independentSecret(env.EDGE_STAGING_SECRET_B64, [env.EDGE_FIXTURE_SECRET_B64, env.TWITCH_EXTENSION_SECRET_B64, env.EDGE_PILOT_SECRET_B64]);
       identity = capabilityIdentity(claims, 'staging-capability', STAGING_CAPABILITY_AUDIENCE);
+    } else if (claims.iss === 'baited-edge-pilot') {
+      if (env.EDGE_PILOT_ENABLED !== 'true' || !originAllowed(request, env, false)) return denied(403);
+      secret = independentSecret(env.EDGE_PILOT_SECRET_B64, [env.EDGE_FIXTURE_SECRET_B64, env.EDGE_STAGING_SECRET_B64, env.TWITCH_EXTENSION_SECRET_B64]);
+      if (claims.aud !== 'baited-edge' || !numericDate(claims.iat) || !numericDate(claims.exp) || claims.exp <= claims.iat || claims.exp - claims.iat > 300 ||
+        typeof claims.sid !== 'string' || !/^[A-Za-z0-9:_-]{1,128}$/.test(claims.sid) || typeof claims.sub !== 'string' ||
+        !/^[A-Za-z0-9:_-]{1,128}$/.test(claims.sub) || !['studio','overlay'].includes(String(claims.role))) return denied(401);
+      identity = {authKind:'pilot-session',channelId,sessionId:claims.sid,subject:claims.sub,role:claims.role as 'studio'|'overlay',
+        stableIdentity:true,canControl:claims.role==='studio',expiresAt:claims.exp*1000,generation:null};
     } else {
       if (!originAllowed(request, env, false)) return denied(403);
-      secret = independentSecret(env.TWITCH_EXTENSION_SECRET_B64, [env.EDGE_FIXTURE_SECRET_B64, env.EDGE_STAGING_SECRET_B64]);
+      secret = independentSecret(env.TWITCH_EXTENSION_SECRET_B64, [env.EDGE_FIXTURE_SECRET_B64, env.EDGE_STAGING_SECRET_B64, env.EDGE_PILOT_SECRET_B64]);
       identity = twitchIdentity(claims);
     }
     if (!identity || !(await signatureValid(parts, secret))) return denied(401);

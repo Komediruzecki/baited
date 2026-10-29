@@ -1,45 +1,35 @@
-# Local verification record
+# Pilot verification
 
-Verified on 2026-10-29 against the implementation in this pull request. These are local functional checks, not provider capacity or billing measurements. The cloud configuration remains disabled; the PC Hosted Test and tunnel were not restarted.
+29 October 2026. The implementation is prepared locally, with the cloud pilot flag disabled and no route. The PC server/tunnel were not restarted. This record distinguishes local tests from real provider acceptance.
 
-## Checks completed
+## Completed local evidence
 
-| Check | Result |
+| Check | Evidence |
 | --- | --- |
-| Frozen workspace install with lifecycle scripts disabled | Passed; existing dependency versions preserved. |
-| `pnpm --filter @baited/edge-game check` | Passed. |
-| `pnpm --filter @baited/edge-game build` | Passed; no Node runtime imports or unexpected external modules. |
-| `pnpm --filter @baited/edge-game test` | **54 passed in CI**, none skipped: 26 auth/art, 7 local-harness, 11 room integration, 10 state-store. Locally, 53 passed together and the final mission-countdown regression passed separately. |
-| `pnpm --filter @baited/app test` | **426 passed**, including 10 new portable-core recovery cases. |
-| Application build | Passed, including the server bundle guard and the full application build inside Docker. |
-| `docker build` | Passed locally after adding the game-core manifest and source to the build stages; the resulting image was not started. |
-| README HTTP example | Started a synthetic round and read an authenticated viewer snapshot through the local gateway. |
-| Bounded local launcher | Exited on its configured deadline; its loopback listener was closed afterward. |
-| `git diff --check` | Passed. |
+| Existing application | 436 tests passed during integration, including the new edge transport. Later targeted client/API/native tests passed: 14/14. |
+| Edge baseline | 73/73 passed together before the final admission and subscription-lifecycle additions. Current complete-suite result is delegated to PR CI. |
+| Pilot room | 11/11 local gateway/Room integration cases passed, including 100 participants plus overflow, microphone ownership/deadlines, secrets, refresh/revocation and shared state/resync budgets. |
+| Production clients with real authority | 1/1 local integration passed through microphone lease, round, viewer secrecy, speech text, pending catch, confirmation and public result. Uses the real gateway/Room and clients with synthetic credentials and a fake Control adapter. |
+| Control | 12/12 auth and integration tests passed, including deletion retry, idle disconnect and explicit reconnect. Later targeted seven control integration cases passed after ingress normalization. |
+| Ingress | Five local cases passed for per-IP throttling, narrower OAuth quota, fail-closed bindings, spoofed forwarded headers and authenticated webhook bypass. |
+| SQLite storage | 14/14 passed, including stable-ID list replacement, compatibility and transaction rollback. |
+| Built UI | Headless desktop Studio, 390px mobile setup, native panel, hidden OBS and confirmed result passed with no JavaScript errors. Refused admissions show a manual retry rather than an automatic reconnect loop. |
+| Speech delivery | Lease renewal changes Studio state without sending unchanged viewer/OBS snapshots. Audio is not uploaded; the local test uses synthetic sample counters/final text, not microphone capture. |
+| Pilot assets | Selected static frontend, 100 card images and pinned Moonshine runtime built without loading env files or copying server data. |
+| Extension ZIP | Edge-transport ZIP built using the public Extension client ID injected from Proton. Version label 0.0.3, 124 files, 66,170,130 bytes. Not uploaded to Twitch. |
 
-Repository CI adds an edge-game matrix job and remains the complete gate for the application, Extension packaging, landing bundles/browser checks, and review-host helper. All four jobs passed on implementation commit `1430d28` in both the [PR run](https://github.com/Komediruzecki/baited/actions/runs/40872753721) and [push run](https://github.com/Komediruzecki/baited/actions/runs/40872745794). The Dockerfile follow-up also passed its local image build. Later documentation-only changes do not alter this tested implementation; current-head CI remains visible on the PR.
+The Extension build hash is `1a060c8b9bcccc4308d31b6457ddbf8c468cf14eefdb26135ef347dec48a02e4`. The filename distinguishes it from the existing Node/PC version. Twitch asset-upload acceptance and native playback are still live checks.
 
-## Regressions covered
+Curated evidence is in the registered `baited/2026-10-29/7156c8cc3ce84c69992e7930a5c1c797` output run. Browser checks used fixtures and headless desktop engines. They do not establish physical iPhone behavior or live Twitch compatibility.
 
-- The existing Node server bundles the shared rules rather than importing an unbuilt TypeScript workspace at runtime. Its build checks the emitted bundle metadata.
-- The room commits changed SQLite rows, its command receipt and next alarm together. An integration fixture throws after an alarm write and verifies rollback, then retries the same command ID successfully.
-- Concurrent commands with the same expected revision commit one transition. Retried commands retain their original result; changed-body reuse conflicts.
-- A persisted local restart retains paused rounds, votes, pending catches and receipts. Core tests also cover logical deadline recovery, result/history aliases and correction state.
-- Viewer, Studio and overlay sockets receive different projections. A broadcaster token cannot opt into the viewer's private target or acquire control privileges.
-- Cached snapshots refresh both round and running mission countdowns without persisting timer ticks. Paused and pending-catch mission time remains frozen.
-- Socket expiry and generation changes close private access without relying on the client to request another snapshot. The local native client enters `CLOSING` promptly; its final close event has a roughly ten-second emulator transport grace period. Tests distinguish those events.
-- The previous caught round can still receive a clue award while the next round is active. Only Studio receives the private award board.
-- Chat paths that return `false` but change deduplication or review evidence still persist their changed rows. Unsafe checkpoint keys and invalid references fail closed.
-- Approved-art tests check authorization before and after reads, metadata, byte limits, PNG headers and the exact digest. They use synthetic bytes, not creator media.
+## Review status
 
-## Review still pending
+Personal Claude subscription identity was checked against the active personal alias before starting the requested read-only Opus 5.5 inspection. Max effort and a 45-minute deadline were explicitly requested. The review is still running; it is not an approval. A frozen source copy was supplied so implementation changes could not invalidate what the reviewer read. Later admission, idle-disconnect and ingress changes require a separate delta assessment.
 
-The initial attempt stopped before a model request because the isolated `irch` profile was logged out. The owner then explicitly authorized the personal account. Its already-active Claude subscription identity matched the `cswap` personal alias before and after the attempt; no authentication or account switch was performed.
+PR #26 remains draft. Current branch CI is the complete repository gate; local targeted checks do not replace it. Historical POC-only evidence and the earlier quota-blocked review are preserved in [VERIFICATION-POC.md](./VERIFICATION-POC.md).
 
-That personal attempt ran with observed model `claude-opus-5-5`, requested Max effort, and a 45-minute deadline. After roughly six and a half minutes, Claude reported **"You've hit your 5-hour limit"** and returned an error instead of a critique. Max effort was requested through the CLI; no effective-effort telemetry was reported. This is an incomplete review, not an approval or a source of accepted findings. The private receipt and prepared brief are preserved for a later continuation when usage is available.
+## Not established yet
 
-Keep the PR in draft until that review has completed, its findings have been assessed and fixed where warranted, and the required checks pass. A successful independent peer review does not substitute for the requested Opus review.
+No new Worker, namespace, bucket, public route or provider workload was activated. No actual Twitch OAuth/EventSub/bot flow, hosted microphone test, Twitch ZIP upload, OBS native run, provider billing measurement, load generator, migration or production release ran. Local limits and passing fixtures do not establish 1,000-player or 100,000-viewer capacity.
 
-## Deliberately unverified
-
-No hosted Worker, Durable Object namespace or R2 bucket was created. No public route, real Twitch authorization, EventSub connection, bot, upload scanner, current Studio integration, load generator, provider cost probe or production migration was run. The proof's small admission limits are not a scale claim. See [DEPLOYMENT.md](./DEPLOYMENT.md) for the separate integration and activation gates.
+See [PILOT.md](./PILOT.md) for the concrete activation and first-live-round sequence. The requested security review and real provider test remain separate gates.

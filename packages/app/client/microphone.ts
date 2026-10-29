@@ -1,13 +1,15 @@
 import { Moonshine, type MoonshineLine } from './moonshine';
 import { LocalFinalSequence } from './local-final-sequence';
 import type { SpeechProvider } from '../shared/types';
+import { edgeSpeechSocket } from './api';
+import type { SpeechSocket } from './edge-transport';
 
 export class Microphone {
   private stream: MediaStream | undefined;
   private context: AudioContext | undefined;
   private worklet: AudioWorkletNode | undefined;
   private source: MediaStreamAudioSourceNode | undefined;
-  private socket: WebSocket | undefined;
+  private socket: WebSocket | SpeechSocket | undefined;
   private cancelled = false;
   private generation = 0;
   private streaming = false;
@@ -136,10 +138,10 @@ export class Microphone {
     const url = new URL('/api/speech', location.href);
     url.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     url.search = new URLSearchParams({ round, epoch: String(epoch), csrf, leaseId }).toString();
-    const socket = new WebSocket(url);
+    const socket = edgeSpeechSocket(round, epoch, leaseId) ?? new WebSocket(url);
     this.socket = socket;
     let failed = false;
-    socket.onmessage = async (e) => {
+    socket.onmessage = async (e: { data: string }) => {
       try {
         const message = JSON.parse(e.data);
         if (this.socket !== socket) return;
@@ -171,7 +173,7 @@ export class Microphone {
       );
       this.stop();
     };
-    socket.onclose = (e) => {
+    socket.onclose = (e: { code: number; reason: string }) => {
       if (this.socket !== socket) return;
       this.socket = undefined;
       this.streaming = false;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { SessionInfo } from '../shared/types';
-import { request } from './api';
+import { request, isEdgeRuntime } from './api';
 import { productBrand, botNotices, BotSignInLink, Button, Modal } from './ui';
 import { ArrowUpRight, Mic, Play, ShieldCheck } from './pixel-icons';
 import { CardBack } from './CardBack';
@@ -45,6 +45,7 @@ export default function Landing({ session, reload }: { session: SessionInfo; rel
         <a className="signin-brand" href="https://baited.maff.app" aria-label="Baited website">{productBrand}</a>
         <h1 id="signin-title">Run baited on your channel.</h1>
         <p>Chat gets a secret word. You keep talking.</p>
+        {isEdgeRuntime() && <p>The pilot uses the Baited deck on invited Twitch channels.</p>}
         {error && <p className="signin-error" role="alert">{error}</p>}
         {error && <BotSignInLink notice={code} />}
         {notice && <p className="signin-notice" role="status">{notice}</p>}

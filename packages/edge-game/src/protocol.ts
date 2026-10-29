@@ -8,6 +8,10 @@ const round = { roundId: z.string().uuid(), epoch: z.number().int().positive() }
 const id = z.string().regex(/^[a-zA-Z0-9:_-]{1,128}$/);
 const input = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start') }).strict(),
+  z.object({ type: z.literal('connect') }).strict(),
+  z.object({ type: z.literal('disconnect') }).strict(),
+  z.object({ type: z.literal('microphone'), armed: z.boolean(), leaseId: z.string().uuid(), renew: z.boolean().default(false) }).strict(),
+  z.object({ type: z.literal('skip'), ...round }).strict(),
   z.object({ type: z.literal('pause'), ...round }).strict(),
   z.object({ type: z.literal('resume'), ...round }).strict(),
   z.object({ type: z.literal('end'), ...round }).strict(),
@@ -29,7 +33,7 @@ export function json(value: unknown, status = 200): Response {
   return Response.json(value, { status, headers: { 'cache-control': 'private, no-store',
     'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' } });
 }
-export async function readBounded(request: Request, max = LIMITS.commandBytes): Promise<string> {
+export async function readBounded(request: Request, max: number = LIMITS.commandBytes): Promise<string> {
   if (Number(request.headers.get('content-length')) > max) throw new Error('body_size');
   const reader = request.body?.getReader();
   if (!reader) return '';

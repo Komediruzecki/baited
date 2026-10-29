@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Check, Copy, Eye, MessageSquare, Mic, ShieldCheck, X } from './icons';
 import type { Phase } from '../shared/types';
+import { authorizeEdgeBot, canAuthorizeEdgeBot, isEdgeRuntime } from './api';
 
 export const productBrand = (
   <span className="product-brand" role="img" aria-label="BAITED">
@@ -34,12 +35,27 @@ export const botNotices = {
 /** Notices whose fix is the operator signing in as the bot account again. */
 const botRetryNotices = new Set(['bot-oauth', 'bot-account']);
 export function BotSignInLink({ notice }: { notice: string }) {
-  if (!botRetryNotices.has(notice)) return null;
+  if (!botRetryNotices.has(notice) || isEdgeRuntime()) return null;
   return (
     <a className="button secondary bot-signin-link" href="/auth/twitch/bot">
       Sign in as the bot account <ArrowUpRight size={16} />
     </a>
   );
+}
+export function EdgeBotSignInButton({ phase }: { phase: Phase }) {
+  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  if (!canAuthorizeEdgeBot()) return null;
+  const running = ['active', 'paused', 'settling'].includes(phase);
+  return <div className="connection-buttons">
+    <Button className="primary" disabled={busy || running} onClick={() => {
+      setBusy(true); setError('');
+      void authorizeEdgeBot().then((url) => location.assign(url)).catch(() => {
+        setBusy(false); setError('The bot sign-in could not start. Try again.');
+      });
+    }}>{busy ? 'Opening Twitch…' : 'Connect the bot account'} <ArrowUpRight size={16} /></Button>
+    <p className="muted">{running ? 'Finish the round before connecting the bot.' : 'Sign in as Baity on Twitch. Your streamer account stays connected.'}</p>
+    {error && <p role="alert">{error}</p>}
+  </div>;
 }
 /**
  * Allowing the bot is a Twitch round trip that replaces the studio session. A running round would
@@ -53,7 +69,7 @@ export function AllowBotButton({ phase }: { phase: Phase }) {
         className="primary"
         disabled={running}
         aria-describedby={running ? 'allow-bot-wait' : undefined}
-        onClick={() => location.assign('/auth/twitch?bot=1')}
+        onClick={() => location.assign(isEdgeRuntime() ? '/auth/twitch' : '/auth/twitch?bot=1')}
       >
         Allow the bot in your chat <ArrowUpRight size={16} />
       </Button>
@@ -156,7 +172,7 @@ export function HowTo() {
         [
           '01',
           'Chat gets the word.',
-          'Share the viewer link. The studio and OBS keep the word hidden.',
+          isEdgeRuntime() ? 'Viewers open the Baited Extension on Twitch. Studio and OBS keep the word hidden.' : 'Share the viewer link. The studio and OBS keep the word hidden.',
           Eye,
         ],
         [

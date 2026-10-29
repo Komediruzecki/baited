@@ -16,6 +16,19 @@ body[data-surface='overlay'] {
   overflow: hidden;
   background: transparent;
 }
+.connection-notice {
+  position: fixed;
+  right: 12px;
+  bottom: 56px;
+  width: min(280px, calc(100vw - 24px));
+  padding: 12px;
+  border: 1px solid var(--b-edge-lit);
+  border-radius: 8px;
+  background: #1a1522;
+  color: var(--b-paper);
+  font-size: 13px;
+}
+.connection-notice button { display: block; margin-top: 8px; }
 .table {
   position: fixed;
   inset: 0;

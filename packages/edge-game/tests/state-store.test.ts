@@ -64,6 +64,24 @@ function restored(store: RoomStore, f: ReturnType<typeof fixture>) {
 }
 
 function plain(state: GameCheckpoint) { return JSON.parse(JSON.stringify(state)); }
+const listItem = (name: string, id: string) => JSON.stringify(['list-item', name, id]);
+const listOrder = (name: string) => JSON.stringify(['list-order', name]);
+
+/** The indexed record layout written before stable list IDs were introduced. */
+function legacyPartition(state: GameCheckpoint) {
+  const records = partition(state);
+  for (const name of ['history', 'hints', 'reviewHints']) {
+    const orderText = records.get(listOrder(name));
+    if (!orderText) continue;
+    const order = JSON.parse(orderText) as string[];
+    order.forEach((id, index) => {
+      records.set(JSON.stringify([name, String(index)]), records.get(listItem(name, id))!);
+      records.delete(listItem(name, id));
+    });
+    records.delete(listOrder(name));
+  }
+  return records;
+}
 
 test('partition/assemble retains active immutable card metadata, private hints, dedupe and map/set state', () => {
   const f = fixture();
@@ -146,7 +164,7 @@ test('ordinary chat writes only changed participant, hint, throttle and dedupe r
   h.calls.length = 0;
   f.chat('second', 'user:b'); save(h, store, f.game, 2);
   assert.deepEqual(h.stateWrites().sort(), [
-    JSON.stringify(['chatIds', 'second']), JSON.stringify(['hints', '1']),
+    JSON.stringify(['chatIds', 'second']), listItem('hints', f.game.round!.hints[1].id), listOrder('hints'),
     JSON.stringify(['participants', 'user:b']), JSON.stringify(['recentChat', 'user:b']),
   ].sort());
   assert.equal(h.stateWrites().includes('base'), false, 'clean chat must not rewrite the room base');
@@ -165,11 +183,73 @@ test('false-return spoiler mutation writes its bounded evidence and survives SQL
   f.game.begin(); save(h, store, f.game, 1); h.calls.length = 0;
   assert.equal(f.chat('spoiler', 'user:a', f.game.round!.word), false);
   save(h, store, f.game, 2);
-  assert.deepEqual(h.stateWrites().sort(), ['base', JSON.stringify(['chatIds', 'spoiler']), JSON.stringify(['hints', '0'])].sort());
+  assert.deepEqual(h.stateWrites().sort(), ['base', JSON.stringify(['chatIds', 'spoiler']),
+    listItem('hints', f.game.round!.hints[0].id), listOrder('hints')].sort());
   const game = restored(new RoomStore(h.sql), f);
   assert.equal(game.round!.violations, 1);
   assert.equal(game.round!.hints[0].eligible, false);
   assert.equal(game.round!.participants.size, 0);
+});
+
+test('a saturated 60-hint list writes only the new hint, evicted hint and bounded order', (t) => {
+  const h = storage(); t.after(() => h.db.close()); const store = new RoomStore(h.sql); const f = fixture();
+  f.game.begin();
+  for (let n = 0; n < 40; n++) f.chat(`valid:${n}`, `valid-user:${n}`);
+  for (let n = 0; n < 20; n++) f.chat(`spoiled:${n}`, `spoiled-user:${n}`, f.game.round!.word);
+  assert.equal(f.game.round!.hints.length, 60);
+  save(h, store, f.game, 1);
+  const removed = f.game.round!.hints[0].id;
+  const retained = f.game.round!.hints.slice(1).map((hint) => hint.id);
+  h.calls.length = 0;
+  f.chat('newest', 'new-user'); save(h, store, f.game, 2);
+  const added = f.game.round!.hints.at(-1)!.id;
+  assert.equal(f.game.round!.hints.length, 60);
+  assert.deepEqual(h.stateWrites().filter((key) => key.includes('list-')).sort(), [
+    listItem('hints', removed), listItem('hints', added), listOrder('hints'),
+  ].sort());
+  for (const id of retained) assert.equal(h.stateWrites().includes(listItem('hints', id)), false);
+  assert.deepEqual(plain(restored(new RoomStore(h.sql), f).checkpoint()), plain(f.game.checkpoint()));
+});
+
+test('a new history result does not rewrite retained history rows when their display order shifts', (t) => {
+  const h = storage(); t.after(() => h.db.close()); const store = new RoomStore(h.sql); const f = fixture();
+  f.game.begin(); f.game.end('ended'); save(h, store, f.game, 1);
+  const retained = f.game.data.history[0].id;
+  f.add(10000); f.game.tick(); f.game.start(); h.calls.length = 0;
+  f.game.end('ended'); save(h, store, f.game, 2);
+  const added = f.game.data.history[0].id;
+  assert.notEqual(added, retained);
+  assert.deepEqual(h.stateWrites().filter((key) => key.includes('history')).sort(), [
+    listItem('history', added), listOrder('history'),
+  ].sort());
+  assert.deepEqual(plain(restored(new RoomStore(h.sql), f).checkpoint()), plain(f.game.checkpoint()));
+});
+
+test('indexed v1 lists load unchanged and migrate atomically on the next successful save', (t) => {
+  const h = storage(); t.after(() => h.db.close()); new RoomStore(h.sql); const f = fixture();
+  f.game.begin(); f.chat('hint', 'user:a'); f.game.transcript(f.transcript());
+  const before = plain(f.game.checkpoint());
+  const legacy = legacyPartition(f.game.checkpoint());
+  h.transaction(() => {
+    for (const [key, value] of legacy) h.sql.exec('INSERT INTO state_part(key,value) VALUES(?,?)', key, value);
+    h.sql.exec('INSERT INTO meta(id,channel,revision,generation) VALUES(1,?,?,?)', '123', 1, 1);
+  });
+  const store = new RoomStore(h.sql);
+  const game = restored(store, f);
+  assert.deepEqual(plain(game.checkpoint()), before);
+  assert.equal(game.result, game.data.history[0]);
+  h.inject((query, bindings) => query.startsWith('INSERT INTO state_part') && bindings[0] === listOrder('history'));
+  assert.throws(() => save(h, store, game, 2), /injected SQL failure/);
+  h.inject();
+  assert.deepEqual(plain(restored(new RoomStore(h.sql), f).checkpoint()), before);
+  assert.deepEqual(plain(restored(store, f).checkpoint()), before);
+  save(h, store, game, 2);
+  const keys = h.db.prepare('SELECT key FROM state_part').all().map((row) => row.key);
+  for (const name of ['history', 'hints', 'reviewHints']) {
+    assert.ok(keys.includes(listOrder(name)));
+    assert.equal(keys.some((key) => (key as string).startsWith(`["${name}",`)), false);
+  }
+  assert.deepEqual(plain(restored(new RoomStore(h.sql), f).checkpoint()), before);
 });
 
 test('state byte and row limits reject before any SQL mutation or cache publication', (t) => {
@@ -248,9 +328,28 @@ test('malformed records fail closed and hostile leader keys cannot mutate an obj
     const invalid = new Map(records); invalid.set(key, JSON.stringify({ name: 'bad', rounds: 1 }));
     assert.throws(() => assemble(invalid), /invalid_record/);
   }
-  const gap = new Map(records); gap.delete(JSON.stringify(['hints', '0'])); gap.set(JSON.stringify(['hints', '1']), JSON.stringify(f.game.round!.hints[0]));
+  const gap = legacyPartition(f.game.checkpoint()); gap.delete(JSON.stringify(['hints', '0'])); gap.set(JSON.stringify(['hints', '1']), JSON.stringify(f.game.round!.hints[0]));
   assert.throws(() => assemble(gap), /invalid_record/);
   const hostile = new Map(records); hostile.set(JSON.stringify(['leaders', '__proto__']), JSON.stringify({ name: 'bad', rounds: 1 }));
   assert.throws(() => Game.restore(assemble(hostile)));
   assert.equal(Object.prototype.hasOwnProperty.call(Object.prototype, 'name'), false);
+});
+
+test('stable list records reject missing, duplicate, mismatched, mixed and orphaned ordering', () => {
+  const f = fixture(); f.game.begin(); f.chat('hint', 'user:a');
+  const original = partition(f.game.checkpoint()), id = f.game.round!.hints[0].id;
+  const mutations = [
+    (records: Map<string, string>) => records.delete(listOrder('hints')),
+    (records: Map<string, string>) => records.delete(listItem('hints', id)),
+    (records: Map<string, string>) => records.set(listOrder('hints'), JSON.stringify([id, id])),
+    (records: Map<string, string>) => records.set(listOrder('hints'), JSON.stringify(['unknown'])),
+    (records: Map<string, string>) => records.set(listItem('hints', 'wrong-id'), records.get(listItem('hints', id))!),
+    (records: Map<string, string>) => records.set(JSON.stringify(['hints', '0']), records.get(listItem('hints', id))!),
+    (records: Map<string, string>) => records.set(listOrder('reviewHints'), '[]'),
+    (records: Map<string, string>) => records.set(listOrder('hints'), JSON.stringify(Array.from({ length: 61 }, (_, n) => `id:${n}`))),
+  ];
+  for (const mutate of mutations) {
+    const records = new Map(original); mutate(records);
+    assert.throws(() => assemble(records), /invalid_record|orphan_record/);
+  }
 });

@@ -240,3 +240,12 @@ test('failure response never returns tokens or keys', async () => {
   assert.equal(body.includes(fixtureKey), false);
   assert.equal(body.includes('opaque_user_id'), false);
 });
+
+
+test('pilot signing key cannot be reused by Twitch, staging or fixture identities', async () => {
+  rejected(await authenticate(request(jwt(extension())), { EDGE_PILOT_SECRET_B64: twitchKey }));
+  rejected(await authenticate(request(jwt(staging(), stagingKey)), { EDGE_PILOT_SECRET_B64: stagingKey }));
+  rejected(await authenticate(request(jwt(fixture(), fixtureKey), {url:`${localOrigin}/v1/rooms/123/state`,origin:localOrigin}), { EDGE_PILOT_SECRET_B64: fixtureKey }));
+  const claims={iss:'baited-edge-pilot',aud:'baited-edge',channel_id:'123',sid:'pilot-session',sub:'pilot-user',role:'studio',iat:seconds,exp:seconds+300};
+  rejected(await authenticate(request(jwt(claims)), {EDGE_PILOT_ENABLED:'true',EDGE_PILOT_SECRET_B64:twitchKey}));
+});

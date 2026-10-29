@@ -1,17 +1,31 @@
 import type { GameCheckpoint } from '@baited/game-core';
 import { LIMITS } from './protocol.js';
 
+const listLimits = new Map([['history', 100], ['hints', 60], ['reviewHints', 60]]);
+
 // Split hot collections into individual records. A chat event never rewrites every
-// channel or its entire participant/leaderboard map. The single-room base is bounded.
+// channel or its entire participant/leaderboard map. Lists use stable IDs plus a
+// bounded order record, so evicting their oldest entry does not rewrite the rest.
 export function partition(state: GameCheckpoint): Map<string, string> {
   const copy = structuredClone(state) as unknown as Record<string, any>;
   const records = new Map<string, string>();
   const take = (name: string, owner: Record<string, any>, field: string, kind: 'map' | 'set' | 'object' | 'list') => {
     const value = owner[field];
+    if (kind === 'list') {
+      if (!Array.isArray(value) || value.length > (listLimits.get(name) ?? 0)) throw new Error('invalid_record');
+      const order: string[] = [];
+      for (const item of value) {
+        if (!item || typeof item.id !== 'string' || order.includes(item.id)) throw new Error('invalid_record');
+        order.push(item.id);
+        records.set(JSON.stringify(['list-item', name, item.id]), JSON.stringify(item));
+      }
+      records.set(JSON.stringify(['list-order', name]), JSON.stringify(order));
+      owner[field] = [];
+      return;
+    }
     const entries: [string, unknown][] = kind === 'map' ? value
       : kind === 'set' ? value.map((key: string) => [key, true])
-      : kind === 'object' ? Object.entries(value)
-      : value.map((item: unknown, index: number) => [String(index), item]);
+      : Object.entries(value);
     for (const [key, item] of entries) records.set(JSON.stringify([name, key]), JSON.stringify(item));
     owner[field] = kind === 'object' ? {} : [];
   };
@@ -36,12 +50,35 @@ export function assemble(records: ReadonlyMap<string, string>): unknown {
   const state = JSON.parse(base);
   // Object.create(null) avoids user-controlled identity keys mutating prototypes.
   state.data.leaders = Object.create(null);
-  const lists = new Map<string, [number, unknown][]>();
+  const legacyLists = new Map<string, [number, unknown][]>();
+  const listItems = new Map<string, Map<string, unknown>>();
+  const listOrders = new Map<string, string[]>();
   for (const [key, value] of records) {
     if (key === 'base') continue;
     const decoded: unknown = JSON.parse(key);
-    if (!Array.isArray(decoded) || decoded.length !== 2 || decoded.some((value) => typeof value !== 'string'))
+    if (!Array.isArray(decoded) || decoded.some((value) => typeof value !== 'string'))
       throw new Error('invalid_record');
+    if (decoded[0] === 'list-item') {
+      const [, name, id] = decoded;
+      if (decoded.length !== 3 || !listLimits.has(name)) throw new Error('invalid_record');
+      const item = JSON.parse(value);
+      if (!item || typeof item !== 'object' || Array.isArray(item) || item.id !== id) throw new Error('invalid_record');
+      const items = listItems.get(name) ?? new Map<string, unknown>();
+      items.set(id, item);
+      if (items.size > listLimits.get(name)!) throw new Error('invalid_record');
+      listItems.set(name, items);
+      continue;
+    }
+    if (decoded[0] === 'list-order') {
+      const [, name] = decoded;
+      const order: unknown = JSON.parse(value);
+      if (decoded.length !== 2 || !listLimits.has(name) || !Array.isArray(order) ||
+          order.length > listLimits.get(name)! || order.some((id) => typeof id !== 'string') ||
+          new Set(order).size !== order.length) throw new Error('invalid_record');
+      listOrders.set(name, order);
+      continue;
+    }
+    if (decoded.length !== 2) throw new Error('invalid_record');
     const [name, id] = decoded as [string, string]; const item = JSON.parse(value);
     if (name === 'leaders') {
       if (['__proto__', 'constructor', 'prototype'].includes(id)) throw new Error('invalid_record');
@@ -51,15 +88,28 @@ export function assemble(records: ReadonlyMap<string, string>): unknown {
     else if (name === 'chatIds') state.chatIds.push(id);
     else if (name === 'participants' && state.round) state.round.participants.push([id, item]);
     else if ((name === 'votes' || name === 'seen') && state.round) state.round[name].push(id);
-    else if (['history', 'hints', 'reviewHints'].includes(name)) {
+    else if (listLimits.has(name)) {
       if (!/^\d+$/.test(id)) throw new Error('invalid_record');
-      const list = lists.get(name) ?? []; list.push([Number(id), item]); lists.set(name, list);
+      const list = legacyLists.get(name) ?? []; list.push([Number(id), item]);
+      if (list.length > listLimits.get(name)!) throw new Error('invalid_record');
+      legacyLists.set(name, list);
     } else throw new Error('unknown_record');
   }
-  for (const [name, list] of lists) {
-    list.sort((a, b) => a[0] - b[0]);
-    if (list.some(([index], i) => index !== i)) throw new Error('invalid_record');
-    const values = list.map(([, value]) => value);
+  for (const name of new Set([...legacyLists.keys(), ...listOrders.keys(), ...listItems.keys()])) {
+    const legacy = legacyLists.get(name), order = listOrders.get(name), items = listItems.get(name);
+    let values: unknown[];
+    if (legacy) {
+      // Existing indexed checkpoints are read without mutation; the next atomic
+      // save replaces them. Mixed formats indicate an incomplete/corrupt save.
+      if (order || items) throw new Error('invalid_record');
+      legacy.sort((a, b) => a[0] - b[0]);
+      if (legacy.some(([index], i) => index !== i)) throw new Error('invalid_record');
+      values = legacy.map(([, value]) => value);
+    } else {
+      if (!order || order.length !== (items?.size ?? 0) || order.some((id) => !items?.has(id)))
+        throw new Error('invalid_record');
+      values = order.map((id) => items!.get(id));
+    }
     if (name === 'history') state.data.history = values;
     else if (name === 'hints' && state.round) state.round.hints = values;
     else if (name === 'reviewHints' && state.review) state.review.candidates = values;

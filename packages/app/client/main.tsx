@@ -41,7 +41,7 @@ import type {
   ChatBotPost,
   ChatBotStatus,
 } from '../shared/types';
-import { request } from './api';
+import { request, isEdgeRuntime, subscribeEdge } from './api';
 import { Microphone } from './microphone';
 import { SpeechLab } from './SpeechLab';
 import { CardArt } from './CardArt';
@@ -64,6 +64,7 @@ import {
   botNotices,
   AllowBotButton,
   BotSignInLink,
+  EdgeBotSignInButton,
   Button,
   Tag,
   CopyButton,
@@ -155,6 +156,7 @@ function useLive<T>(url: string, onState: (s: T) => void, onError: (s: boolean) 
   stateRef.current = onState;
   errorRef.current = onError;
   useEffect(() => {
+    if (isEdgeRuntime()) return subscribeEdge<T>(url, (state) => stateRef.current(state), (lost) => errorRef.current(lost));
     const source = new EventSource(url);
     source.addEventListener('state', (e) => {
       stateRef.current(JSON.parse((e as MessageEvent).data));
@@ -173,7 +175,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [modal, setModal] = useState(''),
-    [tab, setTab] = useState<string>(() => studioTabFromPath(location.pathname)),
+    [tab, setTab] = useState<string>(() => isEdgeRuntime() ? 'studio' : studioTabFromPath(location.pathname)),
     // The operator may finish the bot account sign-in while signed in here as a streamer.
     [notice, setNotice] = useState(() => {
       const code = new URLSearchParams(location.search).get('notice') ?? '';
@@ -433,7 +435,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             ['community', 'Community', Users],
             ['cards', 'Cards', Card],
             ['setup', 'Stream setup', Monitor],
-          ].map(([id, label, Icon]) => {
+          ].filter(([id]) => !isEdgeRuntime() || id !== 'cards').map(([id, label, Icon]) => {
             const I = Icon as typeof Monitor;
             return (
               <button
@@ -935,21 +937,21 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   <section className="panel viewer-share">
                     <div className="section-heading">
                       <div>
-                        <h3>Viewer link</h3>
+                        <h3>{isEdgeRuntime() ? 'Your Twitch channel' : 'Viewer link'}</h3>
                       </div>
                       <Link2 size={21} />
                     </div>
-                    <p>Viewers see the secret word here.</p>
+                    <p>{isEdgeRuntime() ? 'Viewers see the secret word in the Baited Extension.' : 'Viewers see the secret word here.'}</p>
                     <div className="link-field">
-                      <input aria-label="Viewer room link" readOnly value={studio.viewerUrl} />
+                      <input aria-label={isEdgeRuntime() ? 'Twitch channel link' : 'Viewer room link'} readOnly value={studio.viewerUrl} />
                       <CopyButton value={studio.viewerUrl} />
                     </div>
                     <div className="share-footer">
                       <span>
-                        <Users size={13} /> No viewer account needed
+                        <Users size={13} /> {isEdgeRuntime() ? 'Open the Extension on Twitch' : 'No viewer account needed'}
                       </span>
                       <a href={studio.viewerUrl} target="_blank" rel="noreferrer">
-                        Open viewer room <ArrowUpRight size={14} />
+                        {isEdgeRuntime() ? 'Open channel' : 'Open viewer room'} <ArrowUpRight size={14} />
                       </a>
                     </div>
                   </section>
@@ -988,7 +990,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </>
           )}
           {tab === 'community' && <Community game={g} />}
-          {tab === 'cards' && <React.Suspense fallback={<section className="panel" role="status">Opening your card library…</section>}><CardLibrary csrf={session.csrf!} difficulty={g.settings.difficulty}
+          {tab === 'cards' && !isEdgeRuntime() && <React.Suspense fallback={<section className="panel" role="status">Opening your card library…</section>}><CardLibrary csrf={session.csrf!} difficulty={g.settings.difficulty}
             offline={offline} pronunciationDisabled={consent || micStatus !== 'off' || active || paused || settling || !!pendingCatch}
             onDirtyChange={setCardsDirty} onBusyChange={setCardsBusy} onDeckChange={refreshDeck} /></React.Suspense>}
           {tab === 'setup' && (
@@ -1009,9 +1011,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           >
             <h2 id="studio-sound-title">Round sounds</h2>
             <SoundControls roomId={g.id} game={g} offline={offline} />
-            <a href="/card-design-lab">
+            {!isEdgeRuntime() && <a href="/card-design-lab">
               Browse card editions <ArrowUpRight size={14} />
-            </a>
+            </a>}
           </section>
           <footer className="studio-footer">
             <span className="footer-brand">
@@ -1194,7 +1196,9 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
 }
 function chatBotHint(bot: ChatBotStatus) {
   const what =
-    'Baity posts round starts, halfway, the last 10 seconds and results, and gets louder every round chat loses. Never the word while a round is live.';
+    isEdgeRuntime()
+      ? 'Baity posts round starts, results and game events. Never the word while a round is live.'
+      : 'Baity posts round starts, halfway, the last 10 seconds and results, and gets louder every round chat loses. Never the word while a round is live.';
   if (bot.mode === 'demo') return `${what} In this demo, posts appear under Demo controls.`;
   if (bot.mode === 'unconfigured') return `${what} This server has no bot account yet, so nothing is posted.`;
   if (bot.mode === 'unauthorized')
@@ -1687,19 +1691,20 @@ function Setup({
                 <h2>Bring chat into the game</h2>
               </div>
               <p className="muted">
-                Share this standalone viewer-room link in Twitch chat or a channel panel. Viewers
-                keep it beside the stream to see their secret word.
+                {isEdgeRuntime()
+                  ? 'Viewers open the Baited Extension on your Twitch channel to see the secret card. The broadcaster gets the hidden side.'
+                  : 'Share this standalone viewer-room link in Twitch chat or a channel panel. Viewers keep it beside the stream to see their secret word.'}
               </p>
               <div className="link-field">
-                <input aria-label="Viewer room URL" value={studio.viewerUrl} readOnly />
+                <input aria-label={isEdgeRuntime() ? 'Twitch channel URL' : 'Viewer room URL'} value={studio.viewerUrl} readOnly />
                 <CopyButton value={studio.viewerUrl} />
               </div>
               <a className="inline-link" href={studio.viewerUrl} target="_blank" rel="noreferrer">
-                Open the viewer room <ArrowUpRight size={15} />
+                {isEdgeRuntime() ? 'Open your Twitch channel' : 'Open the viewer room'} <ArrowUpRight size={15} />
               </a>
               <div className="notice">
                 <Eye size={18} />
-                <p>This link reveals the word. Keep it closed while you play.</p>
+                <p>{isEdgeRuntime() ? 'Twitch identifies each viewer. Your broadcaster account keeps the secret card hidden.' : 'This link reveals the word. Keep it closed while you play.'}</p>
               </div>
             </div>
           </section>
@@ -1713,14 +1718,14 @@ function Setup({
         <div>
           <h3>Your game data</h3>
           <p className="muted">
-            baited stores settings, scores, participation and award counts. Recent chat hints stay
-            in memory for award review, then clear ten minutes after the round. Chat text, audio and
-            transcripts are never written to disk.
+            {isEdgeRuntime()
+              ? 'Audio stays in your browser. Round state, scores and selected chat clues are stored on the server. Award clues expire after the review window. Contact hello@irchiinnuss.com to remove your pilot data.'
+              : 'baited stores settings, scores, participation and award counts. Recent chat hints stay in memory for award review, then clear ten minutes after the round. Chat text, audio and transcripts are never written to disk.'}
           </p>
         </div>
-        <Button className="danger-outline" onClick={onDelete}>
+        {!isEdgeRuntime() && <Button className="danger-outline" onClick={onDelete}>
           <Trash2 size={16} /> Delete my data
-        </Button>
+        </Button>}
       </section>
     </div>
   );
@@ -1793,6 +1798,7 @@ function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
         {game.mode === 'twitch' && bot.mode === 'twitch' && !bot.channelAllowed && (
           <AllowBotButton phase={game.phase} />
         )}
+        {isEdgeRuntime() && bot.mode === 'unauthorized' && <EdgeBotSignInButton phase={game.phase} />}
         <p className="setup-commands">
           Chat can type <code>!bait help</code>, <code>!bait score</code>, <code>!bait top</code> and{' '}
           <code>!bait who</code>.
@@ -1979,6 +1985,23 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
 }
 
 function Privacy() {
+  if (isEdgeRuntime()) return (
+    <div className="viewer-page">
+      <header className="viewer-header"><a className="brand" href="/">{brand}</a><a className="text-button" href="/">Back to baited <ArrowUpRight size={16} /></a></header>
+      <main className="privacy-copy">
+        <h1>Pilot privacy</h1>
+        <p>Baited is testing a small game for invited Twitch channels. Contact <a href="mailto:hello@irchiinnuss.com">hello@irchiinnuss.com</a> with a privacy question or deletion request.</p>
+        <h2>Your microphone</h2>
+        <p>Microphone access is optional. Moonshine recognizes speech in your browser. Audio stays on your device. Final text, word timing and timing counters reach the game server so it can check a possible catch. The streamer confirms each catch.</p>
+        <h2>Your game and chat</h2>
+        <p>The server stores round state, settings, scores and participation. A limited set of recent chat clues is kept for award review and expires after that review window. Twitch delivers channel chat to the game after the streamer connects their account.</p>
+        <h2>Who sees the card</h2>
+        <p>Twitch identifies Extension viewers. The broadcaster and OBS receive a hidden card during the round; viewers receive the secret word. OBS links are private, read-only capabilities. Do not share one outside your streaming setup.</p>
+        <h2>Sign-in and removal</h2>
+        <p>Studio uses an essential session cookie. Twitch authorization is encrypted on the server. Baited adds no advertising cookies. You can sign out, revoke Baited in Twitch settings, or contact the address above to remove your pilot data.</p>
+      </main>
+    </div>
+  );
   return (
     <div className="viewer-page">
       <header className="viewer-header">
@@ -2082,12 +2105,14 @@ function App() {
         .catch((e) => setError(e.message));
     }, []);
   useEffect(() => {
-    if (!['play', 'overlay', 'privacy', 'speech-lab'].includes(path[0])) reload();
+    if (path[0] !== 'speech-lab') reload();
   }, [reload]);
-  if (path[0] === 'privacy') return <Privacy />;
+  if (path[0] === 'privacy' && session) return <Privacy />;
   if (path[0] === 'speech-lab') return <SpeechLab />;
   if (path[0] === 'about' && session) return <Landing session={session} reload={reload} />;
-  if (['play', 'overlay'].includes(path[0]) && path[1])
+  if (session && isEdgeRuntime() && path[0] === 'play')
+    return <main className="public-error"><h1>Join the game on Twitch.</h1><p>Open the Baited panel or player Extension on the streamer’s channel to see your card.</p><p>The pilot keeps secret cards inside Twitch, where the streamer and viewers have separate views.</p><a href="https://www.twitch.tv">Open Twitch</a></main>;
+  if (session && ['play', 'overlay'].includes(path[0]) && path[1])
     return <PublicRoom id={path[1]} overlay={path[0] === 'overlay'} />;
   if (error)
     return (

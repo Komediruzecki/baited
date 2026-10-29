@@ -1,0 +1,254 @@
+import type { AwardBoard, GameView, Studio } from '../shared/types';
+
+export interface EdgeBootstrap {
+  channelId: string;
+  token: string;
+  tokenExpiresAt: number;
+  csrf?: string;
+  overlayUrl?: string;
+  viewerUrl?: string;
+  user?: { id: string; login: string; name: string };
+  bot?: { configured: boolean; authorized: boolean; channelAllowed: boolean; name?: string; canAuthorize?: boolean };
+}
+export interface EdgeSnapshot {
+  type: 'snapshot'; protocol: 1; revision: number; generation: number;
+  room: GameView | null; awardBoard?: AwardBoard | null;
+}
+type Listener = { state: (snapshot: EdgeSnapshot) => void; error: (lost: boolean) => void };
+export interface SpeechSocket {
+  readyState: number; bufferedAmount: number;
+  onmessage: ((event: { data: string }) => void) | null;
+  onerror: (() => void) | null;
+  onclose: ((event: { code: number; reason: string }) => void) | null;
+  send(value: string | ArrayBuffer): void;
+  close(): void;
+}
+type Options = {
+  origin: string;
+  bootstrap: () => Promise<EdgeBootstrap>;
+  fetch?: typeof fetch;
+  socket?: (url: string, protocols: string[]) => WebSocket;
+};
+const messages: Record<string, string> = {
+  stale_revision: 'The round changed before that action arrived. Check its state and try again.',
+  action_unavailable: 'That action is not available in this round.',
+  room_busy: 'The game is busy. Try again in a moment.',
+  microphone_required: 'Enable your microphone before starting the round.',
+  pilot_full: 'All pilot places are in use. Try again when a game finishes.',
+  rate_limited: 'Too many actions arrived together. Wait a moment and try again.',
+};
+const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+export function readEdgeBootstrap(value: unknown): EdgeBootstrap {
+  if (!record(value) || typeof value.channelId !== 'string' || !/^[1-9][0-9]{0,24}$/.test(value.channelId) ||
+      typeof value.token !== 'string' || value.token.length > 4096 || !/^[A-Za-z0-9_.-]+$/.test(value.token) ||
+      typeof value.tokenExpiresAt !== 'number' || !Number.isFinite(value.tokenExpiresAt) || value.tokenExpiresAt <= Date.now())
+    throw new Error('Your session needs a fresh sign-in. Reload Studio to continue.');
+  return value as unknown as EdgeBootstrap;
+}
+export function readEdgeSnapshot(value: unknown): EdgeSnapshot {
+  if (!record(value) || value.type !== 'snapshot' || value.protocol !== 1 ||
+      !Number.isSafeInteger(value.revision) || (value.revision as number) < 0 ||
+      !Number.isSafeInteger(value.generation) || (value.generation as number) < 1 ||
+      !(value.room === null || (record(value.room) && typeof value.room.serverTime === 'number' &&
+        typeof value.room.phase === 'string' && record(value.room.score) && record(value.room.settings))))
+    throw new Error('The round could not be read. Reconnect to continue.');
+  return value as unknown as EdgeSnapshot;
+}
+
+/** A single room connection owns snapshots, microphone frames and short-lived auth. */
+export class EdgeRoomTransport {
+  private credentials: EdgeBootstrap | undefined;
+  private socket: WebSocket | undefined;
+  private snapshot: EdgeSnapshot | undefined;
+  private listeners = new Set<Listener>();
+  private speech: { socket: SpeechSocket; leaseId: string; roundId: string; epoch: number } | undefined;
+  private connecting: Promise<void> | undefined;
+  private renewTimer: ReturnType<typeof setTimeout> | undefined;
+  private retryTimer: ReturnType<typeof setTimeout> | undefined;
+  private connectTimer: ReturnType<typeof setTimeout> | undefined;
+  private refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  private pendingCredentials: EdgeBootstrap | undefined;
+  private failures = 0;
+  private stopped = false;
+  private operations: Promise<unknown> = Promise.resolve();
+  private fetch: typeof fetch;
+  constructor(private options: Options) { this.fetch = options.fetch ?? globalThis.fetch.bind(globalThis); }
+  get bootstrap() { return this.credentials; }
+  get current() { return this.snapshot; }
+  get connected() { return this.socket?.readyState === 1 && !!this.snapshot && !!this.credentials && this.credentials.tokenExpiresAt > Date.now(); }
+  private report(lost: boolean) { for (const listener of this.listeners) listener.error(lost); }
+  private accept(snapshot: EdgeSnapshot) {
+    if (this.snapshot?.generation === snapshot.generation && snapshot.revision < this.snapshot.revision) return;
+    if (this.snapshot && this.snapshot.generation !== snapshot.generation)
+      this.stopSpeech('The game session changed. Enable the microphone again.');
+    this.snapshot = snapshot;
+    for (const listener of this.listeners) listener.state(snapshot);
+    this.report(this.socket?.readyState !== 1);
+  }
+  subscribe(state: Listener['state'], error: Listener['error']) {
+    const listener = { state, error }; this.listeners.add(listener);
+    if (this.snapshot && this.connected) state(this.snapshot);
+    void this.ensure().catch(() => error(true));
+    return () => { this.listeners.delete(listener); };
+  }
+  async ensure() {
+    if (this.stopped) throw new Error('The connection has closed. Reload to reconnect.');
+    if (this.connected) return;
+    if (this.connecting) return this.connecting;
+    this.connecting = this.open().finally(() => { this.connecting = undefined; });
+    return this.connecting;
+  }
+  private async open() {
+    clearTimeout(this.retryTimer);
+    const credentials = readEdgeBootstrap(await this.options.bootstrap());
+    if (this.stopped) return;
+    if (this.credentials && this.credentials.channelId !== credentials.channelId) throw new Error('The signed-in channel changed. Reload Studio.');
+    this.credentials = credentials;
+    this.snapshot = undefined;
+    const url = new URL(`/v1/rooms/${credentials.channelId}/socket`, this.options.origin);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = (this.options.socket ?? ((address, protocols) => new WebSocket(address, protocols)))(url.href,
+      ['baited.v1', `baited.auth.${credentials.token}`]);
+    this.socket = socket;
+    await new Promise<void>((resolve, reject) => {
+      let initialized = false;
+      this.connectTimer = setTimeout(() => { socket.close(4000, 'Connection timed out.'); reject(new Error('The game did not connect. Try again.')); }, 10000);
+      socket.onmessage = (event) => {
+        if (this.socket !== socket || this.stopped) return;
+        try {
+          if (typeof event.data !== 'string' || event.data.length > 262144) throw new Error('Invalid response.');
+          const frame = JSON.parse(event.data);
+          if (frame.type === 'snapshot') {
+            this.accept(readEdgeSnapshot(frame));
+            if (!initialized) { initialized = true; this.failures = 0; clearTimeout(this.connectTimer); this.scheduleRenewal(); resolve(); }
+          } else if (frame.type === 'auth-refreshed' && this.pendingCredentials) {
+            clearTimeout(this.refreshTimer);
+            this.credentials = this.pendingCredentials; this.pendingCredentials = undefined; this.scheduleRenewal();
+          } else if (frame.type === 'speech-error' || frame.type === 'error') this.stopSpeech('The microphone connection was rejected. Enable it again.');
+        } catch { this.stopSpeech('The game connection could not be read. Enable the microphone again.'); socket.close(4000, 'Invalid response.'); }
+      };
+      socket.onerror = () => { if (this.socket === socket) this.report(true); };
+      socket.onclose = () => {
+        if (this.socket !== socket) return;
+        this.socket = undefined;
+        this.snapshot = undefined;
+        clearTimeout(this.connectTimer); clearTimeout(this.renewTimer); clearTimeout(this.refreshTimer);
+        this.pendingCredentials = undefined;
+        this.stopSpeech('The connection ended. Reconnect, then enable your microphone again.');
+        this.report(true);
+        if (!initialized) reject(new Error('This pilot may be full or temporarily unavailable. Try again later.'));
+        if (initialized && !this.stopped && this.listeners.size && this.failures < 5)
+          this.retryTimer = setTimeout(() => { void this.ensure().catch(() => this.report(true)); }, Math.min(15000, 1000 * 2 ** this.failures++));
+      };
+    });
+  }
+  private scheduleRenewal() {
+    clearTimeout(this.renewTimer);
+    if (!this.credentials || this.stopped) return;
+    this.renewTimer = setTimeout(() => { void this.renew(); }, Math.max(1000, Math.min(240000, this.credentials.tokenExpiresAt - Date.now() - 60000)));
+  }
+  private async renew() {
+    const socket = this.socket;
+    try {
+      const credentials = readEdgeBootstrap(await this.options.bootstrap());
+      if (this.stopped || socket !== this.socket) return;
+      if (!socket || socket.readyState !== 1 || credentials.channelId !== this.credentials?.channelId) throw new Error('Session changed.');
+      this.pendingCredentials = credentials;
+      socket.send(JSON.stringify({ type: 'refresh-auth', token: credentials.token }));
+      this.refreshTimer = setTimeout(() => { socket.close(4001, 'Sign-in renewal timed out.'); }, 8000);
+    } catch { socket?.close(4001, 'Sign-in renewal failed.'); }
+  }
+  async state(): Promise<EdgeSnapshot> {
+    await this.ensure();
+    if (!this.snapshot) throw new Error('The round has not connected yet.');
+    return this.snapshot;
+  }
+  /** Read once after a separate control-plane mutation; never used as a poll. */
+  async refresh(): Promise<EdgeSnapshot> {
+    await this.ensure();
+    const credentials = this.credentials!;
+    const response = await this.fetch(new URL(`/v1/rooms/${credentials.channelId}/state`, this.options.origin), {
+      headers: { Authorization: `Bearer ${credentials.token}` }, credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error('The updated connection could not be loaded. Wait for Studio to reconnect.');
+    this.accept(readEdgeSnapshot(await response.json()));
+    return this.snapshot!;
+  }
+  command(action: Record<string, unknown>): Promise<EdgeSnapshot> {
+    const task = this.operations.catch(() => {}).then(async () => {
+      await this.ensure();
+      const credentials = this.credentials!, snapshot = this.snapshot!;
+      const response = await this.fetch(new URL(`/v1/rooms/${credentials.channelId}/commands`, this.options.origin), {
+        method: 'POST', headers: { Authorization: `Bearer ${credentials.token}`, 'content-type': 'application/json' },
+        credentials: 'omit', cache: 'no-store', redirect: 'error',
+        signal: AbortSignal.timeout(10000),
+        body: JSON.stringify({ id: crypto.randomUUID(), generation: snapshot.generation, expectedRevision: snapshot.revision, action }),
+      });
+      const result = await response.json() as { ok?: boolean; code?: string };
+      // A command receipt is not a snapshot. Read once after the mutation, never poll.
+      const fresh = await this.fetch(new URL(`/v1/rooms/${credentials.channelId}/state`, this.options.origin), {
+        headers: { Authorization: `Bearer ${credentials.token}` }, credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      if (fresh.ok) this.accept(readEdgeSnapshot(await fresh.json()));
+      if (!response.ok || !result.ok) throw new Error(messages[result.code ?? ''] ?? 'That action could not be completed. Check the round and try again.');
+      if (!fresh.ok) throw new Error('The action arrived, but its result could not be loaded. Wait for the round to reconnect.');
+      return this.snapshot!;
+    });
+    this.operations = task;
+    return task;
+  }
+  speechSocket(roundId: string, epoch: number, leaseId: string): SpeechSocket {
+    this.stopSpeech();
+    const roomSocket = this.socket;
+    const round = this.snapshot?.room?.round;
+    const bridge: SpeechSocket = {
+      readyState: 0, bufferedAmount: 0, onmessage: null, onerror: null, onclose: null,
+      send: (value) => {
+        if (this.speech?.socket !== bridge || !this.connected || this.socket !== roomSocket || typeof value !== 'string') {
+          this.stopSpeech('The microphone connection changed. Enable it again.'); return;
+        }
+        const frame = JSON.parse(value);
+        if (!['audio', 'final'].includes(frame.type)) { this.stopSpeech('The microphone sent an unsupported message.'); return; }
+        roomSocket!.send(JSON.stringify({ ...frame, type: frame.type === 'audio' ? 'speech-audio' : 'speech-final', leaseId, roundId, epoch }));
+        bridge.bufferedAmount = roomSocket!.bufferedAmount;
+      },
+      close: () => { bridge.readyState = 3; if (this.speech?.socket === bridge) this.speech = undefined; },
+    };
+    this.speech = { socket: bridge, roundId, epoch, leaseId };
+    queueMicrotask(() => {
+      if (this.speech?.socket !== bridge) return;
+      if (!this.connected || round?.id !== roundId || round.epoch !== epoch || this.snapshot?.room?.phase !== 'active') {
+        this.stopSpeech('The round changed before the microphone connected. Enable it again.'); return;
+      }
+      bridge.readyState = 1;
+      bridge.onmessage?.({ data: JSON.stringify({ type: 'status', status: 'listening' }) });
+    });
+    return bridge;
+  }
+  private stopSpeech(message?: string) {
+    const bridge = this.speech?.socket;
+    this.speech = undefined;
+    if (!bridge) return;
+    bridge.readyState = 3;
+    if (message) bridge.onmessage?.({ data: JSON.stringify({ type: 'error', message }) });
+    bridge.onclose?.({ code: message ? 1008 : 1000, reason: message ? 'Connection lost.' : 'round-ended' });
+  }
+  destroy() {
+    this.stopped = true;
+    clearTimeout(this.renewTimer); clearTimeout(this.retryTimer); clearTimeout(this.connectTimer); clearTimeout(this.refreshTimer);
+    this.stopSpeech(); this.listeners.clear();
+    const socket = this.socket; this.socket = undefined; socket?.close(1000, 'Page closed.');
+    this.credentials = undefined; this.pendingCredentials = undefined; this.snapshot = undefined;
+  }
+}
+
+export function edgeStudio(snapshot: EdgeSnapshot, bootstrap: EdgeBootstrap): Studio {
+  if (!snapshot.room) throw new Error('Your channel is not ready yet. Reload Studio to connect.');
+  return {
+    room: snapshot.room, awardBoard: snapshot.awardBoard ?? null,
+    viewerUrl: bootstrap.viewerUrl ?? `https://www.twitch.tv/${bootstrap.user?.login ?? ''}`,
+    overlayUrl: bootstrap.overlayUrl ?? '', speechProvider: 'moonshine', speechReady: true,
+    chatBot: { mode: bootstrap.bot?.authorized ? 'twitch' : bootstrap.bot?.configured ? 'unauthorized' : 'unconfigured',
+      name: bootstrap.bot?.name ?? 'baity_bot', channelAllowed: bootstrap.bot?.channelAllowed ?? false, problem: null, recent: [] },
+  };
+}

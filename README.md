@@ -9,7 +9,7 @@ Start with [Baited setup](packages/app/docs/GETTING_STARTED.md). Moonshine runs 
 | [`packages/app`](packages/app/README.md) | Streamer Studio, standalone viewer, OBS overlay, game server, Moonshine and native Twitch Extension |
 | [`packages/landing`](packages/landing/README.md) | Landing source and assets for the requested `dev.baited.maff.app` and `baited.maff.app` domains |
 | [`packages/game-core`](packages/game-core/README.md) | Shared portable game rules and versioned recovery checkpoints |
-| [`packages/edge-game`](packages/edge-game/README.md) | Local Cloudflare architecture proof; synthetic events only, no cloud deployment |
+| [`packages/edge-game`](packages/edge-game/README.md) | Cloudflare room authority and allowlisted pilot; prepared, not activated |
 | [`packages/review-host`](packages/review-host/README.md) | Small shared helper for preview hosts and indexing policy |
 
 ## Develop
@@ -43,9 +43,9 @@ The built-in game deck has 100 targets: 35 easy, 34 medium and 31 hard. The publ
 
 The development-only [Card Lab](https://dev.baited.maff.app/card-lab/) compares card editions, materials, backs and gameplay states at panel, phone and Studio sizes. It uses synthetic rounds, and review choices stay in that browser without changing the game. The route and its assets are excluded from production. See [the design and test record](packages/app/docs/card-product-review.md) for local previews, the design direction and the checks completed so far.
 
-## Local edge architecture proof
+## Cloudflare pilot preparation
 
-The [edge proof guide](packages/edge-game/README.md) covers the new Worker gateway, per-channel SQLite Durable Object, private role projections, recovery, and R2 artwork reader. Run `pnpm dev:edge:local` for a bounded loopback emulator. This is an isolated synthetic test service; the existing Studio and Twitch Extension still use the current application backend. No Cloudflare resources or public routes are activated. [Future deployment gates](packages/edge-game/DEPLOYMENT.md) explain the remaining integration and approval steps.
+The [edge pilot guide](packages/edge-game/README.md) covers the Worker gateway, per-channel SQLite Durable Object, shared Twitch control, local Moonshine and WebSocket clients. The initial pilot is limited to three invited channels, 100 participants per channel and the built-in deck. No cloud resources or public routes are activated. [Setup and acceptance steps](packages/edge-game/PILOT.md) separate local verification from the first real Twitch test. `pnpm dev:edge:local` retains the earlier bounded synthetic loopback proof.
 
 ## Deployment and access
 

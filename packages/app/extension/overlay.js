@@ -440,21 +440,24 @@ byId('collapse').addEventListener('click', () => {
   writeCollapsed(collapsed);
 });
 
-connectToTwitch({
+const client = connectToTwitch({
   path: '/api/extension/state',
   parse: readState,
   onData: render,
   onStatus(status) {
     connected = status.kind === 'connected';
+    byId('connection-notice').hidden = status.kind !== 'unavailable';
+    byId('connection-notice-copy').textContent = status.kind === 'unavailable' ? status.message : '';
     byId('card').dataset.stale = String(status.kind === 'reconnecting');
     // A fresh Helper JWT can change account or role. Clear before the new response arrives.
-    if (['invalid', 'authorization', 'forbidden', 'connecting'].includes(status.kind)) {
+    if (['invalid', 'authorization', 'forbidden', 'connecting', 'reconnecting', 'unavailable'].includes(status.kind)) {
       current = null;
       hide(true);
     }
     renderClock();
   },
 });
+byId('connection-retry').addEventListener('click', () => client?.refresh());
 
 let tick;
 function startClock() {

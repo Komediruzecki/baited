@@ -88,6 +88,11 @@ export function createLocalOptions({
       ...bindings,
     },
     durableObjects: { ROOMS: { className: 'ChannelRoom', useSQLite: true } },
+    // These emulate provider bindings locally; they do not provision resources.
+    ratelimits: {
+      PILOT_INGRESS_LIMITER: { namespace_id: '2026102901', simple: { limit: 600, period: 60 } },
+      PILOT_OAUTH_LIMITER: { namespace_id: '2026102902', simple: { limit: 10, period: 60 } },
+    },
     r2Buckets: { ART: 'baited-edge-local-art' },
     resourcePersistencePath: persistence || undefined,
     cacheAPI: false,

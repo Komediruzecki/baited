@@ -3,12 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Local-only Cloudflare room authority proof for Baited",
+  "description": "Baited Cloudflare room authority and allowlisted pilot",
   "scripts": {
     "check": "tsc --noEmit",
     "build": "node scripts/build.mjs",
     "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
-    "dev:local": "node scripts/local.mjs"
+    "dev:local": "node scripts/local.mjs",
+    "build:pilot-assets": "node scripts/build-pilot-assets.mjs"
   },
   "dependencies": {
     "@baited/game-core": "workspace:*",
