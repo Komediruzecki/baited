@@ -2,7 +2,7 @@
 
 29 October 2026. Personal Opus 5.5 reviewed a frozen source snapshot with explicit Max effort and a 45-minute bound. The first review completed successfully. The runner records Max as requested, not independently verified effective effort. This is a code review, not a penetration test or provider certification.
 
-The first review found no P0 secret-disclosure or privilege-escalation defect. It gave a conditional staging GO and a real-audience NO-GO until its P1 findings were addressed. The changes below are responses to that review; the follow-up review and final CI are separate gates.
+The first review found no P0 secret-disclosure or privilege-escalation defect. It gave a conditional staging GO and a real-audience NO-GO until its P1 findings were addressed. The changes below are responses to that review. A second completed review verified most repairs, then found a settling-tail speech defect and questioned the 50 ms CPU ceiling. It gave a conditional single-channel GO and held three-channel expansion. Those additional repairs and a final staff-engineer PR review are separate gates.
 
 | Finding | Disposition in the current branch | Evidence / remaining boundary |
 | --- | --- | --- |
@@ -28,3 +28,17 @@ The overlay capability is a bearer credential for the public projection. Treat c
 Local fixtures do not establish real Twitch OAuth/EventSub permissions, Hosted Test upload acceptance, physical iPhone behavior, native OBS compatibility, provider log redaction, account-wide remaining allowances, sustained load capacity or a fixed invoice. Logs are disabled in the prepared config; verify the account's broader logging settings at activation.
 
 No service, route, storage namespace or paid measurement has been activated. The first live acceptance remains one allowlisted channel with known testers, then the other two after success. See [PILOT.md](./PILOT.md).
+
+## Second review: evidence and follow-through
+
+The repair review completed successfully with Opus 5.5 and explicit Max effort. It inspected source, not a live provider. Its snapshot omitted game-core and the later combined Control/Room fixture; the final staff review will include both. Its “no P0 found” statement is a review result, not proof that no such defect exists.
+
+- Settling-tail audio: a sequence of late progress frames could stop advancing the accepted sample count and then reject a final transcript spanning the buzzer. The Room now retains bounded settling sample counts without extending liveness. Multi-frame tail and crossing-transcript tests confirm that pre-buzzer matches count and post-buzzer-only matches do not. Game-core already checked word timing against the round deadline and required no change.
+- CPU limit: Cloudflare confirms `limits.cpu_ms` also applies to Durable Objects. The disabled pilot now allows 1,000 ms instead of 50 ms. This supplies headroom without reserving compute; it is not a measured worst-case requirement.
+- Connection recovery: 31 focused tests verify earlier renewal, bounded retries for temporary failures, hard expiry, request cancellation and same-identity native token refresh. Permanent authorization and capacity refusals still close access. A saturated viewer projection measured 9,104 UTF-8 bytes, comfortably below the enforced 64 KiB frame bound.
+- Queue stalls: viewer refresh admission now runs outside the Room mutation queue with a serialized generation/identity recheck. Control provider operations use short intent/result phases. Tests show that held subscribe, delete, send and token requests do not block signed chat. Disconnect wins over late creation, which is then durably cleaned up.
+- Storage-size hypothesis: the review's possible 128 KiB limit belongs to legacy KV-backed objects. The prepared classes are SQLite-backed, for which key plus value may occupy up to 2 MB. Control now stores atomic, changed-only SQLite records with migration/rollback coverage. A deliberately oversized local fixture round-tripped 7,816,756 bytes in 1,702 records; its largest record was 75,678 bytes. Runtime guards cap one record at 512 KiB, the checkpoint at 16 MiB and record count at 20,000. This tests storage handling, not hosted throughput. [Cloudflare limits](https://developers.cloudflare.com/durable-objects/platform/limits/)
+
+Authorization revocation now clears stored grants and sessions even after explicit chat disconnect. Subscription reconciliation checks at most three pages and never adopts or deletes another callback.
+
+The final personal Opus staff-engineer review of the completed PR remains pending. The first live test must check obsolete EventSub callbacks, speak across the buzzer, refresh Studio mid-round, leave OBS running across several credential renewals and verify explicit/idle subscription removal. No hosted evidence is inferred from these local repairs.

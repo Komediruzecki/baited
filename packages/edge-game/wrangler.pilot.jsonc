@@ -9,7 +9,7 @@
   "preview_urls": false,
   "routes": [],
   "observability": { "enabled": false },
-  "limits": { "cpu_ms": 50 },
+  "limits": { "cpu_ms": 1000 },
   // Approximate per-location thresholds; these are not a global spending cap.
   // Keep namespace IDs distinct from other Workers in this account at activation.
   "ratelimits": [

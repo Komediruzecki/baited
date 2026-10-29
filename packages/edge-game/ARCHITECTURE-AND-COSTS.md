@@ -72,7 +72,7 @@ WebSockets remove repeated “anything changed?” requests. They do not make an
 | Microphone lease renewal | Every 10 seconds while the microphone is enabled; one command POST returns the current Studio snapshot | One Worker request and two DO calls per renewal, plus a lease/receipt commit |
 | Speech progress | 2,048 samples at 16kHz: about 7.8125 metadata frames/second during capture | Incoming Room WS messages; raw audio stays local |
 | Final transcript | When Moonshine completes a line | Room validation and checkpoint; frequency depends on speech |
-| Studio/OBS credential renewal | Approximately every four minutes | Bootstrap HTTP request, WS refresh and Control admission check |
+| Studio/OBS credential renewal | Approximately every three minutes | Bootstrap HTTP request, WS refresh and Control admission check |
 | Countdown display | Every visual tick, locally | No request just to advance the displayed clock |
 
 A lease renewal normally leaves the viewer and OBS projections unchanged. `Room.commit()` compares those projections at the same clock value and stores their delivery revisions; `broadcast()` skips sockets already holding that revision. Studio receives the new state in its command response and room stream, with no follow-up GET. The local real-client integration test checks this transport and suppression of unchanged audience snapshots. A new participant, vote, result or other visible change still triggers audience updates.
@@ -127,17 +127,17 @@ The old delay begins after each response, so its actual steady rate is slightly 
 
 Example for ten channels: 3.6M chat + 30k viewer joins + 216k microphone HTTP requests = 3.846M Worker requests. Each of those HTTP paths touches Control and Room; 16.875M speech-progress frames add 843,750 DO request units.
 
-**Those prices cover selected request meters, not the complete bill.** For ten channels, renewing one Studio and one OBS credential about 15 times/hour adds roughly 18,000 Worker requests and 36,900 DO request units/month; the illustrated request overage remains $1.20. Viewer JWT renewals, other controls, final transcripts, bot events, alarms, retries, page loads, CPU and storage are additional.
+**Those prices cover selected request meters, not the complete bill.** For ten channels, renewing one Studio and one OBS credential about 20 times/hour adds roughly 24,000 Worker requests and 49,200 DO request units/month; the illustrated request overage remains $1.20. Viewer JWT renewals, other controls, final transcripts, bot events, alarms, retries, page loads, CPU and storage are additional.
 
 For scale, allowing another 1,500 Room alarms per microphone-hour would add 900,000 DO requests across ten channels. Allowing one additional expiry alarm per chat event would add another 3.6M. Those deliberately separate sensitivity allowances bring the illustrated DO request overage to **$1.95**, still excluding CPU and storage. They are neither measured alarm rates nor hard upper bounds: deadlines and expiry cleanup can share alarms, and delayed alarms/retries change the count.
 
-Duration remains modest in this scenario even if every room and the shared Control object stay active for all 60 hours:
+If all ten channels play in the same daily two-hour window, duration stays below the inclusion even if every room and the shared Control object remain active for all 60 hours:
 
 `(10 rooms + 1 Control) × 60 × 3,600 × 0.128 = 304,128 GB-s`
 
-That is below the 400,000 inclusion. Holding all eleven objects awake 24/7 for 30 days instead would use 3,649,536 GB-s and add $50 in rounded duration overage. The pilot uses hibernation and disconnects idle chat after the configured Studio inactivity timeout (15 minutes by default); provider subscription deletion is retried until confirmed.
+That is below the 400,000 inclusion. Staggered sessions change the shared Control duration: ten non-overlapping two-hour sessions per day could keep Control active for 600 hours/month. With the same 600 total Room-hours, the deliberately conservative always-awake estimate becomes 552,960 GB-s, or $12.50 rounded duration overage. Actual eligible idle gaps can reduce that; these are duration scenarios, not measured bills. Holding all eleven objects awake 24/7 for 30 days instead would use 3,649,536 GB-s and add $50 in rounded duration overage. The pilot uses hibernation and disconnects idle chat after the configured Studio inactivity timeout (15 minutes by default); provider subscription deletion is retried until confirmed.
 
-Storage is the remaining important uncertainty. At 3.6M chat events, an illustrative five billed row writes/event is 18M writes; twenty is 72M. Those are not measured counts. Stable-ID storage removes unnecessary list shifting, but receipt indexes, deletion, Control inbox processing and checkpoint metadata still count. The pilot's bounded data and existing card assets do not require a large database; a real invoice estimate still needs measured row/CPU counters and remaining account allowances.
+Storage is the remaining important uncertainty. At 3.6M chat events, an illustrative five billed row writes/event is 18M writes; twenty is 72M. Those are not measured counts. Stable-ID Room storage removes unnecessary list shifting, and Control checkpoints write only changed SQLite records. Receipt indexes, deletion, Control inbox processing and checkpoint metadata still count. The pilot's bounded data and existing card assets do not require a large database; a real invoice estimate still needs measured row/CPU counters and remaining account allowances.
 
 ## Baity: a speed limit, not a wallet
 

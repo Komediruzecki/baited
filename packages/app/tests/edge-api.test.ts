@@ -57,3 +57,30 @@ test('edge chat controls use the session CSRF endpoint and bot sign-in verifies 
     else Reflect.deleteProperty(globalThis, 'location');
   }
 });
+
+test('edge bootstrap timeout works without AbortSignal static helpers and clears successful timers', async (t) => {
+  const originalFetch = globalThis.fetch;
+  const descriptors = ['timeout', 'any'].map((name) => [name, Object.getOwnPropertyDescriptor(AbortSignal, name)] as const);
+  const signals: AbortSignal[] = [];
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    for (const [name] of descriptors) Object.defineProperty(AbortSignal, name, { configurable: true, value: undefined });
+    globalThis.fetch = async (_input, init) => { signals.push(init!.signal!); return Response.json({ ok: true }); };
+    assert.deepEqual(await request('/api/edge/overlay', { channelId: '123', key: 'fixture' }), { ok: true });
+    t.mock.timers.tick(20000);
+    assert.equal(signals[0].aborted, false, 'A completed fetch leaves no timeout behind.');
+    globalThis.fetch = async (_input, init) => new Promise((_resolve, reject) => {
+      signals.push(init!.signal!);
+      init!.signal!.addEventListener('abort', () => reject(new DOMException('Timed out', 'AbortError')), { once: true });
+    });
+    const pending = request('/api/edge/overlay', { channelId: '123', key: 'fixture' });
+    const rejected = assert.rejects(pending, { name: 'AbortError' });
+    t.mock.timers.tick(9999); assert.equal(signals[1].aborted, false);
+    t.mock.timers.tick(1); await rejected;
+    assert.equal(signals[1].aborted, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [name, descriptor] of descriptors) if (descriptor) Object.defineProperty(AbortSignal, name, descriptor);
+    t.mock.timers.reset();
+  }
+});

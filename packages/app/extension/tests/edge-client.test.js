@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createEdgeExtensionClient, readRuntimeConfig, readState } from '../client.js';
+import { createEdgeExtensionClient, readRuntimeConfig, readState, EDGE_SNAPSHOT_MAX_BYTES } from '../client.js';
 import { runtimeConfigSource } from '../../scripts/build-extension.mjs';
+import { Game, defaults } from '@baited/game-core';
+import { randomUUID } from 'node:crypto';
 
 class Socket {
   static opened = [];
@@ -12,6 +14,7 @@ class Socket {
 }
 const config = { clientId: 'fixture123', apiBaseUrl: 'https://pilot.example', studioBaseUrl: 'https://pilot.example', transport: 'edge' };
 const auth = (token = 'signed.jwt.token') => ({ clientId: 'fixture123', channelId: '1234', token });
+const identityToken = (opaque, nonce = 1) => `header.${Buffer.from(JSON.stringify({ opaque_user_id: opaque, role: 'viewer', nonce })).toString('base64url')}.signature`;
 const frame = (revision = 1) => ({ type: 'snapshot', protocol: 1, revision, generation: 1, room: {
   channel: 'streamer', phase: 'idle', serverTime: 10000, round: null, result: null,
 } });
@@ -140,5 +143,73 @@ test('anonymous pilot viewers see sign-in guidance without opening a socket, and
     assert.equal(Socket.opened.length, 1);
     Socket.opened[0].receive(frame());
     assert.equal(h.statuses.at(-1).kind, 'connected');
+  } finally { h.client.destroy(); }
+});
+
+test('same-viewer token refresh preserves admission and the existing bounded recovery window', () => {
+  const h = harness();
+  try {
+    h.client.authorize(auth(identityToken('Uviewer'))); Socket.opened[0].receive(frame());
+    h.client.authorize(auth(identityToken('Uviewer', 2)));
+    Socket.opened[1].close(1006, 'A network blip during token refresh');
+    const retry = [...h.timers.entries()][0];
+    assert.equal(retry[1].delay, 1000, 'A refreshed token must not erase a previously admitted connection.');
+    h.advance(300000);
+    h.client.authorize(auth(identityToken('Uviewer', 3)));
+    Socket.opened[2].close(1006, 'Still offline');
+    assert.equal(h.timers.size, 0, 'A fresh token does not restart an exhausted five-minute retry window.');
+    assert.equal(h.statuses.at(-1).kind, 'unavailable');
+  } finally { h.client.destroy(); }
+});
+
+test('a different viewer or channel and a permanent refusal do not inherit old admission', () => {
+  const h = harness();
+  try {
+    h.client.authorize(auth(identityToken('Ufirst'))); Socket.opened[0].receive(frame());
+    h.client.authorize(auth(identityToken('Uother'))); Socket.opened[1].close(1006, '');
+    assert.equal(h.timers.size, 0);
+    h.client.refresh(); Socket.opened[2].receive(frame());
+    h.client.authorize({ ...auth(identityToken('Uother', 2)), channelId: '4321' }); Socket.opened[3].close(1006, '');
+    assert.equal(h.timers.size, 0);
+    h.client.refresh(); Socket.opened[4].receive(frame()); Socket.opened[4].close(1008, 'Revoked');
+    assert.equal(h.statuses.at(-1).kind, 'authorization'); assert.equal(h.timers.size, 0);
+    h.client.authorize({ ...auth(identityToken('Uother', 3)), channelId: '4321' }); Socket.opened[5].close(1006, '');
+    assert.equal(h.timers.size, 0, 'A refusal needs a newly accepted snapshot before automatic recovery resumes.');
+  } finally { h.client.destroy(); }
+});
+
+test('saturated real viewer projection fits the bounded native frame budget', (t) => {
+  const name = '界'.repeat(40), now = 1793300000000;
+  const game = new Game({ id: randomUUID(), owner: '1234', channel: 'a'.repeat(25), mode: 'twitch', overlayKey: 'fixture',
+    settings: { ...defaults, mission: 'three' }, priorWins: 1000, priorPlayed: 1000, priorBest: 1000,
+    history: Array.from({ length: 100 }, (_, index) => ({ id: randomUUID(), number: index + 1, word: 'w'.repeat(120),
+      outcome: 'caught', elapsed: 300000, participants: 100, at: now, award: { name, at: now }, reason: 'timer', milestone: 1000, newBadge: true })),
+    leaders: Object.fromEntries(Array.from({ length: 1000 }, (_, index) => [String(index + 1), { name, rounds: 1000, baits: 1000 }])),
+  }, () => now);
+  game.begin();
+  for (let i = 0; i < 100; i++) game.round.participants.set(String(i), name);
+  // Private clue text must not enlarge a spectator's payload.
+  game.round.hints = Array.from({ length: 60 }, (_, index) => ({ id: randomUUID(), userId: String(index), name,
+    text: 'private-clue-sentinel'.repeat(25), at: now, spoiled: false }));
+  const h = harness();
+  try {
+    h.client.authorize(auth(identityToken('Uviewer')));
+    const view = game.view('viewer');
+    assert.equal(view.history.length, 12); assert.equal(view.leaders.length, 8); assert.equal(view.mvps.length, 5);
+    assert.equal(view.participants, 100);
+    const packet = { type: 'snapshot', protocol: 1, revision: 123456, generation: 1, room: view };
+    const raw = JSON.stringify(packet), bytes = new TextEncoder().encode(raw).byteLength;
+    t.diagnostic(`Saturated viewer snapshot: ${bytes} UTF-8 bytes; limit ${EDGE_SNAPSHOT_MAX_BYTES}.`);
+    assert.ok(bytes < EDGE_SNAPSHOT_MAX_BYTES / 4, 'Keep at least four times this bounded pilot projection as headroom.');
+    assert.ok(!raw.includes('private-clue-sentinel'));
+    Socket.opened[0].receive(packet);
+    assert.equal(h.statuses.at(-1).kind, 'connected'); assert.equal(h.states.length, 1);
+    // Short UTF-16 text can still exceed the byte budget. Reject before parsing
+    // rather than weakening the cap or retaining an unvalidated card.
+    const tooLarge = JSON.stringify({ ...packet, ignored: '界'.repeat(24000) });
+    assert.ok(tooLarge.length < EDGE_SNAPSHOT_MAX_BYTES);
+    assert.ok(new TextEncoder().encode(tooLarge).byteLength > EDGE_SNAPSHOT_MAX_BYTES);
+    Socket.opened[0].onmessage({ data: tooLarge });
+    assert.equal(h.statuses.at(-1).kind, 'invalid'); assert.equal(h.timers.size, 0);
   } finally { h.client.destroy(); }
 });

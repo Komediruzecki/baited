@@ -22,16 +22,25 @@ const snapshot = (revision = 1): EdgeSnapshot => ({ type: 'snapshot', protocol: 
     round: { id: 'round-1', epoch: 1 } } as GameView });
 function harness() {
   const sockets: Socket[] = [], calls: { url: string; init?: RequestInit }[] = [];
+  const issued: EdgeBootstrap[] = [], signals: AbortSignal[] = [];
   let bootstrapCount = 0, failState = false;
+  let bootstrapError: unknown, pendingBootstrap: Promise<EdgeBootstrap> | undefined;
   const client = new EdgeRoomTransport({ origin: 'https://pilot.example',
-    bootstrap: async () => ({ ...bootstrap(), token: `signed.token.${++bootstrapCount}` }),
+    bootstrap: async (signal) => {
+      bootstrapCount++; signals.push(signal!);
+      if (bootstrapError) throw bootstrapError;
+      if (pendingBootstrap) return pendingBootstrap;
+      const value = { ...bootstrap(), token: `signed.token.${bootstrapCount}` }; issued.push(value); return value;
+    },
     socket: (url, protocols) => { const socket = new Socket(url, protocols); sockets.push(socket); return socket as unknown as WebSocket; },
     fetch: (async (url: URL | RequestInfo, init?: RequestInit) => {
       calls.push({ url: String(url), init });
       return String(url).endsWith('/commands') ? Response.json({ ok: true, revision: 2, generation: 1, ...(failState ? {} : { snapshot: snapshot(2) }) })
         : failState ? Response.json({ error: 'unavailable' }, { status: 503 }) : Response.json(snapshot(2));
     }) as typeof fetch });
-  return { client, sockets, calls, failState: () => { failState = true; }, count: () => bootstrapCount };
+  return { client, sockets, calls, issued, signals, failState: () => { failState = true; }, count: () => bootstrapCount,
+    bootstrapError: (error?: unknown) => { bootstrapError = error; },
+    pendingBootstrap: (pending: Promise<EdgeBootstrap>) => { pendingBootstrap = pending; } };
 }
 async function ready(h: ReturnType<typeof harness>) {
   const promise = h.client.state(); await flush(); h.sockets[0].receive(snapshot()); return promise;
@@ -107,9 +116,99 @@ test('token renewal uses the same room socket and keeps the current microphone b
     await (h.client as unknown as { renew(): Promise<void> }).renew();
     assert.equal(h.sockets.length, 1);
     assert.deepEqual(JSON.parse(h.sockets[0].sent[0]), { type: 'refresh-auth', token: 'signed.token.2' });
-    h.sockets[0].receive({ type: 'auth-refreshed', expiresAt: Date.now() + 300000 });
+    h.sockets[0].receive({ type: 'auth-refreshed', expiresAt: h.issued.at(-1)!.tokenExpiresAt });
     assert.equal(h.client.bootstrap?.token, 'signed.token.2');
     assert.equal(speech.readyState, 1);
+  } finally { h.client.destroy(); }
+});
+
+for (const error of [new TypeError('Network failed'), Object.assign(new Error('Service unavailable'), { status: 503 })])
+  test(`transient renewal ${error.name}/${'status' in error ? error.status : 'network'} recovers on the same live socket`, async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 100000 });
+    const h = harness();
+    try {
+      await ready(h); h.client.subscribe(() => {}, () => {});
+      const speech = h.client.speechSocket('round-1', 1, 'lease-1'); await flush();
+      h.bootstrapError(error);
+      t.mock.timers.tick(180000); await flush();
+      assert.equal(h.count(), 2, 'Renew two minutes before expiry.');
+      assert.equal(h.sockets[0].readyState, 1); assert.equal(speech.readyState, 1);
+      h.bootstrapError();
+      t.mock.timers.tick(1000); await flush();
+      const renewed = h.issued.at(-1)!;
+      assert.equal(h.count(), 3); assert.equal(h.sockets.length, 1);
+      assert.equal(JSON.parse(h.sockets[0].sent[0]).token, renewed.token);
+      h.sockets[0].receive({ type: 'auth-refreshed', expiresAt: renewed.tokenExpiresAt });
+      assert.equal(h.client.bootstrap!.token, renewed.token);
+      t.mock.timers.tick(119000); await flush();
+      assert.equal(h.sockets[0].readyState, 1, 'Acknowledged renewal replaces the original expiry timer.');
+      assert.equal(speech.readyState, 1);
+    } finally { h.client.destroy(); t.mock.timers.reset(); }
+  });
+
+for (const status of [401, 403, 429]) test(`renewal HTTP ${status} stops unattended retries and closes the microphone`, async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 100000 });
+  const h = harness();
+  try {
+    await ready(h); h.client.subscribe(() => {}, () => {});
+    const speech = h.client.speechSocket('round-1', 1, 'lease-1'); await flush();
+    h.bootstrapError(Object.assign(new Error('Refused'), { status }));
+    t.mock.timers.tick(180000); await flush();
+    assert.equal(h.sockets[0].readyState, 3); assert.equal(speech.readyState, 3);
+    t.mock.timers.tick(600000); await flush();
+    assert.equal(h.count(), 2); assert.equal(h.sockets.length, 1);
+  } finally { h.client.destroy(); t.mock.timers.reset(); }
+});
+
+test('missing renewal acknowledgement reconnects OBS with fresh credentials, without rearming speech', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 100000 });
+  const h = harness();
+  try {
+    await ready(h); h.client.subscribe(() => {}, () => {});
+    const speech = h.client.speechSocket('round-1', 1, 'lease-1'); await flush();
+    t.mock.timers.tick(180000); await flush();
+    t.mock.timers.tick(8000); await flush();
+    assert.equal(h.sockets[0].readyState, 3); assert.equal(speech.readyState, 3);
+    t.mock.timers.tick(1000); await flush();
+    assert.equal(h.sockets.length, 2); assert.equal(h.count(), 3);
+    h.sockets[1].receive(snapshot(2)); await flush();
+    assert.equal(h.client.connected, true); assert.equal(speech.readyState, 3);
+    assert.equal(h.sockets[1].sent.length, 0, 'Recovery cannot secretly arm the microphone.');
+  } finally { h.client.destroy(); t.mock.timers.reset(); }
+});
+
+test('renewal outage clears state at credential expiry, then permits only a fresh bootstrap', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 100000 });
+  const h = harness();
+  try {
+    await ready(h); h.client.subscribe(() => {}, () => {});
+    h.bootstrapError(Object.assign(new Error('Temporary'), { status: 503 }));
+    t.mock.timers.tick(180000); await flush();
+    // Background timers may arrive late. Even a throttled retry must not keep an
+    // expired connection or snapshot alive.
+    t.mock.timers.tick(120000); await flush();
+    assert.equal(h.sockets[0].readyState, 3); assert.equal(h.client.connected, false); assert.equal(h.client.current, undefined);
+    h.bootstrapError();
+    t.mock.timers.tick(1000); await flush();
+    assert.equal(h.sockets.length, 2);
+    h.sockets[1].receive(snapshot(3)); await flush();
+    assert.equal(h.client.connected, true);
+    assert.ok(h.client.bootstrap!.tokenExpiresAt > Date.now());
+  } finally { h.client.destroy(); t.mock.timers.reset(); }
+});
+
+test('destroy aborts an in-flight renewal and a late bootstrap cannot resurrect its socket', async () => {
+  const h = harness();
+  try {
+    await ready(h);
+    let finish!: (value: EdgeBootstrap) => void;
+    h.pendingBootstrap(new Promise((resolve) => { finish = resolve; }));
+    const pending = (h.client as unknown as { renew(): Promise<void> }).renew(); await flush();
+    const signal = h.signals.at(-1)!; assert.equal(signal.aborted, false);
+    h.client.destroy(); assert.equal(signal.aborted, true);
+    finish(bootstrap()); await pending;
+    assert.equal(h.sockets[0].sent.length, 0); assert.equal(h.sockets.length, 1);
+    assert.equal(h.client.current, undefined);
   } finally { h.client.destroy(); }
 });
 

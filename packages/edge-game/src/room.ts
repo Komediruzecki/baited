@@ -12,7 +12,7 @@ import type { ControlEnv } from './control-types.js';
 export interface Env extends AuthEnv, ControlEnv { ROOMS: DurableObjectNamespace; ART: R2Bucket; CONTROL?: DurableObjectNamespace; ASSETS?: Fetcher }
 interface Speech { leaseId: string; roundId: string; epoch: number; samples: number; firstAudioAt: number; lastAudioAt: number; lastSequence: number }
 type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:'help'|'score'|'top'|'who';userId:string};
-interface Attachment { identity: AuthIdentity; lastInputAt: number; lastAuthRefreshAt?:number; sentViewRevision?:number; socketId?: string; speech?: Speech; inputs?: {at:number;n:number} }
+interface Attachment { identity: AuthIdentity; lastInputAt: number; lastAuthRefreshAt?:number; sentViewRevision?:number; socketId?: string; microphoneLeases?:string[]; speech?: Speech; inputs?: {at:number;n:number} }
 interface Lease { id:string; sessionId:string; socketId:string; expiresAt:number; lastAudioAt?:number; roundId?:string; epoch?:number }
 interface PilotState { lease:Lease|null; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>} }
 const eventSchema = z.object({eventId:z.string().min(1).max(200),channelId:z.string().regex(/^[1-9][0-9]{0,24}$/),
@@ -54,9 +54,9 @@ export class ChannelRoom extends DurableObject<Env> {
   private writePilot(state=this.pilotState) {
     this.ctx.storage.sql.exec('INSERT INTO pilot_state(id,body) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body',JSON.stringify(state));
   }
-  private async control(path:string, body:unknown): Promise<Response> {
+  private async control(path:string, body:unknown, signal?:AbortSignal): Promise<Response> {
     if (!this.env.CONTROL) throw new Error('Control unavailable.');
-    return this.env.CONTROL.get(this.env.CONTROL.idFromName('control-v1')).fetch(new Request(`https://control.internal${path}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
+    return this.env.CONTROL.get(this.env.CONTROL.idFromName('control-v1')).fetch(new Request(`https://control.internal${path}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal}));
   }
   private async flushOutbox() {
     if (!this.pilot()) return;
@@ -204,9 +204,23 @@ export class ChannelRoom extends DurableObject<Env> {
     });
     // Publish in-memory state only after the transaction commits. An exception
     // leaves both the durable state and the live authoritative Game untouched.
+    const newLease=pilotState.lease && pilotState.lease.id!==this.pilotState.lease?.id?pilotState.lease:null;
     this.store.committed(records); this.game = candidate; this.channel = candidate.data.owner;
     this.revision = nextRevision; this.generation = nextGeneration; this.pilotState = pilotState;
     this.receiptAt = this.store.receiptDeadline(); this.projections.clear();
+    if(newLease) {
+      for(const ws of this.openSockets()) {
+        const att=this.attachment(ws);
+        if(att?.socketId!==newLease.socketId || att.identity.sessionId!==newLease.sessionId) continue;
+        // Keep only this socket's current and previous committed lease. Delayed
+        // audio from a cancelled capture can then be ignored without admitting
+        // another socket's microphone frames or closing the healthy Studio.
+        att.microphoneLeases=[newLease.id,...(att.microphoneLeases??[])].slice(0,2);
+        // A socket disappearing after the durable commit cannot roll back the
+        // authoritative lease or leave the live state behind its checkpoint.
+        try {ws.serializeAttachment(att);} catch {ws.close(1013,'Reconnect to catch up.');}
+      }
+    }
   }
   private speechDeadline(game=this.game,pilot=this.pilotState):number|null {
     const lease=pilot.lease;
@@ -422,10 +436,12 @@ export class ChannelRoom extends DurableObject<Env> {
     }
   }
   async webSocketMessage(ws: WebSocket,message: string | ArrayBuffer): Promise<void> {
+    const receivedAt=Date.now();
+    let refresh:Record<string,unknown>|undefined;
     // Reject bad or excessive input before it occupies the room's mutation queue.
     // Viewers can request a snapshot or renew identity, never issue game commands.
     if(this.pilot()) {
-      const att=this.attachment(ws),now=Date.now();
+      const att=this.attachment(ws),now=receivedAt;
       if(!att || !identityIsCurrent(att.identity,this.channel,this.generation,now)) {ws.close(1008,'Authorization expired. Reconnect.');return;}
       if(att.identity.role==='viewer' && this.pending>=8) {ws.close(1013,'Reconnect to catch up.');return;}
       if(typeof message!=='string' || new TextEncoder().encode(message).length>LIMITS.commandBytes) {ws.close(1009,'Message too large.');return;}
@@ -440,14 +456,22 @@ export class ChannelRoom extends DurableObject<Env> {
         if(data.type==='refresh-auth') {
           if(att.lastAuthRefreshAt && now-att.lastAuthRefreshAt<30_000) {ws.close(1008,'Too many authorization refreshes.');return;}
           att.lastAuthRefreshAt=now;
+          refresh=data;
         }
       }
       ws.serializeAttachment(att);
+      if(refresh) {
+        // Signature/admission work may await another object. It must not hold
+        // the game queue while the owner continues sending microphone audio.
+        try {await this.refreshAuth(ws,att,refresh);}
+        catch {if(ws.readyState===WebSocket.OPEN)ws.close(1013,'Authorization temporarily unavailable. Reconnect.');}
+        return;
+      }
     }
-    try { await this.serial(() => this.handleMessage(ws,message)); }
+    try { await this.serial(() => this.handleMessage(ws,message,receivedAt)); }
     catch { ws.close(1013,'Reconnect to catch up.'); }
   }
-  private async handleMessage(ws: WebSocket,message: string | ArrayBuffer): Promise<void> {
+  private async handleMessage(ws: WebSocket,message: string | ArrayBuffer,receivedAt=Date.now()): Promise<void> {
     await this.reconcile(); const att = this.attachment(ws);
     if (!att || !this.current(att.identity)) {ws.close(1008,'Authorization expired. Reconnect.');return;}
     if (typeof message !== 'string' || new TextEncoder().encode(message).length > LIMITS.commandBytes) {ws.close(1009,'Message too large.');return;}
@@ -457,8 +481,7 @@ export class ChannelRoom extends DurableObject<Env> {
     try {
       if (this.pilot()) {
         if(message!=='resync') {const data=JSON.parse(message);
-          if(data.type==='refresh-auth') {await this.refreshAuth(ws,att,data);return;}
-          if(data.type==='speech-audio'||data.type==='speech-final') {await this.speech(ws,att,data);return;}
+          if(data.type==='speech-audio'||data.type==='speech-final') {await this.speech(ws,att,data,receivedAt);return;}
         }
       }
       if (message === 'resync') {
@@ -484,16 +507,27 @@ export class ChannelRoom extends DurableObject<Env> {
     if(next.subject!==att.identity.subject || next.role!==att.identity.role || next.authKind!==att.identity.authKind || next.sessionId!==att.identity.sessionId) {
       ws.close(1008,'Identity changed. Reconnect.');return;
     }
-    const check=await this.control('/internal/authorize',{channelId:this.channel,sessionId:next.sessionId,role:next.authKind==='twitch-extension'?'viewer':next.role});
+    const check=await this.control('/internal/authorize',{channelId:this.channel,sessionId:next.sessionId,role:next.authKind==='twitch-extension'?'viewer':next.role},AbortSignal.timeout(5000));
+    if(check.status===429 || check.status>=500) throw new Error('Admission temporarily unavailable.');
     const body=await check.json() as {allowed?:boolean};
-    this.now=Date.now();
-    if(!check.ok || !body.allowed || !this.current(att.identity) || !identityIsCurrent(next,this.channel,this.generation,this.now)) {ws.close(1008,'Sign in again.');return;}
-    att.identity={...next,generation:this.generation};ws.serializeAttachment(att);
-    ws.send(JSON.stringify({type:'auth-refreshed',expiresAt:next.expiresAt}));await this.schedule();
+    await this.serial(async()=>{
+      await this.reconcile();
+      if(ws.readyState!==WebSocket.OPEN) return;
+      const current=this.attachment(ws);
+      if(!check.ok || !body.allowed || !current || current.socketId!==att.socketId ||
+        current.identity.expiresAt!==att.identity.expiresAt || !this.current(att.identity) ||
+        !this.current(current.identity) || !identityIsCurrent(next,this.channel,this.generation,this.now)) {
+        ws.close(1008,'Sign in again.');return;
+      }
+      // Preserve progress/input fields changed while admission was in flight.
+      current.identity={...next,generation:this.generation};ws.serializeAttachment(current);
+      ws.send(JSON.stringify({type:'auth-refreshed',expiresAt:next.expiresAt}));await this.schedule();
+    });
   }
-  private async speech(ws:WebSocket,att:Attachment,data:Record<string,unknown>) {
+  private async speech(ws:WebSocket,att:Attachment,data:Record<string,unknown>,receivedAt:number) {
     const owner=this.pilotState.lease;
     if(!att.identity.canControl || !owner || owner.sessionId!==att.identity.sessionId || owner.socketId!==att.socketId || owner.id!==data.leaseId) {
+      if(att.identity.canControl && typeof data.leaseId==='string' && att.microphoneLeases?.includes(data.leaseId)) return;
       ws.close(1008,'This connection does not own the microphone.');return;
     }
     try {
@@ -509,11 +543,20 @@ export class ChannelRoom extends DurableObject<Env> {
         const parsed=progressSchema.parse({type:'audio',samples:data.samples});
         const delta=parsed.samples-speech.samples;
         if(delta<=0 || delta>8192) throw new Error('speech_timing');
-        if(!speech.firstAudioAt) speech.firstAudioAt=this.now-delta/16;
-        const drift=this.now-speech.firstAudioAt-parsed.samples/16;
-        if(this.game.phase==='settling' && speech.firstAudioAt+parsed.samples/16>this.game.round.endsAt+250) return;
+        if(this.game.phase==='settling') {
+          // Moonshine drains capture after the buzzer. Keep the bounded sample
+          // clock so a final sentence may include that tail, but do not extend
+          // microphone liveness or move its established capture anchor. Core
+          // scores only matching words that ended strictly before the buzzer.
+          if(!speech.firstAudioAt) speech.firstAudioAt=Math.max(this.game.round.segmentAt,receivedAt-parsed.samples/16);
+          speech.samples=parsed.samples;
+          att.speech=speech;ws.serializeAttachment(att);await this.schedule();return;
+        }
+        const observedStart=receivedAt-parsed.samples/16;
+        speech.firstAudioAt=Math.max(this.game.round.segmentAt,speech.firstAudioAt?Math.min(speech.firstAudioAt,observedStart):observedStart);
+        const drift=receivedAt-speech.firstAudioAt-parsed.samples/16;
         if(drift < -500 || drift>2000) throw new Error('speech_timing');
-        speech.samples=parsed.samples;speech.lastAudioAt=this.now;
+        speech.samples=parsed.samples;speech.lastAudioAt=receivedAt;
         att.speech=speech;ws.serializeAttachment(att);await this.schedule();return;
       }
       const transcript=localTranscript({type:'final',sequence:data.sequence,line:data.line},

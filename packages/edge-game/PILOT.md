@@ -25,11 +25,13 @@ See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Invalid values fail closed
 | `EDGE_STUDIO_IDLE_MINUTES` | `15` default | Stop Twitch subscriptions after Studio stops refreshing its authenticated session. Supports 5–60 minutes. Explicit reconnection is required afterward. |
 | `EDGE_BOT_OWNER_LOGIN` | `komediruzecki7` | Only this signed-in operator may initiate the Baity account authorization flow. |
 | `EDGE_PILOT_ENABLED` | `false` | Admission remains closed until the launch decision. |
-| `limits.cpu_ms` | `50` | Per-request CPU guard; not a monthly spending cap. |
+| `limits.cpu_ms` | `1000` | Per-invocation CPU guard, also applicable to the Durable Objects; not a monthly spending cap. |
 
 Room controls and explicit state refreshes each have a 120/minute budget per role and identity. Viewer joins allow 12/minute per identity; Studio/OBS joins allow 120/minute. Viewer traffic cannot consume the Studio's buckets. Viewer sockets are capped at four per identity. Studio and OBS share eight reserved connection slots. The pilot requires viewers to sign into Twitch; identity sharing is not required. Brief tab visibility changes keep the socket; five minutes hidden releases it.
 
 Frames and commands are limited to 8 KiB. A viewer may send four frames/second; Studio allows 16 for audio progress. Invalid viewer commands close that connection before entering the mutation queue. The gateway additionally allows 600 dynamic requests/minute/IP and 10 OAuth initiations/minute/IP using Cloudflare's approximate, per-location rate limiter. Verify that namespace IDs `2026102901` and `2026102902` are unique in the deployment account before activation. These are abuse controls, not exact global quotas.
+
+The 1,000 ms CPU allowance leaves headroom for room persistence and audience fanout; it is a ceiling, not reserved compute or a measured requirement. The earlier 50 ms setting was too aggressive without a worst-case provider profile. Cloudflare applies this setting to Durable Object invocations too. [Cloudflare limits](https://developers.cloudflare.com/durable-objects/platform/limits/)
 
 The active microphone has a 30-second lease renewed every 10 seconds and is bound to the exact Studio tab. A new round pauses if no audio timing arrives within five seconds, or if progress subsequently stops for 2.5 seconds. Late frames from a paused or finished round are ignored. Renewals return state in their response; there is no follow-up polling GET.
 
@@ -51,7 +53,7 @@ These limits bound admitted work, not the number of requests strangers can send 
 
 The streamer grant requests `user:read:chat`, `user:bot` and `channel:bot` for the app-token chat subscription and bot permission path. The bot account grants `user:write:chat` and `user:bot`. Granting `channel:bot` is not granting moderator status. Viewers use Twitch’s Extension authorization; they do not need the streamer’s OAuth grant.
 
-Studio cookies are Secure, HttpOnly and SameSite=Lax with a 12-hour lifetime. State-changing control endpoints require the session and CSRF token. Socket capabilities last at most five minutes and refresh while the session is valid. OBS uses a public-display capability in the URL fragment, exchanged through POST; it cannot read the live secret. Credentials and raw audio are not logged.
+Studio cookies are Secure, HttpOnly and SameSite=Lax with a 12-hour lifetime. State-changing control endpoints require the session and CSRF token. Socket capabilities last at most five minutes and begin renewing after about three minutes. Transient refresh failures retry while the old credential remains valid; hard expiry clears access before reconnection. OBS can recover unattended with a fresh valid capability. A Studio socket loss stops speech and requires the streamer to enable the microphone again; recovery never silently rearms it. OBS uses a public-display capability in the URL fragment, exchanged through POST; it cannot read the live secret. Credentials and raw audio are not logged.
 
 Broadcaster role protection stops accidental peeking with the broadcaster’s known account. It cannot stop a streamer using another account, watching a friend’s screen or receiving the word in ordinary Twitch chat. This is a social game, not a cryptographic guarantee against its own host.
 
@@ -73,7 +75,7 @@ The branch has no automatic deployment workflow. Its prepared config has `worker
 3. Add the exact HTTPS pilot hostname as a reviewed Worker custom domain/route and set the pilot flag true. Keep fixture and synthetic staging flags false.
 4. The owner adds the OAuth redirect `https://pilot-baited.maff.app/auth/twitch/callback` to the existing Twitch application. The owner adds the exact HTTPS/WSS pilot endpoints to the Extension’s allowed connections and adds its real Twitch-hosted Extension origin to `EDGE_ALLOWED_ORIGINS` on the Worker. No wildcard origins.
 5. The owner uploads the edge pilot ZIP to the intended Hosted Test version. Uploading a ZIP does not update the backend, and updating the backend does not change Twitch’s uploaded assets.
-6. Visit Studio over HTTPS. Sign in as `komediruzecki7`, approve the listed scopes, connect Twitch chat and verify the connection status. Authorize Baity separately with the configured bot account if announcements are wanted.
+6. Before connecting, inspect the existing application's EventSub subscriptions for these channels. An old PC/tunnel callback can conflict with the pilot. The pilot deliberately refuses to delete another callback automatically; remove only the confirmed obsolete subscription through a reviewed operator action. Then visit Studio over HTTPS. Sign in as `komediruzecki7`, approve the listed scopes, connect Twitch chat and verify the connection status. Authorize Baity separately with the configured bot account if announcements are wanted.
 7. Replace the OBS source URL with the URL copied from this pilot Studio. Do not reuse the former PC server’s capability URL.
 8. Enable the microphone and wait for Moonshine readiness. A different allowlisted tester opens the native Twitch panel/video overlay. Begin one round and run the checks below before inviting the other channels.
 

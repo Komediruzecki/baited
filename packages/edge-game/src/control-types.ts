@@ -40,6 +40,8 @@ export interface ControlSession {
   expiresAt: number;
 }
 export interface RegisteredChannel extends TwitchUser {
+  generation?: number;
+  botGeneration?: number;
   credentials?: EncryptedValue;
   overlayKey: EncryptedValue;
   overlayKeyHash: string;

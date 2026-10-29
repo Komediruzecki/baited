@@ -1,6 +1,9 @@
 import { cardArtPath, cardArtSource } from './presentation.js';
 
 const VERSION = '0.0.1';
+// Saturated built-in pilot projections are verified below this limit in the
+// edge client tests. Private hints and the full leaderboard are never sent here.
+export const EDGE_SNAPSHOT_MAX_BYTES = 64 * 1024;
 const phases = new Set(['idle', 'active', 'paused', 'settling', 'cooldown']);
 const outcomes = new Set(['caught', 'escaped', 'skipped', 'ended', 'overturned', 'review']);
 const difficulties = new Set(['easy', 'medium', 'hard']);
@@ -253,7 +256,8 @@ export function createEdgeExtensionClient({ config, path, parse, onData, onStatu
     current.onmessage = (event) => {
       if (!valid()) return;
       try {
-        if (typeof event.data !== 'string' || event.data.length > 65536) throw new Error('Invalid frame');
+        if (typeof event.data !== 'string' || event.data.length > EDGE_SNAPSHOT_MAX_BYTES ||
+          new TextEncoder().encode(event.data).byteLength > EDGE_SNAPSHOT_MAX_BYTES) throw new Error('Invalid frame');
         const frame = JSON.parse(event.data);
         if (frame.type !== 'snapshot' || frame.protocol !== 1 || !count(frame.revision) || !count(frame.generation)) throw new Error('Invalid snapshot');
         if (roomGeneration === frame.generation && frame.revision < lastRevision) return;
@@ -282,10 +286,12 @@ export function createEdgeExtensionClient({ config, path, parse, onData, onStatu
       lastView = null;
       clearScheduled();
       if (event.code === 1008 || event.code === 4001) {
+        connectedOnce = false; retryUntil = 0;
         report('authorization', 'Twitch authorization expired. Waiting for it to refresh.');
         return;
       }
       if (event.code === 4408 || event.code === 4429) {
+        connectedOnce = false; retryUntil = 0;
         report('unavailable', 'This pilot is full or busy. Try again later.');
         return;
       }
@@ -309,16 +315,18 @@ export function createEdgeExtensionClient({ config, path, parse, onData, onStatu
   };
   return {
     authorize(value) {
+      const previous = authorization;
       generation += 1; clearScheduled(); clearHidden(); close(); lastView = null;
       if (stopped) return;
       if (!object(value) || value.clientId !== config.clientId || typeof value.channelId !== 'string' || !/^[1-9][0-9]{0,24}$/.test(value.channelId) ||
         !string(value.token, 4096) || !/^[A-Za-z0-9_.-]+$/.test(value.token)) {
-        authorization = null;
+        authorization = null; connectedOnce = false; retryUntil = 0;
         report('invalid', 'This Extension is configured for a different Twitch application.');
         return;
       }
       // This is a UI hint only; the server independently verifies the JWT and
       // rejects anonymous seats. Logged-in opaque U identities need no sharing.
+      let identityHint = null;
       try {
         const payload = JSON.parse(atob(value.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
         if (object(payload) && typeof payload.opaque_user_id === 'string' && payload.opaque_user_id.startsWith('A')) {
@@ -326,14 +334,21 @@ export function createEdgeExtensionClient({ config, path, parse, onData, onStatu
           report('signin', 'Sign in to Twitch to join this pilot. You do not need to share your identity.');
           return;
         }
+        if (object(payload) && typeof payload.opaque_user_id === 'string' && typeof payload.role === 'string')
+          identityHint = JSON.stringify([payload.opaque_user_id, payload.role, payload.user_id ?? null]);
       } catch { /* Malformed claims are handled by the server, never trusted here. */ }
-      authorization = { token: value.token, channelId: value.channelId };
-      retries = 0; retryUntil = 0; connectedOnce = false; lastRevision = roomGeneration = -1;
+      const sameIdentity = previous?.channelId === value.channelId &&
+        (previous.token === value.token || identityHint !== null && previous.identityHint === identityHint);
+      authorization = { token: value.token, channelId: value.channelId, identityHint };
+      // Refreshing Twitch's token does not turn an admitted viewer into a first
+      // join. Keep its existing recovery deadline; changing users/channels does.
+      if (!sameIdentity) { retries = 0; retryUntil = 0; connectedOnce = false; }
+      lastRevision = roomGeneration = -1;
       report('connecting', 'Connecting to the round…');
       connect();
     },
     refresh() { if (!stopped) { retries = 0; retryUntil = 0; connect(); } },
-    invalidate() { generation += 1; authorization = null; lastView = null; clearScheduled(); clearHidden(); close(); },
+    invalidate() { generation += 1; authorization = null; connectedOnce = false; retryUntil = 0; lastView = null; clearScheduled(); clearHidden(); close(); },
     setVisible(value) {
       if (visible === Boolean(value) || stopped) return;
       visible = Boolean(value); clearHidden();

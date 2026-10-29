@@ -19,6 +19,7 @@ interface Inspection {
   alarm: number | null; now: number; revision: number; phase: string; mic: string;
   round: { id: string; epoch: number; segmentAt: number; endsAt: number | null; remaining: number; duration: number; result?: string } | null;
   lease: {id:string;socketId:string;expiresAt:number;sessionId:string} | null;
+  ownerSpeech?: {firstAudioAt:number;lastAudioAt:number;samples:number;lastSequence:number};
   chatReceipts: number; history: number; participants: number; sqlChanges: number; outbox: number;
   sockets: {role:string;expiresAt:number;generation:number;readyState:number}[];
 }
@@ -30,6 +31,7 @@ interface FixtureStub {
   disconnectFixture(): Promise<number>;
   freezeAtFixture(at: number): Promise<void>;
   ownerMessageAtFixture(at: number, message: Record<string,unknown>): Promise<Inspection>;
+  queuedOwnerMessageFixture(receivedAt: number, processedAt: number, message: Record<string,unknown>): Promise<Inspection>;
   closeOwnerAtFixture(at: number, code?: number): Promise<Inspection>;
   enqueueOutboxFixture(at: number, expiresAt: number): Promise<Inspection>;
   flushOutboxAtFixture(at: number): Promise<Inspection>;
@@ -49,16 +51,29 @@ before(async () => {
         export default gateway;
         export class MockControl extends DurableObject {
           allowed = true;
+          admissionStatus = 200;
           deliveryStatus = 200;
           deliveries = 0;
+          heldRole = null;
+          authorizeWaiting = 0;
+          authorizeGate = null;
+          releaseAuthorize = null;
           denyFixture() { this.allowed = false; }
+          admissionStatusFixture(status) { this.admissionStatus = status; }
           deliveryFixture(status) { this.deliveryStatus = status; }
           deliveredFixture() { return this.deliveries; }
+          holdAuthorizeFixture(role) {
+            this.heldRole=role;
+            this.authorizeGate=new Promise(resolve=>{this.releaseAuthorize=resolve;});
+          }
+          authorizeWaitingFixture() { return this.authorizeWaiting; }
+          releaseAuthorizeFixture() { this.heldRole=null;this.releaseAuthorize?.();this.releaseAuthorize=null; }
           async fetch(request) {
             const path = new URL(request.url).pathname;
             if (path === '/internal/authorize') {
               const body = await request.json();
-              return Response.json({allowed: this.allowed && body.channelId === '123', login: 'komediruzecki7'});
+              if(this.heldRole===body.role) {this.authorizeWaiting++;await this.authorizeGate;this.authorizeWaiting--;}
+              return Response.json({allowed: this.allowed && body.channelId === '123', login: 'komediruzecki7'}, {status:this.admissionStatus});
             }
             if (path === '/internal/room-event') { this.deliveries++; return Response.json({ok: this.deliveryStatus === 200}, {status:this.deliveryStatus}); }
             return new Response('No external provider in this fixture.', {status: 503});
@@ -74,6 +89,7 @@ before(async () => {
             const self = this;
             return {alarm: await this.ctx.storage.getAlarm(), now:self.now, revision:self.revision,
               phase:self.game.phase, mic:self.game.mic, lease:self.pilotState.lease,
+              ownerSpeech:this.ctx.getWebSockets().map(ws=>ws.deserializeAttachment()).find(att=>att?.socketId===self.pilotState.lease?.socketId)?.speech,
               round:self.game.round ? {id:self.game.round.id, epoch:self.game.round.epoch, segmentAt:self.game.round.segmentAt,
                 endsAt:self.game.round.endsAt, remaining:self.game.round.remaining, duration:self.game.round.duration, result:self.game.round.result} : null,
               history:self.game.data.history.length,
@@ -97,6 +113,20 @@ before(async () => {
             const owner=this.ctx.getWebSockets().find(ws=>ws.deserializeAttachment()?.socketId===this.pilotState.lease?.socketId);
             if(!owner) throw new Error('The fixture has no microphone owner.');
             await this.webSocketMessage(owner,JSON.stringify(message));
+            return this.inspectFixture();
+          }
+          async queuedOwnerMessageFixture(receivedAt,processedAt,message) {
+            const owner=this.ctx.getWebSockets().find(ws=>ws.deserializeAttachment()?.socketId===this.pilotState.lease?.socketId);
+            if(!owner) throw new Error('The fixture has no microphone owner.');
+            let entered,release;
+            const ready=new Promise(resolve=>{entered=resolve;});
+            const gate=new Promise(resolve=>{release=resolve;});
+            const blocked=this.serial(async()=>{entered();await gate;});
+            await ready;
+            Date.now=()=>receivedAt;
+            const work=this.webSocketMessage(owner,JSON.stringify(message));
+            Date.now=()=>processedAt;
+            release();await blocked;await work;
             return this.inspectFixture();
           }
           async closeOwnerAtFixture(at,code=1000) {
@@ -248,6 +278,21 @@ function nextSocketEvent(ws: Awaited<ReturnType<typeof connectedStudio>>) {
     const cleanup = () => {clearTimeout(timer); ws.removeEventListener('message',message);ws.removeEventListener('close',close);};
     ws.addEventListener('message',message);ws.addEventListener('close',close);
   });
+}
+
+async function heldControl(mf:Miniflare) {
+  const namespace=await mf.getDurableObjectNamespace('CONTROL');
+  return namespace.get(namespace.idFromName('control-v1')) as unknown as {
+    holdAuthorizeFixture(role:string):Promise<void>;releaseAuthorizeFixture():Promise<void>;
+    authorizeWaitingFixture():Promise<number>;
+  };
+}
+async function waitForHeldAuthorization(control:Awaited<ReturnType<typeof heldControl>>) {
+  for(let attempt=0;attempt<100;attempt++) {
+    if(await control.authorizeWaitingFixture()) return;
+    await new Promise(resolve=>setTimeout(resolve,10));
+  }
+  assert.fail('The mock Control authorization did not enter its deterministic gate.');
 }
 
 test('pilot arms the first audio deadline at five seconds and pauses before an unattended round can end', {timeout:15_000}, async () => {
@@ -532,7 +577,7 @@ test('late owner audio and final transcripts after pause or an old epoch preserv
   } finally {await mf.dispose();}
 });
 
-test('audio tail beyond the round deadline is discarded without disarming during settlement', {timeout:15_000}, async () => {
+test('audio tail beyond the round deadline preserves the microphone during settlement', {timeout:15_000}, async () => {
   const {mf,stub}=await runtime();
   try {
     const initial=await state(mf);
@@ -547,6 +592,181 @@ test('audio tail beyond the round deadline is discarded without disarming during
     assert.deepEqual(after.lease,settling.lease);
     assert.equal(after.revision,settling.revision);
   } finally {await mf.dispose();}
+});
+
+test('five settling tail frames preserve a crossing final and score only words ending before the buzzer', {timeout:15_000}, async () => {
+  for(const targetBeforeBuzzer of [true,false]) {
+    const {mf,stub}=await runtime();
+    try {
+      const initial=await state(mf);
+      await send(mf,{type:'settings',settings:{...initial.room.settings,duration:30}},initial.revision);
+      await start(mf);
+      const target=(await state(mf,'viewer')).room.round!.target!;
+      const settling=await advanceAudio(mf,stub,30_000);
+      const end=settling.round!.endsAt!;
+      const lastLiveAudio=settling.ownerSpeech!.lastAudioAt;
+      for(let index=1;index<=5;index++) {
+        const tail=await stub.ownerMessageAtFixture(end+index*128+150,{type:'speech-audio',
+          leaseId:settling.lease!.id,roundId:settling.round!.id,epoch:settling.round!.epoch,samples:480_000+index*2048});
+        assert.equal(tail.mic,'listening');
+        assert.equal(tail.lease!.id,settling.lease!.id);
+        assert.equal(tail.ownerSpeech!.samples,480_000+index*2048);
+        assert.equal(tail.ownerSpeech!.lastAudioAt,lastLiveAudio,'Draining a tail must not extend microphone liveness.');
+      }
+      const final=await stub.ownerMessageAtFixture(end+800,{type:'speech-final',leaseId:settling.lease!.id,
+        roundId:settling.round!.id,epoch:settling.round!.epoch,sequence:1,line:{id:randomUUID(),
+          text:targetBeforeBuzzer?`${target} 1234567890`:`1234567890 ${target}`,isComplete:true,startTime:29,duration:1.64,
+          words:[{text:targetBeforeBuzzer?target:'1234567890',start:29.8,end:29.95,confidence:1},
+            {text:targetBeforeBuzzer?'1234567890':target,start:30.2,end:30.4,confidence:1}]}});
+      assert.equal(final.mic,'listening');
+      assert.equal(final.lease!.id,settling.lease!.id);
+      assert.equal(final.ownerSpeech!.lastSequence,1);
+      const result=await state(mf);
+      assert.equal(result.room.result?.outcome,targetBeforeBuzzer?'review':undefined);
+      if(targetBeforeBuzzer) {
+        await send(mf,{type:'catch',roundId:settling.round!.id,decision:'confirm'},result.revision);
+        assert.equal((await state(mf)).room.score.wins,1);
+      }
+      await stub.freezeAtFixture(end+2000);
+      const afterSettlement=await state(mf);
+      assert.equal(afterSettlement.room.result?.outcome,targetBeforeBuzzer?'caught':'escaped');
+      assert.equal(afterSettlement.room.score.wins,targetBeforeBuzzer?1:0);
+      assert.equal(afterSettlement.room.mic,'listening');
+    } finally {await mf.dispose();}
+  }
+});
+
+test('queued audio anchors on its arrival time rather than the delayed first processing time', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const initial=await stub.inspectFixture();
+    for(let index=1;index<=8;index++) {
+      const after=await stub.queuedOwnerMessageFixture(initial.round!.segmentAt+index*128,
+        initial.round!.segmentAt+1000+(index-1)*25,{type:'speech-audio',leaseId:initial.lease!.id,
+          roundId:initial.round!.id,epoch:initial.round!.epoch,samples:index*2048});
+      assert.equal(after.mic,'listening');
+      assert.equal(after.phase,'active');
+      assert.equal(after.lease!.id,initial.lease!.id);
+      assert.equal(after.ownerSpeech!.firstAudioAt,initial.round!.segmentAt);
+      assert.equal(after.ownerSpeech!.lastAudioAt,initial.round!.segmentAt+index*128);
+    }
+  } finally {await mf.dispose();}
+});
+
+test('an arrival-time anchor cannot advance audio faster than real time', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const initial=await stub.inspectFixture();
+    const frame=(samples:number)=>({type:'speech-audio',leaseId:initial.lease!.id,
+      roundId:initial.round!.id,epoch:initial.round!.epoch,samples});
+    await stub.ownerMessageAtFixture(initial.round!.segmentAt+1,frame(8000));
+    const rejected=await stub.ownerMessageAtFixture(initial.round!.segmentAt+2,frame(16_000));
+    assert.equal(rejected.mic,'error');
+    assert.equal(rejected.phase,'paused');
+    assert.equal(rejected.lease,null);
+    assert.equal(rejected.history,0);
+  } finally {await mf.dispose();}
+});
+
+test('a retired lease frame on the same Studio socket cannot close its replacement microphone', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const old=await advanceAudio(mf,stub,1000);
+    const off=await send(mf,{type:'microphone',armed:false,leaseId:old.lease!.id,socketId:old.lease!.socketId},old.revision);
+    const nextLease=randomUUID();
+    const armed=await send(mf,{type:'microphone',armed:true,leaseId:nextLease,socketId:old.lease!.socketId},off.revision);
+    const paused=await stub.inspectFixture();
+    await send(mf,{type:'resume',roundId:paused.round!.id,epoch:paused.round!.epoch},armed.revision);
+    const resumed=await stub.inspectFixture();
+    for(const type of ['speech-audio','speech-final']) {
+      const stale=await stub.ownerMessageAtFixture(resumed.round!.segmentAt+50,{type,leaseId:old.lease!.id,
+        roundId:old.round!.id,epoch:old.round!.epoch,samples:18_048});
+      assert.equal(stale.phase,'active');
+      assert.equal(stale.mic,'listening');
+      assert.equal(stale.lease!.id,nextLease);
+      assert.equal(stale.revision,resumed.revision);
+      assert.ok(stale.sockets.some(socket=>socket.role==='studio'&&socket.readyState===1));
+    }
+    const healthy=await stub.ownerMessageAtFixture(resumed.round!.segmentAt+128,{type:'speech-audio',leaseId:nextLease,
+      roundId:resumed.round!.id,epoch:resumed.round!.epoch,samples:2048});
+    assert.equal(healthy.ownerSpeech!.samples,2048);
+    assert.equal(healthy.mic,'listening');
+  } finally {await mf.dispose();}
+});
+
+test('a stalled viewer authorization refresh leaves the microphone mutation queue available', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  const control=await heldControl(mf);
+  try {
+    await start(mf);
+    const before=await stub.inspectFixture();
+    const viewer=await connectedStudio(mf,'viewer');
+    await control.holdAuthorizeFixture('viewer');
+    const refreshed=nextSocketEvent(viewer);
+    viewer.send(JSON.stringify({type:'refresh-auth',token:token('viewer')}));
+    await waitForHeldAuthorization(control);
+    let timer:ReturnType<typeof setTimeout>|undefined;
+    let after:Inspection;
+    try {
+      after=await Promise.race([advanceAudio(mf,stub,3000),new Promise<never>((_,reject)=>{
+        timer=setTimeout(()=>reject(new Error('Viewer refresh blocked live audio behind Control.')),1000);
+      })]);
+    } finally {clearTimeout(timer);}
+    assert.equal(after!.mic,'listening');
+    assert.equal(after!.phase,'active');
+    assert.equal(after!.lease!.id,before.lease!.id);
+    assert.equal(await control.authorizeWaitingFixture(),1);
+    await control.releaseAuthorizeFixture();
+    const ack=await refreshed;
+    assert.equal(ack.kind,'message');
+    if(ack.kind==='message') assert.equal(ack.data.type,'auth-refreshed');
+    assert.equal((await stub.inspectFixture()).ownerSpeech!.samples,48_000);
+  } finally {await control.releaseAuthorizeFixture();await mf.dispose();}
+});
+
+test('temporary Control admission failures close refresh sockets with a retryable code', {timeout:15_000}, async () => {
+  for(const status of [429,503]) {
+    const {mf,stub}=await runtime();
+    try {
+      await start(mf);
+      const viewer=await connectedStudio(mf,'viewer');
+      const namespace=await mf.getDurableObjectNamespace('CONTROL');
+      const control=namespace.get(namespace.idFromName('control-v1')) as unknown as {admissionStatusFixture(status:number):Promise<void>};
+      await control.admissionStatusFixture(status);
+      const closed=nextSocketEvent(viewer);
+      viewer.send(JSON.stringify({type:'refresh-auth',token:token('viewer')}));
+      const event=await closed;
+      assert.equal(event.kind,'close');
+      if(event.kind==='close') assert.equal(event.code,1013,'A provider outage must not become a permanent authorization refusal.');
+      const active=await stub.inspectFixture();
+      assert.equal(active.mic,'listening');
+      assert.equal(active.phase,'active');
+      assert.ok(active.lease);
+    } finally {await mf.dispose();}
+  }
+});
+
+test('generation revocation while viewer admission is pending cannot revive that socket', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  const control=await heldControl(mf);
+  try {
+    await start(mf);
+    const viewer=await connectedStudio(mf,'viewer');
+    await control.holdAuthorizeFixture('viewer');
+    viewer.send(JSON.stringify({type:'refresh-auth',token:token('viewer')}));
+    await waitForHeldAuthorization(control);
+    const before=await stub.inspectFixture();
+    await send(mf,{type:'revoke-connections'},before.revision);
+    await control.releaseAuthorizeFixture();
+    // The server endpoint is authoritative; dispatchFetch does not reliably
+    // deliver a close frame initiated from a separate test RPC.
+    const revoked=await stub.inspectFixture();
+    assert.ok(revoked.sockets.every(socket=>socket.readyState!==1));
+    assert.ok(revoked.sockets.every(socket=>socket.generation===1));
+  } finally {await control.releaseAuthorizeFixture();await mf.dispose();}
 });
 
 test('closing an owner socket after sixty seconds pauses at disconnect time instead of rewinding to five seconds', {timeout:15_000}, async () => {

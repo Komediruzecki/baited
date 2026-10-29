@@ -17,25 +17,38 @@ export async function authorizeEdgeBot(): Promise<string> {
   return url.href;
 }
 
-async function direct<T>(path: string, body?: unknown, csrf?: string): Promise<T> {
-  const response = await fetch(path, {
-    method: body === undefined ? 'GET' : 'POST',
-    headers: {
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(csrf ? { 'x-csrf-token': csrf } : {}),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const data = await response
-    .json()
-    .catch(() => ({ error: 'The server did not respond. Try again.' }));
-  if (!response.ok) throw Object.assign(new Error(data.error || 'Request failed.'), { status: response.status });
-  return data;
+async function direct<T>(path: string, body?: unknown, csrf?: string, signal?: AbortSignal): Promise<T> {
+  // Older OBS Chromium has AbortController but not AbortSignal.timeout/any.
+  // Keep the legacy Node path unchanged; bound edge bootstrap and control calls.
+  const controller = edgeMode || path.startsWith('/api/edge/') || signal ? new AbortController() : undefined;
+  const abort = () => controller?.abort();
+  if (signal?.aborted) abort();
+  else signal?.addEventListener('abort', abort, { once: true });
+  const timer = controller ? setTimeout(abort, 10000) : undefined;
+  try {
+    const response = await fetch(path, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: {
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(csrf ? { 'x-csrf-token': csrf } : {}),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller?.signal,
+    });
+    const data = await response
+      .json()
+      .catch(() => ({ error: 'The server did not respond. Try again.' }));
+    if (!response.ok) throw Object.assign(new Error(data.error || 'Request failed.'), { status: response.status });
+    return data;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
+  }
 }
 
 function studioEdge() {
   return studioTransport ??= new EdgeRoomTransport({ origin: location.origin,
-    bootstrap: () => direct<EdgeBootstrap>('/api/edge/session') });
+    bootstrap: (signal) => direct<EdgeBootstrap>('/api/edge/session', undefined, undefined, signal) });
 }
 function overlayEdge(channelId: string) {
   if (overlayTransport) return overlayTransport;
@@ -44,7 +57,7 @@ function overlayEdge(channelId: string) {
   if (!key || !/^[A-Za-z0-9_-]{32,256}$/.test(key)) throw new Error('Copy a fresh OBS link from Stream setup.');
   // The capability never enters a request URL, referrer or server access log.
   return overlayTransport = new EdgeRoomTransport({ origin: location.origin,
-    bootstrap: () => direct<EdgeBootstrap>('/api/edge/overlay', { channelId, key }) });
+    bootstrap: (signal) => direct<EdgeBootstrap>('/api/edge/overlay', { channelId, key }, undefined, signal) });
 }
 function clearEdge() {
   studioTransport?.destroy(); overlayTransport?.destroy();

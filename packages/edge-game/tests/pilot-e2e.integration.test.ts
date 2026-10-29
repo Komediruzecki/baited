@@ -47,7 +47,7 @@ before(async () => {
           queue: structuredClone(this.data.queue), receipts: structuredClone(this.data.receipts),
           sentAt: [...this.data.sentAt], events: structuredClone(this.events),
           sent: await this.ctx.storage.get('fixture-sent') || [],
-          credentialsEncrypted: !JSON.stringify(await this.ctx.storage.get('control-v1')).includes('fixture-access:'),
+          credentialsEncrypted: !JSON.stringify(this.loadCheckpoint()).includes('fixture-access:'),
         }));
       }
       async replayAnnouncementFixture(eventId) {

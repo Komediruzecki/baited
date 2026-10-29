@@ -26,7 +26,7 @@ export interface SpeechSocket {
 }
 type Options = {
   origin: string;
-  bootstrap: () => Promise<EdgeBootstrap>;
+  bootstrap: (signal?: AbortSignal) => Promise<EdgeBootstrap>;
   fetch?: typeof fetch;
   socket?: (url: string, protocols: string[]) => WebSocket;
 };
@@ -70,7 +70,11 @@ export class EdgeRoomTransport {
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private connectTimer: ReturnType<typeof setTimeout> | undefined;
   private refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  private expiryTimer: ReturnType<typeof setTimeout> | undefined;
+  private bootstrapAbort: AbortController | undefined;
   private pendingCredentials: EdgeBootstrap | undefined;
+  private renewing = false;
+  private renewalFailures = 0;
   private failures = 0;
   private connectedOnce = false;
   private retryUntil = 0;
@@ -113,12 +117,20 @@ export class EdgeRoomTransport {
     }).finally(() => { this.connecting = undefined; });
     return this.connecting;
   }
+  private async credentialsFromServer() {
+    this.bootstrapAbort?.abort();
+    const controller = new AbortController();
+    this.bootstrapAbort = controller;
+    try { return readEdgeBootstrap(await this.options.bootstrap(controller.signal)); }
+    finally { if (this.bootstrapAbort === controller) this.bootstrapAbort = undefined; }
+  }
   private async open() {
     clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
-    const credentials = readEdgeBootstrap(await this.options.bootstrap());
+    const credentials = await this.credentialsFromServer();
     if (this.stopped) return;
-    if (this.credentials && this.credentials.channelId !== credentials.channelId) throw new Error('The signed-in channel changed. Reload Studio.');
+    if (this.credentials && this.credentials.channelId !== credentials.channelId)
+      throw Object.assign(new Error('The signed-in channel changed. Reload Studio.'), { refused: true });
     this.credentials = credentials;
     this.snapshot = undefined;
     this.boundSocketId = undefined;
@@ -135,14 +147,20 @@ export class EdgeRoomTransport {
         try {
           if (typeof event.data !== 'string' || event.data.length > 262144) throw new Error('Invalid response.');
           const frame = JSON.parse(event.data);
+          if (frame.type !== 'auth-refreshed' && this.credentials!.tokenExpiresAt <= Date.now()) {
+            socket.close(4000, 'Session expired. Reconnecting.'); return;
+          }
           if (frame.type === 'snapshot') {
             const snapshot = readEdgeSnapshot(frame);
             if (snapshot.socketId) this.boundSocketId = snapshot.socketId;
             this.accept(snapshot);
             if (!initialized) { initialized = true; this.connectedOnce = true; this.retryUntil = 0; this.failures = 0; clearTimeout(this.connectTimer); this.scheduleRenewal(); resolve(); }
           } else if (frame.type === 'auth-refreshed' && this.pendingCredentials) {
+            // A delayed acknowledgement for an earlier renewal cannot validate
+            // a different token. Expiry is the server's signed JWT boundary.
+            if (frame.expiresAt !== this.pendingCredentials.tokenExpiresAt || frame.expiresAt <= Date.now()) return;
             clearTimeout(this.refreshTimer);
-            this.credentials = this.pendingCredentials; this.pendingCredentials = undefined; this.scheduleRenewal();
+            this.credentials = this.pendingCredentials; this.pendingCredentials = undefined; this.renewalFailures = 0; this.scheduleRenewal();
           } else if (frame.type === 'speech-error' || frame.type === 'error') this.stopSpeech('The microphone connection was rejected. Enable it again.');
         } catch { this.stopSpeech('The game connection could not be read. Enable the microphone again.'); socket.close(4000, 'Invalid response.'); }
       };
@@ -152,31 +170,63 @@ export class EdgeRoomTransport {
         this.socket = undefined;
         this.boundSocketId = undefined;
         this.snapshot = undefined;
-        clearTimeout(this.connectTimer); clearTimeout(this.renewTimer); clearTimeout(this.refreshTimer);
+        clearTimeout(this.connectTimer); clearTimeout(this.renewTimer); clearTimeout(this.refreshTimer); clearTimeout(this.expiryTimer);
+        this.bootstrapAbort?.abort();
         this.pendingCredentials = undefined;
         this.stopSpeech('The connection ended. Reconnect, then enable your microphone again.');
         this.report(true);
-        const refusal = [1008, 4001, 4408, 4429].includes(event.code);
+        // An expired socket is closed before reconnecting with a fresh bootstrap.
+        // Revocation before expiry and explicit capacity refusals never auto-retry.
+        const expired = !!this.credentials && this.credentials.tokenExpiresAt <= Date.now();
+        const refusal = [4001, 4408, 4429].includes(event.code) || !expired && event.code === 1008;
         if (!initialized) reject(Object.assign(new Error('This pilot may be full or temporarily unavailable. Try again later.'), { refused: refusal }));
         if (!refusal) this.scheduleRetry();
       };
     });
   }
   private scheduleRenewal() {
-    clearTimeout(this.renewTimer);
+    clearTimeout(this.renewTimer); clearTimeout(this.expiryTimer);
     if (!this.credentials || this.stopped) return;
-    this.renewTimer = setTimeout(() => { void this.renew(); }, Math.max(1000, Math.min(240000, this.credentials.tokenExpiresAt - Date.now() - 60000)));
+    const socket = this.socket, remaining = this.credentials.tokenExpiresAt - Date.now();
+    // Five-minute credentials renew at three minutes, leaving two minutes for
+    // network recovery and background-tab timer throttling.
+    this.renewTimer = setTimeout(() => { void this.renew(); }, Math.max(1000, Math.min(180000, remaining - 120000)));
+    this.expiryTimer = setTimeout(() => {
+      if (!this.stopped && socket === this.socket) socket?.close(4000, 'Session expired. Reconnecting.');
+    }, Math.max(0, remaining));
+  }
+  private retryRenewal(socket: WebSocket) {
+    if (this.stopped || socket !== this.socket || socket.readyState !== 1) return;
+    if (!this.credentials || this.credentials.tokenExpiresAt <= Date.now()) { socket.close(4000, 'Session expired. Reconnecting.'); return; }
+    const delay = Math.min(30000, 1000 * 2 ** Math.min(this.renewalFailures++, 5));
+    clearTimeout(this.renewTimer);
+    this.renewTimer = setTimeout(() => { void this.renew(); }, delay);
   }
   private async renew() {
     const socket = this.socket;
+    if (this.stopped || this.renewing || this.pendingCredentials || !socket || socket.readyState !== 1) return;
+    this.renewing = true;
+    clearTimeout(this.renewTimer);
     try {
-      const credentials = readEdgeBootstrap(await this.options.bootstrap());
+      const credentials = await this.credentialsFromServer();
       if (this.stopped || socket !== this.socket) return;
-      if (!socket || socket.readyState !== 1 || credentials.channelId !== this.credentials?.channelId) throw new Error('Session changed.');
+      if (socket.readyState !== 1) return;
+      if (credentials.channelId !== this.credentials?.channelId) { socket.close(4001, 'Session changed.'); return; }
       this.pendingCredentials = credentials;
       socket.send(JSON.stringify({ type: 'refresh-auth', token: credentials.token }));
-      this.refreshTimer = setTimeout(() => { socket.close(4001, 'Sign-in renewal timed out.'); }, 8000);
-    } catch { socket?.close(4001, 'Sign-in renewal failed.'); }
+      // An uncertain acknowledgement is a transport failure, not revocation.
+      // Reopen with fresh credentials instead of resending inside the server's
+      // thirty-second auth-refresh rate limit. The microphone stays fail-closed.
+      this.refreshTimer = setTimeout(() => {
+        if (socket === this.socket) socket.close(4000, 'Sign-in renewal timed out. Reconnecting.');
+      }, 8000);
+    } catch (error) {
+      if (this.stopped || socket !== this.socket) return;
+      const status = (error as { status?: number })?.status;
+      if (status === 401 || status === 403) socket.close(4001, 'Sign in again.');
+      else if (status === 429) socket.close(4429, 'The pilot is busy. Try again later.');
+      else this.retryRenewal(socket);
+    } finally { this.renewing = false; }
   }
   async state(): Promise<EdgeSnapshot> {
     await this.ensure();
@@ -257,7 +307,8 @@ export class EdgeRoomTransport {
   }
   destroy() {
     this.stopped = true;
-    clearTimeout(this.renewTimer); clearTimeout(this.retryTimer); clearTimeout(this.connectTimer); clearTimeout(this.refreshTimer);
+    clearTimeout(this.renewTimer); clearTimeout(this.retryTimer); clearTimeout(this.connectTimer); clearTimeout(this.refreshTimer); clearTimeout(this.expiryTimer);
+    this.bootstrapAbort?.abort(); this.bootstrapAbort = undefined;
     this.stopSpeech(); this.listeners.clear();
     const socket = this.socket; this.socket = undefined; socket?.close(1000, 'Page closed.');
     this.credentials = undefined; this.pendingCredentials = undefined; this.snapshot = undefined; this.boundSocketId = undefined;

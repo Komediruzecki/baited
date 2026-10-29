@@ -16,13 +16,42 @@ import { TwitchControl } from './src/control.ts';
 export class FixtureControl extends TwitchControl {
   failDelete=false;
   rowsRead=0; holdValidation=false; releaseValidation=null; validationTask=null; conflict=false; dropped=false;
+  holdProvider='';heldProvider='';releaseProvider=null;failCheckpoint=0;checkpointWrites=0;pageConflict=false;
+  writeCheckpointRow(key,value) {
+    super.writeCheckpointRow(key,value);if(this.failCheckpoint && ++this.checkpointWrites===this.failCheckpoint)throw new Error('fixture-storage-failure');
+  }
   inboxQuery(query,...bindings) {
     const cursor=this.ctx.storage.sql.exec(query,...bindings);const rows=cursor.toArray();this.rowsRead+=cursor.rowsRead;return rows;
   }
   async fetch(request) {
     await this.ready;
     const url=new URL(request.url);
-    if (url.pathname==='/__fixture/state') return Response.json(await this.ctx.storage.get('control-v1'));
+    if (url.pathname==='/__fixture/state') return Response.json(this.committed);
+    if (url.pathname==='/__fixture/durable-state') return Response.json(this.loadCheckpoint());
+    if (url.pathname==='/__fixture/provider-hold') {
+      this.holdProvider=url.searchParams.get('kind');
+      if(this.holdProvider==='token'){this.data.appToken=undefined;delete this.data.channels['123'].moderationSubscriptions['channel.chat.clear_user_messages'];await this.persist();}
+      return Response.json({ok:true});
+    }
+    if (url.pathname==='/__fixture/provider-status') return Response.json({kind:this.heldProvider});
+    if (url.pathname==='/__fixture/provider-release') {this.releaseProvider?.();return Response.json({ok:true});}
+    if (url.pathname==='/__fixture/legacy') {
+      await this.ctx.storage.put('control-v1',this.committed);this.ctx.storage.sql.exec('DELETE FROM control_state');return Response.json({ok:true});
+    }
+    if (url.pathname==='/__fixture/storage-stats') return Response.json({legacy:!!await this.ctx.storage.get('control-v1'),...this.ctx.storage.sql.exec('SELECT COUNT(*) AS rows,COALESCE(SUM(length(CAST(key||value AS BLOB))),0) AS bytes,COALESCE(MAX(length(CAST(key||value AS BLOB))),0) AS largest FROM control_state').toArray()[0]});
+    if (url.pathname==='/__fixture/rollback') {
+      this.failCheckpoint=2;this.checkpointWrites=0;
+      try {await this.serial(async()=>{this.data.channels['123'].active=false;this.data.sessions={};this.data.queue.push({id:'rollback',channelId:'123',key:'test',text:'rollback',expiresAt:Date.now()+10000});await this.persist();});return Response.json({threw:false});}
+      catch{return Response.json({threw:true});}finally{this.failCheckpoint=0;}
+    }
+    if (url.pathname==='/__fixture/large-checkpoint') {
+      await this.serial(async()=>{
+        const template=this.data.channels['123'];
+        for(let i=0;i<99;i++)this.data.channels[String(1000+i)]={...structuredClone(template),id:String(1000+i),credentials:{version:1,iv:'x'.repeat(16),ciphertext:'x'.repeat(75000)}};
+        for(let i=0;i<1600;i++)this.data.dedupe['room:'+String(1000+i%10)+':round:'+String(i).padStart(160,'x')]=Date.now()+600000;
+        await this.persist();
+      });return Response.json({ok:true});
+    }
     if (url.pathname==='/__fixture/rows') return Response.json({rowsRead:this.rowsRead,counts:this.ctx.storage.sql.exec('SELECT * FROM inbox_counts').toArray()[0]});
     if (url.pathname==='/__fixture/rows-reset') {this.rowsRead=0;this.nextInboxPruneAt=0;return Response.json({ok:true});}
     if (url.pathname==='/__fixture/inbox') {
@@ -35,7 +64,7 @@ export class FixtureControl extends TwitchControl {
     }
     if (url.pathname==='/__fixture/validation-status') return Response.json({holding:!!this.releaseValidation});
     if (url.pathname==='/__fixture/validation-release') {this.releaseValidation?.();await this.validationTask;return Response.json({ok:true});}
-    if (url.pathname==='/__fixture/conflict') {this.conflict=true;return Response.json({ok:true});}
+    if (url.pathname==='/__fixture/conflict') {this.conflict=true;this.pageConflict=url.searchParams.get('pages')==='true';return Response.json({ok:true});}
     if (url.pathname==='/__fixture/secret-change') {this.data.channels['123'].subscriptionSecretHash='previous-secret-fingerprint';this.data.channels['123'].subscriptionRetryAt=0;await this.persist();return Response.json({ok:true});}
     if (url.pathname==='/__fixture/drop') {this.dropped=true;return Response.json({ok:true});}
     if (url.pathname==='/__fixture/fail-delete') {this.failDelete=url.searchParams.get('value')==='true';return Response.json({ok:true});}
@@ -53,6 +82,8 @@ export class FixtureControl extends TwitchControl {
   }
   async externalFetch(input,init={}) {
     const url=new URL(input); const headers=new Headers(init.headers);
+    const kind=url.pathname==='/oauth2/token' && new URLSearchParams(init.body).get('grant_type')==='client_credentials'?'token':url.pathname==='/helix/chat/messages'?'send':url.pathname==='/helix/eventsub/subscriptions'?init.method==='DELETE'?'delete':init.method==='POST'?'subscribe':'list':'';
+    if(kind && this.holdProvider===kind){this.holdProvider='';this.heldProvider=kind;await new Promise(resolve=>{this.releaseProvider=resolve});this.releaseProvider=null;this.heldProvider='';}
     const users={komediruzecki7:['123','komediruzecki7'],lakeeko:['456','lakeeko'],yahwehwastaken:['789','yahwehwastaken'],outsider:['987','outsider'],bot:['999','baity_bot'],wrongclient:['123','komediruzecki7'],missingscope:['123','komediruzecki7']};
     if(url.origin==='https://id.twitch.tv' && url.pathname==='/oauth2/token') {
       const params=new URLSearchParams(init.body);const code=params.get('code')||'komediruzecki7';
@@ -67,7 +98,10 @@ export class FixtureControl extends TwitchControl {
     if(url.origin==='https://api.twitch.tv' && url.pathname==='/helix/users') return Response.json({data:[{id,login,display_name:login}]});
     if(url.origin==='https://api.twitch.tv' && url.pathname==='/helix/eventsub/subscriptions') {
       if(init.method==='DELETE') {if(!this.failDelete)this.conflict=false;return new Response(null,{status:this.failDelete?503:204});}
-      if(init.method==='GET') return Response.json({data:[{id:'sub-disabled',type:'channel.chat.message',version:'1',condition:{broadcaster_user_id:'123',user_id:'123'},transport:{method:'webhook',callback:'https://pilot.test/api/twitch/eventsub'},status:'notification_failures_exceeded'}]});
+      if(init.method==='GET') {
+        if(this.pageConflict && !url.searchParams.has('after'))return Response.json({data:[{id:'unrelated-subscription',type:'channel.chat.message',version:'1',condition:{broadcaster_user_id:'123',user_id:'123'},transport:{method:'webhook',callback:'https://another.example/api/twitch/eventsub'},status:'enabled'}],pagination:{cursor:'fixture-page-2'}});
+        return Response.json({data:[{id:'sub-disabled',type:'channel.chat.message',version:'1',condition:{broadcaster_user_id:'123',user_id:'123'},transport:{method:'webhook',callback:'https://pilot.test/api/twitch/eventsub'},status:'notification_failures_exceeded'}]});
+      }
       if(this.conflict)return new Response(null,{status:409});
       const body=JSON.parse(init.body||'{}');
       return Response.json({data:[{id:'sub-'+body.condition.broadcaster_user_id+'-'+body.type,status:'enabled'}]},{status:202});
@@ -361,10 +395,10 @@ test('delivery-failure revocation keeps OAuth sessions and reconciles the disabl
     let state = await f.request('/__fixture/state').then(r => r.json()) as any;
     assert.equal(state.channels['123'].active, true); assert.equal(state.channels['123'].subscriptionStatus, 'failed');
     assert.equal((await f.request('/api/edge/session', { headers: { cookie } })).status, 200);
-    await f.request('/__fixture/conflict'); await f.request('/__fixture/flush');
+    await f.request('/__fixture/conflict?pages=true'); await f.request('/__fixture/flush');
     state = await f.request('/__fixture/state').then(r => r.json()) as any;
-    assert.equal(state.channels['123'].subscriptionStatus, 'pending');
-    await f.request('/__fixture/flush');
+    assert.equal(state.channels['123'].subscriptionStatus, 'stopping');
+    await f.request('/__fixture/flush'); await f.request('/__fixture/flush');
     state = await f.request('/__fixture/state').then(r => r.json()) as any;
     assert.equal(state.channels['123'].subscriptionStatus, 'enabled');
     await f.request('/__fixture/secret-change'); await f.request('/__fixture/flush');
@@ -405,4 +439,102 @@ test('command spam cannot consume round receipt capacity or another channel bot 
     state = await f.request('/__fixture/state').then(r => r.json()) as any;
     assert(state.pausedUntil > Date.now(), 'Twitch rate-limit drop responses back off');
   } finally { await f.mf.dispose(); }
+});
+
+
+async function heldProvider(f: Awaited<ReturnType<typeof fixture>>, kind: string) {
+  for (let i = 0; i < 50; i++) {
+    if ((await f.request('/__fixture/provider-status').then(r => r.json()) as any).kind === kind) return;
+  }
+  assert.fail(`fixture did not reach held ${kind} provider request`);
+}
+async function bounded<T>(task: Promise<T>, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  try { return await Promise.race([task, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(message)), 1000); })]); }
+  finally { clearTimeout(timer!); }
+}
+for (const kind of ['subscribe', 'delete', 'send', 'token']) test(`a stalled Twitch ${kind} request does not hold signed chat delivery`, async () => {
+  const f = await fixture(); let operation: Promise<Response> | undefined;
+  try {
+    const owner = await login(f); await f.request('/__fixture/flush'); await f.request('/__fixture/flush'); await f.request('/__fixture/flush');
+    const other = await login(f, 'lakeeko'); await f.request('/__fixture/flush'); await f.request('/__fixture/flush'); await f.request('/__fixture/flush');
+    let target = other;
+    if (kind === 'subscribe') target = await login(f, 'yahwehwastaken');
+    if (kind === 'send') {
+      const bootstrap = await f.request('/api/edge/session', { headers: { cookie: owner.cookie } }).then(r => r.json()) as any;
+      const bot = await f.request('/api/bot/authorize', jsonPost({}, { cookie: owner.cookie, 'x-csrf-token': bootstrap.csrf }));
+      const url = new URL((await bot.json() as any).url);
+      await f.request(`/auth/twitch/callback?state=${url.searchParams.get('state')}&code=bot`, { headers: { cookie: cookies(bot) } });
+      const game = new Game({ id: 'fixture-room', owner: '123', channel: 'komediruzecki7', mode: 'demo', overlayKey: 'unused', settings: { ...defaults, chatBot: true }, history: [], priorWins: 0, priorPlayed: 0, priorBest: 0, leaders: {} });
+      game.start();
+      await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: 'held-send', safeView: game.view('overlay'), event: { type: 'start' } }));
+    }
+    const bootstrap = await f.request('/api/edge/session', { headers: { cookie: target.cookie } }).then(r => r.json()) as any;
+    await f.request(`/__fixture/provider-hold?kind=${kind}`);
+    operation = kind === 'delete' ? f.request('/api/edge/chat', jsonPost({ connected: false }, { cookie: target.cookie, 'x-csrf-token': bootstrap.csrf })) : f.request('/__fixture/flush');
+    await heldProvider(f, kind);
+    const id = `chat-during-${kind}`;
+    assert.equal((await bounded(f.request('/api/twitch/eventsub', webhook(event(id), id)), `signed chat stalled behind ${kind}`)).status, 204);
+    const calls = await f.request('/__fixture/room/123').then(r => r.json()) as any[];
+    assert(calls.some(c => c.body.eventId === id), 'signed event reached the room while Twitch was still held');
+    if (kind === 'subscribe') {
+      assert.equal((await bounded(f.request('/api/edge/chat', jsonPost({ connected: false }, { cookie: target.cookie, 'x-csrf-token': bootstrap.csrf })), 'disconnect stalled behind subscribe')).status, 200);
+    }
+    await f.request('/__fixture/provider-release'); assert.equal((await operation).status, 200);
+    if (kind === 'subscribe') {
+      let state = await f.request('/__fixture/state').then(r => r.json()) as any;
+      assert.equal(state.channels['789'].chatWanted, false);
+      assert.equal(state.channels['789'].subscriptionStatus, 'stopping', 'late subscription result schedules orphan cleanup');
+      await f.request('/__fixture/flush');
+      state = await f.request('/__fixture/state').then(r => r.json()) as any;
+      assert.equal(state.channels['789'].subscriptionStatus, 'offline'); assert.equal(state.channels['789'].subscriptionId, undefined);
+    }
+  } finally {
+    await f.request('/__fixture/provider-release').catch(() => {});
+    await operation?.catch(() => {}); await f.mf.dispose();
+  }
+});
+
+test('authorization revocation clears grants and Studio sessions after explicit chat disconnect', async () => {
+  const f = await fixture();
+  try {
+    const { cookie } = await login(f); await f.request('/__fixture/flush');
+    const bootstrap = await f.request('/api/edge/session', { headers: { cookie } }).then(r => r.json()) as any;
+    assert.equal((await f.request('/api/edge/chat', jsonPost({ connected: false }, { cookie, 'x-csrf-token': bootstrap.csrf }))).status, 200);
+    const revoked = event(); (revoked.subscription as any).status = 'authorization_revoked';
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(revoked, 'revoked-after-disconnect', 'revocation'))).status, 204);
+    const state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(state.channels['123'].credentials, undefined); assert.equal(state.channels['123'].active, false);
+    assert.equal(Object.keys(state.sessions).length, 0);
+    const calls = await f.request('/__fixture/room/123').then(r => r.json()) as any[];
+    assert(calls.some(c => c.body.type === 'disconnect' && c.body.sessionId));
+  } finally { await f.mf.dispose(); }
+});
+
+test('Control checkpoint migrates, rolls back atomically and partitions large bounded state', async (t) => {
+  const root = process.env.BAITED_EDGE_TEST_OUTPUT ?? tmpdir();
+  await mkdir(root, { recursive: true }); const persistence = await mkdtemp(join(root, 'baited-control-partition-'));
+  let f = await fixture({}, persistence); let passed = false;
+  try {
+    const { cookie } = await login(f);
+    const before = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal((await f.request('/__fixture/rollback').then(r => r.json()) as any).threw, true);
+    const after = await f.request('/__fixture/durable-state').then(r => r.json()) as any;
+    assert.equal(after.channels['123'].active, true); assert.deepEqual(after.sessions, before.sessions); assert.equal(after.queue.length, 0);
+    assert.equal((await f.request('/api/session', { headers: { cookie } }).then(r => r.json()) as any).authenticated, true);
+    await f.request('/__fixture/legacy'); await f.mf.dispose(); f = await fixture({}, persistence);
+    assert.equal((await f.request('/api/edge/session', { headers: { cookie } })).status, 200);
+    let stats = await f.request('/__fixture/storage-stats').then(r => r.json()) as any;
+    assert.equal(stats.legacy, false); assert(stats.rows > 1);
+    assert.equal((await f.request('/__fixture/large-checkpoint')).status, 200);
+    stats = await f.request('/__fixture/storage-stats').then(r => r.json()) as any;
+    assert(stats.bytes > 2 * 1024 * 1024, 'stress checkpoint is larger than the single-value limit');
+    assert(stats.largest <= 512 * 1024); assert(stats.rows < 20_000); assert(stats.bytes < 16 * 1024 * 1024);
+    t.diagnostic(`Partitioned checkpoint stress: ${stats.bytes} bytes across ${stats.rows} records; largest ${stats.largest} bytes.`);
+    await f.mf.dispose(); f = await fixture({}, persistence);
+    assert.equal((await f.request('/api/session', { headers: { cookie } }).then(r => r.json()) as any).authenticated, true);
+    const recovered = await f.request('/__fixture/durable-state').then(r => r.json()) as any;
+    assert.equal(Object.keys(recovered.channels).length, 100); assert.equal(Object.keys(recovered.dedupe).length, 1600);
+    passed = true;
+  } finally { await f.mf.dispose(); if (passed || !process.env.BAITED_EDGE_TEST_OUTPUT) await rm(persistence, { recursive: true }); }
 });
