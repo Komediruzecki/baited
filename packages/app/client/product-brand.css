@@ -1,4 +1,4 @@
-/* Owner-supplied original BAITED lettering. Hook variants remain archived. */
+/* The landing's approved pixel BAITED lettering. Earlier variants stay archived. */
 .product-brand {
   display: inline-flex;
   width: 116px;
@@ -8,10 +8,10 @@
 .baited-glyph {
   display: block;
   width: 100%;
-  aspect-ratio: 1280 / 376;
+  aspect-ratio: 370 / 100;
   background: currentColor;
-  -webkit-mask: url('/brand/baited-original-mask.svg') center / contain no-repeat;
-  mask: url('/brand/baited-original-mask.svg') center / contain no-repeat;
+  -webkit-mask: url('/brand/baited-pixel-white.svg') center / contain no-repeat;
+  mask: url('/brand/baited-pixel-white.svg') center / contain no-repeat;
 }
 .small-brand .product-brand {
   width: 94px;

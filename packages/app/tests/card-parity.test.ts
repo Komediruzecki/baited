@@ -305,6 +305,41 @@ test('the signature is the landing\'s pixel logo, byte for byte', () => {
   assert.match(face, /<div class="cut-card__footer"><span class="cut-card__signature baited-glyph" aria-hidden="true"><\/span><\/div>/);
 });
 
+test('Studio and native Extension mastheads and backs resolve the approved landing identity', () => {
+  const approved = bytes(landingRoot, 'site/assets/brand/baited-pixel-white.svg');
+  for (const [cssPath, assetBase] of [
+    ['client/product-brand.css', 'public'],
+    ['extension/styles.css', 'extension'],
+  ]) {
+    const glyph = /\.baited-glyph\s*\{([^}]+)\}/.exec(text(appRoot, cssPath))?.[1];
+    assert.ok(glyph, `${cssPath} defines the shared masthead/back glyph`);
+    const asset = /mask:\s*url\(['"]?([^'"\)]+)['"]?\)/.exec(glyph)?.[1];
+    assert.ok(asset, `${cssPath} resolves a logo asset`);
+    assert.deepEqual(bytes(appRoot, `${assetBase}/${asset.replace(/^\.?\//, '')}`), approved);
+    assert.match(glyph, /aspect-ratio:\s*370\s*\/\s*100/);
+  }
+  assert.deepEqual(
+    bytes(appRoot, 'public/brand/baited-favicon.png'),
+    bytes(landingRoot, 'site/assets/brand/baited-favicon.png'),
+  );
+});
+
+test('every app page links the landing\'s pixel B favicon as PNG and SVG', () => {
+  const lf = (value: string) => value.replace(/\r\n/g, '\n');
+  assert.equal(
+    lf(text(appRoot, 'public/brand/baited-favicon.svg')),
+    lf(text(landingRoot, 'site/assets/brand/baited-favicon.svg')),
+  );
+  // index.html serves Studio, the viewer room, the OBS overlay and the card labs.
+  const studio = text(appRoot, 'index.html');
+  assert.match(studio, /<link rel="icon" type="image\/png" sizes="256x256" href="\/brand\/baited-favicon\.png" \/>/);
+  assert.match(studio, /<link rel="icon" type="image\/svg\+xml" sizes="any" href="\/brand\/baited-favicon\.svg" \/>/);
+  // card-lab.html is published at /card-lab/ on the landing's dev site, so it links the landing's own copies.
+  const cardLab = text(appRoot, 'card-lab.html');
+  assert.match(cardLab, /<link rel="icon" href="\/assets\/brand\/baited-favicon\.png" type="image\/png" sizes="256x256" \/>/);
+  assert.match(cardLab, /<link rel="icon" href="\/assets\/brand\/baited-favicon\.svg" type="image\/svg\+xml" sizes="any" \/>/);
+});
+
 interface FakeCanvas {
   width: number;
   height: number;

@@ -11,7 +11,7 @@ export const EXTENSION_FILES = Object.freeze([
   'runtime-config.js', 'client.js', 'viewer.js', 'config.js', 'overlay.js', 'presentation.js', 'pixel-reveal.js',
   'assets/inter-latin.woff2', 'assets/russo-one.ttf',
   'assets/Inter-OFL.txt', 'assets/RussoOne-OFL.txt',
-  'assets/baited-original-mask.svg', 'assets/baited-pixel-white.svg', 'assets/back-prism.webp',
+  'assets/baited-pixel-white.svg', 'assets/back-prism.webp',
   ...streakFlameFiles.map((file) => `assets/${file}`),
   ...proofWords.map((word) => `assets/card-${word}.png`),
 ]);

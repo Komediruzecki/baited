@@ -1,8 +1,16 @@
-# BAIT logo
+# Brand assets
+
+## Logo
+
+The interface draws the landing's pixel BAITED wordmark. `baited-pixel-white.svg` is a byte-identical copy of `packages/landing/site/assets/brand/baited-pixel-white.svg`, tinted through a CSS mask (`.baited-glyph` in `client/product-brand.css`) in the Studio header, the sign-in page, the viewer room, the OBS HUD, the card labs and on every card back. `tests/card-parity.test.ts` checks the bytes, so a new landing logo fails there until this copy follows.
+
+## Earlier artwork
+
+Nothing draws these any more; they stay as the record. `baited-original-mask.svg` is the owner's supplied angular BAITED lettering, used before the pixel wordmark. `bait-bomb.png` and `baited-wordmark-b.png` are earlier artwork too.
 
 The project owner supplied `baitlogo.png` on October 24, 2026. That original file is retained unchanged. Original SHA-256: `ac882ab12279d5b132aab3fae4f3fd480938207efb90e94692ed9eea62370ff2`.
 
-The interface uses `baitlogo-transparent.png`, a 1254 × 1254 RGBA derivative made with an AI image tool for background extraction. Its outer canvas has alpha 0; the black symbol strip and white characters are retained. Header and compact-sidebar crops are CSS presentation. The original is preserved separately because generation does not promise pixel-identical reproduction.
+`baitlogo-transparent.png` is a 1254 × 1254 RGBA derivative made with an AI image tool for background extraction. Its outer canvas has alpha 0; the black symbol strip and white characters are retained. The original is preserved separately because generation does not promise pixel-identical reproduction.
 
 Transparent derivative SHA-256: `66029cbf7dbd05034886750d37b5c76029da03be1f6f97618ea1abae86455b88`.
 
@@ -18,4 +26,4 @@ The logo is user-supplied artwork, separate from the original code, illustration
 
 ## Favicon
 
-`baited-favicon.png` is an unmodified copy of the landing's favicon, `packages/landing/site/assets/brand/baited-favicon.png`, so the studio's tab carries the same B as the website. SHA-256: `6cbc8a9693aeb1d19f185eae8cfddde81f94a9e621cdc8b9fe8e4dd1662e87c1`. `bait-bomb.png` remains in this folder as earlier artwork and is no longer referenced by the interface.
+`baited-favicon.png` and `baited-favicon.svg` are unmodified copies of the landing's favicon, `packages/landing/site/assets/brand/baited-favicon.{png,svg}`: the pixel logo's B in `#160033` on the violet `#7721e5`. `index.html` (Studio, the viewer room, the OBS overlay and the card labs) links both, like the landing, so a browser tab carries the same B as the website. `card-lab.html` is published on the landing's dev site and links the landing's own copies. PNG SHA-256: `6aae09f82291b0c4af05df2f0fd14de8b76e6111490add422604202c5c9860be`.

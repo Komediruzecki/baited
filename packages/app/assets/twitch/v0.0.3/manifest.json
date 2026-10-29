@@ -1,0 +1,42 @@
+{
+  "extensionVersion": "0.0.3",
+  "category": "Games in Extensions",
+  "identity": "The taskbar icon design on every listing image: the landing pixel B favicon, without an added hook",
+  "source": "packages/landing/site/pixel-logo.js (PIXEL_FAVICON)",
+  "sourceSha256": "2eb63d56d4188979edc28f00eebc4f5fa7b60fffd61efdfa80db4261b01326e9",
+  "renderer": "scripts/build-twitch-brand-assets.mjs, whole-pixel squares",
+  "licensing": "Project identity supplied by the owner. No Twitch marks or third-party game marks used. Existing A/B/C explorations preserved.",
+  "screenshots": "Capture the actual running panel and studio. No staged landing film or generated interface is included as a screenshot.",
+  "assets": [
+    {
+      "file": "logo-100.png",
+      "source": "logo-100.svg",
+      "width": 100,
+      "height": 100,
+      "square": 7,
+      "bytes": 244,
+      "sha256": "c14f301565ff90c924449ef59e3fddb0d6866b01df3c9c0e58690df62b0eaa85",
+      "purpose": "Twitch Extension logo"
+    },
+    {
+      "file": "icon-24.png",
+      "source": "icon-24.svg",
+      "width": 24,
+      "height": 24,
+      "square": 2,
+      "bytes": 117,
+      "sha256": "ab39a58a8f6541aa55bcb52497092d375778a91893afaecea9e9d8d8420812b8",
+      "purpose": "Optional video-component taskbar icon; not required by the panel"
+    },
+    {
+      "file": "discovery-300x200.png",
+      "source": "discovery-300x200.svg",
+      "width": 300,
+      "height": 200,
+      "square": 14,
+      "bytes": 791,
+      "sha256": "97f33f1204f902ac9e5bc16852cf8e12a43ba1b783d9eee8aeba43b3b3dd453a",
+      "purpose": "Twitch discovery image"
+    }
+  ]
+}

@@ -4,11 +4,11 @@
 
 `inter-latin.woff2` and `russo-one.ttf` are copied from the existing project's `public/fonts`. Their corresponding license files are included here. These are served locally with the Extension package; no external font service is used.
 
-## Current BAITED identity, 2026-10-26
+## Current BAITED identity, 2026-10-28
 
-`baited-original-mask.svg` is a byte-identical copy of `packages/landing/site/assets/brand/baited-original-mask.svg` in this repository. It preserves the owner's supplied angular BAITED lettering without an added hook. The same mask lives at `public/brand/baited-original-mask.svg` for the app. `scripts/build-twitch-brand-assets.mjs` synchronizes these copies and exports the listing formats in `assets/twitch/v0.0.1/`. App and native panel CSS tint this existing mask; the shape is not regenerated.
+`baited-pixel-white.svg` is a byte-identical copy of the landing's pixel wordmark, `packages/landing/site/assets/brand/baited-pixel-white.svg`; `tests/card-parity.test.ts` checks the bytes. The panel's header, every card's signature and the Prism back's mark tint this one mask, as the Studio does with its copy in `public/brand/`. It is the only logo in the Extension ZIP.
 
-The Extension ZIP includes this original mask and excludes the archived B variant.
+`baited-original-mask.svg`, the owner's supplied angular BAITED lettering, is kept as earlier artwork, like the B exploration below. Nothing draws it, the ZIP no longer includes it, and the `assets/twitch/v0.0.1/` listing exports were made from it.
 
 ## Archived B exploration and current card art
 

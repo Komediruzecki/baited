@@ -1,58 +1,110 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { deflateSync } from 'node:zlib';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PIXEL_FAVICON, PIXEL_LOGO_ROWS, pixelFaviconRows, pixelFaviconSvg, pixelLogoPath } from '../../landing/site/pixel-logo.js';
 
-// Format exports of the approved identity, not another generated logo variant.
-// Requires librsvg's rsvg-convert. Keep the original JPEG and variants intact.
+// Format exports of the approved identity, not another generated logo variant. Every listing
+// image is the taskbar icon's design: the landing's pixel B favicon, the wordmark's B in deep ink
+// on the violet, drawn from the landing's grid with each square on whole pixels, so no renderer
+// blurs an edge. Keep the original identity and earlier listing exports intact; this script only
+// writes the selected listing folder.
 const app = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const out = resolve(app, 'assets/twitch/v0.0.1');
-const source = resolve(app, '../landing/site/assets/brand/baited-original-mask.svg');
-const mask = await readFile(source);
-const mark = `data:image/svg+xml;base64,${mask.toString('base64')}`;
+const options = { version: '0.0.3', outDir: undefined };
+for (let index = 2; index < process.argv.length; index++) {
+  const flag = process.argv[index];
+  if (flag === '--help') {
+    console.log('Usage: node scripts/build-twitch-brand-assets.mjs [--version SEMVER] [--out-dir PATH]');
+    process.exit(0);
+  }
+  if (flag !== '--version' && flag !== '--out-dir') throw new Error(`Unknown option: ${flag}`);
+  const value = process.argv[++index];
+  if (!value || value.startsWith('--')) throw new Error(`Missing value for ${flag}.`);
+  options[flag === '--version' ? 'version' : 'outDir'] = value;
+}
+if (!/^\d+\.\d+\.\d+$/.test(options.version)) throw new Error('Use a three-part Extension version, for example 0.0.3.');
+const out = resolve(options.outDir ?? resolve(app, `assets/twitch/v${options.version}`));
+const archive = resolve(app, 'assets/twitch/v0.0.1');
+const archiveRelative = relative(archive, out);
+if (!archiveRelative || (!archiveRelative.startsWith('..') && !archiveRelative.startsWith('/'))) {
+  throw new Error('The v0.0.1 listing exports are archived. Choose a new version or another output folder.');
+}
 const hash = (data) => createHash('sha256').update(data).digest('hex');
-const ink = '#FFFC79', purple = '#9146FF', dark = '#21172F';
+const { cols, ground, ink } = PIXEL_FAVICON;
+const rows = pixelFaviconRows();
 
-function wordmark(x, y, width, color = ink, id = 'wordmark') {
-  const height = width * 376 / 1280;
-  return `<mask id="${id}" maskUnits="userSpaceOnUse" x="${x}" y="${y}" width="${width}" height="${height}" style="mask-type:alpha"><image x="${x}" y="${y}" width="${width}" height="${height}" href="${mark}"/></mask><rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${color}" mask="url(#${id})"/>`;
+// The B centred on the violet, `cell` pixels to a square of the grid.
+function placement(width, height, cell) {
+  const x = (width - cols * cell) / 2, y = (height - PIXEL_LOGO_ROWS * cell) / 2;
+  if (!Number.isInteger(x) || !Number.isInteger(y)) throw new Error(`The B does not sit on whole pixels at ${width} × ${height}.`);
+  return { x, y };
 }
-function svg(width, height, title, body) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><title>${title}</title>${body}</svg>\n`;
+function svg(width, height, cell, title) {
+  const { x, y } = placement(width, height, cell);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges"><title>${title}</title><rect width="${width}" height="${height}" fill="${ground}"/><path fill="${ink}" transform="translate(${x} ${y}) scale(${cell})" d="${pixelLogoPath(rows, cols)}"/></svg>\n`;
 }
-function card(x, y, angle, color, id) {
-  return `<g transform="translate(${x} ${y}) rotate(${angle} 38 105)"><rect width="76" height="108" rx="6" fill="${color}" stroke="#B89BE3" stroke-width="1"/><rect x="5" y="5" width="66" height="98" rx="3" fill="none" stroke="#B89BE3" stroke-opacity=".35"/>${wordmark(9, 43, 58, '#E7DDF7', id)}</g>`;
+
+// An 8-bit RGB PNG painted square by square, as the landing writes its favicon PNG.
+const CRC = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+function crc32(bytes) {
+  let c = 0xffffffff;
+  for (const byte of bytes) c = CRC[(c ^ byte) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
 }
-const logo = svg(100, 100, 'Baited Extension logo', `<rect width="100" height="100" fill="${purple}"/><g transform="rotate(-8 50 50)"><rect x="24" y="15" width="52" height="70" rx="4" fill="${dark}" stroke="#B99AE8"/><rect x="29" y="20" width="42" height="60" rx="2" fill="none" stroke="#B99AE8" stroke-opacity=".35"/></g>${wordmark(6, 37, 88)}`);
-const icon = svg(24, 24, 'Baited B icon', `<rect width="24" height="24" rx="3" fill="${purple}"/><defs><mask id="b" maskUnits="userSpaceOnUse" x="5" y="2" width="14" height="20" style="mask-type:alpha"><svg x="6" y="2" width="12" height="20" viewBox="0 0 218 376"><image width="1280" height="376" href="${mark}"/></svg></mask></defs><rect width="24" height="24" fill="${ink}" mask="url(#b)"/>`);
-const discovery = svg(300, 200, 'Baited card game for Twitch chat', `<rect width="300" height="200" fill="${purple}"/><path d="M0 155 L300 105 V200 H0Z" fill="#7C33E4"/>${card(96, 70, -23, '#342048', 'back-left')}${card(113, 70, -6, '#21172F', 'back-middle')}${card(130, 70, 13, '#2A193E', 'back-right')}${wordmark(21, 16, 258, ink, 'headline')}`);
+function chunk(type, data) {
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const check = Buffer.alloc(4);
+  check.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, check]);
+}
+function png(width, height, cell) {
+  const { x: left, y: top } = placement(width, height, cell);
+  const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const stride = width * 3 + 1;
+  const raw = Buffer.alloc(stride * height);
+  const paint = (x0, y0, w, h, color) => {
+    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) raw.set(color, y * stride + 1 + x * 3);
+  };
+  paint(0, 0, width, height, rgb(ground));
+  rows.forEach((row, y) => {
+    for (let x = 0; x < cols; x++) if (row[x] === '#') paint(left + x * cell, top + y * cell, cell, cell, rgb(ink));
+  });
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 2, 0, 0, 0], 8); // 8-bit RGB, no interlace
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(raw, { level: 9 })),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
 
 await mkdir(out, { recursive: true });
-// App and Twitch CDN use the same original mask as the landing. Keep the old
-// B PNG files as archived design variants, outside the current ZIP allowlist.
-await writeFile(resolve(app, 'public/brand/baited-original-mask.svg'), mask);
-await writeFile(resolve(app, 'extension/assets/baited-original-mask.svg'), mask);
 const assets = [];
-for (const [name, width, height, content, purpose] of [
-  ['logo-100', 100, 100, logo, 'Twitch Extension logo'],
-  ['icon-24', 24, 24, icon, 'Optional video-component taskbar icon; not required by the panel'],
-  ['discovery-300x200', 300, 200, discovery, 'Twitch discovery image'],
+for (const [name, width, height, cell, title, purpose] of [
+  ['logo-100', 100, 100, 7, 'Baited Extension logo', 'Twitch Extension logo'],
+  ['icon-24', 24, 24, 2, 'Baited B icon', 'Optional video-component taskbar icon; not required by the panel'],
+  ['discovery-300x200', 300, 200, 14, 'Baited card game for Twitch chat', 'Twitch discovery image'],
 ]) {
-  const svgPath = resolve(out, `${name}.svg`);
-  const pngPath = resolve(out, `${name}.png`);
-  await writeFile(svgPath, content);
-  const render = spawnSync('rsvg-convert', ['--width', String(width), '--height', String(height), '--output', pngPath, svgPath], { encoding: 'utf8' });
-  if (render.status !== 0) throw new Error(`Cannot export ${name}: install librsvg (rsvg-convert).`);
-  const png = await readFile(pngPath);
-  if (!png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) || png.readUInt32BE(16) !== width || png.readUInt32BE(20) !== height) throw new Error(`Invalid ${name} PNG export.`);
-  assets.push({ file: `${name}.png`, source: `${name}.svg`, width, height, bytes: png.length, sha256: hash(png), purpose });
+  const image = png(width, height, cell);
+  await writeFile(resolve(out, `${name}.svg`), svg(width, height, cell, title));
+  await writeFile(resolve(out, `${name}.png`), image);
+  assets.push({ file: `${name}.png`, source: `${name}.svg`, width, height, square: cell, bytes: image.length, sha256: hash(image), purpose });
 }
 await writeFile(resolve(out, 'manifest.json'), JSON.stringify({
-  extensionVersion: '0.0.1', category: 'Games in Extensions',
-  identity: 'Owner-supplied original BAITED lettering, without an added hook',
-  source: 'packages/landing/site/assets/brand/baited-original-mask.svg',
-  sourceSha256: hash(mask), renderer: 'librsvg rsvg-convert',
+  extensionVersion: options.version, category: 'Games in Extensions',
+  identity: 'The taskbar icon design on every listing image: the landing pixel B favicon, without an added hook',
+  source: 'packages/landing/site/pixel-logo.js (PIXEL_FAVICON)',
+  sourceSha256: hash(pixelFaviconSvg()), renderer: 'scripts/build-twitch-brand-assets.mjs, whole-pixel squares',
   licensing: 'Project identity supplied by the owner. No Twitch marks or third-party game marks used. Existing A/B/C explorations preserved.',
   screenshots: 'Capture the actual running panel and studio. No staged landing film or generated interface is included as a screenshot.',
   assets,
