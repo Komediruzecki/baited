@@ -106,6 +106,8 @@ import './chat-bot.css';
 import './streak.css';
 import './obs-twitch.css';
 import './studio-m3.css';
+import './scrollbars.css';
+import './scrollbars';
 
 const ProductReview = React.lazy(() => import('./ProductReview'));
 const CardDesignLab = React.lazy(() => import('./CardDesignLab'));
