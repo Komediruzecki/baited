@@ -2,7 +2,7 @@
 
 **Checked 29 October 2026.** USD before tax. The Worker pilot and client adapters are implemented locally. The prepared deployment is disabled, with no public route. This document does not claim a live Twitch acceptance test or measured Cloudflare bill. No paid resources or hosted load tests were activated for this review.
 
-The pilot uses the existing deck, initially allows `komediruzecki7`, `lakeeko` and `yahwehwastaken`, and limits each channel to 100 round participants and 100 concurrent viewer sockets. Channel capacity is configurable up to 10. Custom cards, uploads and scanners are excluded; the pilot configuration does not bind an R2 bucket.
+The pilot uses the existing deck, initially allows `komediruzecki7`, `lakeeko` and `yahwehwastaken`, and limits each channel to 100 round participants and 100 concurrent viewer sockets. Channel capacity is configurable up to 10. Viewers must be signed into Twitch; anonymous Extension tokens cannot occupy pilot seats. Custom cards, uploads and scanners are excluded; the pilot configuration does not bind an R2 bucket.
 
 ## Who sees the hidden card?
 
@@ -69,15 +69,17 @@ WebSockets remove repeated “anything changed?” requests. They do not make an
 |---|---|---|
 | Initial viewer connection | Worker → Control admission → Room socket | One Worker request and two DO calls |
 | Incoming chat | Worker → Control webhook/dedupe → Room | One Worker request and normally two DO calls per delivery, plus storage |
-| Microphone lease renewal | Every 10 seconds while the microphone is enabled; command POST, then state GET | Two Worker requests and four DO calls per renewal; lease/receipt commit and state-read rate-counter write |
+| Microphone lease renewal | Every 10 seconds while the microphone is enabled; one command POST returns the current Studio snapshot | One Worker request and two DO calls per renewal, plus a lease/receipt commit |
 | Speech progress | 2,048 samples at 16kHz: about 7.8125 metadata frames/second during capture | Incoming Room WS messages; raw audio stays local |
 | Final transcript | When Moonshine completes a line | Room validation and checkpoint; frequency depends on speech |
 | Studio/OBS credential renewal | Approximately every four minutes | Bootstrap HTTP request, WS refresh and Control admission check |
 | Countdown display | Every visual tick, locally | No request just to advance the displayed clock |
 
-A lease renewal normally leaves the viewer and OBS projections unchanged. `Room.commit()` compares those projections at the same clock value and stores their delivery revisions; `broadcast()` skips sockets already holding that revision. Studio still receives its new revision, and the client also fetches state after the command. The local real-client integration test confirms that an unchanged renewal produces no new viewer or OBS snapshot. A new participant, vote, result or other visible change still triggers audience updates.
+A lease renewal normally leaves the viewer and OBS projections unchanged. `Room.commit()` compares those projections at the same clock value and stores their delivery revisions; `broadcast()` skips sockets already holding that revision. Studio receives the new state in its command response and room stream, with no follow-up GET. The local real-client integration test checks this transport and suppression of unchanged audience snapshots. A new participant, vote, result or other visible change still triggers audience updates.
 
-At 360 lease renewals/hour, each channel adds **720 Worker requests and 1,440 DO calls/hour**. Sixty microphone-enabled hours add 43,200 Worker requests and 86,400 DO calls per channel. The progress stream adds about 28,125 incoming WS frames/hour, equivalent to 1,406.25 DO request units under the published 20:1 billing ratio. Checkpoints, indexed dedupe, expiry cleanup and alarm operations add storage work; one chat event is not necessarily one billed row write.
+At 360 lease renewals/hour, each channel adds **360 Worker requests and 720 DO calls/hour**. Sixty microphone-enabled hours add 21,600 Worker requests and 43,200 DO calls per channel. The progress stream adds about 28,125 incoming WS frames/hour, equivalent to 1,406.25 DO request units under the published 20:1 billing ratio. Checkpoints, indexed dedupe, expiry cleanup and alarm operations add storage work; one chat event is not necessarily one billed row write.
+
+Idle ordinary chat has no Room checkpoint or receipt write. Control still authenticates and deduplicates webhook delivery until the idle subscription is stopped. Capacity checks use indexed counters rather than repeatedly counting receipt tables. Unsupported viewer frames are rejected before joining the mutation queue; state/reconnect budgets are separated by identity and role so one viewer cannot consume Studio's microphone budget.
 
 ## Your existing $5 Workers plan
 
@@ -119,13 +121,15 @@ The old delay begins after each response, so its actual steady rate is slightly 
 
 | Streamers | Chat events/month | Worker requests: chat + viewer joins + mic renewals | DO request units for those paths + speech progress | Rounded DO request overage for these items |
 |---:|---:|---:|---:|---:|
-| 3 | 1,080,000 | 1,218,600 | 2,690,325 | $0.30 |
-| 5 | 1,800,000 | 2,031,000 | 4,483,875 | $0.60 |
-| 10 | 3,600,000 | 4,062,000 | 8,967,750 | $1.20 |
+| 3 | 1,080,000 | 1,153,800 | 2,560,725 | $0.30 |
+| 5 | 1,800,000 | 1,923,000 | 4,267,875 | $0.60 |
+| 10 | 3,600,000 | 3,846,000 | 8,535,750 | $1.20 |
 
-Example for ten channels: 3.6M chat + 30k viewer joins + 432k microphone HTTP requests = 4.062M Worker requests. Each of those HTTP paths touches Control and Room; 16.875M speech-progress frames add 843,750 DO request units.
+Example for ten channels: 3.6M chat + 30k viewer joins + 216k microphone HTTP requests = 3.846M Worker requests. Each of those HTTP paths touches Control and Room; 16.875M speech-progress frames add 843,750 DO request units.
 
-**Those prices cover selected request meters, not the complete bill.** For ten channels, renewing one Studio and one OBS credential about 15 times/hour adds roughly 18,000 Worker requests and 36,900 DO request units/month, nudging the illustrated DO request charge to $1.35. Viewer JWT renewals, other controls, final transcripts, bot events, alarms, retries, page loads, CPU and storage are additional.
+**Those prices cover selected request meters, not the complete bill.** For ten channels, renewing one Studio and one OBS credential about 15 times/hour adds roughly 18,000 Worker requests and 36,900 DO request units/month; the illustrated request overage remains $1.20. Viewer JWT renewals, other controls, final transcripts, bot events, alarms, retries, page loads, CPU and storage are additional.
+
+For scale, allowing another 1,500 Room alarms per microphone-hour would add 900,000 DO requests across ten channels. Allowing one additional expiry alarm per chat event would add another 3.6M. Those deliberately separate sensitivity allowances bring the illustrated DO request overage to **$1.95**, still excluding CPU and storage. They are neither measured alarm rates nor hard upper bounds: deadlines and expiry cleanup can share alarms, and delayed alarms/retries change the count.
 
 Duration remains modest in this scenario even if every room and the shared Control object stay active for all 60 hours:
 
@@ -148,7 +152,7 @@ One bot post to a channel is one send, even if 100,000 people read it. Twitch do
 
 The Send Chat Message API has a separate API rate bucket. `channel:bot` authorization does not make Baity a moderator or verified bot. [Twitch chat limits](https://dev.twitch.tv/docs/chat/)
 
-The implemented pilot shares **15 messages/30 seconds**, configurable up to 18, with at least 1.1 seconds between sends to a channel. It coalesces obsolete messages and prioritizes announcements over command replies.
+The implemented pilot shares **15 messages/30 seconds**, configurable up to 18, with at least 1.1 seconds between sends to a channel. It coalesces obsolete messages and prioritizes announcements over command replies. Room command replies have a 20-second channel and 30-second user cooldown before entering the durable outbox. Outbox events expire within 60 seconds; permanent authorization/validation failures are dropped instead of retrying indefinitely.
 
 An ordinary uninterrupted two-minute round generates **start and result** announcements. Pause/resume, review, votes, wrong guesses, awards, mission events and command replies can add messages. The pilot does **not** wire the legacy halfway, final-warning or struggle timers.
 
@@ -176,6 +180,6 @@ The 100-participant cap limits admitted round identities; the socket cap limits 
 
 ## Evidence and remaining acceptance
 
-Local Room integration tests cover microphone deadlines and late wake ordering, role privacy, 100/101 admission, configurable socket capacity, duplicate events, owner isolation, token refresh/revocation and shared refresh budgets. Stable-list tests cover saturated hints, legacy compatibility and rollback. `tests/pilot-client.integration.test.ts` also passes with the real Studio/OBS and native Extension adapters, checking shared state, privacy, speech confirmation, no initial polling and suppression of unchanged lease snapshots. Broader project gates remain recorded in release verification.
+Local Room integration tests cover microphone deadlines and late wake ordering, role privacy, 100/101 admission, configurable socket capacity, duplicate events, owner isolation, token refresh/revocation and per-identity refresh budgets. Opus regression cases also cover viewer floods while Studio retains control, stale audio after pause/settlement, disconnect after 60 seconds of audio, chat/command races, zero idle-chat Room writes, constant-size receipt capacity reads, bot cooldowns and outbox expiry. Stable-list tests cover saturated hints, legacy compatibility and rollback. `tests/pilot-client.integration.test.ts` exercises the real Studio/OBS and native Extension adapters. Broader project gates remain recorded in release verification.
 
 These fixtures do not prove production capacity, real iPhone behavior or a fixed bill. Before opening the pilot, finish the combined gate and external review, configure the exact Twitch origin/callback, then run one real allowlisted channel with Studio, OBS and a viewer. Expand to the other two only after that path passes. Account budgets and alerts should accompany activation; no hosted measurement is required during development.

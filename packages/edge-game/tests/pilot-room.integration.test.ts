@@ -17,8 +17,9 @@ const SESSION = 'fixture-studio-session';
 interface Snapshot { type: 'snapshot'; revision: number; generation: number; room: GameView }
 interface Inspection {
   alarm: number | null; now: number; revision: number; phase: string; mic: string;
-  round: { id: string; segmentAt: number; endsAt: number | null; remaining: number; result?: string } | null;
-  lease: unknown; chatReceipts: number; history: number; participants: number;
+  round: { id: string; epoch: number; segmentAt: number; endsAt: number | null; remaining: number; duration: number; result?: string } | null;
+  lease: {id:string;socketId:string;expiresAt:number;sessionId:string} | null;
+  chatReceipts: number; history: number; participants: number; sqlChanges: number; outbox: number;
   sockets: {role:string;expiresAt:number;generation:number;readyState:number}[];
 }
 interface FixtureStub {
@@ -28,6 +29,11 @@ interface FixtureStub {
   chatFixture(event: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }>;
   disconnectFixture(): Promise<number>;
   freezeAtFixture(at: number): Promise<void>;
+  ownerMessageAtFixture(at: number, message: Record<string,unknown>): Promise<Inspection>;
+  closeOwnerAtFixture(at: number, code?: number): Promise<Inspection>;
+  enqueueOutboxFixture(at: number, expiresAt: number): Promise<Inspection>;
+  flushOutboxAtFixture(at: number): Promise<Inspection>;
+  receiptStatsFixture(): Promise<{count:number;indexedCount:number;indexedRowsRead:number}>;
 }
 let script: string;
 
@@ -43,14 +49,18 @@ before(async () => {
         export default gateway;
         export class MockControl extends DurableObject {
           allowed = true;
+          deliveryStatus = 200;
+          deliveries = 0;
           denyFixture() { this.allowed = false; }
+          deliveryFixture(status) { this.deliveryStatus = status; }
+          deliveredFixture() { return this.deliveries; }
           async fetch(request) {
             const path = new URL(request.url).pathname;
             if (path === '/internal/authorize') {
               const body = await request.json();
               return Response.json({allowed: this.allowed && body.channelId === '123', login: 'komediruzecki7'});
             }
-            if (path === '/internal/room-event') return Response.json({ok: true});
+            if (path === '/internal/room-event') { this.deliveries++; return Response.json({ok: this.deliveryStatus === 200}, {status:this.deliveryStatus}); }
             return new Response('No external provider in this fixture.', {status: 503});
           }
         }
@@ -64,14 +74,16 @@ before(async () => {
             const self = this;
             return {alarm: await this.ctx.storage.getAlarm(), now:self.now, revision:self.revision,
               phase:self.game.phase, mic:self.game.mic, lease:self.pilotState.lease,
-              round:self.game.round ? {id:self.game.round.id, segmentAt:self.game.round.segmentAt,
-                endsAt:self.game.round.endsAt, remaining:self.game.round.remaining, result:self.game.round.result} : null,
+              round:self.game.round ? {id:self.game.round.id, epoch:self.game.round.epoch, segmentAt:self.game.round.segmentAt,
+                endsAt:self.game.round.endsAt, remaining:self.game.round.remaining, duration:self.game.round.duration, result:self.game.round.result} : null,
               history:self.game.data.history.length,
               participants:self.game.round?.participants.size ?? 0,
               sockets:this.ctx.getWebSockets().map(ws => ({role:ws.deserializeAttachment().identity.role,
                 expiresAt:ws.deserializeAttachment().identity.expiresAt,
                 generation:ws.deserializeAttachment().identity.generation,readyState:ws.readyState})),
-              chatReceipts:this.ctx.storage.sql.exec('SELECT count(*) AS n FROM pilot_chat_receipt').one().n};
+              chatReceipts:this.ctx.storage.sql.exec('SELECT count(*) AS n FROM pilot_chat_receipt').one().n,
+              outbox:this.ctx.storage.sql.exec('SELECT count(*) AS n FROM pilot_outbox').one().n,
+              sqlChanges:this.ctx.storage.sql.exec('SELECT total_changes() AS n').one().n};
           }
           async reconcileAtFixture(at) {
             const clock = Date.now;
@@ -80,6 +92,40 @@ before(async () => {
             finally { Date.now = clock; }
           }
           freezeAtFixture(at) { Date.now = () => at; }
+          async ownerMessageAtFixture(at,message) {
+            Date.now = () => at;
+            const owner=this.ctx.getWebSockets().find(ws=>ws.deserializeAttachment()?.socketId===this.pilotState.lease?.socketId);
+            if(!owner) throw new Error('The fixture has no microphone owner.');
+            await this.webSocketMessage(owner,JSON.stringify(message));
+            return this.inspectFixture();
+          }
+          async closeOwnerAtFixture(at,code=1000) {
+            Date.now = () => at;
+            const owner=this.ctx.getWebSockets().find(ws=>ws.deserializeAttachment()?.socketId===this.pilotState.lease?.socketId);
+            if(!owner) throw new Error('The fixture has no microphone owner.');
+            await this.webSocketClose(owner,code);
+            return this.inspectFixture();
+          }
+          async enqueueOutboxFixture(at,expiresAt) {
+            Date.now = () => at;
+            this.ctx.storage.sql.exec('INSERT INTO pilot_outbox(id,body,retry_at,expires_at) VALUES(?,?,?,?)',
+              crypto.randomUUID(),JSON.stringify({channelId:'123',event:{type:'round-start'}}),at,expiresAt);
+            await this.schedule();
+            return this.inspectFixture();
+          }
+          async flushOutboxAtFixture(at) {
+            Date.now = () => at;
+            // A real alarm has already consumed its old schedule when invoked.
+            await this.ctx.storage.deleteAlarm();
+            await this.alarm();
+            return this.inspectFixture();
+          }
+          receiptStatsFixture() {
+            const count=this.ctx.storage.sql.exec('SELECT count(*) AS n FROM pilot_chat_receipt').one().n;
+            const cursor=this.ctx.storage.sql.exec('SELECT chat AS n FROM pilot_counts WHERE id=1');
+            const indexedCount=cursor.one().n;
+            return {count,indexedCount,indexedRowsRead:cursor.rowsRead};
+          }
           async chatFixture(event) {
             const response = await this.fetch(new Request('https://room.internal/internal/twitch-chat', {
               method:'POST', body:JSON.stringify(event)
@@ -174,6 +220,23 @@ async function start(mf: Miniflare) {
   const mic = await send(mf, {type:'microphone',armed:true,leaseId:randomUUID()}, initial.revision);
   await send(mf, {type:'start'}, mic.revision);
   return ws;
+}
+async function advanceAudio(mf: Miniflare, stub: FixtureStub, milliseconds: number) {
+  const first = await stub.inspectFixture();
+  assert.ok(first.round && first.lease);
+  let current = first;
+  // Synthetic metadata only: 500ms of 16kHz samples per local clock step. This
+  // exercises the actual owner input guard and avoids real audio/provider calls.
+  for(let elapsed=500;elapsed<=milliseconds;elapsed+=500) {
+    current=await stub.ownerMessageAtFixture(first.round.segmentAt+elapsed,{type:'speech-audio',
+      leaseId:first.lease.id,roundId:first.round.id,epoch:first.round.epoch,samples:elapsed*16});
+    assert.equal(current.mic,'listening',`Audio failed at ${elapsed}ms.`);
+    if(elapsed%10_000===0) {
+      await send(mf,{type:'microphone',armed:true,renew:true,leaseId:first.lease.id,socketId:first.lease.socketId},current.revision);
+      current=await stub.inspectFixture();
+    }
+  }
+  return current;
 }
 function nextSocketEvent(ws: Awaited<ReturnType<typeof connectedStudio>>) {
   return new Promise<{kind:'message'; data:Record<string,unknown>} | {kind:'close'; code:number}>((resolve,reject) => {
@@ -295,6 +358,12 @@ test('the default pilot admits exactly 100 chat participants and durably ignores
       messageId:'existing-player-skip',userId:'1000',name:'viewer0',text:'!skip'});
     assert.deepEqual(existing.body,{ok:true});
     assert.equal((await stub.inspectFixture()).participants,100);
+    const counts=await stub.receiptStatsFixture();
+    assert.equal(counts.count,102);
+    assert.equal(counts.indexedCount,counts.count);
+    assert.ok(counts.indexedRowsRead<=1,'Capacity checks must read a counter, not the whole receipt table.');
+    await stub.flushOutboxAtFixture(Date.now()+600_001);
+    assert.equal((await stub.receiptStatsFixture()).indexedCount,0,'Expiry deletes must update the bounded receipt counter.');
   } finally { await mf.dispose(); }
 });
 
@@ -381,12 +450,14 @@ test('socket refresh cannot replace a viewer identity with a valid broadcaster c
   } finally { await mf.dispose(); }
 });
 
-test('WebSocket resync and HTTP state reads share the channel refresh budget', {timeout:15_000}, async () => {
+test('one viewer shares its HTTP and WebSocket refresh budget without spending Studio capacity', {timeout:15_000}, async () => {
   const {mf,stub} = await runtime();
   try {
     // A test-only frozen clock makes the fixed-minute boundary deterministic.
     // It is ahead of the signing clock, but inside each synthetic token's TTL.
     await stub.freezeAtFixture(Date.now()+30_000);
+    await start(mf);
+    const owner=await stub.inspectFixture();
     const ws = await connectedStudio(mf,'viewer');
     for(let index=0;index<119;index++) await state(mf,'viewer');
     const allowed = nextSocketEvent(ws);
@@ -399,5 +470,198 @@ test('WebSocket resync and HTTP state reads share the channel refresh budget', {
     assert.deepEqual(await denied,{kind:'close',code:1008});
     const overflow = await mf.dispatchFetch(await endpoint(mf,'state'),{headers:{origin:ORIGIN,authorization:`Bearer ${token('viewer')}`}});
     assert.equal(overflow.status,429);
+    const studio=await state(mf);
+    const renewal=await send(mf,{type:'microphone',armed:true,renew:true,leaseId:owner.lease!.id,socketId:owner.lease!.socketId},studio.revision);
+    assert.equal(renewal.ok,true);
+    assert.equal((await stub.inspectFixture()).mic,'listening');
   } finally { await mf.dispose(); }
+});
+
+test('invalid viewer frame bursts close those viewers while Studio retains its lease and controls', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(Date.now()+30_000);
+    await start(mf);
+    const before=await stub.inspectFixture();
+    const viewers=[];
+    // Forty signed identities stay below the 100-seat pilot cap while exceeding
+    // the mutation queue's capacity if read-only disconnects were serialized.
+    for(let index=0;index<40;index++) viewers.push(await connectedStudio(mf,'viewer',
+      token('viewer',{opaque_user_id:`U${1000+index}`,user_id:String(1000+index)})));
+    const closed=viewers.map(ws=>nextSocketEvent(ws));
+    for(const ws of viewers) for(let index=0;index<8;index++) ws.send('{invalid-json');
+    const renewal=await send(mf,{type:'microphone',armed:true,renew:true,leaseId:before.lease!.id,
+      socketId:before.lease!.socketId},before.revision);
+    assert.equal(renewal.ok,true);
+    for(const response of await Promise.all(closed)) {
+      assert.equal(response.kind,'close');
+      if(response.kind==='close') assert.ok([1008,1013].includes(response.code));
+    }
+    const after=await stub.inspectFixture();
+    assert.equal(after.phase,'active');
+    assert.equal(after.mic,'listening');
+    assert.equal(after.lease!.id,before.lease!.id);
+    await send(mf,{type:'pause',roundId:after.round!.id,epoch:after.round!.epoch},before.revision);
+    assert.equal((await stub.inspectFixture()).phase,'paused');
+  } finally {await mf.dispose();}
+});
+
+test('late owner audio and final transcripts after pause or an old epoch preserve the microphone lease', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const active=await advanceAudio(mf,stub,1_000);
+    await send(mf,{type:'pause',roundId:active.round!.id,epoch:active.round!.epoch},active.revision);
+    const paused=await stub.inspectFixture();
+    assert.equal(paused.phase,'paused');
+    for(const type of ['speech-audio','speech-final']) {
+      const after=await stub.ownerMessageAtFixture(active.round!.segmentAt+1_150,{type,
+        leaseId:active.lease!.id,roundId:active.round!.id,epoch:active.round!.epoch,samples:20_000});
+      assert.deepEqual(after.lease,paused.lease);
+      assert.equal(after.mic,'listening');
+      assert.equal(after.revision,paused.revision,'Stale audio must be a no-op, not a new error checkpoint.');
+    }
+    await send(mf,{type:'resume',roundId:paused.round!.id,epoch:paused.round!.epoch},paused.revision);
+    const resumed=await stub.inspectFixture();
+    const afterOldEpoch=await stub.ownerMessageAtFixture(active.round!.segmentAt+1_250,{type:'speech-audio',
+      leaseId:active.lease!.id,roundId:active.round!.id,epoch:active.round!.epoch,samples:24_000});
+    assert.equal(afterOldEpoch.phase,'active');
+    assert.equal(afterOldEpoch.mic,'listening');
+    assert.equal(afterOldEpoch.revision,resumed.revision);
+    assert.deepEqual(afterOldEpoch.lease,resumed.lease);
+  } finally {await mf.dispose();}
+});
+
+test('audio tail beyond the round deadline is discarded without disarming during settlement', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const initial=await state(mf);
+    await send(mf,{type:'settings',settings:{...initial.room.settings,duration:30}},initial.revision);
+    await start(mf);
+    const settling=await advanceAudio(mf,stub,30_000);
+    assert.equal(settling.phase,'settling');
+    const after=await stub.ownerMessageAtFixture(settling.round!.endsAt!+550,{type:'speech-audio',
+      leaseId:settling.lease!.id,roundId:settling.round!.id,epoch:settling.round!.epoch,samples:30_400*16});
+    assert.equal(after.phase,'settling');
+    assert.equal(after.mic,'listening');
+    assert.deepEqual(after.lease,settling.lease);
+    assert.equal(after.revision,settling.revision);
+  } finally {await mf.dispose();}
+});
+
+test('closing an owner socket after sixty seconds pauses at disconnect time instead of rewinding to five seconds', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const active=await advanceAudio(mf,stub,60_000);
+    const after=await stub.closeOwnerAtFixture(active.round!.segmentAt+60_150,1006);
+    assert.equal(after.phase,'paused');
+    assert.equal(after.mic,'error');
+    assert.equal(after.lease,null);
+    assert.equal(after.history,0);
+    assert.equal(after.round!.remaining,59_850);
+  } finally {await mf.dispose();}
+});
+
+test('a round-scoped pause survives unrelated chat revisions while a stale epoch remains rejected', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const snapshot=await stub.inspectFixture();
+    await stub.freezeAtFixture(snapshot.now);
+    for(let index=0;index<10;index++) await stub.chatFixture({eventId:`race-${index}`,channelId:'123',at:snapshot.now,kind:'message',
+      messageId:`race-message-${index}`,userId:String(1000+index),name:`viewer${index}`,text:'1234567890'});
+    assert.ok((await stub.inspectFixture()).revision>snapshot.revision);
+    await send(mf,{type:'pause',roundId:snapshot.round!.id,epoch:snapshot.round!.epoch},snapshot.revision);
+    assert.equal((await stub.inspectFixture()).phase,'paused');
+    const invalid=await mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',headers:{
+      origin:ORIGIN,authorization:`Bearer ${token()}`,'content-type':'application/json'},body:JSON.stringify({id:randomUUID(),
+      generation:1,expectedRevision:snapshot.revision,action:{type:'resume',roundId:snapshot.round!.id,epoch:snapshot.round!.epoch}})});
+    assert.equal(invalid.status,409,'Relaxed revisions must not let a previous round epoch resume.');
+    assert.equal((await stub.inspectFixture()).phase,'paused');
+  } finally {await mf.dispose();}
+});
+
+test('ordinary chat while idle causes neither Room SQLite writes nor revision or alarm changes', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const before=await stub.inspectFixture();
+    assert.equal(before.phase,'idle');
+    for(let index=0;index<20;index++) {
+      const response=await stub.chatFixture({eventId:`idle-${index}`,channelId:'123',at:Date.now(),kind:'message',
+        messageId:`idle-message-${index}`,userId:String(1000+index),name:`viewer${index}`,text:'1234567890'});
+      assert.equal(response.body.reason,'room_idle');
+    }
+    const after=await stub.inspectFixture();
+    assert.equal(after.sqlChanges,before.sqlChanges);
+    assert.equal(after.revision,before.revision);
+    assert.equal(after.chatReceipts,0);
+    assert.equal(after.alarm,before.alarm);
+  } finally {await mf.dispose();}
+});
+
+test('permanent outbox failure is dropped and temporary failure expires without a repeating alarm', {timeout:15_000}, async () => {
+  for(const status of [403,503]) {
+    const {mf,stub}=await runtime();
+    try {
+      const namespace=await mf.getDurableObjectNamespace('CONTROL');
+      const control=namespace.get(namespace.idFromName('control-v1')) as unknown as {
+        deliveryFixture(status:number):Promise<void>;deliveredFixture():Promise<number>};
+      await control.deliveryFixture(status);
+      const now=Date.now()+30_000;
+      assert.equal((await stub.enqueueOutboxFixture(now,now+60_000)).outbox,1);
+      const attempted=await stub.flushOutboxAtFixture(now);
+      assert.equal(await control.deliveredFixture(),1);
+      if(status===403) {
+        assert.equal(attempted.outbox,0);
+        assert.equal(attempted.alarm,null);
+      } else {
+        assert.equal(attempted.outbox,1);
+        assert.equal(attempted.alarm,now+15_000);
+        const expired=await stub.flushOutboxAtFixture(now+60_001);
+        assert.equal(expired.outbox,0);
+        assert.equal(expired.alarm,null);
+        assert.equal(await control.deliveredFixture(),1,'Expired announcements must not call Control again.');
+      }
+    } finally {await mf.dispose();}
+  }
+});
+
+test('anonymous Extension viewers cannot fill pilot socket seats', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const anonymous=token('viewer',{opaque_user_id:'Aanonymous',user_id:undefined});
+    const response=await mf.dispatchFetch(await endpoint(mf,'socket'),{headers:{origin:ORIGIN,upgrade:'websocket',
+      'sec-websocket-protocol':`baited.v1, baited.auth.${anonymous}`}});
+    assert.equal(response.status,401);
+    await start(mf);
+    await connectedStudio(mf,'viewer');
+    assert.equal((await stub.inspectFixture()).sockets.filter(s=>s.role==='viewer'&&s.readyState===1).length,1);
+  } finally {await mf.dispose();}
+});
+
+test('chat-command cooldowns preserve outbox capacity for a round event', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const clock=Date.now()+30_000;
+    await stub.freezeAtFixture(clock);
+    const initial=await state(mf);
+    await send(mf,{type:'settings',settings:{...initial.room.settings,chatBot:true}},initial.revision);
+    await start(mf);
+    const command=(index:number)=>({eventId:`help-${index}`,channelId:'123',at:clock,kind:'message',
+      messageId:`help-message-${index}`,userId:String(1000+index),name:`viewer${index}`,text:'!bait help'});
+    assert.equal((await stub.chatFixture(command(0))).status,200);
+    const first=await stub.inspectFixture();
+    for(let index=1;index<=40;index++) {
+      const result=await stub.chatFixture(command(index));
+      assert.equal(result.body.reason,'no_change');
+    }
+    const quiet=await stub.inspectFixture();
+    assert.equal(quiet.outbox,first.outbox,'Reply spam must not consume all 32 durable outbox slots.');
+    assert.equal(quiet.revision,first.revision);
+    await send(mf,{type:'pause',roundId:quiet.round!.id,epoch:quiet.round!.epoch},quiet.revision);
+    const paused=await stub.inspectFixture();
+    assert.equal(paused.phase,'paused');
+    assert.equal(paused.outbox,quiet.outbox+1,'The real round event still has an outbox slot.');
+  } finally {await mf.dispose();}
 });

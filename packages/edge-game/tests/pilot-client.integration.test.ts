@@ -108,6 +108,9 @@ test('real edge clients share one authoritative round with role privacy, speech 
         fetch: fetchImpl, socket: (url, protocols) => new Socket(url, protocols) as unknown as WebSocket });
       clients.push(value); return value;
     };
+    // The first tab must not steal a microphone armed by the second tab.
+    const otherStudio = client('studio');
+    const firstTab = await otherStudio.state();
     const studio = client('studio'), obs = client('overlay');
     const nativeStates: ReturnType<typeof readState>[] = [];
     const statuses: string[] = [];
@@ -116,6 +119,9 @@ test('real edge clients share one authoritative round with role privacy, speech 
       onStatus: (status) => statuses.push(status.kind), WebSocketImpl: Socket });
     native.authorize({ clientId: 'fixture123', channelId: '123', token: sign('viewer') });
     await Promise.all([studio.state(), obs.state()]);
+    assert.ok(firstTab.socketId);
+    assert.ok(studio.current!.socketId);
+    assert.notEqual(firstTab.socketId, studio.current!.socketId);
     await until(() => nativeStates.length, 'Native Extension did not receive its initial snapshot.');
     assert.equal(calls.length, 0, 'Initial state is socket-pushed, not fetched or polled.');
     const leaseId = randomUUID();
@@ -149,7 +155,8 @@ test('real edge clients share one authoritative round with role privacy, speech 
     assert.equal(obs.current!.room!.result!.word, target);
     assert.ok(frames.every((frame) => typeof frame === 'string'));
     assert.deepEqual(frames.map((value) => JSON.parse(value).type), ['speech-audio', 'speech-final']);
-    assert.equal(calls.length, 8, 'Only four command receipts and four explicit state reads were used.');
+    assert.equal(calls.length, 4, 'Four command receipts include their authoritative state; no follow-up GETs.');
+    assert.ok(calls.every((path) => path.endsWith('/commands')));
     assert.ok(!statuses.includes('invalid'), 'The native parser accepts real room snapshots.');
   } finally {
     native?.destroy();

@@ -446,11 +446,12 @@ const client = connectToTwitch({
   onData: render,
   onStatus(status) {
     connected = status.kind === 'connected';
-    byId('connection-notice').hidden = status.kind !== 'unavailable';
-    byId('connection-notice-copy').textContent = status.kind === 'unavailable' ? status.message : '';
+    byId('connection-notice').hidden = !['unavailable', 'signin'].includes(status.kind);
+    byId('connection-notice-copy').textContent = ['unavailable', 'signin'].includes(status.kind) ? status.message : '';
+    byId('connection-retry').hidden = status.kind !== 'unavailable';
     byId('card').dataset.stale = String(status.kind === 'reconnecting');
     // A fresh Helper JWT can change account or role. Clear before the new response arrives.
-    if (['invalid', 'authorization', 'forbidden', 'connecting', 'reconnecting', 'unavailable'].includes(status.kind)) {
+    if (['invalid', 'authorization', 'forbidden', 'connecting', 'reconnecting', 'unavailable', 'signin'].includes(status.kind)) {
       current = null;
       hide(true);
     }

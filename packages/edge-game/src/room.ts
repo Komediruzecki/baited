@@ -12,9 +12,9 @@ import type { ControlEnv } from './control-types.js';
 export interface Env extends AuthEnv, ControlEnv { ROOMS: DurableObjectNamespace; ART: R2Bucket; CONTROL?: DurableObjectNamespace; ASSETS?: Fetcher }
 interface Speech { leaseId: string; roundId: string; epoch: number; samples: number; firstAudioAt: number; lastAudioAt: number; lastSequence: number }
 type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:'help'|'score'|'top'|'who';userId:string};
-interface Attachment { identity: AuthIdentity; lastInputAt: number; sentViewRevision?:number; socketId?: string; speech?: Speech; inputs?: {at:number;n:number} }
-interface Lease { id:string; sessionId:string; socketId:string; expiresAt:number }
-interface PilotState { lease:Lease|null; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; viewRevisions?:Partial<Record<AuthIdentity['role'],number>> }
+interface Attachment { identity: AuthIdentity; lastInputAt: number; lastAuthRefreshAt?:number; sentViewRevision?:number; socketId?: string; speech?: Speech; inputs?: {at:number;n:number} }
+interface Lease { id:string; sessionId:string; socketId:string; expiresAt:number; lastAudioAt?:number; roundId?:string; epoch?:number }
+interface PilotState { lease:Lease|null; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>} }
 const eventSchema = z.object({eventId:z.string().min(1).max(200),channelId:z.string().regex(/^[1-9][0-9]{0,24}$/),
   at:z.number().finite(),kind:z.enum(['message','delete','clear-user']),messageId:z.string().min(1).max(200).optional(),
   userId:z.string().regex(/^[1-9][0-9]{0,24}$/),name:z.string().max(40).optional(),text:z.string().max(2000).optional(),
@@ -44,10 +44,13 @@ export class ChannelRoom extends DurableObject<Env> {
   }
   private takeRate(state: PilotState, key:string, max:number): boolean {
     const at=Math.floor(this.now/60_000)*60_000;
+    for(const [name,bucket] of Object.entries(state.rates)) if(bucket.at!==at) delete state.rates[name];
+    if(!state.rates[key] && Object.keys(state.rates).length>=(key.includes(':viewer:')?512:1024)) return false;
     const bucket=state.rates[key]?.at===at ? state.rates[key]! : {at,n:0};
     if (bucket.n>=max) return false;
     bucket.n++;state.rates[key]=bucket;return true;
   }
+  private actorRate(identity:AuthIdentity, kind:string) { return `${kind}:${identity.role}:${identity.subject}`; }
   private writePilot(state=this.pilotState) {
     this.ctx.storage.sql.exec('INSERT INTO pilot_state(id,body) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body',JSON.stringify(state));
   }
@@ -57,11 +60,16 @@ export class ChannelRoom extends DurableObject<Env> {
   }
   private async flushOutbox() {
     if (!this.pilot()) return;
-    const rows=await this.serial(async()=>this.ctx.storage.sql.exec<{id:string;body:string}>('SELECT id,body FROM pilot_outbox WHERE retry_at<=? ORDER BY rowid LIMIT 8',Date.now()).toArray());
+    const rows=await this.serial(async()=>{
+      this.ctx.storage.sql.exec('DELETE FROM pilot_outbox WHERE expires_at<=?',Date.now());
+      return this.ctx.storage.sql.exec<{id:string;body:string}>('SELECT id,body FROM pilot_outbox WHERE retry_at<=? ORDER BY rowid LIMIT 8',Date.now()).toArray();
+    });
     for (const row of rows) {
       try {
         const response=await this.control('/internal/room-event',JSON.parse(row.body));
-        if (!response.ok) throw new Error('Delivery deferred.');
+        // Authorization/validation failures cannot recover by replaying this old
+        // announcement. A rate limit or temporary outage can, within its TTL.
+        if (!response.ok && !(response.status>=400 && response.status<500 && response.status!==429)) throw new Error('Delivery deferred.');
         await this.serial(async()=>{this.ctx.storage.sql.exec('DELETE FROM pilot_outbox WHERE id=?',row.id);});
       } catch { await this.serial(async()=>{this.ctx.storage.sql.exec('UPDATE pilot_outbox SET retry_at=? WHERE id=?',Date.now()+15_000,row.id);}); }
     }
@@ -85,7 +93,16 @@ export class ChannelRoom extends DurableObject<Env> {
       ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS pilot_state(id INTEGER PRIMARY KEY CHECK(id=1),body TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS pilot_chat_receipt(id TEXT PRIMARY KEY,expires INTEGER NOT NULL);
         CREATE INDEX IF NOT EXISTS pilot_chat_expiry ON pilot_chat_receipt(expires);
-        CREATE TABLE IF NOT EXISTS pilot_outbox(id TEXT PRIMARY KEY,body TEXT NOT NULL,retry_at INTEGER NOT NULL);`);
+        CREATE TABLE IF NOT EXISTS pilot_outbox(id TEXT PRIMARY KEY,body TEXT NOT NULL,retry_at INTEGER NOT NULL,expires_at INTEGER NOT NULL DEFAULT 0);`);
+      const columns=ctx.storage.sql.exec<{name:string}>('PRAGMA table_info(pilot_outbox)').toArray();
+      if(!columns.some(column=>column.name==='expires_at')) ctx.storage.sql.exec('ALTER TABLE pilot_outbox ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0');
+      ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS pilot_outbox_retry ON pilot_outbox(retry_at); CREATE INDEX IF NOT EXISTS pilot_outbox_expiry ON pilot_outbox(expires_at)');
+      ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS pilot_counts(id INTEGER PRIMARY KEY CHECK(id=1),chat INTEGER NOT NULL)');
+      if(!ctx.storage.sql.exec('SELECT id FROM pilot_counts WHERE id=1').toArray().length)
+        ctx.storage.sql.exec('INSERT INTO pilot_counts(id,chat) SELECT 1,count(*) FROM pilot_chat_receipt');
+      ctx.storage.sql.exec(`
+        CREATE TRIGGER IF NOT EXISTS pilot_chat_insert AFTER INSERT ON pilot_chat_receipt BEGIN UPDATE pilot_counts SET chat=chat+1 WHERE id=1; END;
+        CREATE TRIGGER IF NOT EXISTS pilot_chat_delete AFTER DELETE ON pilot_chat_receipt BEGIN UPDATE pilot_counts SET chat=chat-1 WHERE id=1; END;`);
       const row=ctx.storage.sql.exec<{body:string}>('SELECT body FROM pilot_state WHERE id=1').toArray()[0];
       if (row) this.pilotState=JSON.parse(row.body);
     }
@@ -100,7 +117,7 @@ export class ChannelRoom extends DurableObject<Env> {
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
   }
   private bind(game: Game): Game {
-    game.canRun = () => this.pilot() && this.pilotState.chatConnected && this.leaseValid();
+    game.canRun = () => this.pilot() && game.mic==='listening' && this.pilotState.chatConnected && this.leaseValid();
     game.artFor = () => undefined; // Pilot uses only the built-in illustrated deck.
     const events: {event:PilotEvent;safeView:ReturnType<Game['view']>}[]=[];
     this.events.set(game,events);
@@ -176,8 +193,8 @@ export class ChannelRoom extends DurableObject<Env> {
           // Announcements are best-effort and bounded; never hold gameplay hostage to a chat outage.
           for (const [i,item] of pending.entries()) if (count+i<32) {
             const eventId=`${candidate.data.owner}:${nextRevision}:${i}`;
-            this.ctx.storage.sql.exec('INSERT OR IGNORE INTO pilot_outbox(id,body,retry_at) VALUES(?,?,?)',eventId,
-              JSON.stringify({channelId:candidate.data.owner,eventId,...item}),this.now);
+            this.ctx.storage.sql.exec('INSERT OR IGNORE INTO pilot_outbox(id,body,retry_at,expires_at) VALUES(?,?,?,?)',eventId,
+              JSON.stringify({channelId:candidate.data.owner,eventId,...item}),this.now,this.now+60_000);
           }
         }
       }
@@ -193,11 +210,15 @@ export class ChannelRoom extends DurableObject<Env> {
   }
   private speechDeadline(game=this.game,pilot=this.pilotState):number|null {
     const lease=pilot.lease;
-    if (!lease || !game || game.phase!=='active') return null;
-    const a=this.openSockets().map(ws => this.attachment(ws)).find(a => a?.socketId===lease.socketId);
+    if (!lease || !game?.round || game.phase!=='active') return null;
+    // The close callback can still read the final attachment even after the
+    // socket stops being OPEN. Never rewind a played round to its first-audio grace.
+    const a=this.ctx.getWebSockets().map(ws => this.attachment(ws)).find(a => a?.socketId===lease.socketId);
     const speech=a?.speech;
     return speech && speech.roundId===game.round?.id && speech.epoch===game.round.epoch
-      ? speech.lastAudioAt+pilotLimits(this.env).speechGapMs : game.round!.segmentAt+5_000;
+      ? speech.lastAudioAt+pilotLimits(this.env).speechGapMs
+      : lease.roundId===game.round?.id && lease.epoch===game.round.epoch && lease.lastAudioAt
+        ? lease.lastAudioAt+pilotLimits(this.env).speechGapMs : game.round!.segmentAt+5_000;
   }
   private async reconcile(): Promise<void> {
     this.now = Date.now(); this.closeStale();
@@ -228,8 +249,9 @@ export class ChannelRoom extends DurableObject<Env> {
     if (this.pilot()) {
       if (pilot.lease) deadlines.push(pilot.lease.expiresAt,this.speechDeadline(game,pilot));
       const outbox=this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(retry_at) AS at FROM pilot_outbox').one().at;
+      const outboxExpiry=this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(expires_at) AS at FROM pilot_outbox').one().at;
       const chat=this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(expires) AS at FROM pilot_chat_receipt').one().at;
-      deadlines.push(outbox,chat);
+      deadlines.push(outbox,outboxExpiry,chat);
     }
     for (const ws of this.ctx.getWebSockets()) {
       const att = this.attachment(ws);
@@ -259,7 +281,8 @@ export class ChannelRoom extends DurableObject<Env> {
       case 'disconnect': throw new Error('use_chat_control');
       case 'microphone': {
         if (!this.pilot() || identity.authKind!=='pilot-session' || !identity.sessionId) throw new Error('unsupported');
-        const socket=this.openSockets().map(ws=>this.attachment(ws)).find(a=>a!==null && a.identity.sessionId===identity.sessionId && a.identity.canControl && this.current(a.identity));
+        const choices=this.openSockets().map(ws=>this.attachment(ws)).filter((item):item is Attachment=>item!==null && item.identity.sessionId===identity.sessionId && item.identity.canControl && this.current(item.identity));
+        const socket=a.socketId?choices.find(item=>item.socketId===a.socketId):choices.length===1?choices[0]:undefined;
         if (!socket?.socketId) throw new Error('studio_not_connected');
         const old=pilot.lease;
         if (!a.armed) {
@@ -268,7 +291,8 @@ export class ChannelRoom extends DurableObject<Env> {
         }
         if ((old && old.expiresAt>this.now && (old.id!==a.leaseId || old.sessionId!==identity.sessionId || old.socketId!==socket.socketId)) ||
           (a.renew && (!old || old.expiresAt<=this.now || old.id!==a.leaseId || old.sessionId!==identity.sessionId))) throw new Error('lease_owner');
-        pilot.lease={id:a.leaseId,sessionId:identity.sessionId,socketId:socket.socketId,expiresAt:this.now+pilotLimits(this.env).microphoneLeaseMs};
+        pilot.lease={id:a.leaseId,sessionId:identity.sessionId,socketId:socket.socketId,expiresAt:this.now+pilotLimits(this.env).microphoneLeaseMs,
+          ...(socket.speech?{lastAudioAt:socket.speech.lastAudioAt,roundId:socket.speech.roundId,epoch:socket.speech.epoch}:{})};
         game.mic='listening';break;
       }
       case 'skip': game.end('skipped');break;
@@ -299,7 +323,8 @@ export class ChannelRoom extends DurableObject<Env> {
     if (previous) return previous.fingerprint === hash
       ? {status:200,body:JSON.parse(previous.body)}
       : {status:409,body:{ok:false,code:'id_conflict',revision:this.revision,generation:this.generation}};
-    if (command.generation !== this.generation || ((command.action.type === 'fixture-chat' || (this.pilot() && command.action.type === 'microphone'))
+    const acceptsOlderRevision=this.pilot() && !['start','settings','revoke-connections'].includes(command.action.type);
+    if (command.generation !== this.generation || ((command.action.type === 'fixture-chat' || acceptsOlderRevision)
       ? command.expectedRevision > this.revision : command.expectedRevision !== this.revision))
       return {status:409,body:{ok:false,code:'stale_revision',revision:this.revision,generation:this.generation}};
     this.store.prune(this.now);
@@ -307,7 +332,7 @@ export class ChannelRoom extends DurableObject<Env> {
     const candidate = this.game ? this.bind(Game.restore(this.game.checkpoint(), () => this.now)) : this.fresh(identity.channelId);
     if (!this.game && command.action.type !== 'start') return {status:409,body:{ok:false,code:'start_room_first',revision:0,generation:this.generation}};
     const pilot=structuredClone(this.pilotState);
-    if (this.pilot() && !this.takeRate(pilot,'control',pilotLimits(this.env).controlsPerMinute)) return {status:429,body:{ok:false,code:'rate_limit',revision:this.revision,generation:this.generation}};
+    if (this.pilot() && !this.takeRate(pilot,this.actorRate(identity,'control'),pilotLimits(this.env).controlsPerMinute)) return {status:429,body:{ok:false,code:'rate_limit',revision:this.revision,generation:this.generation}};
     try { this.dispatch(candidate, identity, command, pilot); }
     catch { return {status:409,body:{ok:false,code:'action_unavailable',revision:this.revision,generation:this.generation}}; }
     const generation = this.generation + (command.action.type === 'revoke-connections' ? 1 : 0);
@@ -316,6 +341,9 @@ export class ChannelRoom extends DurableObject<Env> {
     this.broadcast(); return {status:200,body};
   }
   async fetch(request: Request): Promise<Response> {
+    if(this.pilot() && this.pending>=8) {
+      try {if(JSON.parse(request.headers.get('x-edge-identity')??'null')?.role==='viewer') return json({error:'Please try again shortly.'},503);}catch{return json({error:'Access denied.'},403);}
+    }
     try { return await this.serial(() => this.fetchRequest(request)); }
     catch { return json({error:'This test room is temporarily unavailable. Try again.'},503); }
   }
@@ -325,6 +353,7 @@ export class ChannelRoom extends DurableObject<Env> {
     // Headers are freshly constructed by the gateway, never copied from callers.
     const identity = JSON.parse(request.headers.get('x-edge-identity') ?? 'null') as AuthIdentity | null;
     if (!identity) return json({error:'Access denied.'},403);
+    if(this.pilot() && identity.role==='viewer' && !identity.stableIdentity) return json({error:'Sign into Twitch to join this pilot.'},401);
     await this.reconcile();
     if (this.channel && !this.current(identity)) return json({error:'Authorization changed. Reconnect.'},401);
     if (!identityIsCurrent(identity, identity.channelId, this.generation, this.now)) return json({error:'Authorization changed. Reconnect.'},401);
@@ -338,7 +367,7 @@ export class ChannelRoom extends DurableObject<Env> {
     }
     try {
       if (path === '/state' && request.method === 'GET') {
-        if(this.pilot()) {const next=structuredClone(this.pilotState);if(!this.takeRate(next,'state',pilotLimits(this.env).stateReadsPerMinute))return json({error:'Too many refreshes.'},429);this.ctx.storage.transactionSync(()=>this.writePilot(next));this.pilotState=next;}
+        if(this.pilot()) {const next=structuredClone(this.pilotState);if(!this.takeRate(next,this.actorRate(identity,'state'),pilotLimits(this.env).stateReadsPerMinute))return json({error:'Too many refreshes.'},429);this.ctx.storage.transactionSync(()=>this.writePilot(next));this.pilotState=next;}
         await this.schedule(); this.now = Date.now();
         if (!identityIsCurrent(identity, identity.channelId, this.generation, this.now))
           return json({error:'Authorization expired. Reconnect.'},401);
@@ -351,7 +380,7 @@ export class ChannelRoom extends DurableObject<Env> {
         await this.reconcile();
         if (!identityIsCurrent(identity, identity.channelId, this.generation, this.now) || (this.channel && !this.current(identity))) return json({error:'Authorization changed. Reconnect.'},401);
         const result = await this.apply(identity,command,hash);
-        await this.schedule(); return json(result.body,result.status);
+        await this.schedule(); return json({...result.body,snapshot:this.snapshot(identity.role)},result.status);
       }
       if (path === '/socket' && request.method === 'GET' && request.headers.get('upgrade') === 'websocket') {
         if (!this.game) return json({error:'Start the test room first.'},404);
@@ -361,19 +390,20 @@ export class ChannelRoom extends DurableObject<Env> {
           return json({error:'This test room has reached its connection limit.'},429);
         if (this.pilot()) {
           const next=structuredClone(this.pilotState);
-          if (!this.takeRate(next,'join',pilotLimits(this.env).joinsPerMinute)) return json({error:'Too many reconnects. Try again shortly.'},429);
+          if (!this.takeRate(next,this.actorRate(identity,'join'),identity.role==='viewer'?12:pilotLimits(this.env).joinsPerMinute)) return json({error:'Too many reconnects. Try again shortly.'},429);
           this.ctx.storage.transactionSync(()=>this.writePilot(next));this.pilotState=next;
         }
         const pair = new WebSocketPair(); const [client,server] = Object.values(pair);
         const bound = {...identity,generation:this.generation};
         this.ctx.acceptWebSocket(server,[identity.role]);
-        server.serializeAttachment({identity:bound,lastInputAt:0,socketId:crypto.randomUUID(),sentViewRevision:this.pilotState.viewRevisions?.[identity.role]??this.revision} satisfies Attachment);
+        const socketId=crypto.randomUUID();
+        server.serializeAttachment({identity:bound,lastInputAt:0,socketId,sentViewRevision:this.pilotState.viewRevisions?.[identity.role]??this.revision} satisfies Attachment);
         await this.schedule(); this.now = Date.now();
         if (!this.current(bound)) {
           server.close(1008,'Authorization expired. Reconnect.');
           return json({error:'Authorization expired. Reconnect.'},401);
         }
-        server.send(JSON.stringify(this.snapshot(identity.role)));
+        server.send(JSON.stringify({...this.snapshot(identity.role),...(identity.canControl?{socketId}:{})}));
         return new Response(null,{status:101,webSocket:client,headers:{'sec-websocket-protocol':'baited.v1','cache-control':'no-store'}});
       }
       if (path.startsWith('/art/') && request.method === 'GET') {
@@ -392,6 +422,28 @@ export class ChannelRoom extends DurableObject<Env> {
     }
   }
   async webSocketMessage(ws: WebSocket,message: string | ArrayBuffer): Promise<void> {
+    // Reject bad or excessive input before it occupies the room's mutation queue.
+    // Viewers can request a snapshot or renew identity, never issue game commands.
+    if(this.pilot()) {
+      const att=this.attachment(ws),now=Date.now();
+      if(!att || !identityIsCurrent(att.identity,this.channel,this.generation,now)) {ws.close(1008,'Authorization expired. Reconnect.');return;}
+      if(att.identity.role==='viewer' && this.pending>=8) {ws.close(1013,'Reconnect to catch up.');return;}
+      if(typeof message!=='string' || new TextEncoder().encode(message).length>LIMITS.commandBytes) {ws.close(1009,'Message too large.');return;}
+      const window=Math.floor(now/1000),inputs=att.inputs?.at===window?att.inputs:{at:window,n:0};
+      if(++inputs.n>(att.identity.canControl?16:4)) {ws.close(1008,'Too many messages.');return;}
+      att.inputs=inputs;
+      if(message!=='resync') {
+        let data:Record<string,unknown>;
+        try {data=JSON.parse(message);if(!data || typeof data!=='object')throw new Error();}
+        catch {ws.close(1008,'Invalid message.');return;}
+        if(!att.identity.canControl && data.type!=='refresh-auth') {ws.close(1008,'Read-only connection.');return;}
+        if(data.type==='refresh-auth') {
+          if(att.lastAuthRefreshAt && now-att.lastAuthRefreshAt<30_000) {ws.close(1008,'Too many authorization refreshes.');return;}
+          att.lastAuthRefreshAt=now;
+        }
+      }
+      ws.serializeAttachment(att);
+    }
     try { await this.serial(() => this.handleMessage(ws,message)); }
     catch { ws.close(1013,'Reconnect to catch up.'); }
   }
@@ -404,16 +456,14 @@ export class ChannelRoom extends DurableObject<Env> {
     att.lastInputAt=this.now;ws.serializeAttachment(att);
     try {
       if (this.pilot()) {
-        const window=Math.floor(this.now/1000);const inputs=att.inputs?.at===window?att.inputs:{at:window,n:0};
-        if (++inputs.n>16) {ws.close(1008,'Too many messages.');return;}att.inputs=inputs;ws.serializeAttachment(att);
         if(message!=='resync') {const data=JSON.parse(message);
           if(data.type==='refresh-auth') {await this.refreshAuth(ws,att,data);return;}
           if(data.type==='speech-audio'||data.type==='speech-final') {await this.speech(ws,att,data);return;}
         }
       }
       if (message === 'resync') {
-        if(this.pilot()) {const next=structuredClone(this.pilotState);if(!this.takeRate(next,'state',pilotLimits(this.env).stateReadsPerMinute)){ws.close(1008,'Too many refreshes.');return;}this.ctx.storage.transactionSync(()=>this.writePilot(next));this.pilotState=next;}
-        ws.send(JSON.stringify(this.snapshot(att.identity.role)));await this.schedule();return;}
+        if(this.pilot()) {const next=structuredClone(this.pilotState);if(!this.takeRate(next,this.actorRate(att.identity,'state'),pilotLimits(this.env).stateReadsPerMinute)){ws.close(1008,'Too many refreshes.');return;}this.ctx.storage.transactionSync(()=>this.writePilot(next));this.pilotState=next;}
+        ws.send(JSON.stringify({...this.snapshot(att.identity.role),...(att.identity.canControl?{socketId:att.socketId}:{})}));await this.schedule();return;}
       const command=commandSchema.parse(JSON.parse(message)); const hash=await fingerprint(JSON.stringify(command));
       await this.reconcile();
       if (!this.current(att.identity)) {ws.close(1008,'Authorization changed. Reconnect.');return;}
@@ -448,8 +498,10 @@ export class ChannelRoom extends DurableObject<Env> {
     }
     try {
       const lease=this.pilotState.lease;
-      if(!att.identity.canControl || !lease || !this.leaseValid() || lease.id!==data.leaseId || lease.sessionId!==att.identity.sessionId || lease.socketId!==att.socketId ||
-        !this.game?.round || !['active','settling'].includes(this.game.phase) || data.roundId!==this.game.round.id || data.epoch!==this.game.round.epoch) throw new Error('speech_binding');
+      if(!lease || !this.leaseValid()) throw new Error('speech_binding');
+      // A pause, result, or new epoch can beat audio already in flight. Discard
+      // that tail without disarming an otherwise healthy microphone.
+      if(!this.game?.round || !['active','settling'].includes(this.game.phase) || data.roundId!==this.game.round.id || data.epoch!==this.game.round.epoch) return;
       let speech=att.speech;
       if(!speech || speech.roundId!==data.roundId || speech.epoch!==data.epoch || speech.leaseId!==data.leaseId)
         speech={leaseId:lease.id,roundId:this.game.round.id,epoch:this.game.round.epoch,samples:0,firstAudioAt:0,lastAudioAt:this.now,lastSequence:0};
@@ -459,7 +511,8 @@ export class ChannelRoom extends DurableObject<Env> {
         if(delta<=0 || delta>8192) throw new Error('speech_timing');
         if(!speech.firstAudioAt) speech.firstAudioAt=this.now-delta/16;
         const drift=this.now-speech.firstAudioAt-parsed.samples/16;
-        if(drift < -500 || drift>2000 || (this.game.phase==='settling' && speech.firstAudioAt+parsed.samples/16>this.game.round.endsAt+250)) throw new Error('speech_timing');
+        if(this.game.phase==='settling' && speech.firstAudioAt+parsed.samples/16>this.game.round.endsAt+250) return;
+        if(drift < -500 || drift>2000) throw new Error('speech_timing');
         speech.samples=parsed.samples;speech.lastAudioAt=this.now;
         att.speech=speech;ws.serializeAttachment(att);await this.schedule();return;
       }
@@ -484,7 +537,7 @@ export class ChannelRoom extends DurableObject<Env> {
   private ignoreChat(eventId:string,pilot:PilotState,reason:string):Response {
     this.ctx.storage.transactionSync(()=>{
       this.ctx.storage.sql.exec('DELETE FROM pilot_chat_receipt WHERE expires<=?',this.now);
-      if(this.ctx.storage.sql.exec<{n:number}>('SELECT count(*) AS n FROM pilot_chat_receipt').one().n<12_000)
+      if(this.ctx.storage.sql.exec<{n:number}>('SELECT chat AS n FROM pilot_counts WHERE id=1').one().n<12_000)
         this.ctx.storage.sql.exec('INSERT OR IGNORE INTO pilot_chat_receipt(id,expires) VALUES(?,?)',eventId,this.now+600_000);
       this.writePilot(pilot);
     });
@@ -516,6 +569,13 @@ export class ChannelRoom extends DurableObject<Env> {
     if(path!=='/internal/twitch-chat') return json({error:'Not found.'},404);
     const event=eventSchema.parse(data);
     if(!this.game) return json({ok:true,ignored:true});
+    const command=(event.text??'').trim().toLowerCase();
+    const botCommand=event.kind==='message' && /^!bait (help|score|top|who)$/.test(command);
+    const modCommand=event.kind==='message' && /^!bait (start|pause|resume)$/.test(command) && this.game.data.settings.modCommands &&
+      (event.userId===this.channel || (event.badges??[]).some(b=>['moderator','broadcaster'].includes(b)));
+    // Ordinary chat outside a running round has no gameplay effect and needs
+    // neither a room checkpoint nor a receipt. Control deduplicates delivery.
+    if(event.kind==='message' && this.game.phase!=='active' && !botCommand && !modCommand) return json({ok:true,ignored:true,reason:'room_idle'});
     const prior=this.ctx.storage.sql.exec('SELECT id FROM pilot_chat_receipt WHERE id=? AND expires>?',event.eventId,this.now).toArray();
     if(prior.length) return json({ok:true,duplicate:true});
     // Twitch delivers the whole channel chat; overflow remains normal Twitch chat
@@ -525,30 +585,64 @@ export class ChannelRoom extends DurableObject<Env> {
     if(event.kind==='message') {
       if(!this.takeRate(pilot,'chat',pilotLimits(this.env).chatPerMinute)) return this.ignoreChat(event.eventId,pilot,'pilot_chat_rate');
       const participants=candidate.round?.participants;
-      if(participants && !participants.has(event.userId) && participants.size>=pilotLimits(this.env).participants) {
+      if(!modCommand && !botCommand && participants && !participants.has(event.userId) && participants.size>=pilotLimits(this.env).participants) {
         return this.ignoreChat(event.eventId,pilot,'pilot_player_limit');
       }
       const badges=event.badges??[];
       const isMod=event.userId===this.channel || badges.some(b=>['moderator','broadcaster'].includes(b));
-      const command=(event.text??'').trim().toLowerCase();
       if(candidate.data.settings.modCommands && isMod && /^!bait (start|pause|resume)$/.test(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
         try {
           if(command==='!bait pause') candidate.pause();
           else if(pilot.chatConnected && this.leaseValid()) {if(command==='!bait start')candidate.begin();else candidate.resume();}
         } catch { /* A stale moderator command cannot override the current phase. */ }
       } else if(/^!bait (help|score|top|who)$/.test(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
-        this.events.get(candidate)!.push({event:{type:'chat-command',command:command.slice(6) as 'help'|'score'|'top'|'who',userId:event.userId},safeView:candidate.view('overlay')});
+        // Cooldowns belong before the durable outbox. A user cannot fill the
+        // shared bot queue with replies that will be discarded later anyway.
+        const replies=pilot.botReplies??{channelAt:0,users:{}};
+        for(const [user,at] of Object.entries(replies.users)) if(this.now-at>=30_000) delete replies.users[user];
+        if(candidate.data.settings.chatBot && this.now-replies.channelAt>=20_000 &&
+          (!replies.users[event.userId] || this.now-replies.users[event.userId]!>=30_000)) {
+          replies.channelAt=this.now;replies.users[event.userId]=this.now;pilot.botReplies=replies;
+          this.events.get(candidate)!.push({event:{type:'chat-command',command:command.slice(6) as 'help'|'score'|'top'|'who',userId:event.userId},safeView:candidate.view('overlay')});
+        }
       } else candidate.chat(event.messageId??event.eventId,event.userId,event.name??event.userId,event.text??'',event.at);
     } else if(event.kind==='delete') candidate.dropMessage(event.messageId??'',event.userId);
     else candidate.dropChatter(event.userId);
     // Bound durable transport dedupe separately from browser command receipts.
     this.ctx.storage.sql.exec('DELETE FROM pilot_chat_receipt WHERE expires<=?',this.now);
-    if(this.ctx.storage.sql.exec<{n:number}>('SELECT count(*) AS n FROM pilot_chat_receipt').one().n>=12_000) return json({ok:true,ignored:true,reason:'pilot_capacity'});
+    if(this.ctx.storage.sql.exec<{n:number}>('SELECT chat AS n FROM pilot_counts WHERE id=1').one().n>=12_000) return json({ok:true,ignored:true,reason:'pilot_capacity'});
+    if(JSON.stringify(candidate.checkpoint())===JSON.stringify(this.game.checkpoint()) && !this.events.get(candidate)?.length)
+      return this.ignoreChat(event.eventId,pilot,'no_change');
     await this.commit(candidate,this.revision+1,this.generation,undefined,pilot,event.eventId);this.broadcast();
     return json({ok:true});
   }
-  async webSocketClose(ws: WebSocket, code: number): Promise<void> {ws.close(code,'');await this.serial(async()=>{await this.reconcile();await this.schedule();});}
-  async webSocketError(ws: WebSocket): Promise<void> {ws.close(1011,'Reconnect to catch up.');await this.serial(async()=>{await this.reconcile();await this.schedule();});}
+  private rememberClosedSpeech(ws:WebSocket) {
+    const att=this.attachment(ws),lease=this.pilotState.lease;
+    if(lease && att?.socketId===lease.socketId && att.speech) {
+      lease.lastAudioAt=att.speech.lastAudioAt;lease.roundId=att.speech.roundId;lease.epoch=att.speech.epoch;
+      this.writePilot();
+    }
+  }
+  async webSocketClose(ws: WebSocket, code: number): Promise<void> {
+    if(this.pilot() && this.attachment(ws)?.socketId!==this.pilotState.lease?.socketId) {
+      try {ws.close([1005,1006,1015].includes(code)?1000:code,'');}catch{/* already closed */}
+      // A viewer disconnect cannot change gameplay. The existing expiry alarm
+      // will clean up scheduling without placing a disconnect wave in the queue.
+      return;
+    }
+    await this.serial(async()=>{
+      this.rememberClosedSpeech(ws);
+      // Reserved receive-only close codes cannot be sent back to the peer.
+      try {ws.close([1005,1006,1015].includes(code)?1000:code,'');} catch { /* already closed */ }
+      await this.reconcile();await this.schedule();
+    });
+  }
+  async webSocketError(ws: WebSocket): Promise<void> {
+    if(this.pilot() && this.attachment(ws)?.socketId!==this.pilotState.lease?.socketId) {
+      try{ws.close(1011,'Reconnect to catch up.');}catch{/* already closed */}return;
+    }
+    await this.serial(async()=>{this.rememberClosedSpeech(ws);try{ws.close(1011,'Reconnect to catch up.');}catch{/* already closed */}await this.reconcile();await this.schedule();});
+  }
   async alarm(): Promise<void> {
     await this.serial(async () => {
       await this.reconcile(); this.store.prune(this.now);

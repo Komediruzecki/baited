@@ -27,7 +27,11 @@ See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Invalid values fail closed
 | `EDGE_PILOT_ENABLED` | `false` | Admission remains closed until the launch decision. |
 | `limits.cpu_ms` | `50` | Per-request CPU guard; not a monthly spending cap. |
 
-Room controls, joins and explicit state refreshes each have a 120/minute budget. Viewer sockets are capped at four per identity. Studio and OBS share eight reserved connection slots. Frames and commands are limited to 8 KiB. The active microphone has a 30-second lease renewed every 10 seconds; a new round pauses if no audio timing arrives within five seconds, or if progress subsequently stops for 2.5 seconds.
+Room controls and explicit state refreshes each have a 120/minute budget per role and identity. Viewer joins allow 12/minute per identity; Studio/OBS joins allow 120/minute. Viewer traffic cannot consume the Studio's buckets. Viewer sockets are capped at four per identity. Studio and OBS share eight reserved connection slots. The pilot requires viewers to sign into Twitch; identity sharing is not required. Brief tab visibility changes keep the socket; five minutes hidden releases it.
+
+Frames and commands are limited to 8 KiB. A viewer may send four frames/second; Studio allows 16 for audio progress. Invalid viewer commands close that connection before entering the mutation queue. The gateway additionally allows 600 dynamic requests/minute/IP and 10 OAuth initiations/minute/IP using Cloudflare's approximate, per-location rate limiter. Verify that namespace IDs `2026102901` and `2026102902` are unique in the deployment account before activation. These are abuse controls, not exact global quotas.
+
+The active microphone has a 30-second lease renewed every 10 seconds and is bound to the exact Studio tab. A new round pauses if no audio timing arrives within five seconds, or if progress subsequently stops for 2.5 seconds. Late frames from a paused or finished round are ignored. Renewals return state in their response; there is no follow-up polling GET.
 
 Adding another invited streamer is a small config change: add the exact login, increase `EDGE_MAX_CHANNELS` as needed, review it, and redeploy configuration. Existing cookies do not grant a removed channel continued admission. Before removing a channel, disconnect its Twitch subscriptions and end its active test; do not rely on an allowlist edit alone as cleanup.
 
@@ -53,7 +57,7 @@ Broadcaster role protection stops accidental peeking with the broadcaster’s kn
 
 ## Build and review before activation
 
-1. Finish the requested personal Opus review, assess each finding and rerun affected checks. Keep the PR draft if a blocking issue remains.
+1. Finish the requested personal Opus review and its fix-verification pass, assess each finding and rerun affected checks. Keep the PR draft if a blocking issue remains. See [REVIEW-DISPOSITION.md](./REVIEW-DISPOSITION.md).
 2. Let the existing PR checks validate the application, Extension, landing, review-host and edge package. The new edge checks also build the selected static pilot assets.
 3. Build the pilot frontend with `pnpm --filter @baited/edge-game build:pilot-assets`.
 4. Build a separately named native Extension ZIP with `EXTENSION_TRANSPORT=edge` and the exact pilot API/Studio origin. [`pilot-extension.env.tmpl`](./pilot-extension.env.tmpl) supplies the public configuration and the Proton reference for the public Extension client ID. A ZIP built with fixture values is not upload-ready.

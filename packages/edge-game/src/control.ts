@@ -49,15 +49,31 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   private ready: Promise<void>;
   private tail: Promise<unknown> = Promise.resolve();
   private waiting = 0;
+  private nextInboxPruneAt = 0;
+  private webhookSecretHash = '';
   constructor(ctx: DurableObjectState, env: ControlEnv) {
     super(ctx, env);
     this.ready = ctx.blockConcurrencyWhile(async () => {
       const saved = await ctx.storage.get<ControlState>('control-v1');
+      this.webhookSecretHash = await sha256(env.TWITCH_EVENTSUB_SECRET ?? '');
       if (saved) { if (saved.version !== 1) throw new Error('Unsupported control state.'); this.data = saved; }
       this.committed = structuredClone(this.data);
       ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS twitch_inbox (
         id TEXT PRIMARY KEY, expires_at INTEGER NOT NULL, next_at INTEGER NOT NULL,
         attempts INTEGER NOT NULL DEFAULT 0, payload TEXT, delivered INTEGER NOT NULL DEFAULT 0)`);
+      ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS inbox_expiry ON twitch_inbox(expires_at)');
+      ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS inbox_pending ON twitch_inbox(delivered,next_at)');
+      ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS inbox_counts (id INTEGER PRIMARY KEY CHECK(id=1), total INTEGER NOT NULL, pending INTEGER NOT NULL)');
+      // Only the first migration counts historical rows. Triggers keep capacity
+      // checks O(1), including retries, expiry and channel disconnect cleanup.
+      if (!ctx.storage.sql.exec('SELECT id FROM inbox_counts WHERE id=1').toArray().length)
+        ctx.storage.sql.exec('INSERT INTO inbox_counts SELECT 1,COUNT(*),COALESCE(SUM(delivered=0),0) FROM twitch_inbox');
+      ctx.storage.sql.exec(`CREATE TRIGGER IF NOT EXISTS inbox_insert AFTER INSERT ON twitch_inbox BEGIN
+        UPDATE inbox_counts SET total=total+1,pending=pending+(NEW.delivered=0) WHERE id=1; END`);
+      ctx.storage.sql.exec(`CREATE TRIGGER IF NOT EXISTS inbox_delete AFTER DELETE ON twitch_inbox BEGIN
+        UPDATE inbox_counts SET total=total-1,pending=pending-(OLD.delivered=0) WHERE id=1; END`);
+      ctx.storage.sql.exec(`CREATE TRIGGER IF NOT EXISTS inbox_delivery AFTER UPDATE OF delivered ON twitch_inbox BEGIN
+        UPDATE inbox_counts SET pending=pending+(NEW.delivered=0)-(OLD.delivered=0) WHERE id=1; END`);
     });
   }
   private async serial<T>(run: () => Promise<T>): Promise<T> {
@@ -70,6 +86,10 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   /** Override in the isolated fixture only; production uses bounded native fetch. */
   protected externalFetch(input: string, init?: RequestInit): Promise<Response> {
     return fetch(input, { ...init, signal: AbortSignal.timeout(5000), redirect: 'error' });
+  }
+  /** Fixture instrumentation measures actual SQLite rows read, not an estimate. */
+  protected inboxQuery<T extends Record<string, SqlStorageValue>>(query: string, ...bindings: SqlStorageValue[]): T[] {
+    return this.ctx.storage.sql.exec<T>(query, ...bindings).toArray();
   }
   private allowed(channel?: RegisteredChannel): channel is RegisteredChannel {
     return !!channel && channel.active && allowedLogins(this.env).has(channel.login);
@@ -91,7 +111,10 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     this.data.queue = this.data.queue.filter((q) => q.expiresAt > now && this.allowed(this.data.channels[q.channelId]));
     this.data.sentAt = this.data.sentAt.filter((at) => at > now - 30_000);
     this.data.receipts = this.data.receipts.slice(-50);
-    this.ctx.storage.sql.exec('DELETE FROM twitch_inbox WHERE expires_at <= ?', now);
+    if (now >= this.nextInboxPruneAt) {
+      this.inboxQuery('DELETE FROM twitch_inbox WHERE expires_at <= ?', now);
+      this.nextInboxPruneAt = now + 30_000;
+    }
   }
   private async persist(): Promise<void> {
     try { await this.ctx.storage.put('control-v1', this.data); this.committed = structuredClone(this.data); }
@@ -100,9 +123,16 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   }
   private async schedule(): Promise<void> {
     const now = Date.now(); const deadlines: number[] = [];
-    const inbox = this.ctx.storage.sql.exec<{ at: number | null }>('SELECT MIN(next_at) AS at FROM twitch_inbox WHERE delivered = 0').toArray()[0]?.at;
+    const inbox = this.inboxQuery<{ next_at: number }>('SELECT next_at FROM twitch_inbox WHERE delivered=0 ORDER BY next_at LIMIT 1')[0]?.next_at;
     if (inbox) deadlines.push(inbox);
-    if (this.data.queue.length) deadlines.push(Math.max(now + 1100, this.data.pausedUntil, this.data.sentAt.length >= this.botBudget() ? this.data.sentAt[0]! + 30_001 : 0));
+    if (this.data.queue.length) {
+      const channelReady = Math.min(...this.data.queue.map((q) => {
+        const window = (this.data.channelSentWindow?.[q.channelId] ?? []).filter((at) => at > now - 30_000);
+        return Math.max(now + 1100, (this.data.channelSentAt[q.channelId] ?? 0) + 1100, window.length >= 6 ? window[0]! + 30_001 : 0);
+      }));
+      deadlines.push(Math.min(Math.max(channelReady, this.data.pausedUntil, this.data.sentAt.length >= this.botBudget() ? this.data.sentAt[0]! + 30_001 : 0),
+        ...this.data.queue.map((q) => q.expiresAt)));
+    }
     for (const c of Object.values(this.data.channels)) if (this.needsSubscription(c)) deadlines.push(c.subscriptionRetryAt ?? now + 1000);
     for (const c of Object.values(this.data.channels)) {
       if (c.pendingDeletion?.length) deadlines.push(c.deleteRetryAt ?? now + 1000);
@@ -114,10 +144,10 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     if (deadlines.length) await this.ctx.storage.setAlarm(Math.max(now + 1000, Math.min(...deadlines)));
     else await this.ctx.storage.deleteAlarm();
   }
-  private async session(request: Request): Promise<{ id: string; value: ControlSession; channel: RegisteredChannel } | null> {
+  private async session(request: Request, state = this.data): Promise<{ id: string; value: ControlSession; channel: RegisteredChannel } | null> {
     const cookie = cookieValue(request, SESSION_COOKIE); if (!cookie) return null;
-    const id = await sha256(cookie); const value = this.data.sessions[id];
-    const channel = value ? this.data.channels[value.channelId] : undefined;
+    const id = await sha256(cookie); const value = state.sessions[id];
+    const channel = value ? state.channels[value.channelId] : undefined;
     if (!value || value.expiresAt <= Date.now() || !this.allowed(channel)) return null;
     return { id, value, channel };
   }
@@ -131,6 +161,21 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   }
   async fetch(request: Request): Promise<Response> {
     try {
+      const url = new URL(request.url);
+      if (url.pathname === '/api/session' && request.method === 'GET' || url.pathname === WEBHOOK && request.method === 'POST') {
+        await this.ready;
+        if (!this.configured()) return json({ error: 'The hosted pilot is not configured.' }, 503);
+        if (url.origin !== publicOrigin(this.env) || url.username || url.password || url.hash) return denied();
+        if (url.pathname === '/api/session') {
+          const session = await this.session(request, this.committed);
+          return json({ runtime: 'edge', authenticated: !!session, twitchReady: true, demoAvailable: false, speechReady: true,
+            ...(session ? { user: { name: session.channel.name, mode: 'twitch' }, csrf: session.value.csrf } : {}) });
+        }
+        const body = await boundedControlBody(request);
+        const signature = await verifyWebhook(request, body, this.env.TWITCH_EVENTSUB_SECRET);
+        if (!signature) return denied();
+        return await this.serial(() => { this.prune(); return this.webhook(body, signature); });
+      }
       // Room authentication must not wait behind a control operation delivering a
       // webhook into that same room. Read only the last committed auth snapshot.
       if (request.url === 'https://control.internal/internal/authorize' && request.method === 'POST') {
@@ -153,7 +198,6 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     if (url.origin !== publicOrigin(this.env) || url.username || url.password || url.hash) return denied();
     if (url.pathname === '/auth/twitch' && request.method === 'GET') return this.beginOAuth('broadcaster');
     if (url.pathname === CALLBACK && request.method === 'GET') return this.callback(request, url);
-    if (url.pathname === WEBHOOK && request.method === 'POST') return this.webhook(request);
     if (url.pathname === '/api/edge/overlay' && request.method === 'POST') return this.overlay(request);
     const session = await this.session(request);
     if (url.pathname === '/api/session' && request.method === 'GET') return json({ runtime: 'edge', authenticated: !!session, twitchReady: true,
@@ -198,7 +242,10 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     return json({ error: 'Not found.' }, 404);
   }
   private async beginOAuth(kind: 'broadcaster' | 'bot', initiatingSession?: string, asJson = false): Promise<Response> {
-    if (Object.keys(this.data.pending).length >= CONTROL_LIMITS.pendingOAuth) return json({ error: 'Too many sign-in attempts. Try again shortly.' }, 429);
+    if (Object.keys(this.data.pending).length >= CONTROL_LIMITS.pendingOAuth) {
+      const oldest = Object.entries(this.data.pending).sort((a, b) => a[1].expiresAt - b[1].expiresAt)[0];
+      if (oldest) delete this.data.pending[oldest[0]];
+    }
     const state = randomToken(); const cookie = randomToken();
     this.data.pending[await sha256(state)] = { cookieHash: await sha256(cookie), kind, initiatingSession, expiresAt: Date.now() + CONTROL_LIMITS.oauthMs };
     await this.persist();
@@ -239,6 +286,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       moderationSubscriptions: existing?.subscriptionStatus === 'revoked' ? {} : existing?.moderationSubscriptions ?? {},
       subscriptionStatus: existing?.chatWanted === false ? existing.subscriptionStatus : existing?.subscriptionStatus === 'enabled' ? 'enabled' : 'pending',
       chatWanted: existing?.chatWanted ?? true, lastStudioAt: Date.now(), pendingDeletion: existing?.pendingDeletion ?? [],
+      subscriptionSecretHash: existing?.subscriptionSecretHash, resubscribeAfterDeletion: existing?.resubscribeAfterDeletion,
       deleteRetryAt: existing?.deleteRetryAt, deleteAttempts: existing?.deleteAttempts,
       subscriptionRetryAt: Date.now() + 1000, subscriptionAttempts: 0, active: true };
     const token = randomToken(); const sessionId = await sha256(token);
@@ -254,7 +302,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   private async tokenCall(parameters: Record<string, string>): Promise<Record<string, any>> {
     const response = await this.externalFetch('https://id.twitch.tv/oauth2/token', { method: 'POST', body: new URLSearchParams({
       client_id: this.env.TWITCH_CLIENT_ID!, client_secret: this.env.TWITCH_CLIENT_SECRET!, ...parameters }) });
-    if (!response.ok) throw new Error('token_exchange_failed');
+    if (!response.ok) throw new Error(parameters.grant_type === 'refresh_token' && [400, 401].includes(response.status) ? 'token_revoked' : 'token_exchange_failed');
     const data = object(await response.json());
     if (!data || typeof data.access_token !== 'string' || data.access_token.length > 4096 || !Number.isFinite(data.expires_in) || data.expires_in <= 0) throw new Error('invalid_token_response');
     return data;
@@ -327,15 +375,16 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   private roomStub(channelId: string) { return this.env.ROOMS.get(this.env.ROOMS.idFromName(`channel:${channelId}`)); }
   private needsSubscription(channel: RegisteredChannel): boolean {
     return this.allowed(channel) && channel.chatWanted !== false && !channel.pendingDeletion?.length && (['pending', 'failed'].includes(channel.subscriptionStatus) ||
-      channel.subscriptionStatus === 'enabled' && MODERATION_TYPES.some((type) => !channel.moderationSubscriptions?.[type]));
+      channel.subscriptionStatus === 'enabled' && (channel.subscriptionSecretHash !== this.webhookSecretHash || MODERATION_TYPES.some((type) => !channel.moderationSubscriptions?.[type])));
   }
   private async stopChat(channel: RegisteredChannel, detail: string): Promise<void> {
     channel.chatWanted = false;
+    channel.resubscribeAfterDeletion = false;
     channel.pendingDeletion = [...new Set([...(channel.pendingDeletion ?? []), ...(channel.subscriptionId ? [channel.subscriptionId] : []), ...Object.values(channel.moderationSubscriptions ?? {})])];
     channel.subscriptionStatus = channel.pendingDeletion.length ? 'stopping' : 'offline';
     channel.deleteRetryAt = Date.now() + 1000; channel.deleteAttempts = 0;
     this.data.queue = this.data.queue.filter((q) => q.channelId !== channel.id);
-    this.ctx.storage.sql.exec("DELETE FROM twitch_inbox WHERE delivered = 0 AND json_extract(payload, '$.channelId') = ?", channel.id);
+    this.inboxQuery("DELETE FROM twitch_inbox WHERE delivered = 0 AND json_extract(payload, '$.channelId') = ?", channel.id);
     // Store the stop intent before any external DELETE. In-flight notifications are
     // acknowledged without entering the room while provider removal is retried.
     await this.persist();
@@ -350,11 +399,14 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       } catch {
         channel.deleteAttempts = Math.min(10, (channel.deleteAttempts ?? 0) + 1);
         channel.deleteRetryAt = Date.now() + Math.min(5 * 60_000, 1000 * 2 ** channel.deleteAttempts);
-        channel.subscriptionStatus = 'stopping'; await this.persist(); return false;
+        channel.subscriptionStatus = channel.active ? 'stopping' : 'revoked'; await this.persist(); return false;
       }
     }
     channel.subscriptionId = undefined; channel.moderationSubscriptions = {}; channel.pendingDeletion = [];
-    channel.subscriptionStatus = 'offline'; channel.deleteAttempts = 0; channel.deleteRetryAt = undefined;
+    const reconnect = channel.active && channel.chatWanted !== false && channel.resubscribeAfterDeletion;
+    channel.subscriptionStatus = channel.active ? reconnect ? 'pending' : 'offline' : 'revoked';
+    channel.resubscribeAfterDeletion = false; channel.deleteAttempts = 0; channel.deleteRetryAt = undefined;
+    if (reconnect) channel.subscriptionRetryAt = Date.now() + 1000;
     await this.persist(); return true;
   }
   private async roomControl(channelId: string, event: Record<string, unknown>): Promise<void> {
@@ -362,8 +414,25 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       headers: { 'content-type': 'application/json' }, body: JSON.stringify({ channelId, ...event }) });
     if (!response.ok) throw new Error('room_unavailable');
   }
+  private async revokeChannel(channel: RegisteredChannel): Promise<void> {
+    const sessions = Object.entries(this.data.sessions).filter(([, session]) => session.channelId === channel.id).map(([id]) => id);
+    for (const id of sessions) delete this.data.sessions[id];
+    channel.active = false; delete channel.credentials; channel.scopes = [];
+    await this.stopChat(channel, 'Twitch authorization changed. Connect again.');
+    channel.subscriptionStatus = 'revoked'; await this.persist();
+    // Revoke the durable session before closing sockets. A failed push cannot
+    // admit new commands; the room also rechecks durable session authorization.
+    for (const sessionId of sessions) await this.roomControl(channel.id, { type: 'disconnect', sessionId }).catch(() => {});
+  }
   private async subscribe(channel: RegisteredChannel): Promise<void> {
     if (!this.allowed(channel)) return;
+    if (channel.subscriptionId && channel.subscriptionSecretHash !== this.webhookSecretHash) {
+      channel.pendingDeletion = [...new Set([channel.subscriptionId, ...Object.values(channel.moderationSubscriptions ?? {})])];
+      channel.subscriptionStatus = 'stopping'; channel.resubscribeAfterDeletion = true; channel.deleteRetryAt = Date.now() + 1000;
+      await this.persist();
+      await this.roomControl(channel.id, { type: 'connection', status: 'disconnected', detail: 'Reconnecting Twitch chat.', login: channel.login }).catch(() => {});
+      return;
+    }
     const type = channel.subscriptionStatus === 'enabled' ? MODERATION_TYPES.find((type) => !channel.moderationSubscriptions?.[type]) : 'channel.chat.message';
     if (!type) return;
     const primary = type === 'channel.chat.message';
@@ -374,9 +443,21 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         // Do not guess an existing subscription's status or callback destination.
         const list = await this.helix(`eventsub/subscriptions?type=${type}`, { method: 'GET' });
         const payload = list.ok ? object(await list.json()) : null;
-        const found = payload && Array.isArray(payload.data) ? payload.data.find((s: any) => s?.condition?.broadcaster_user_id === channel.id && s.condition.user_id === channel.id &&
-          s.transport?.method === 'webhook' && s.transport.callback === `${publicOrigin(this.env)}${WEBHOOK}` && s.status === 'enabled') : null;
+        const found = payload && Array.isArray(payload.data) ? payload.data.find((s: any) => s?.type === type && s.version === '1' &&
+          s?.condition?.broadcaster_user_id === channel.id && s.condition.user_id === channel.id &&
+          s.transport?.method === 'webhook' && s.transport.callback === `${publicOrigin(this.env)}${WEBHOOK}` &&
+          typeof s.id === 'string' && s.id.length <= 128) : null;
         if (!found) throw new Error('subscription_conflict');
+        const knownId = primary ? channel.subscriptionId : channel.moderationSubscriptions?.[type];
+        if (found.status !== 'enabled' || channel.subscriptionSecretHash !== this.webhookSecretHash || found.id !== knownId) {
+          // Only reconcile subscriptions belonging to this exact app callback and
+          // channel. Never remove a subscription for another consumer.
+          const removed = await this.helix(`eventsub/subscriptions?id=${encodeURIComponent(found.id)}`, { method: 'DELETE' });
+          if (!removed.ok && removed.status !== 404) throw new Error('subscription_conflict');
+          if (primary) { channel.subscriptionId = undefined; channel.subscriptionStatus = 'pending'; }
+          else if (channel.moderationSubscriptions) delete channel.moderationSubscriptions[type];
+          channel.subscriptionRetryAt = Date.now() + 1000; await this.persist(); return;
+        }
         if (primary) { channel.subscriptionId = found.id; channel.subscriptionStatus = 'enabled'; }
         else { channel.moderationSubscriptions ??= {}; channel.moderationSubscriptions[type] = found.id; }
       } else {
@@ -386,6 +467,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         if (primary) { channel.subscriptionId = entry.id; channel.subscriptionStatus = entry.status === 'enabled' ? 'enabled' : 'pending'; }
         else { channel.moderationSubscriptions ??= {}; channel.moderationSubscriptions[type] = entry.id; }
       }
+      channel.subscriptionSecretHash = this.webhookSecretHash;
       channel.subscriptionAttempts = 0; channel.subscriptionRetryAt = Date.now() + (primary ? 60_000 : 1000);
       await this.persist();
       if (channel.subscriptionStatus === 'enabled') await this.roomControl(channel.id, { type: 'connection', status: 'connected', detail: 'Twitch chat connected.', login: channel.login });
@@ -396,56 +478,58 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       await this.persist();
     }
   }
-  private async webhook(request: Request): Promise<Response> {
-    const body = await boundedControlBody(request); const signature = await verifyWebhook(request, body, this.env.TWITCH_EVENTSUB_SECRET);
-    if (!signature) return denied();
-    const payload = object(JSON.parse(body)); const subscription = object(payload?.subscription); const condition = object(subscription?.condition);
+  private async webhook(body: string, signature: NonNullable<Awaited<ReturnType<typeof verifyWebhook>>>): Promise<Response> {
+    const ignored = () => new Response(null, { status: 204 });
+    let payload: Record<string, any> | null;
+    try { payload = object(JSON.parse(body)); } catch { return ignored(); }
+    const subscription = object(payload?.subscription); const condition = object(subscription?.condition);
     const channel = condition && ID.test(condition.broadcaster_user_id ?? '') ? this.data.channels[condition.broadcaster_user_id] : undefined;
     if (!this.allowed(channel) || !['channel.chat.message', ...MODERATION_TYPES].includes(subscription?.type) || subscription?.version !== '1' || condition?.user_id !== channel.id ||
-      typeof subscription.id !== 'string' || subscription.id.length > 128) return denied();
+      typeof subscription.id !== 'string' || subscription.id.length > 128) return ignored();
     if (channel.chatWanted === false) return new Response(null, { status: 204 });
     const primary = subscription.type === 'channel.chat.message';
     const knownId = primary ? channel.subscriptionId : channel.moderationSubscriptions?.[subscription.type];
-    if (knownId && knownId !== subscription.id) return denied();
-    if (!knownId && signature.type !== 'webhook_callback_verification') return denied();
+    if (knownId && knownId !== subscription.id) return ignored();
+    if (!knownId && signature.type !== 'webhook_callback_verification') return ignored();
     if (signature.type === 'webhook_callback_verification') {
-      if (typeof payload?.challenge !== 'string' || payload.challenge.length > 1024) return denied();
+      if (typeof payload?.challenge !== 'string' || payload.challenge.length > 1024) return ignored();
       if (primary) { channel.subscriptionId = subscription.id; channel.subscriptionStatus = 'enabled'; channel.subscriptionRetryAt = Date.now() + 1000; }
       else { channel.moderationSubscriptions ??= {}; channel.moderationSubscriptions[subscription.type] = subscription.id; }
+      channel.subscriptionSecretHash = this.webhookSecretHash;
       await this.persist();
       await this.roomControl(channel.id, { type: 'connection', status: 'connected', detail: 'Twitch chat connected.', login: channel.login }).catch(() => {});
       return new Response(payload.challenge, { headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
     }
     if (signature.type === 'revocation') {
-      if (!primary && subscription.status !== 'authorization_revoked' && subscription.status !== 'user_removed') {
-        if (channel.moderationSubscriptions) delete channel.moderationSubscriptions[subscription.type];
-        channel.subscriptionRetryAt = Date.now() + 60_000; await this.persist();
-        return new Response(null, { status: 204 });
+      if (subscription.status === 'authorization_revoked' || subscription.status === 'user_removed') {
+        await this.revokeChannel(channel); return ignored();
       }
-      channel.subscriptionStatus = 'revoked'; channel.active = false;
-      for (const [id, session] of Object.entries(this.data.sessions)) if (session.channelId === channel.id) delete this.data.sessions[id];
-      this.data.queue = this.data.queue.filter((q) => q.channelId !== channel.id); await this.persist();
-      await this.roomControl(channel.id, { type: 'connection', status: 'disconnected', detail: 'Twitch authorization changed. Connect again.', login: channel.login }).catch(() => {});
-      return new Response(null, { status: 204 });
+      if (subscription.status === 'version_removed') {
+        await this.stopChat(channel, 'Twitch chat needs an update before it can reconnect.'); return ignored();
+      }
+      if (primary) { channel.subscriptionId = undefined; channel.subscriptionStatus = 'failed'; }
+      else if (channel.moderationSubscriptions) delete channel.moderationSubscriptions[subscription.type];
+      channel.subscriptionRetryAt = Date.now() + 60_000; channel.subscriptionAttempts = 0; await this.persist();
+      if (primary) await this.roomControl(channel.id, { type: 'connection', status: 'disconnected', detail: 'Reconnecting Twitch chat.', login: channel.login }).catch(() => {});
+      return ignored();
     }
     const event = object(payload?.event); const message = object(event?.message);
-    if (!event || event.broadcaster_user_id !== channel.id) return denied();
+    if (!event || event.broadcaster_user_id !== channel.id) return ignored();
     if (primary && (!ID.test(event.chatter_user_id ?? '') || typeof event.chatter_user_name !== 'string' ||
       event.chatter_user_name.length > 100 || typeof event.message_id !== 'string' || event.message_id.length > 128 || typeof message?.text !== 'string' ||
-      message.text.length > 2000 || event.source_broadcaster_user_id && event.source_broadcaster_user_id !== channel.id)) return denied();
-    if (!primary && (!ID.test(event.target_user_id ?? '') || subscription.type === 'channel.chat.message_delete' && (typeof event.message_id !== 'string' || event.message_id.length > 128))) return denied();
+      message.text.length > 2000 || event.source_broadcaster_user_id && event.source_broadcaster_user_id !== channel.id)) return ignored();
+    if (!primary && (!ID.test(event.target_user_id ?? '') || subscription.type === 'channel.chat.message_delete' && (typeof event.message_id !== 'string' || event.message_id.length > 128))) return ignored();
     if (primary && event.chatter_user_id === this.env.EDGE_BOT_USER_ID) return new Response(null, { status: 204 });
-    if (this.ctx.storage.sql.exec('SELECT id FROM twitch_inbox WHERE id = ?', signature.id).toArray().length) return new Response(null, { status: 204 });
-    const count = this.ctx.storage.sql.exec<{ count: number }>('SELECT COUNT(*) AS count FROM twitch_inbox').toArray()[0]!.count;
-    const pending = this.ctx.storage.sql.exec<{ count: number }>('SELECT COUNT(*) AS count FROM twitch_inbox WHERE delivered = 0').toArray()[0]!.count;
-    if (count >= CONTROL_LIMITS.dedupe || pending >= CONTROL_LIMITS.inbox) return json({ error: 'Chat delivery is busy. Retry shortly.' }, 503);
+    if (this.inboxQuery('SELECT id FROM twitch_inbox WHERE id = ?', signature.id).length) return ignored();
+    const counts = this.inboxQuery<{ total: number; pending: number }>('SELECT total,pending FROM inbox_counts WHERE id=1')[0]!;
+    if (counts.total >= CONTROL_LIMITS.dedupe || counts.pending >= CONTROL_LIMITS.inbox) return json({ error: 'Chat delivery is busy. Retry shortly.' }, 503);
     const badges = Array.isArray(event.badges) ? event.badges.slice(0, 64).flatMap((b: unknown) => { const v = object(b); return typeof v?.set_id === 'string' && v.set_id.length <= 40 ? [v.set_id] : []; }) : [];
     const normalized: TwitchChatEvent = { eventId: signature.id, channelId: channel.id, at: Date.parse(signature.timestamp),
       kind: primary ? 'message' : subscription.type === 'channel.chat.message_delete' ? 'delete' : 'clear-user',
       messageId: event.message_id, userId: primary ? event.chatter_user_id : event.target_user_id,
       ...(primary ? { name: event.chatter_user_name.slice(0, 40), text: message!.text, badges } : {}) };
     // Persist before delivery. Room deduplication makes a retry after eviction safe.
-    this.ctx.storage.sql.exec('INSERT INTO twitch_inbox (id,expires_at,next_at,payload) VALUES (?,?,?,?)', signature.id,
+    this.inboxQuery('INSERT INTO twitch_inbox (id,expires_at,next_at,payload) VALUES (?,?,?,?)', signature.id,
       Math.max(Date.now(), normalized.at) + CONTROL_LIMITS.webhookMs, Date.now(), JSON.stringify(normalized));
     await this.schedule(); await this.deliver(normalized);
     return new Response(null, { status: 204 });
@@ -453,29 +537,35 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   private async deliver(event: TwitchChatEvent): Promise<void> {
     try {
       const channel = this.data.channels[event.channelId];
-      if (!this.allowed(channel) || channel.chatWanted === false) { this.ctx.storage.sql.exec('DELETE FROM twitch_inbox WHERE id = ?', event.eventId); return; }
+      if (!this.allowed(channel) || channel.chatWanted === false) { this.inboxQuery('DELETE FROM twitch_inbox WHERE id = ?', event.eventId); return; }
       const response = await this.roomStub(event.channelId).fetch('https://room.internal/internal/twitch-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(event) });
-      if (!response.ok) throw new Error('room_delivery_failed');
-      this.ctx.storage.sql.exec('UPDATE twitch_inbox SET delivered = 1, payload = NULL WHERE id = ?', event.eventId);
+      if (!response.ok && !(response.status >= 400 && response.status < 500 && response.status !== 429)) throw new Error('room_delivery_failed');
+      this.inboxQuery('UPDATE twitch_inbox SET delivered = 1, payload = NULL WHERE id = ?', event.eventId);
     } catch {
-      const row = this.ctx.storage.sql.exec<{ attempts: number }>('SELECT attempts FROM twitch_inbox WHERE id = ?', event.eventId).toArray()[0];
+      const row = this.inboxQuery<{ attempts: number }>('SELECT attempts FROM twitch_inbox WHERE id = ?', event.eventId)[0];
       const attempts = (row?.attempts ?? 0) + 1;
-      this.ctx.storage.sql.exec('UPDATE twitch_inbox SET attempts = ?, next_at = ? WHERE id = ?', attempts, Date.now() + Math.min(60_000, 1000 * 2 ** Math.min(attempts, 6)), event.eventId);
+      this.inboxQuery('UPDATE twitch_inbox SET attempts = ?, next_at = ? WHERE id = ?', attempts, Date.now() + Math.min(60_000, 1000 * 2 ** Math.min(attempts, 6)), event.eventId);
     }
     await this.schedule();
   }
   private async roomEvent(input: RoomAnnouncement): Promise<Response> {
     if (typeof input.eventId !== 'string' || input.eventId.length > 160 || !object(input.safeView) || !object(input.event)) return json({ error: 'Invalid event.' }, 400);
-    const key = `room:${input.channelId}:${input.eventId}`;
+    const isCommand = input.event.type === 'chat-command';
+    const prefix = `room:${input.channelId}:${isCommand ? 'command' : 'round'}:`;
+    const key = `${prefix}${input.eventId}`;
     if (this.data.dedupe[key]) return json({ ok: true });
-    if (Object.keys(this.data.dedupe).length >= 512) return json({ error: 'Announcement queue is busy.' }, 503);
     // Never let even an accidentally supplied viewer projection feed the bot.
     const view = structuredClone(input.safeView) as GameView;
     if (view.round) { delete view.round.target; delete view.round.forbiddenClues; delete view.round.artUrl; delete view.round.example; delete view.round.ink; }
     view.history = view.history.map(({ word: _word, ...rest }) => rest);
     if (view.result && !['caught', 'escaped'].includes(view.result.outcome)) delete view.result.word;
     let announcement = null;
-    if (!view.settings.chatBot) this.data.queue = this.data.queue.filter((q) => q.channelId !== input.channelId);
+    if (!view.settings.chatBot) {
+      const previous = this.data.queue.length;
+      this.data.queue = this.data.queue.filter((q) => q.channelId !== input.channelId);
+      if (previous !== this.data.queue.length) await this.persist();
+      return json({ ok: true });
+    }
     else if (input.event.type === 'chat-command') {
       const commands = { help: helpText, score: scoreText, top: topText, who: whoText };
       const command = input.event.command;
@@ -487,12 +577,23 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         this.data.commandCooldowns[userKey] = Date.now() + 30_000;
       }
     } else if (input.event.type !== 'bot-settings') announcement = eventAnnouncement(view, input.event);
+    // Cooldown-ignored commands do not consume announcement receipt capacity or
+    // rewrite the full durable state. Each channel has its own bounded buckets.
+    if (!announcement) return json({ ok: true });
+    const receipts = Object.entries(this.data.dedupe).filter(([id]) => id.startsWith(prefix));
+    if (receipts.length >= (isCommand ? 32 : 128)) {
+      receipts.sort((a, b) => a[1] - b[1]); delete this.data.dedupe[receipts[0]![0]];
+    }
     this.data.dedupe[key] = Date.now() + CONTROL_LIMITS.webhookMs;
     const channel = this.data.channels[input.channelId]!; const bot = this.botStatus(channel);
     if (announcement && channel.chatWanted !== false && bot.configured && bot.authorized && bot.channelAllowed) {
       const text = announcement.text.trim();
       if (text && text.length <= 500) {
         this.data.queue = this.data.queue.filter((q) => !(q.channelId === input.channelId && q.key === announcement.key));
+        if (this.data.queue.filter((q) => q.channelId === input.channelId).length >= 8) {
+          const replace = this.data.queue.findIndex((q) => q.channelId === input.channelId && (q.key === 'command' || !isCommand));
+          if (replace >= 0) this.data.queue.splice(replace, 1);
+        }
         if (this.data.queue.length < CONTROL_LIMITS.queue) this.data.queue.push({ id: key, channelId: input.channelId, key: announcement.key,
           text, expiresAt: Date.now() + Math.min(60_000, announcement.ttl) });
       }
@@ -508,12 +609,16 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     if (!this.data.bot || this.data.bot.user.id !== this.env.EDGE_BOT_USER_ID || this.data.pausedUntil > now || this.data.sentAt.length >= this.botBudget()) return;
     // Round announcements win over help/score chatter when the shared bot is busy.
     this.data.queue.sort((a, b) => Number(a.key === 'command') - Number(b.key === 'command'));
-    const index = this.data.queue.findIndex((q) => now - (this.data.channelSentAt[q.channelId] ?? 0) >= 1100 && this.data.channels[q.channelId]?.scopes.includes('channel:bot'));
+    this.data.channelSentWindow ??= {};
+    for (const [channel, times] of Object.entries(this.data.channelSentWindow)) this.data.channelSentWindow[channel] = times.filter((at) => at > now - 30_000);
+    const index = this.data.queue.findIndex((q) => now - (this.data.channelSentAt[q.channelId] ?? 0) >= 1100 &&
+      (this.data.channelSentWindow![q.channelId]?.length ?? 0) < 6 && this.data.channels[q.channelId]?.scopes.includes('channel:bot'));
     if (index < 0) return;
     const [item] = this.data.queue.splice(index, 1); if (!item) return;
     // Reserve globally and remove durably before the network request. Ambiguous failures
     // are not resent: at-most-once posting is safer than duplicate chat announcements.
-    this.data.sentAt.push(now); this.data.channelSentAt[item.channelId] = now; await this.persist();
+    this.data.sentAt.push(now); this.data.channelSentAt[item.channelId] = now;
+    (this.data.channelSentWindow[item.channelId] ??= []).push(now); await this.persist();
     let status: 'sent' | 'failed' | 'dropped' = 'failed';
     try {
       const response = await this.helix('chat/messages', { method: 'POST', body: JSON.stringify({ broadcaster_id: item.channelId, sender_id: this.data.bot.user.id, message: item.text }) }, false);
@@ -521,42 +626,66 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         const reset = Number(response.headers.get('ratelimit-reset')) * 1000;
         this.data.pausedUntil = now + Math.max(30_000, Math.min(5 * 60_000, Number.isFinite(reset) ? reset - now : 30_000));
       } else if (response.status === 401) { this.data.appToken = undefined; this.data.pausedUntil = now + 30_000; }
-      else if (response.ok) { const body = object(await response.json()); status = body && Array.isArray(body.data) && body.data[0]?.is_sent === true ? 'sent' : 'dropped'; }
+      else if (response.ok) {
+        const body = object(await response.json()); const result = body && Array.isArray(body.data) ? object(body.data[0]) : null;
+        status = result?.is_sent === true ? 'sent' : 'dropped';
+        if (status === 'dropped' && /rate|limit|throttl/i.test(String(result?.drop_reason?.code ?? ''))) this.data.pausedUntil = now + 30_000;
+      }
     } catch { /* No message bodies, access tokens or provider responses enter logs. */ }
     this.data.receipts.push({ id: item.id, channelId: item.channelId, at: now, status }); await this.persist();
   }
-  private async validateCredential(channel: RegisteredChannel | null): Promise<void> {
-    const bot = this.data.bot;
-    if (!channel && !bot) return;
-    const id = channel ? `channel:${channel.id}` : `bot:${bot!.user.id}`;
-    const encrypted = channel?.credentials ?? bot!.credentials;
+  private async validateCredential(channelId: string | null): Promise<void> {
+    const snapshot = this.committed;
+    const holder = channelId ? snapshot.channels[channelId] : snapshot.bot;
+    let encrypted = holder?.credentials;
+    if (!encrypted || channelId && !this.allowed(snapshot.channels[channelId])) return;
+    const identity = channelId ? `channel:${channelId}` : `bot:${snapshot.bot!.user.id}`;
+    const current = () => {
+      const value = channelId ? this.data.channels[channelId] : this.data.bot;
+      return this.configured() && value?.credentials?.ciphertext === encrypted!.ciphertext &&
+        (!channelId || this.allowed(this.data.channels[channelId])) ? value : null;
+    };
     try {
-      let credentials = await decryptValue<Credentials>(encrypted, this.env.EDGE_TOKEN_ENCRYPTION_KEY_B64, id);
+      let credentials = await decryptValue<Credentials>(encrypted, this.env.EDGE_TOKEN_ENCRYPTION_KEY_B64, identity);
       if (credentials.expiresAt < Date.now() + 5 * 60_000) {
         const token = await this.tokenCall({ grant_type: 'refresh_token', refresh_token: credentials.refreshToken });
         if (typeof token.refresh_token !== 'string') throw new Error('token_revoked');
         credentials = { ...credentials, accessToken: token.access_token, refreshToken: token.refresh_token, expiresAt: Date.now() + token.expires_in * 1000 };
-        // Save rotated refresh credentials before validation or another outbound request.
-        if (channel) channel.credentials = await this.seal(credentials, id); else bot!.credentials = await this.seal(credentials, id);
-        await this.persist();
+        const refreshed = await this.seal(credentials, identity);
+        const saved = await this.serial(async () => {
+          const value = current(); if (!value) return false;
+          value.credentials = refreshed; await this.persist(); return true;
+        });
+        if (!saved) return;
+        encrypted = refreshed;
       }
-      const validated = await this.validateToken(credentials.accessToken, channel ? BROADCASTER_SCOPES : BOT_SCOPES);
-      if (validated.userId !== credentials.id || validated.login !== credentials.login) throw new Error('token_revoked');
-      credentials = { ...credentials, scopes: validated.scopes, validatedAt: Date.now() };
-      if (channel) { channel.credentials = await this.seal(credentials, id); channel.validatedAt = credentials.validatedAt; channel.scopes = credentials.scopes; }
-      else { bot!.credentials = await this.seal(credentials, id); bot!.validatedAt = credentials.validatedAt; }
+      // Provider validation never occupies the Control mutation queue. A concurrent
+      // logout/revocation/new OAuth grant wins over this older credential snapshot.
+      const valid = await this.validateToken(credentials.accessToken, channelId ? BROADCASTER_SCOPES : BOT_SCOPES);
+      if (valid.userId !== credentials.id || valid.login !== credentials.login) throw new Error('token_revoked');
+      credentials = { ...credentials, scopes: valid.scopes, validatedAt: Date.now() };
+      const sealed = await this.seal(credentials, identity);
+      await this.serial(async () => {
+        const value = current(); if (!value) return;
+        value.credentials = sealed; value.validatedAt = credentials.validatedAt;
+        if (channelId) this.data.channels[channelId]!.scopes = credentials.scopes;
+        await this.persist();
+      });
     } catch (error) {
-      if (error instanceof Error && error.message === 'token_revoked') {
-        if (channel) {
-          channel.active = false; channel.subscriptionStatus = 'revoked';
-          for (const [sessionId, session] of Object.entries(this.data.sessions)) if (session.channelId === channel.id) delete this.data.sessions[sessionId];
-          await this.roomControl(channel.id, { type: 'connection', status: 'disconnected', detail: 'Twitch authorization changed. Connect again.', login: channel.login }).catch(() => {});
-        } else { delete this.data.bot; this.data.queue = []; }
-      } else this.data.nextValidationAt = Math.min(this.data.nextValidationAt || Infinity, Date.now() + 5 * 60_000);
+      await this.serial(async () => {
+        if (!current()) return;
+        if (error instanceof Error && error.message === 'token_revoked') {
+          if (channelId) await this.revokeChannel(this.data.channels[channelId]!);
+          else { delete this.data.bot; this.data.queue = []; await this.persist(); }
+        } else {
+          this.data.nextValidationAt = Math.min(this.data.nextValidationAt || Infinity, Date.now() + 5 * 60_000);
+          await this.persist();
+        }
+      });
     }
-    await this.persist();
   }
   async alarm(): Promise<void> {
+    const validate: (string | null)[] = [];
     await this.serial(async () => {
       if (!this.configured()) { await this.ctx.storage.deleteAlarm(); return; }
       this.prune();
@@ -564,16 +693,17 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         c.lastStudioAt + studioIdleMilliseconds(this.env) <= Date.now()) await this.stopChat(c, 'Studio has been inactive. Connect Twitch chat when you return.');
       const stopping = Object.values(this.data.channels).find((c) => c.pendingDeletion?.length && (c.deleteRetryAt ?? 0) <= Date.now());
       if (stopping) await this.deleteSubscriptions(stopping);
-      const pending = this.ctx.storage.sql.exec<{ payload: string }>('SELECT payload FROM twitch_inbox WHERE delivered = 0 AND next_at <= ? ORDER BY next_at LIMIT 8', Date.now()).toArray();
+      const pending = this.inboxQuery<{ payload: string }>('SELECT payload FROM twitch_inbox WHERE delivered = 0 AND next_at <= ? ORDER BY next_at LIMIT 8', Date.now());
       for (const row of pending) await this.deliver(JSON.parse(row.payload) as TwitchChatEvent);
       const channel = Object.values(this.data.channels).find((c) => this.needsSubscription(c) && (c.subscriptionRetryAt ?? 0) <= Date.now());
       if (channel) await this.subscribe(channel);
       if (this.data.nextValidationAt && this.data.nextValidationAt <= Date.now()) {
         this.data.nextValidationAt = Date.now() + CONTROL_LIMITS.validationMs; await this.persist();
-        for (const c of Object.values(this.data.channels).filter((c) => this.allowed(c))) await this.validateCredential(c);
-        if (this.data.bot) await this.validateCredential(null);
+        validate.push(...Object.values(this.data.channels).filter((c) => this.allowed(c)).map((c) => c.id));
+        if (this.data.bot) validate.push(null);
       }
       await this.sendOne(); await this.persist();
     });
+    for (const channelId of validate) await this.validateCredential(channelId);
   }
 }

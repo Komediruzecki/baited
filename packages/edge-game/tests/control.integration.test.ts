@@ -15,10 +15,29 @@ import { DurableObject } from 'cloudflare:workers';
 import { TwitchControl } from './src/control.ts';
 export class FixtureControl extends TwitchControl {
   failDelete=false;
+  rowsRead=0; holdValidation=false; releaseValidation=null; validationTask=null; conflict=false; dropped=false;
+  inboxQuery(query,...bindings) {
+    const cursor=this.ctx.storage.sql.exec(query,...bindings);const rows=cursor.toArray();this.rowsRead+=cursor.rowsRead;return rows;
+  }
   async fetch(request) {
     await this.ready;
     const url=new URL(request.url);
     if (url.pathname==='/__fixture/state') return Response.json(await this.ctx.storage.get('control-v1'));
+    if (url.pathname==='/__fixture/rows') return Response.json({rowsRead:this.rowsRead,counts:this.ctx.storage.sql.exec('SELECT * FROM inbox_counts').toArray()[0]});
+    if (url.pathname==='/__fixture/rows-reset') {this.rowsRead=0;this.nextInboxPruneAt=0;return Response.json({ok:true});}
+    if (url.pathname==='/__fixture/inbox') {
+      this.ctx.storage.sql.exec("WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x<10000) INSERT INTO twitch_inbox(id,expires_at,next_at,delivered) SELECT 'fixture-old-'||x,?,0,1 FROM n",Date.now()+600000);
+      this.rowsRead=0;this.nextInboxPruneAt=0;return Response.json({ok:true});
+    }
+    if (url.pathname==='/__fixture/expire-inbox') {this.ctx.storage.sql.exec('UPDATE twitch_inbox SET expires_at=0');this.nextInboxPruneAt=0;this.prune();return Response.json({ok:true});}
+    if (url.pathname==='/__fixture/validate-hold') {
+      this.holdValidation=true;this.data.nextValidationAt=1;this.validationTask=this.alarm();this.ctx.waitUntil(this.validationTask);return Response.json({ok:true});
+    }
+    if (url.pathname==='/__fixture/validation-status') return Response.json({holding:!!this.releaseValidation});
+    if (url.pathname==='/__fixture/validation-release') {this.releaseValidation?.();await this.validationTask;return Response.json({ok:true});}
+    if (url.pathname==='/__fixture/conflict') {this.conflict=true;return Response.json({ok:true});}
+    if (url.pathname==='/__fixture/secret-change') {this.data.channels['123'].subscriptionSecretHash='previous-secret-fingerprint';this.data.channels['123'].subscriptionRetryAt=0;await this.persist();return Response.json({ok:true});}
+    if (url.pathname==='/__fixture/drop') {this.dropped=true;return Response.json({ok:true});}
     if (url.pathname==='/__fixture/fail-delete') {this.failDelete=url.searchParams.get('value')==='true';return Response.json({ok:true});}
     if (url.pathname==='/__fixture/idle') {
       for(const c of Object.values(this.data.channels)) c.lastStudioAt=Date.now()-16*60*1000;
@@ -41,17 +60,22 @@ export class FixtureControl extends TwitchControl {
     }
     const code=(headers.get('authorization')||'').split('fixture-access:')[1]||'komediruzecki7';
     const [id,login]=users[code]||users.komediruzecki7;
-    if(url.origin==='https://id.twitch.tv' && url.pathname==='/oauth2/validate') return Response.json({client_id:code==='wrongclient'?'wrong':'fixture-client',user_id:id,login,expires_in:7200,scopes:code==='missingscope'?[]:code==='bot'?['user:write:chat','user:bot']:['user:read:chat','user:bot','channel:bot']});
+    if(url.origin==='https://id.twitch.tv' && url.pathname==='/oauth2/validate') {
+      if(this.holdValidation){this.holdValidation=false;await new Promise(resolve=>{this.releaseValidation=resolve});this.releaseValidation=null;}
+      return Response.json({client_id:code==='wrongclient'?'wrong':'fixture-client',user_id:id,login,expires_in:7200,scopes:code==='missingscope'?[]:code==='bot'?['user:write:chat','user:bot']:['user:read:chat','user:bot','channel:bot']});
+    }
     if(url.origin==='https://api.twitch.tv' && url.pathname==='/helix/users') return Response.json({data:[{id,login,display_name:login}]});
     if(url.origin==='https://api.twitch.tv' && url.pathname==='/helix/eventsub/subscriptions') {
-      if(init.method==='DELETE') return new Response(null,{status:this.failDelete?503:204});
+      if(init.method==='DELETE') {if(!this.failDelete)this.conflict=false;return new Response(null,{status:this.failDelete?503:204});}
+      if(init.method==='GET') return Response.json({data:[{id:'sub-disabled',type:'channel.chat.message',version:'1',condition:{broadcaster_user_id:'123',user_id:'123'},transport:{method:'webhook',callback:'https://pilot.test/api/twitch/eventsub'},status:'notification_failures_exceeded'}]});
+      if(this.conflict)return new Response(null,{status:409});
       const body=JSON.parse(init.body||'{}');
       return Response.json({data:[{id:'sub-'+body.condition.broadcaster_user_id+'-'+body.type,status:'enabled'}]},{status:202});
     }
     if(url.origin==='https://api.twitch.tv' && url.pathname==='/helix/chat/messages') {
       const sent=await this.ctx.storage.get('fixture-sent')||[];
       sent.push(JSON.parse(init.body));await this.ctx.storage.put('fixture-sent',sent);
-      return Response.json({data:[{is_sent:true,message_id:'fixture-message'}]});
+      return Response.json({data:[this.dropped?{is_sent:false,drop_reason:{code:'rate_limit_exceeded'}}:{is_sent:true,message_id:'fixture-message'}]});
     }
     throw new Error('Unexpected provider request in offline fixture');
   }
@@ -203,7 +227,7 @@ test('verified webhooks deliver once, reject altered payloads and handle moderat
     assert.equal((await f.request('/api/twitch/eventsub', good)).status, 204);
     assert.equal((await f.request('/api/twitch/eventsub', { ...good, body: `${good.body} ` })).status, 403);
     const shared = event('message-shared'); (shared.event as any).source_broadcaster_user_id = '456';
-    assert.equal((await f.request('/api/twitch/eventsub', webhook(shared, 'evt-shared'))).status, 403);
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(shared, 'evt-shared'))).status, 204);
     assert.equal((await f.request('/api/twitch/eventsub', webhook(event('message-delete', 'channel.chat.message_delete'), 'evt-delete'))).status, 204);
     const longName = event('message-long-name');
     longName.event.chatter_user_name = 'v'.repeat(65);
@@ -214,7 +238,8 @@ test('verified webhooks deliver once, reject altered payloads and handle moderat
     assert(calls.some((c) => c.body.kind === 'delete' && c.body.userId === '555'));
     const normalized = calls.find((c) => c.body.eventId === 'evt-normalized')!.body;
     assert.equal(normalized.name.length, 40); assert.deepEqual(normalized.badges, ['moderator']);
-    assert.equal((await f.request('/api/twitch/eventsub', webhook(event(), 'evt-revoke', 'revocation'))).status, 204);
+    const revoked = event(); (revoked.subscription as any).status = 'authorization_revoked';
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(revoked, 'evt-revoke', 'revocation'))).status, 204);
     assert.equal((await f.request('/__fixture/authorize', jsonPost({ channelId: '123' })).then((r) => r.json()) as any).allowed, false);
   } finally { await f.mf.dispose(); }
 });
@@ -268,4 +293,116 @@ test('credentials, sessions, webhook retry and replay receipts survive control e
     await f.mf.dispose();
     if (passed || !process.env.BAITED_EDGE_TEST_OUTPUT) await rm(persistence, { recursive: true });
   }
+});
+
+test('OAuth state capacity evicts oldest attempts and a legitimate sign-in still completes', async () => {
+  const f = await fixture();
+  try {
+    const oldest = await f.request('/auth/twitch');
+    for (let i = 0; i < 101; i++) assert.equal((await f.request('/auth/twitch')).status, 302);
+    assert.equal((await login(f)).callback.status, 302);
+    const location = new URL(oldest.headers.get('location')!);
+    assert.equal((await f.request(`/auth/twitch/callback?state=${location.searchParams.get('state')}&code=komediruzecki7`, { headers: { cookie: cookies(oldest) } })).status, 403);
+    const state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert(Object.keys(state.pending).length <= 100);
+  } finally { await f.mf.dispose(); }
+});
+
+test('webhook inbox reads stay bounded with 10000 receipts and counters survive cleanup', async (t) => {
+  const f = await fixture();
+  try {
+    await login(f); await f.request('/__fixture/flush'); await f.request('/__fixture/rows-reset');
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(event('before'), 'before'))).status, 204);
+    const small = await f.request('/__fixture/rows').then(r => r.json()) as any;
+    assert.equal(small.counts.total, 1); assert.equal(small.counts.pending, 0);
+    await f.request('/__fixture/inbox');
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(event('after'), 'after'))).status, 204);
+    const large = await f.request('/__fixture/rows').then(r => r.json()) as any;
+    assert.equal(large.counts.total, 10002); assert.equal(large.counts.pending, 0);
+    assert(large.rowsRead < 100, `10000-row inbox used ${large.rowsRead} SQLite rows read`);
+    assert(large.rowsRead <= small.rowsRead + 20, `rows read grew from ${small.rowsRead} to ${large.rowsRead}`);
+    t.diagnostic(`Measured SQLite rows read: ${small.rowsRead} with an empty inbox; ${large.rowsRead} with 10001 existing receipts.`);
+    await f.request('/__fixture/expire-inbox');
+    const empty = await f.request('/__fixture/rows').then(r => r.json()) as any;
+    assert.equal(empty.counts.total, 0); assert.equal(empty.counts.pending, 0);
+  } finally { await f.mf.dispose(); }
+});
+
+test('unsigned requests and a slow credential validation do not block signed chat or read-only sessions', async () => {
+  const f = await fixture();
+  try {
+    const { cookie } = await login(f); await f.request('/__fixture/flush');
+    await f.request('/__fixture/validate-hold');
+    let holding = false;
+    for (let i = 0; i < 30 && !holding; i++) holding = (await f.request('/__fixture/validation-status').then(r => r.json()) as any).holding;
+    assert(holding, 'fixture holds provider validation open');
+    const responses = await Promise.all(Array.from({ length: 80 }, (_, i) => i % 2 ?
+      f.request('/api/session', { headers: { cookie } }) : f.request('/api/twitch/eventsub', { method: 'POST', body: '{}' })));
+    assert(responses.every((r, i) => r.status === (i % 2 ? 200 : 403)));
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(event(), 'while-validation-waits'))).status, 204);
+    const revoked = event(); (revoked.subscription as any).status = 'authorization_revoked';
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(revoked, 'revoke-during-validation', 'revocation'))).status, 204);
+    await f.request('/__fixture/validation-release');
+    const state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(state.channels['123'].active, false); assert.equal(state.channels['123'].credentials, undefined);
+    assert.deepEqual(state.channels['123'].scopes, []); assert.equal(Object.keys(state.sessions).length, 0);
+    assert.equal((await f.request('/api/session', { headers: { cookie } }).then(r => r.json()) as any).authenticated, false);
+    const calls = await f.request('/__fixture/room/123').then(r => r.json()) as any[];
+    assert(calls.some(c => c.body.type === 'disconnect' && c.body.sessionId));
+  } finally { await f.request('/__fixture/validation-release').catch(() => {}); await f.mf.dispose(); }
+});
+
+test('delivery-failure revocation keeps OAuth sessions and reconciles the disabled exact subscription', async () => {
+  const f = await fixture();
+  try {
+    const { cookie } = await login(f); await f.request('/__fixture/flush');
+    const revoked = event(); (revoked.subscription as any).status = 'notification_failures_exceeded';
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(revoked, 'failure-revoked', 'revocation'))).status, 204);
+    let state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(state.channels['123'].active, true); assert.equal(state.channels['123'].subscriptionStatus, 'failed');
+    assert.equal((await f.request('/api/edge/session', { headers: { cookie } })).status, 200);
+    await f.request('/__fixture/conflict'); await f.request('/__fixture/flush');
+    state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(state.channels['123'].subscriptionStatus, 'pending');
+    await f.request('/__fixture/flush');
+    state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(state.channels['123'].subscriptionStatus, 'enabled');
+    await f.request('/__fixture/secret-change'); await f.request('/__fixture/flush');
+    state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(state.channels['123'].subscriptionStatus, 'stopping'); assert.equal(state.channels['123'].chatWanted, true);
+    await f.request('/__fixture/flush'); await f.request('/__fixture/flush');
+    state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(state.channels['123'].subscriptionStatus, 'enabled');
+    assert.notEqual(state.channels['123'].subscriptionSecretHash, 'previous-secret-fingerprint');
+  } finally { await f.mf.dispose(); }
+});
+
+test('command spam cannot consume round receipt capacity or another channel bot share', async () => {
+  const f = await fixture({ EDGE_BOT_MESSAGES_PER_30_SECONDS: '15' });
+  try {
+    const { cookie } = await login(f); await login(f, 'lakeeko');
+    const bootstrap = await f.request('/api/edge/session', { headers: { cookie } }).then(r => r.json()) as any;
+    const botStart = await f.request('/api/bot/authorize', jsonPost({}, { cookie, 'x-csrf-token': bootstrap.csrf }));
+    const botUrl = new URL((await botStart.json() as any).url);
+    assert.equal((await f.request(`/auth/twitch/callback?state=${botUrl.searchParams.get('state')}&code=bot`, { headers: { cookie: cookies(botStart) } })).status, 302);
+    const game = new Game({ id: 'fixture-room', owner: '123', channel: 'komediruzecki7', mode: 'demo', overlayKey: 'unused', settings: { ...defaults, chatBot: true }, history: [], priorWins: 0, priorPlayed: 0, priorBest: 0, leaders: {} });
+    game.start(); const safeView = game.view('overlay');
+    for (let i = 0; i < 600; i++) assert.equal((await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: `spam-${i}`, safeView,
+      event: { type: 'chat-command', command: 'help', userId: String(555 + i % 2) } }))).status, 200);
+    let state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(Object.keys(state.dedupe).length, 1, 'cooldown-ignored commands do not consume receipts');
+    for (let i = 0; i < 8; i++) {
+      assert.equal((await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: `start-${i}`, safeView, event: { type: 'start' } }))).status, 200);
+      await f.request('/__fixture/flush');
+    }
+    assert.equal((await f.request('/__fixture/event', jsonPost({ channelId: '456', eventId: 'other-start', safeView, event: { type: 'start' } }))).status, 200);
+    await f.request('/__fixture/flush');
+    state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(state.receipts.filter((r: any) => r.channelId === '123').length, 6);
+    assert.equal(state.receipts.filter((r: any) => r.channelId === '456').length, 1);
+    await f.request('/__fixture/drop');
+    await f.request('/__fixture/event', jsonPost({ channelId: '456', eventId: 'drop-start', safeView, event: { type: 'start' } })); await f.request('/__fixture/flush');
+    state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert(state.pausedUntil > Date.now(), 'Twitch rate-limit drop responses back off');
+  } finally { await f.mf.dispose(); }
 });

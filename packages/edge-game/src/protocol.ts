@@ -10,7 +10,7 @@ const input = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start') }).strict(),
   z.object({ type: z.literal('connect') }).strict(),
   z.object({ type: z.literal('disconnect') }).strict(),
-  z.object({ type: z.literal('microphone'), armed: z.boolean(), leaseId: z.string().uuid(), renew: z.boolean().default(false) }).strict(),
+  z.object({ type: z.literal('microphone'), armed: z.boolean(), leaseId: z.string().uuid(), socketId: z.string().uuid().optional(), renew: z.boolean().default(false) }).strict(),
   z.object({ type: z.literal('skip'), ...round }).strict(),
   z.object({ type: z.literal('pause'), ...round }).strict(),
   z.object({ type: z.literal('resume'), ...round }).strict(),

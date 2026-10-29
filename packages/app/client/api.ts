@@ -29,7 +29,7 @@ async function direct<T>(path: string, body?: unknown, csrf?: string): Promise<T
   const data = await response
     .json()
     .catch(() => ({ error: 'The server did not respond. Try again.' }));
-  if (!response.ok) throw new Error(data.error || 'Request failed.');
+  if (!response.ok) throw Object.assign(new Error(data.error || 'Request failed.'), { status: response.status });
   return data;
 }
 

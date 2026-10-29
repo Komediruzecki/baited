@@ -18,12 +18,12 @@ const frame = (revision = 1) => ({ type: 'snapshot', protocol: 1, revision, gene
 function harness() {
   Socket.opened = [];
   const timers = new Map(), states = [], statuses = [];
-  let nextId = 0;
+  let nextId = 0, clock = 1000;
   const client = createEdgeExtensionClient({ config, path: '/api/extension/state', parse: readState,
     onData: (state) => states.push(state), onStatus: (status) => statuses.push(status), WebSocketImpl: Socket,
     setTimer: (callback, delay) => { const id = ++nextId; timers.set(id, { callback, delay }); return id; },
-    clearTimer: (id) => timers.delete(id) });
-  return { client, timers, states, statuses };
+    clearTimer: (id) => timers.delete(id), now: () => clock });
+  return { client, timers, states, statuses, advance: (ms) => { clock += ms; } };
 }
 
 test('edge transport is an explicit build option and Node remains the default', () => {
@@ -62,12 +62,25 @@ test('reauthorization ignores old snapshots and an expired token waits for Twitc
   } finally { h.client.destroy(); }
 });
 
-test('hidden or malformed panels close their socket and clear authorization-sensitive UI', () => {
+test('brief visibility changes retain the socket, while five minutes hidden releases it', () => {
   const h = harness();
   try {
     h.client.authorize(auth()); const socket = Socket.opened[0]; socket.receive(frame());
     h.client.setVisible(false);
-    assert.equal(socket.readyState, 3); assert.equal(h.statuses.at(-1).kind, 'authorization');
+    assert.equal(socket.readyState, 1); assert.equal(h.statuses.at(-1).kind, 'authorization');
+    const visibleFrames = h.states.length;
+    socket.receive(frame(2));
+    assert.equal(h.states.length, visibleFrames, 'Hidden snapshots are validated but not rendered.');
+    h.client.setVisible(true);
+    assert.equal(Socket.opened.length, 1);
+    assert.equal(h.states.length, visibleFrames + 1);
+    assert.equal(h.statuses.at(-1).kind, 'connected');
+    for (let index = 0; index < 100; index++) { h.client.setVisible(false); h.client.setVisible(true); }
+    assert.equal(Socket.opened.length, 1, 'One hundred quick switches consume one admission.');
+    h.client.setVisible(false);
+    const hidden = [...h.timers.entries()][0]; assert.equal(hidden[1].delay, 300000);
+    h.advance(hidden[1].delay); h.timers.delete(hidden[0]); hidden[1].callback();
+    assert.equal(socket.readyState, 3);
     h.client.setVisible(true); Socket.opened[1].receive({ type: 'snapshot', room: {} });
     assert.equal(h.statuses.at(-1).kind, 'invalid'); assert.equal(Socket.opened[1].readyState, 3);
     assert.equal(h.timers.size, 0);
@@ -89,8 +102,43 @@ test('refused pilot admission stops automatically and leaves a visible manual re
     const retry = [...h.timers.entries()][0];
     assert.equal(retry[1].delay, 1000);
     h.timers.delete(retry[0]); retry[1].callback();
-    Socket.opened[2].close(1006, '');
+    Socket.opened[2].close(4429, 'Busy');
     assert.equal(h.statuses.at(-1).kind, 'unavailable');
-    assert.equal(h.timers.size, 0, 'A refused reconnect cannot start another admission loop.');
+    assert.equal(h.timers.size, 0, 'An explicit busy refusal cannot start another admission loop.');
+  } finally { h.client.destroy(); }
+});
+
+test('an established connection retries a temporary outage for at most five minutes', () => {
+  const h = harness();
+  try {
+    h.client.authorize(auth()); Socket.opened[0].receive(frame()); Socket.opened[0].close(1006, '');
+    let elapsed = 0, attempts = 0;
+    while (h.timers.size) {
+      assert.ok(attempts++ < 20, 'Retries must be bounded.');
+      const retry = [...h.timers.entries()][0];
+      assert.ok(retry[1].delay <= 60000);
+      elapsed += retry[1].delay; h.advance(retry[1].delay);
+      h.timers.delete(retry[0]); retry[1].callback();
+      Socket.opened.at(-1).close(1006, '');
+    }
+    assert.ok(attempts > 5, 'An established OBS/panel connection should survive more than five short failures.');
+    assert.ok(elapsed <= 300000);
+    assert.equal(h.statuses.at(-1).kind, 'unavailable');
+  } finally { h.client.destroy(); }
+});
+
+test('anonymous pilot viewers see sign-in guidance without opening a socket, and logged-in opaque viewers can join', () => {
+  const h = harness();
+  const token = (opaque) => `header.${Buffer.from(JSON.stringify({ opaque_user_id: opaque, role: 'viewer' })).toString('base64url')}.signature`;
+  try {
+    h.client.authorize(auth(token('Aanonymous')));
+    assert.equal(Socket.opened.length, 0); assert.equal(h.timers.size, 0);
+    assert.equal(h.statuses.at(-1).kind, 'signin');
+    assert.match(h.statuses.at(-1).message, /Sign in to Twitch/);
+    assert.match(h.statuses.at(-1).message, /do not need to share/);
+    h.client.authorize(auth(token('Uopaque-viewer')));
+    assert.equal(Socket.opened.length, 1);
+    Socket.opened[0].receive(frame());
+    assert.equal(h.statuses.at(-1).kind, 'connected');
   } finally { h.client.destroy(); }
 });

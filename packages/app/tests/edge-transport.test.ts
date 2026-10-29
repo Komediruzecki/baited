@@ -17,6 +17,7 @@ class Socket {
 }
 const bootstrap = (): EdgeBootstrap => ({ channelId: '1234', token: 'signed.fixture.token', tokenExpiresAt: Date.now() + 300000 });
 const snapshot = (revision = 1): EdgeSnapshot => ({ type: 'snapshot', protocol: 1, revision, generation: 1,
+  socketId: '00000000-0000-4000-8000-000000000001',
   room: { id: 'edge-1234', phase: 'active', serverTime: Date.now(), score: {}, settings: {},
     round: { id: 'round-1', epoch: 1 } } as GameView });
 function harness() {
@@ -27,7 +28,7 @@ function harness() {
     socket: (url, protocols) => { const socket = new Socket(url, protocols); sockets.push(socket); return socket as unknown as WebSocket; },
     fetch: (async (url: URL | RequestInfo, init?: RequestInit) => {
       calls.push({ url: String(url), init });
-      return String(url).endsWith('/commands') ? Response.json({ ok: true, revision: 2, generation: 1 })
+      return String(url).endsWith('/commands') ? Response.json({ ok: true, revision: 2, generation: 1, ...(failState ? {} : { snapshot: snapshot(2) }) })
         : failState ? Response.json({ error: 'unavailable' }, { status: 503 }) : Response.json(snapshot(2));
     }) as typeof fetch });
   return { client, sockets, calls, failState: () => { failState = true; }, count: () => bootstrapCount };
@@ -53,7 +54,7 @@ test('edge uses one socket with credential subprotocol and no snapshot polling',
     assert.deepEqual(h.sockets[0].protocols, ['baited.v1', 'baited.auth.signed.token.1']);
     assert.equal(new URL(h.sockets[0].url).search, '');
     const result = await h.client.command({ type: 'pause', roundId: 'round-1', epoch: 1 });
-    assert.equal(result.revision, 2); assert.equal(h.calls.length, 2);
+    assert.equal(result.revision, 2); assert.equal(h.calls.length, 1);
     const body = JSON.parse(h.calls[0].init!.body as string);
     assert.equal(body.expectedRevision, 1); assert.equal(body.generation, 1);
     assert.equal(body.action.type, 'pause'); assert.equal(typeof body.id, 'string');
@@ -112,11 +113,12 @@ test('token renewal uses the same room socket and keeps the current microphone b
   } finally { h.client.destroy(); }
 });
 
-test('failed refresh after a committed command does not claim a stale success', async () => {
+test('a receipt without the authoritative projection does not claim a stale success or issue a state GET', async () => {
   const h = harness();
   try {
     await ready(h); h.failState();
     await assert.rejects(h.client.command({ type: 'start' }), /action arrived.*result could not be loaded/);
+    assert.equal(h.calls.length, 1);
   } finally { h.client.destroy(); }
 });
 
@@ -125,7 +127,7 @@ test('the browser fetch receiver is preserved when commands use the native imple
   let socket: Socket | undefined;
   globalThis.fetch = async function (this: unknown, url) {
     assert.equal(this, globalThis, 'native browser fetch requires its global receiver');
-    return String(url).endsWith('/commands') ? Response.json({ ok: true }) : Response.json(snapshot(2));
+    return String(url).endsWith('/commands') ? Response.json({ ok: true, snapshot: snapshot(2) }) : Response.json(snapshot(2));
   };
   const client = new EdgeRoomTransport({ origin: 'https://pilot.example', bootstrap: async () => bootstrap(),
     socket: (url, protocols) => (socket = new Socket(url, protocols)) as unknown as WebSocket });
@@ -133,6 +135,31 @@ test('the browser fetch receiver is preserved when commands use the native imple
     const initial = client.state(); await flush(); socket!.receive(snapshot()); await initial;
     await client.command({ type: 'pause', roundId: 'round-1', epoch: 1 });
   } finally { client.destroy(); globalThis.fetch = original; }
+});
+
+test('microphone commands bind the current tab socket and cannot choose another socket', async () => {
+  const h = harness();
+  try {
+    await ready(h);
+    await h.client.command({ type: 'microphone', armed: true, leaseId: 'lease-1', socketId: 'another-tab' });
+    assert.equal(JSON.parse(h.calls[0].init!.body as string).action.socketId, snapshot().socketId);
+    h.sockets[0].close(1006, '');
+    const pending = h.client.state(); await flush();
+    h.sockets[1].receive({ ...snapshot(3), socketId: '00000000-0000-4000-8000-000000000002' }); await pending;
+    await h.client.command({ type: 'microphone', armed: true, leaseId: 'lease-2' });
+    assert.equal(JSON.parse(h.calls[1].init!.body as string).action.socketId, '00000000-0000-4000-8000-000000000002');
+    assert.equal(h.calls.length, 2);
+  } finally { h.client.destroy(); }
+});
+
+test('a missing socket binding prevents microphone control before any request', async () => {
+  const h = harness();
+  try {
+    const pending = h.client.state(); await flush();
+    const { socketId: _ignored, ...frame } = snapshot(); h.sockets[0].receive(frame); await pending;
+    await assert.rejects(h.client.command({ type: 'microphone', armed: true }), /Studio connection needs to refresh/);
+    assert.equal(h.calls.length, 0);
+  } finally { h.client.destroy(); }
 });
 
 test('refused initial admission stops automatic retries even with a subscriber', async () => {
@@ -147,4 +174,25 @@ test('refused initial admission stops automatic retries even with a subscriber',
     assert.equal(h.sockets.length, 1);
     assert.equal((h.client as unknown as { retryTimer?: unknown }).retryTimer, undefined);
   } finally { h.client.destroy(); }
+});
+
+test('established transport retries a temporary outage for five minutes, but stops on explicit refusal', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 100000 });
+  const h = harness();
+  try {
+    await ready(h); h.client.subscribe(() => {}, () => {});
+    h.sockets[0].close(1006, '');
+    for (const [index, delay] of [1000, 2000, 4000, 8000, 16000, 32000, 60000, 60000, 60000].entries()) {
+      t.mock.timers.tick(delay); await flush();
+      assert.equal(h.sockets.length, index + 2);
+      h.sockets.at(-1)!.close(1006, ''); await flush();
+    }
+    const exhausted = h.sockets.length;
+    t.mock.timers.tick(300000); await flush();
+    assert.equal(h.sockets.length, exhausted);
+    const manual = h.client.state(); await flush(); h.sockets.at(-1)!.receive(snapshot(4)); await manual;
+    h.sockets.at(-1)!.close(4408, 'Full');
+    t.mock.timers.tick(300000); await flush();
+    assert.equal(h.sockets.length, exhausted + 1, 'Explicit capacity refusal waits for a manual retry.');
+  } finally { h.client.destroy(); t.mock.timers.reset(); }
 });

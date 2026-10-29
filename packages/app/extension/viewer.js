@@ -336,7 +336,7 @@ const client = connectToTwitch({
   onStatus(status) {
     connected = status.kind === 'connected';
     connectionView(status);
-    if (['invalid', 'authorization', 'forbidden', 'connecting', 'reconnecting', 'unavailable'].includes(status.kind)) {
+    if (['invalid', 'authorization', 'forbidden', 'connecting', 'reconnecting', 'unavailable', 'signin'].includes(status.kind)) {
       clearCard(
         'Waiting for the word.',
         status.kind === 'connecting'
@@ -352,6 +352,7 @@ const client = connectToTwitch({
       byId('card').dataset.state = 'reconnecting';
     }
     if (status.kind === 'unavailable') byId('phase-label').textContent = 'Unavailable';
+    if (status.kind === 'signin') byId('phase-label').textContent = 'Sign in to Twitch';
     renderClock();
   },
 });

@@ -40,7 +40,7 @@ export interface ControlSession {
   expiresAt: number;
 }
 export interface RegisteredChannel extends TwitchUser {
-  credentials: EncryptedValue;
+  credentials?: EncryptedValue;
   overlayKey: EncryptedValue;
   overlayKeyHash: string;
   scopes: string[];
@@ -50,6 +50,8 @@ export interface RegisteredChannel extends TwitchUser {
   subscriptionStatus: 'pending' | 'enabled' | 'failed' | 'revoked' | 'stopping' | 'offline';
   subscriptionRetryAt?: number;
   subscriptionAttempts?: number;
+  subscriptionSecretHash?: string;
+  resubscribeAfterDeletion?: boolean;
   chatWanted?: boolean;
   lastStudioAt?: number;
   pendingDeletion?: string[];
@@ -100,6 +102,7 @@ export interface ControlState {
   queue: QueuedMessage[];
   sentAt: number[];
   channelSentAt: Record<string, number>;
+  channelSentWindow?: Record<string, number[]>;
   commandCooldowns: Record<string, number>;
   pausedUntil: number;
   receipts: BotReceipt[];

@@ -222,11 +222,12 @@ export function createExtensionClient({ config, path, parse, onData, onStatus, f
   };
 }
 
-/** Edge pilot: one authenticated socket per visible panel, never a polling loop. */
+/** Edge pilot: retain the room connection across brief tab switches, never poll. */
 export function createEdgeExtensionClient({ config, path, parse, onData, onStatus,
-  WebSocketImpl = globalThis.WebSocket, setTimer = setTimeout, clearTimer = clearTimeout }) {
-  let authorization = null, socket = null, timer = null, deadline = null;
+  WebSocketImpl = globalThis.WebSocket, setTimer = setTimeout, clearTimer = clearTimeout, now = Date.now }) {
+  let authorization = null, socket = null, timer = null, deadline = null, hiddenTimer = null, lastView = null;
   let stopped = false, visible = true, generation = 0, retries = 0, lastRevision = -1, roomGeneration = -1;
+  let connectedOnce = false, retryUntil = 0;
   const report = (kind, message) => onStatus({ kind, message });
   const clearScheduled = () => {
     if (timer !== null) clearTimer(timer);
@@ -237,17 +238,17 @@ export function createEdgeExtensionClient({ config, path, parse, onData, onStatu
     const old = socket; socket = null;
     if (old) { old.onopen = old.onmessage = old.onerror = old.onclose = null; old.close(1000, 'Panel closed.'); }
   };
+  const clearHidden = () => { if (hiddenTimer !== null) clearTimer(hiddenTimer); hiddenTimer = null; };
   const connect = () => {
     clearScheduled();
     close();
     if (stopped || !visible || !authorization) return;
     const activeGeneration = generation;
-    let receivedSnapshot = false;
     const url = new URL(`/v1/rooms/${authorization.channelId}/socket`, config.apiBaseUrl);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     const current = new WebSocketImpl(url.href, ['baited.v1', `baited.auth.${authorization.token}`]);
     socket = current;
-    const valid = () => !stopped && visible && current === socket && activeGeneration === generation;
+    const valid = () => !stopped && current === socket && activeGeneration === generation;
     deadline = setTimer(() => { if (valid()) current.close(4000, 'Connection timed out.'); }, 10000);
     current.onmessage = (event) => {
       if (!valid()) return;
@@ -262,41 +263,53 @@ export function createEdgeExtensionClient({ config, path, parse, onData, onStatu
               studioUrl: `${config.studioBaseUrl ?? config.apiBaseUrl}/studio` }
           : { version: VERSION, configured: frame.room !== null, room: frame.room };
         const parsed = parse(value);
-        receivedSnapshot = true;
+        connectedOnce = true; retryUntil = 0; lastView = parsed;
         lastRevision = frame.revision; roomGeneration = frame.generation;
         retries = 0;
         if (deadline !== null) clearTimer(deadline);
         deadline = null;
-        onData(parsed);
-        report('connected', 'Connected');
+        if (visible) { onData(parsed); report('connected', 'Connected'); }
       } catch {
         // Keep neither an old secret nor an unvalidated partial snapshot on screen.
         report('invalid', 'The round could not be read. Reload the panel on Twitch.');
-        clearScheduled(); close();
+        lastView = null; clearScheduled(); close();
       }
     };
-    current.onerror = () => { if (valid()) report('reconnecting', 'Connection interrupted. Retrying…'); };
+    current.onerror = () => { if (valid() && visible) report('reconnecting', 'Connection interrupted. Retrying…'); };
     current.onclose = (event) => {
       if (!valid()) return;
       socket = null;
+      lastView = null;
       clearScheduled();
       if (event.code === 1008 || event.code === 4001) {
         report('authorization', 'Twitch authorization expired. Waiting for it to refresh.');
         return;
       }
+      if (event.code === 4408 || event.code === 4429) {
+        report('unavailable', 'This pilot is full or busy. Try again later.');
+        return;
+      }
+      if (!visible) return;
       // Browsers hide a refused upgrade's HTTP status (including a full pilot's
-      // 429). Stop here instead of multiplying admission attempts per viewer.
-      if (!receivedSnapshot) {
+      // 429). New viewers wait for manual retry; admitted viewers get a bounded
+      // recovery window after losing a previously healthy connection.
+      if (!connectedOnce) {
         report('unavailable', 'This pilot may be full or temporarily unavailable. Try again later.');
         return;
       }
-      report('reconnecting', retries >= 5 ? 'The round is unavailable. Try again shortly.' : 'Connection interrupted. Retrying…');
-      if (retries < 5) timer = setTimer(connect, Math.min(15000, 1000 * 2 ** retries++));
+      if (!retryUntil) retryUntil = now() + 300000;
+      const delay = Math.min(60000, 1000 * 2 ** Math.min(retries++, 6));
+      if (now() + delay > retryUntil) {
+        report('unavailable', 'The round is still unavailable. Try again when your connection returns.');
+        return;
+      }
+      report('reconnecting', 'Connection interrupted. Retrying…');
+      timer = setTimer(connect, delay);
     };
   };
   return {
     authorize(value) {
-      generation += 1; clearScheduled(); close();
+      generation += 1; clearScheduled(); clearHidden(); close(); lastView = null;
       if (stopped) return;
       if (!object(value) || value.clientId !== config.clientId || typeof value.channelId !== 'string' || !/^[1-9][0-9]{0,24}$/.test(value.channelId) ||
         !string(value.token, 4096) || !/^[A-Za-z0-9_.-]+$/.test(value.token)) {
@@ -304,21 +317,39 @@ export function createEdgeExtensionClient({ config, path, parse, onData, onStatu
         report('invalid', 'This Extension is configured for a different Twitch application.');
         return;
       }
+      // This is a UI hint only; the server independently verifies the JWT and
+      // rejects anonymous seats. Logged-in opaque U identities need no sharing.
+      try {
+        const payload = JSON.parse(atob(value.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (object(payload) && typeof payload.opaque_user_id === 'string' && payload.opaque_user_id.startsWith('A')) {
+          authorization = null; connectedOnce = false;
+          report('signin', 'Sign in to Twitch to join this pilot. You do not need to share your identity.');
+          return;
+        }
+      } catch { /* Malformed claims are handled by the server, never trusted here. */ }
       authorization = { token: value.token, channelId: value.channelId };
-      retries = 0; lastRevision = roomGeneration = -1;
+      retries = 0; retryUntil = 0; connectedOnce = false; lastRevision = roomGeneration = -1;
       report('connecting', 'Connecting to the round…');
       connect();
     },
-    refresh() { if (!stopped) { retries = 0; connect(); } },
-    invalidate() { generation += 1; authorization = null; clearScheduled(); close(); },
+    refresh() { if (!stopped) { retries = 0; retryUntil = 0; connect(); } },
+    invalidate() { generation += 1; authorization = null; lastView = null; clearScheduled(); clearHidden(); close(); },
     setVisible(value) {
       if (visible === Boolean(value) || stopped) return;
-      visible = Boolean(value); generation += 1;
-      clearScheduled(); close();
-      if (visible) { report('connecting', 'Connecting to the round…'); connect(); }
-      else report('authorization', 'The card will reconnect when you return.');
+      visible = Boolean(value); clearHidden();
+      if (visible) {
+        if (socket?.readyState === 1 && lastView) { onData(lastView); report('connected', 'Connected'); }
+        else if (!socket) { report('connecting', 'Connecting to the round…'); connect(); }
+      } else {
+        // Keep the connection and validate/cache updates while the UI is hidden.
+        // Brief tab switches must not consume another viewer admission slot.
+        if (timer !== null) clearTimer(timer);
+        timer = null;
+        report('authorization', 'The card is hidden while you are away.');
+        hiddenTimer = setTimer(() => { hiddenTimer = null; lastView = null; close(); }, 300000);
+      }
     },
-    destroy() { stopped = true; generation += 1; authorization = null; clearScheduled(); close(); },
+    destroy() { stopped = true; generation += 1; authorization = null; lastView = null; clearScheduled(); clearHidden(); close(); },
   };
 }
 
@@ -355,7 +386,7 @@ export function connectToTwitch(options) {
 export function connectionView(status) {
   const element = document.getElementById('connection');
   element.hidden = status.kind === 'connected';
-  element.dataset.tone = ['invalid', 'forbidden', 'authorization'].includes(status.kind) ? 'error' : 'notice';
+  element.dataset.tone = ['invalid', 'forbidden', 'authorization', 'signin'].includes(status.kind) ? 'error' : 'notice';
   document.getElementById('connection-copy').textContent = status.message;
   document.getElementById('retry').hidden = !['reconnecting', 'unavailable'].includes(status.kind);
 }
