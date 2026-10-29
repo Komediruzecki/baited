@@ -147,15 +147,36 @@ h3 {
 .retry:active {
   background: #ffffff24;
 }
-/* The landing's approved card (card.css), fitted to the panel. The panel is its
-   container host: the card spans the panel's content width, so one landing pixel is
-   about 0.98 px at Twitch's 318 px. The card grows with its copy instead of keeping 5:7,
-   so its art window is smaller than the landing's to keep every state inside 500 px. */
+/* The landing's approved card (card.css), fitted to the panel. It keeps the landing's 5:7
+   in every state, like every other card: the panel fills Twitch's frame, and the card takes
+   the height its masthead, notice and footer leave, as wide as that height allows and never
+   wider than the panel. Its host is exactly as wide as the card, so one landing pixel is
+   about 0.92 px at Twitch's 318 × 500. The art window is smaller than the landing's so
+   every state's copy fits the card. */
 .panel {
+  container-type: inline-size;
+}
+body[data-surface='viewer'] .panel {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.card-slot {
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+}
+.card-host {
+  width: min(100cqw, 100cqh * 5 / 7);
+  aspect-ratio: 5 / 7;
   container-type: inline-size;
 }
 .secret-card {
   --cut-art: calc(148 * var(--cut-u));
+  height: 100%;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -206,11 +227,9 @@ h3 {
   image-rendering: pixelated;
   vertical-align: -0.15em;
 }
+/* The card keeps its height, so the signature footer sits on its bottom edge, as on the landing. */
 .secret-card .cut-card__footer {
-  margin-top: 10px;
-}
-.secret-card .card-question:not([hidden]) ~ .cut-card__footer {
-  margin-top: 2px;
+  margin-top: auto;
 }
 /* The streamer's pick and the bait MVPs: public names, shown when no round is live. The
    heading is the card's ruled label, as over the clues. */
@@ -294,11 +313,24 @@ progress::-webkit-progress-value {
 progress::-moz-progress-bar {
   background: var(--lit);
 }
+/* Time running out: the Studio's round progress, as card.css draws it for the other timers. */
+.clock[data-urgent='true'] progress {
+  z-index: 1;
+  top: calc(-4 * var(--cut-u));
+  height: calc(9 * var(--cut-u));
+  border-radius: 999px;
+}
 .clock[data-urgent='true'] progress::-webkit-progress-value {
-  background: var(--yellow);
+  border-radius: 999px;
+  background:
+    linear-gradient(#ffffff80, #ffffff80) calc(6 * var(--cut-u)) calc(2 * var(--cut-u)) / calc(100% - 12 * var(--cut-u)) calc(2 * var(--cut-u)) no-repeat,
+    var(--yellow);
 }
 .clock[data-urgent='true'] progress::-moz-progress-bar {
-  background: var(--yellow);
+  border-radius: 999px;
+  background:
+    linear-gradient(#ffffff80, #ffffff80) calc(6 * var(--cut-u)) calc(2 * var(--cut-u)) / calc(100% - 12 * var(--cut-u)) calc(2 * var(--cut-u)) no-repeat,
+    var(--yellow);
 }
 .clock[data-urgent='true'] .clock-value {
   color: var(--yellow);
@@ -570,8 +602,24 @@ code {
   .wordmark {
     font-size: 23px;
   }
-  /* Long state chips take two rows; the field still starts at the card's top edge.
-     A chip longer than the whole row shortens inside its pill. */
+  .setup {
+    padding-inline: 14px;
+  }
+  .setup-intro h1 {
+    font-size: 29px;
+  }
+  .setup-intro {
+    grid-template-columns: 1fr;
+  }
+  .setup-card-well {
+    display: none;
+  }
+}
+/* A narrow card, in a narrow panel or in the room a connection notice leaves, keeps its copy
+   inside. Long state chips take two rows (the field still starts at the card's top edge, and a
+   chip longer than the whole row shortens inside its pill), the clues stack, and the example
+   question steps aside. The card host is the container, so this follows the card's own width. */
+@container (max-width: 255px) {
   .secret-card {
     --cut-top: 34px;
   }
@@ -586,23 +634,9 @@ code {
     text-overflow: ellipsis;
   }
   .secret-card .cut-card__clues {
-    gap: 4px 12px;
-  }
-  .setup {
-    padding-inline: 14px;
-  }
-  .setup-intro h1 {
-    font-size: 29px;
-  }
-  .setup-intro {
-    grid-template-columns: 1fr;
-  }
-  .setup-card-well {
-    display: none;
-  }
-  .secret-card .cut-card__clues {
     grid-template-columns: max-content;
     justify-content: center;
+    gap: 4px 12px;
   }
   .card-question {
     display: none;

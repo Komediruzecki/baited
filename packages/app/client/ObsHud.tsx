@@ -1,6 +1,5 @@
 import React from 'react';
 import type { GameView } from '../shared/types';
-import { productBrand } from './ui';
 import { Card, Pause } from './pixel-icons';
 import { MissionStatus } from './mechanics';
 import { StreakFlame, StreakRow } from './streak';
@@ -86,7 +85,6 @@ export function ObsHud({
       className={`obs-hud${won ? ' obs-hud-win' : ''}${!offline && g.phase === 'paused' ? ' obs-hud-paused' : ''}${offline ? ' obs-hud-stale' : ''}${urgent ? ' obs-hud-urgent' : ''}`}
     >
       <div className={`obs-widget${won ? ' obs-win' : ''}`}>
-        <div className="obs-logo">{productBrand}</div>
         <div className="obs-message">
           <span>{!offline && g.phase === 'active' && <Card size={16} />}{label}</span>
           <strong>{headline}</strong>

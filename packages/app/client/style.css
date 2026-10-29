@@ -2159,7 +2159,7 @@ code {
 }
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 17px;
   margin-top: 22px;
 }
@@ -2169,6 +2169,12 @@ code {
   gap: 8px;
   font-size: 12px;
   color: #c9b7d8;
+}
+/* A 320 px phone leaves the dialog too narrow for two selects side by side. */
+@media (max-width: 360px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .form-grid select,
 .number-label input {

@@ -81,8 +81,10 @@
 .cl-fan--one { transform:rotate(-9deg) translateX(-7px); }
 .cl-fan--two { transform:rotate(9deg) translateX(7px); }
 .cl-context--panel { width:318px; height:500px; padding:0 12px 10px; background:#1d0b45; outline:1px solid #a783cb; overflow:auto; }
-.cl-context--panel .cl-frame__card { width:294px; }
-.cl-context--panel .cl-card { min-height:0; aspect-ratio:auto; height:auto; }
+/* As in the Extension's panel, the card keeps 5:7 and takes the height the header and footer leave
+   inside Twitch's 500 px frame, as wide as that height allows. */
+.cl-context--panel .cl-frame__card { width:294px; flex:1 1 auto; min-height:0; container-type:size; display:grid; justify-items:center; align-items:start; }
+.cl-context--panel .cl-card { min-height:0; width:min(100cqw, 100cqh * 5 / 7); }
 .cl-context--panel .cl-card__art { width:164px; }
 .cl-context--panel .cl-card[data-edition=foil] { padding:14px 18px; }
 .cl-context--panel .cl-card[data-edition=foil] .cl-card__art { width:164px; }
@@ -113,7 +115,6 @@
 .cl-context--obs { width:640px; height:360px; display:block; overflow:hidden; background:conic-gradient(#1c1a20 25%,#25212b 0 50%,#1c1a20 0 75%,#25212b 0) 0 0/24px 24px; outline:1px solid #927ba7; }
 .cl-obs-canvas { position:relative; width:1920px; height:1080px; transform:scale(.333333); transform-origin:top left; }
 .cl-obs-hud { position:absolute; top:32px; left:40px; width:540px; height:140px; padding:24px; display:flex; gap:20px; align-items:center; border:1px solid #c9a8ff; border-radius:12px; background:#242426; font-size:20px; }
-.cl-obs-hud .product-brand { width:88px; }
 .cl-obs-hud strong { margin-left:auto; font:400 44px 'Russo One',sans-serif; }
 .cl-obs-card { position:absolute; top:196px; left:40px; width:300px; animation:cl-broadcast 5.5s linear var(--scrub) both paused; }
 .cl-obs-card .cl-card { animation:none; }
@@ -142,7 +143,7 @@
 .cl-closed p { margin-bottom:24px; }
 
 /* Editions share semantic words and clues; their composition is the experiment. */
-.cl-card { --card-art:176px; --card-pad:18px; --word-max:30px; --chip-font:12px; --card-height:420px; --label-font:11px; --glyph-width:52px; position:relative; isolation:isolate; container-type:inline-size; display:flex; flex-direction:column; align-items:center; gap:0; width:100%; min-height:var(--card-height); padding:16px var(--card-pad) 14px; color:#fffdf7; background:#242426; border:1px solid #69616e; border-top-color:#c9a8ff99; border-radius:12px 20px 12px 12px; box-shadow:0 8px 0 -3px #120d1a,0 24px 48px #1d0b4573; transform-style:preserve-3d; animation:cl-deal calc(280ms * var(--b-motion,1)) cubic-bezier(.16,1,.3,1) both; overflow:clip; user-select:none; }
+.cl-card { --card-art:176px; --card-pad:18px; --word-max:30px; --chip-font:12px; --card-height:420px; --label-font:11px; --glyph-width:52px; position:relative; isolation:isolate; container-type:inline-size; display:flex; flex-direction:column; align-items:center; gap:0; width:100%; aspect-ratio:5/7; padding:16px var(--card-pad) 14px; color:#fffdf7; background:#242426; border:1px solid #69616e; border-top-color:#c9a8ff99; border-radius:12px 20px 12px 12px; box-shadow:0 8px 0 -3px #120d1a,0 24px 48px #1d0b4573; transform-style:preserve-3d; animation:cl-deal calc(280ms * var(--b-motion,1)) cubic-bezier(.16,1,.3,1) both; overflow:clip; user-select:none; }
 .cl-card[data-size=l] { --card-art:224px; --card-pad:22px; --word-max:38px; --chip-font:13px; --card-height:504px; --label-font:12px; --glyph-width:64px; padding-top:20px; padding-bottom:18px; border-radius:14px 24px 14px 14px; }
 .cl-card[data-size=xs] { --card-art:96px; --card-pad:12px; --word-max:19px; --chip-font:9px; --card-height:266px; --label-font:9px; --glyph-width:40px; padding-top:10px; padding-bottom:10px; }
 .cl-card__rail { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; height:20px; font-size:var(--label-font); color:#cbc1d4; flex:none; }

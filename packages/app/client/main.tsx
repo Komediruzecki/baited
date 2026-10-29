@@ -1926,6 +1926,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
               note={!playing ? (won ? 'Chat wins' : pendingCatch ? 'Not scored yet' : 'Round complete') : null}
               question={playing && !stale ? g.round?.example : null}
               progress={playing && g.round ? ms / g.round.duration : null}
+              urgent={active && !stale && ms <= 15000}
               footer={<span className="viewer-card-clock"><Timer size={14} /><span role={playing && !stale ? 'timer' : undefined} aria-label={playing && !stale ? spokenTime(ms, paused) : undefined}>{playing ? fmt(ms) : pendingCatch ? '—:—' : g.nextAt !== null ? fmt(Math.max(0, g.nextAt - (now + offset.current))) : '—:—'}</span><small>{settling ? 'Checking' : paused ? 'Paused' : pendingCatch ? 'Not scored yet' : finished ? g.nextAt !== null ? 'Next round' : 'Waiting' : 'Left'}</small></span>}
             />
             {!stale && <ForbiddenClueCard game={g} rulesOnly />}

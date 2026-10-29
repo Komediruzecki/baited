@@ -117,6 +117,8 @@
 .studio-shell .catch-actions > .button { flex: 1 1 130px; width: auto; }
 .studio-shell .undo-button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 0; margin-top: 8px; min-height: 44px; border: 0; background: transparent; color: var(--b-lilac); font: 500 12px/1.5 var(--b-ui); text-decoration: underline; text-underline-offset: 4px; }
 .studio-shell .studio-result__decision > .text-button { min-height: 44px; color: var(--b-lilac); font: 500 12px/1.5 var(--b-ui); }
+/* The reverse link and the award link share a line after a catch; keep them apart. */
+.studio-shell .studio-result__decision > .undo-button + .text-button { margin-left: 20px; }
 .studio-shell .mic-card { display: block; align-items: stretch; height: auto; min-height: 0; padding: 22px; background: var(--b-panel); text-align: left; }
 .studio-shell .mic-card > .card-heading { display: flex; align-items: center; justify-content: space-between; padding: 0; margin: 0 0 24px; }
 .studio-shell .mic-card .small-label { color: var(--b-copy); font: 600 13px/1.4 var(--b-ui); letter-spacing: 0; text-transform: none; }
