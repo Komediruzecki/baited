@@ -1,14 +1,14 @@
 # Baited: first Cloudflare pilot
 
-Prepared on 29 October 2026. **No resources or public endpoint have been activated.** The earlier instruction to keep hosting prepared remains the activation boundary. The PC server and tunnel stay stopped. This pilot does not move production or change Twitch settings.
+Prepared on 29 October 2026; deployed inactive under the owner’s later authorization. **The Worker, static assets, two Durable Object namespaces and six secrets now exist, but no public endpoint is enabled.** The pilot flag is false. The PC server and tunnel stay stopped. Production and Twitch settings are unchanged. See [the deployment receipt and owner setup](./INACTIVE-DEPLOYMENT.md).
 
 ## The smallest useful test
 
-One streamer signs into Studio, enables local Moonshine and starts a round. A different Twitch account sees the secret card in the native Extension and sends clues through normal Twitch chat. Studio sees those clues and confirms a detected catch. OBS shows the public result. Then repeat with the other invited channels.
+Once activation is authorized, one streamer signs into Studio, enables local Moonshine and starts a round. A different Twitch account sees the secret card in the native Extension and sends clues through normal Twitch chat. Studio sees those clues and confirms a detected catch. OBS shows the public result. Expand to other invited channels only after this passes and expansion is authorized.
 
 Use the existing built-in deck only. Card Maker, uploads, custom decks, scanning, R2, D1 and Containers are out of scope. Assets are static; the room and control state live in SQLite Durable Objects.
 
-The proposed isolated hostname is `pilot-baited.maff.app`. It is a proposal in configuration, not a working link. Existing `dev-play-baited.maff.app`, `play-baited.maff.app` and landing domains remain unchanged. Choosing a different pilot hostname means updating the public origin, exact host/origin allowlists, Extension build values and OAuth callback together.
+The reserved hostname in configuration is `pilot-baited.maff.app`. It is intentionally unrouted, not a working link. Existing `dev-play-baited.maff.app`, `play-baited.maff.app` and landing domains remain unchanged. Choosing a different pilot hostname means updating the public origin, exact host/origin allowlists, Extension build values and OAuth callback together.
 
 ## Limits that can be changed together
 
@@ -66,16 +66,16 @@ Broadcaster role protection stops accidental peeking with the broadcaster’s kn
 3. Build the pilot frontend with `pnpm --filter @baited/edge-game build:pilot-assets`.
 4. Build a separately named native Extension ZIP with `EXTENSION_TRANSPORT=edge` and the exact pilot API/Studio origin. [`pilot-extension.env.tmpl`](./pilot-extension.env.tmpl) supplies the public configuration and the Proton reference for the public Extension client ID. A ZIP built with fixture values is not upload-ready. Pass `--version` explicitly to `packages/app/scripts/build-extension.mjs` (the script defaults to 0.0.1), plus distinct `--out-dir` and `--zip` paths. Match the owner-selected Twitch version; the currently prepared pilot ZIP is labeled 0.0.3.
 5. Review the actual Cloudflare account’s remaining included usage. The published allowances are shared with other projects; the $5 plan is not a hard spending cap.
-6. Record the chosen hostname, account, commit, time window, initial channels and stop procedure. Obtain the final activation decision before creating bindings, routing or provider workload.
+6. Record the chosen hostname, account, commit, time window, initial channels and stop procedure. The inactive deployment and secret setup are complete. Obtain the final activation decision before public routing, enabling the pilot or live Twitch work.
 
 No workflow deploys this game Worker. A later merge can still trigger the existing development landing/Card Lab workflow; that does not activate the game backend. The prepared Worker config has `workers_dev: false`, `preview_urls: false`, empty routes and `EDGE_PILOT_ENABLED: false`. A local build or PR merge is not a deployment instruction.
 
 ## Activation sequence, once authorized
 
-1. Use the existing paid Workers account. Create only the Worker, its two SQLite Durable Object classes and static asset deployment. Do not create an R2 bucket, D1 database or Container for this deck-only pilot.
-2. Generate/store the dedicated keys in Proton and supply the six secret bindings without echoing their values. Keep them distinct from fixture and staging keys.
+1. Already complete: the existing paid Workers account contains the disabled Worker, its two SQLite Durable Object namespaces and static assets. Verify their settings before activation. Do not create an R2 bucket, D1 database or Container for this deck-only pilot.
+2. Already complete: the three dedicated keys are stored in Proton and all six secret bindings are present on the Worker. Keep these keys stable; do not regenerate them for an ordinary deployment.
 3. Add the exact HTTPS pilot hostname as a reviewed Worker custom domain/route and set the pilot flag true. Keep fixture and synthetic staging flags false.
-4. The owner adds the OAuth redirect `https://pilot-baited.maff.app/auth/twitch/callback` to the existing Twitch application. The owner adds the exact HTTPS/WSS pilot endpoints to the Extension’s allowed connections and adds its real Twitch-hosted Extension origin to `EDGE_ALLOWED_ORIGINS` on the Worker. No wildcard origins.
+4. The owner adds the OAuth redirect `https://pilot-baited.maff.app/auth/twitch/callback` to the existing Twitch application. The owner adds the exact HTTPS/WSS pilot endpoints to the Extension’s allowed connections. The Worker already permits the actual Twitch-hosted Extension origin. No wildcard origins. These console settings can be prepared before activation.
 5. The owner uploads the edge pilot ZIP to the intended Hosted Test version. Uploading a ZIP does not update the backend, and updating the backend does not change Twitch’s uploaded assets.
 6. Before connecting, inspect the existing application's EventSub subscriptions for these channels. An old PC/tunnel callback can conflict with the pilot. The pilot deliberately refuses to delete another callback automatically; remove only the confirmed obsolete subscription through a reviewed operator action. Then visit Studio over HTTPS. Sign in as `komediruzecki7`, approve the listed scopes, connect Twitch chat and verify the connection status. Authorize Baity separately with the configured bot account if announcements are wanted.
 7. Replace the OBS source URL with the URL copied from this pilot Studio. Do not reuse the former PC server’s capability URL.

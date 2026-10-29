@@ -27,7 +27,7 @@ The overlay capability is a bearer credential for the public projection. Treat c
 
 Local fixtures do not establish real Twitch OAuth/EventSub permissions, Hosted Test upload acceptance, physical iPhone behavior, native OBS compatibility, provider log redaction, account-wide remaining allowances, sustained load capacity or a fixed invoice. Logs are disabled in the prepared config; verify the account's broader logging settings at activation.
 
-No service, route, storage namespace or paid measurement has been activated. The first live acceptance remains one allowlisted channel with known testers, then the other two after success. See [PILOT.md](./PILOT.md).
+After the code reviews, the owner authorized an inactive deployment: the Worker, static assets, two Durable Object namespaces and six secrets now exist. No public route or live game workload is enabled, and no paid load/cost measurement ran. See [INACTIVE-DEPLOYMENT.md](./INACTIVE-DEPLOYMENT.md). The first live acceptance remains one allowlisted channel with known testers, then the other two after success. See [PILOT.md](./PILOT.md).
 
 ## Second review: evidence and follow-through
 

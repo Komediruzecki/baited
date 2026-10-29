@@ -2,8 +2,9 @@
 
 A Cloudflare Worker routes authenticated traffic to one SQLite Durable Object per Twitch channel. A shared Control object handles Twitch authorization, chat subscriptions and Baity’s account-wide sending budget. Studio, OBS and the native Twitch Extension use persistent WebSockets. Moonshine runs in the streamer’s browser; audio stays there.
 
-**Prepared, not activated.** The pilot configuration has no public route, no workers.dev address and its enable flag is false. Building and testing locally creates no Cloudflare resources. No production or existing PC host is changed.
+**Deployed inactive.** The Worker, static assets, two Durable Object namespaces and six secret bindings are present on Cloudflare. There is no public route, workers.dev address or preview URL, and the pilot flag is false. No real Twitch session or game has started. Production and the stopped PC host are unchanged.
 
+- [Deployment receipt and exact owner setup](./INACTIVE-DEPLOYMENT.md)
 - [Pilot setup, limits and acceptance steps](./PILOT.md)
 - [Architecture, hidden cards and cost tables](./ARCHITECTURE-AND-COSTS.md)
 - [Verification and review status](./VERIFICATION.md)
@@ -11,7 +12,7 @@ A Cloudflare Worker routes authenticated traffic to one SQLite Durable Object pe
 
 ## Pilot scope
 
-The initial channels are `komediruzecki7`, `lakeeko` and `yahwehwastaken`. Each channel admits up to 100 distinct chat participants per round and 100 concurrent viewer sockets, with separate capacity for Studio and OBS. These are different limits: a person can open more than one Extension view.
+The initial channel is `komediruzecki7` only. Adding `lakeeko` or `yahwehwastaken` as streamers is a later configuration change; they can still be invited as viewers of the first channel. Each channel admits up to 100 distinct chat participants per round and 100 concurrent viewer sockets, with separate capacity for Studio and OBS. These are different limits: a person can open more than one Extension view.
 
 The existing illustrated deck is included. Custom decks, card creation, image uploads, scanning and R2 are disabled in this pilot. The existing Node application remains available for those features; this is not a complete product migration.
 

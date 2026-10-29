@@ -1,6 +1,6 @@
 # Baited pilot: architecture and running costs
 
-**Checked 29 October 2026.** USD before tax. The Worker pilot and client adapters are implemented locally. The prepared deployment is disabled, with no public route. This document does not claim a live Twitch acceptance test or measured Cloudflare bill. No paid resources or hosted load tests were activated for this review.
+**Checked 29 October 2026.** USD before tax. The Worker pilot and client adapters are implemented and deployed inactive, with no public route. This document does not claim a live Twitch acceptance test or measured Cloudflare bill. The later owner-authorized deployment created the Worker, assets and two Durable Object namespaces and uploaded six secrets. No hosted gameplay or load/cost test has run. See [the deployment receipt](./INACTIVE-DEPLOYMENT.md).
 
 The pilot uses the existing deck, initially allows only `komediruzecki7`, and limits each channel to 100 round participants and 100 concurrent viewer sockets. The next proposed expansion adds `lakeeko` and `yahwehwastaken` after a successful first test. Channel capacity is configurable up to 10. Viewers must be signed into Twitch; anonymous Extension tokens cannot occupy pilot seats. Custom cards, uploads and scanners are excluded; the pilot configuration does not bind an R2 bucket.
 

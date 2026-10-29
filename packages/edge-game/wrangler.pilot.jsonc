@@ -1,4 +1,4 @@
-// PREPARED ONLY. No route, workers.dev address or paid resource is activated here.
+// INACTIVE PILOT. Deployed without public routes, workers.dev or preview URLs.
 // Enable the reviewed pilot and add its exact route only at the launch checkpoint.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
