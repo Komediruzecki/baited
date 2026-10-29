@@ -9,15 +9,15 @@ Verified on 2026-10-29 against the implementation in this pull request. These ar
 | Frozen workspace install with lifecycle scripts disabled | Passed; existing dependency versions preserved. |
 | `pnpm --filter @baited/edge-game check` | Passed. |
 | `pnpm --filter @baited/edge-game build` | Passed; no Node runtime imports or unexpected external modules. |
-| `pnpm --filter @baited/edge-game test` | **53 passed**, none skipped: 26 auth/art, 7 local-harness, 10 room integration, 10 state-store. |
-| Follow-up mission-countdown regression | **1 passed** after final peer review: running missions advance at an unchanged revision; paused and catch-review missions stay frozen. The full suite now contains 54 tests. |
+| `pnpm --filter @baited/edge-game test` | **54 passed in CI**, none skipped: 26 auth/art, 7 local-harness, 11 room integration, 10 state-store. Locally, 53 passed together and the final mission-countdown regression passed separately. |
 | `pnpm --filter @baited/app test` | **426 passed**, including 10 new portable-core recovery cases. |
-| Application build | Passed. A subsequent focused server rebuild and bundle guard also passed after fixing workspace-package externalization. |
+| Application build | Passed, including the server bundle guard and the full application build inside Docker. |
+| `docker build` | Passed locally after adding the game-core manifest and source to the build stages; the resulting image was not started. |
 | README HTTP example | Started a synthetic round and read an authenticated viewer snapshot through the local gateway. |
 | Bounded local launcher | Exited on its configured deadline; its loopback listener was closed afterward. |
 | `git diff --check` | Passed. |
 
-Repository CI adds an edge-game matrix job and remains the complete gate for the application, Extension packaging, landing bundles/browser checks, and review-host helper. Its result is reported on the PR; this record does not predeclare that result.
+Repository CI adds an edge-game matrix job and remains the complete gate for the application, Extension packaging, landing bundles/browser checks, and review-host helper. All four jobs passed on the first implementation commit ([run 40871611495](https://github.com/Komediruzecki/baited/actions/runs/40871611495)). The Dockerfile follow-up is validated by its local image build; the current-head CI result remains visible on the PR.
 
 ## Regressions covered
 
