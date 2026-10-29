@@ -16,8 +16,8 @@ See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Admission settings fail cl
 
 | Configuration | Prepared value | Meaning |
 | --- | --- | --- |
-| `EDGE_CHANNEL_LOGIN_ALLOWLIST` | `komediruzecki7,lakeeko,yahwehwastaken` | OAuth must prove an allowlisted identity. A browser-supplied channel name grants nothing. |
-| `EDGE_MAX_CHANNELS` | `3` | Allowlist/registered-channel ceiling. Supports up to 10 after review. This is stricter than allowing 10 simultaneous games from an unlimited directory. |
+| `EDGE_CHANNEL_LOGIN_ALLOWLIST` | `komediruzecki7` | First-test channel only. OAuth must prove an allowlisted identity. A browser-supplied channel name grants nothing. |
+| `EDGE_MAX_CHANNELS` | `1` | Allowlist/registered-channel ceiling. Supports up to 10 after review. This is stricter than allowing 10 simultaneous games from an unlimited directory. |
 | `EDGE_MAX_PARTICIPANTS` | `100` | Distinct chat identities admitted to each round. A 101st identity remains in normal Twitch chat but is ignored by the game. Pilot implementation will not accept a value above 100. |
 | `EDGE_MAX_VIEWER_SOCKETS` | `100` | Concurrent viewer connections per channel; separate from participants. Up to 200 configurable after a deliberate capacity review. |
 | `EDGE_CHAT_EVENTS_PER_MINUTE` | `600` | Per-room chat processing budget. Twitch can still deliver more ordinary chat to the ingress. Do not raise this without reviewing the global replay table. |
@@ -35,7 +35,7 @@ The 1,000 ms CPU allowance leaves headroom for room persistence and audience fan
 
 The active microphone has a 30-second lease renewed every 10 seconds and is bound to the exact Studio tab. A new round pauses if no audio timing arrives within five seconds, or if progress subsequently stops for 2.5 seconds. Late frames from a paused or finished round are ignored. Renewals return state in their response; there is no follow-up polling GET.
 
-To enforce the first test as one channel, set both `EDGE_CHANNEL_LOGIN_ALLOWLIST=komediruzecki7` and `EDGE_MAX_CHANNELS=1`. Leaving three allowlisted names with a ceiling of one fails configuration validation; it does not select the first name. Restore the three-name allowlist and ceiling together when expanding.
+The prepared configuration enforces the first test with `EDGE_CHANNEL_LOGIN_ALLOWLIST=komediruzecki7` and `EDGE_MAX_CHANNELS=1`. Leaving three allowlisted names with a ceiling of one fails configuration validation; it does not select the first name. After that test passes and expansion is authorized, change both the allowlist to `komediruzecki7,lakeeko,yahwehwastaken` and the ceiling to `3` together.
 
 Adding another invited streamer is a small config change: add the exact login, increase `EDGE_MAX_CHANNELS` as needed, review it, and redeploy configuration. Existing cookies do not grant a removed channel continued admission. Before removing a channel, disconnect its Twitch subscriptions and end its active test; do not rely on an allowlist edit alone as cleanup.
 
@@ -43,7 +43,7 @@ These limits bound admitted work, not the number of requests strangers can send 
 
 ## Credentials and permissions
 
-[`pilot-secrets.env.tmpl`](./pilot-secrets.env.tmpl) contains references only. The new `baited-edge-pilot` item and fields are **not claimed to exist yet**. At activation, create independent random keys in Proton and inject directly into the provider’s secret-binding command. Never write injected values to an env file, terminal output or Git.
+[`pilot-secrets.env.tmpl`](./pilot-secrets.env.tmpl) contains references only. The `dev / baited-edge-pilot` item now contains three independently generated keys, verified through Proton injection on 29 October 2026. Keep these stable across ordinary deployments. Inject directly into the provider’s secret-binding command; never write injected values to an env file, terminal output or Git.
 
 | Binding | Purpose |
 | --- | --- |
