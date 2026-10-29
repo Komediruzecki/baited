@@ -17,7 +17,7 @@ Verified on 2026-10-29 against the implementation in this pull request. These ar
 | Bounded local launcher | Exited on its configured deadline; its loopback listener was closed afterward. |
 | `git diff --check` | Passed. |
 
-Repository CI adds an edge-game matrix job and remains the complete gate for the application, Extension packaging, landing bundles/browser checks, and review-host helper. All four jobs passed on the first implementation commit ([run 40871611495](https://github.com/Komediruzecki/baited/actions/runs/40871611495)). The Dockerfile follow-up is validated by its local image build; the current-head CI result remains visible on the PR.
+Repository CI adds an edge-game matrix job and remains the complete gate for the application, Extension packaging, landing bundles/browser checks, and review-host helper. All four jobs passed on implementation commit `1430d28` in both the [PR run](https://github.com/Komediruzecki/baited/actions/runs/40872753721) and [push run](https://github.com/Komediruzecki/baited/actions/runs/40872745794). The Dockerfile follow-up also passed its local image build. Later documentation-only changes do not alter this tested implementation; current-head CI remains visible on the PR.
 
 ## Regressions covered
 
@@ -34,7 +34,9 @@ Repository CI adds an edge-game matrix job and remains the complete gate for the
 
 ## Review still pending
 
-The requested Opus 5.5 Max inspection did **not** run: the account preflight reported that the isolated `irch` profile was logged out before a model request. The prepared review requests a 45-minute read-only inspection and concrete regression tests. No other account was substituted.
+The initial attempt stopped before a model request because the isolated `irch` profile was logged out. The owner then explicitly authorized the personal account. Its already-active Claude subscription identity matched the `cswap` personal alias before and after the attempt; no authentication or account switch was performed.
+
+That personal attempt ran with observed model `claude-opus-5-5`, requested Max effort, and a 45-minute deadline. After roughly six and a half minutes, Claude reported **"You've hit your 5-hour limit"** and returned an error instead of a critique. Max effort was requested through the CLI; no effective-effort telemetry was reported. This is an incomplete review, not an approval or a source of accepted findings. The private receipt and prepared brief are preserved for a later continuation when usage is available.
 
 Keep the PR in draft until that review has completed, its findings have been assessed and fixed where warranted, and the required checks pass. A successful independent peer review does not substitute for the requested Opus review.
 
