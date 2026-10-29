@@ -31,7 +31,7 @@ After the code reviews, the owner authorized an inactive deployment: the Worker,
 
 ## Second review: evidence and follow-through
 
-The repair review completed successfully with Opus 5.5 and explicit Max effort. It inspected source, not a live provider. Its snapshot omitted game-core and the later combined Control/Room fixture; the final staff review will include both. Its “no P0 found” statement is a review result, not proof that no such defect exists.
+The repair review completed successfully with Opus 5.5 and explicit Max effort. It inspected source, not a live provider. Its snapshot omitted game-core and the later combined Control/Room fixture; the subsequently completed final staff review included both. Its “no P0 found” statement is a review result, not proof that no such defect exists.
 
 - Settling-tail audio: a sequence of late progress frames could stop advancing the accepted sample count and then reject a final transcript spanning the buzzer. The Room now retains bounded settling sample counts without extending liveness. Multi-frame tail and crossing-transcript tests confirm that pre-buzzer matches count and post-buzzer-only matches do not. Game-core already checked word timing against the round deadline and required no change.
 - CPU limit: Cloudflare confirms `limits.cpu_ms` also applies to Durable Objects. The disabled pilot now allows 1,000 ms instead of 50 ms. This supplies headroom without reserving compute; it is not a measured worst-case requirement.

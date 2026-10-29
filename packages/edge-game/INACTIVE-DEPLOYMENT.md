@@ -66,7 +66,7 @@ Open the [Twitch Developer Console](https://dev.twitch.tv/console). Use the exis
 
 3. Upload the separately named **baited-v0.0.3-edge-pilot.zip** to the intended test version. Keep the panel/mobile/video-overlay placements you want to test. This package uses the edge transport and the exact pilot origin; the former PC/Node ZIP is not interchangeable. The prepared filename/version label is 0.0.3; rebuild with the intended label if you choose another version.
 4. Keep `komediruzecki7` as the testing broadcaster. Keep `yahwehwastaken` and/or `lakeeko` in the Extension tester access list if they will join as viewers. The backend's one-streamer allowlist does not prevent them from being viewers.
-5. Leave this as a test version. **Do not submit it for review or release it.** Console preparation and asset upload can happen now; working Studio sign-in, chat, Baity and OBS tests must wait until the backend is enabled and routed.
+5. After saving details and uploading the ZIP, transition the version back to **Hosted Test** so it serves the uploaded Twitch CDN assets. **Do not submit it for review or release it.** Console preparation and asset upload can happen now; working Studio sign-in, chat, Baity and OBS tests must wait until the backend is enabled and routed. At that later test, install/activate the intended version and panel/video-overlay placement on `komediruzecki7`.
 
 The Worker already permits `https://54ysfu9jbragbdbvown2n8zrrli0g0.ext-twitch.tv`. No wildcard is needed. Do not add an EventSub webhook URL as an OAuth redirect: the backend registers its webhook after the appropriate authorization.
 
