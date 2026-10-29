@@ -81,8 +81,10 @@
 .cl-fan--one { transform:rotate(-9deg) translateX(-7px); }
 .cl-fan--two { transform:rotate(9deg) translateX(7px); }
 .cl-context--panel { width:318px; height:500px; padding:0 12px 10px; background:#1d0b45; outline:1px solid #a783cb; overflow:auto; }
-.cl-context--panel .cl-frame__card { width:294px; }
-.cl-context--panel .cl-card { min-height:0; }
+/* As in the Extension's panel, the card keeps 5:7 and takes the height the header and footer leave
+   inside Twitch's 500 px frame, as wide as that height allows. */
+.cl-context--panel .cl-frame__card { width:294px; flex:1 1 auto; min-height:0; container-type:size; display:grid; justify-items:center; align-items:start; }
+.cl-context--panel .cl-card { min-height:0; width:min(100cqw, 100cqh * 5 / 7); }
 .cl-context--panel .cl-card__art { width:164px; }
 .cl-context--panel .cl-card[data-edition=foil] { padding:14px 18px; }
 .cl-context--panel .cl-card[data-edition=foil] .cl-card__art { width:164px; }
