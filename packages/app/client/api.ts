@@ -38,6 +38,7 @@ async function direct<T>(path: string, body?: unknown, csrf?: string, signal?: A
     const data = await response
       .json()
       .catch(() => ({ error: 'The server did not respond. Try again.' }));
+    if (signal?.aborted || controller?.signal.aborted) throw new DOMException('The request was canceled.', 'AbortError');
     if (!response.ok) throw Object.assign(new Error(data.error || 'Request failed.'), { status: response.status });
     return data;
   } finally {
@@ -82,9 +83,9 @@ export function edgeSpeechSocket(round: string, epoch: number, leaseId: string):
   return edgeMode ? studioEdge().speechSocket(round, epoch, leaseId) : undefined;
 }
 
-export async function request<T>(path: string, body?: unknown, csrf?: string): Promise<T> {
+export async function request<T>(path: string, body?: unknown, csrf?: string, signal?: AbortSignal): Promise<T> {
   if (path === '/api/session') {
-    const session = await direct<T & { runtime?: string; authenticated?: boolean }>(path);
+    const session = await direct<T & { runtime?: string; authenticated?: boolean }>(path, undefined, undefined, signal);
     edgeMode = session.runtime === 'edge';
     if (!session.authenticated) clearEdge();
     return session;

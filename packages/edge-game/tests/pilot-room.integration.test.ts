@@ -21,7 +21,8 @@ interface Inspection {
   lease: {id:string;socketId:string;expiresAt:number;sessionId:string} | null;
   ownerSpeech?: {firstAudioAt:number;lastAudioAt:number;samples:number;lastSequence:number};
   chatReceipts: number; history: number; participants: number; sqlChanges: number; outbox: number;
-  sockets: {role:string;expiresAt:number;generation:number;readyState:number}[];
+  chatConnected: boolean; connectionRevision: number;
+  sockets: {role:string;sessionId?:string;expiresAt:number;generation:number;readyState:number}[];
 }
 interface FixtureStub {
   bootstrapFixture(): Promise<number>;
@@ -29,6 +30,9 @@ interface FixtureStub {
   reconcileAtFixture(at: number): Promise<Inspection>;
   chatFixture(event: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }>;
   disconnectFixture(): Promise<number>;
+  disconnectBatchFixture(payload:Record<string,unknown>): Promise<number>;
+  connectionFixture(status:string,revision:unknown): Promise<number>;
+  clockFixture(): Promise<number>;
   freezeAtFixture(at: number): Promise<void>;
   ownerMessageAtFixture(at: number, message: Record<string,unknown>): Promise<Inspection>;
   queuedOwnerMessageFixture(receivedAt: number, processedAt: number, message: Record<string,unknown>): Promise<Inspection>;
@@ -38,6 +42,7 @@ interface FixtureStub {
   receiptStatsFixture(): Promise<{count:number;indexedCount:number;indexedRowsRead:number}>;
 }
 let script: string;
+const fixtureClocks=new WeakMap<Miniflare,FixtureStub>();
 
 before(async () => {
   // Only this test bundle exports RPC fixture methods. The production entry and
@@ -82,19 +87,21 @@ before(async () => {
         export class ChannelRoom extends BaseRoom {
           async bootstrapFixture() {
             return (await this.fetch(new Request('https://room.internal/internal/control', {
-              method:'POST', body:JSON.stringify({channelId:'123', login:'komediruzecki7', type:'connection', status:'connected'})
+              method:'POST', body:JSON.stringify({channelId:'123', login:'komediruzecki7', type:'connection', status:'connected',connectionRevision:1})
             }))).status;
           }
           async inspectFixture() {
             const self = this;
             return {alarm: await this.ctx.storage.getAlarm(), now:self.now, revision:self.revision,
               phase:self.game.phase, mic:self.game.mic, lease:self.pilotState.lease,
+              chatConnected:self.pilotState.chatConnected,connectionRevision:self.pilotState.connectionRevision??0,
               ownerSpeech:this.ctx.getWebSockets().map(ws=>ws.deserializeAttachment()).find(att=>att?.socketId===self.pilotState.lease?.socketId)?.speech,
               round:self.game.round ? {id:self.game.round.id, epoch:self.game.round.epoch, segmentAt:self.game.round.segmentAt,
                 endsAt:self.game.round.endsAt, remaining:self.game.round.remaining, duration:self.game.round.duration, result:self.game.round.result} : null,
               history:self.game.data.history.length,
               participants:self.game.round?.participants.size ?? 0,
               sockets:this.ctx.getWebSockets().map(ws => ({role:ws.deserializeAttachment().identity.role,
+                sessionId:ws.deserializeAttachment().identity.sessionId,
                 expiresAt:ws.deserializeAttachment().identity.expiresAt,
                 generation:ws.deserializeAttachment().identity.generation,readyState:ws.readyState})),
               chatReceipts:this.ctx.storage.sql.exec('SELECT count(*) AS n FROM pilot_chat_receipt').one().n,
@@ -107,6 +114,7 @@ before(async () => {
             try { await this.serial(() => this.reconcile()); return await this.inspectFixture(); }
             finally { Date.now = clock; }
           }
+          clockFixture() { return Date.now(); }
           freezeAtFixture(at) { Date.now = () => at; }
           async ownerMessageAtFixture(at,message) {
             Date.now = () => at;
@@ -167,6 +175,16 @@ before(async () => {
               method:'POST', body:JSON.stringify({channelId:'123',type:'disconnect',sessionId:'fixture-studio-session'})
             }))).status;
           }
+          async disconnectBatchFixture(payload) {
+            return (await this.fetch(new Request('https://room.internal/internal/control', {
+              method:'POST',body:JSON.stringify({...payload,channelId:'123',type:'disconnect'})
+            }))).status;
+          }
+          async connectionFixture(status,revision) {
+            return (await this.fetch(new Request('https://room.internal/internal/control', {
+              method:'POST', body:JSON.stringify({channelId:'123',login:'komediruzecki7',type:'connection',status,connectionRevision:revision})
+            }))).status;
+          }
         }
       `,
       loader: 'ts', sourcefile: 'pilot-room-inline-fixture.ts',
@@ -197,6 +215,7 @@ async function runtime(bindings: Record<string, string> = {}) {
     const namespace = await mf.getDurableObjectNamespace('ROOMS');
     const stub = namespace.get(namespace.idFromName('channel:123')) as unknown as FixtureStub;
     assert.equal(await stub.bootstrapFixture(), 200);
+    fixtureClocks.set(mf,stub);
     return { mf, stub };
   } catch (error) { await mf.dispose(); throw error; }
 }
@@ -206,29 +225,36 @@ function sign(payload: Record<string, unknown>, secret: string): string {
     .map(part => Buffer.from(JSON.stringify(part)).toString('base64url')).join('.');
   return `${contents}.${createHmac('sha256', Buffer.from(secret, 'base64')).update(contents).digest('base64url')}`;
 }
-function token(role: 'studio' | 'overlay' | 'viewer' | 'broadcaster' = 'studio', overrides: Record<string, unknown> = {}): string {
-  const now = Math.floor(Date.now() / 1000);
+function token(role: 'studio' | 'overlay' | 'viewer' | 'broadcaster' = 'studio', overrides: Record<string, unknown> = {}, at=Date.now()): string {
+  const now = Math.floor(at / 1000);
   return role === 'viewer' || role === 'broadcaster'
     ? sign({channel_id:'123', role, opaque_user_id: role === 'viewer' ? 'U456' : 'U123', user_id:role === 'viewer' ? '456' : '123', iat:now, exp:now+300, ...overrides}, EXTENSION_SECRET)
     : sign({iss:'baited-edge-pilot', aud:'baited-edge', channel_id:'123', role, sid:SESSION, sub:'twitch:123', iat:now, exp:now+300, ...overrides}, PILOT_SECRET);
 }
+async function fixtureToken(mf:Miniflare,role:Parameters<typeof token>[0]='studio',overrides:Record<string,unknown>={}) {
+  const clock=fixtureClocks.get(mf);
+  assert.ok(clock,'The local fixture must register its Worker clock before issuing credentials.');
+  // Gameplay tests freeze/advance workerd independently from the Node host.
+  // Mint against the validating clock; production future-iat checks stay strict.
+  return token(role,overrides,await clock.clockFixture());
+}
 async function endpoint(mf: Miniflare, route: string) { return `${(await mf.ready).origin}/v1/rooms/123/${route}`; }
 async function state(mf: Miniflare, role: Parameters<typeof token>[0] = 'studio'): Promise<Snapshot> {
-  const response = await mf.dispatchFetch(await endpoint(mf, 'state'), {headers:{origin:ORIGIN, authorization:`Bearer ${token(role)}`}});
+  const response = await mf.dispatchFetch(await endpoint(mf, 'state'), {headers:{origin:ORIGIN, authorization:`Bearer ${await fixtureToken(mf,role)}`}});
   assert.equal(response.status, 200, await response.clone().text());
   return await response.json() as Snapshot;
 }
 async function send(mf: Miniflare, action: Command['action'], revision: number): Promise<Receipt> {
   const response = await mf.dispatchFetch(await endpoint(mf, 'commands'), {method:'POST',
-    headers:{origin:ORIGIN, authorization:`Bearer ${token()}`, 'content-type':'application/json'},
+    headers:{origin:ORIGIN, authorization:`Bearer ${await fixtureToken(mf)}`, 'content-type':'application/json'},
     body:JSON.stringify({id:randomUUID(),generation:1,expectedRevision:revision,action})});
   const body = await response.json() as Receipt;
   assert.equal(response.status, 200, JSON.stringify(body));
   return body;
 }
-async function connectedStudio(mf: Miniflare, role: Parameters<typeof token>[0] = 'studio', credential = token(role)) {
+async function connectedStudio(mf: Miniflare, role: Parameters<typeof token>[0] = 'studio', credential?:string) {
   const response = await mf.dispatchFetch(await endpoint(mf, 'socket'), {headers:{
-    origin:ORIGIN, upgrade:'websocket', 'sec-websocket-protocol':`baited.v1, baited.auth.${credential}`,
+    origin:ORIGIN, upgrade:'websocket', 'sec-websocket-protocol':`baited.v1, baited.auth.${credential??await fixtureToken(mf,role)}`,
   }});
   assert.equal(response.status, 101);
   const ws = response.webSocket!;
@@ -294,6 +320,42 @@ async function waitForHeldAuthorization(control:Awaited<ReturnType<typeof heldCo
   }
   assert.fail('The mock Control authorization did not enter its deterministic gate.');
 }
+
+test('replayed connection status cannot overwrite newer chat state or stop its microphone', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const first=await advanceAudio(mf,stub,500);
+    assert.equal(await stub.connectionFixture('connected',3),200);
+    const connected=await stub.inspectFixture();
+    assert.equal(connected.connectionRevision,3);
+    assert.equal(connected.lease!.id,first.lease!.id);
+    for(const [status,revision] of [['disconnected',2],['connected',3],['disconnected',3]] as const) {
+      assert.equal(await stub.connectionFixture(status,revision),200);
+      const unchanged=await stub.inspectFixture();
+      assert.equal(unchanged.revision,connected.revision);
+      assert.equal(unchanged.sqlChanges,connected.sqlChanges);
+      assert.equal(unchanged.connectionRevision,3);
+      assert.equal(unchanged.chatConnected,true);
+      assert.equal(unchanged.phase,'active');
+      assert.equal(unchanged.mic,'listening');
+      assert.equal(unchanged.lease!.id,first.lease!.id);
+    }
+    assert.equal(await stub.connectionFixture('disconnected',4),200);
+    const disconnected=await stub.inspectFixture();
+    assert.equal(disconnected.chatConnected,false);
+    assert.equal(disconnected.lease,null);
+    assert.equal(disconnected.phase,'paused');
+    assert.equal(await stub.connectionFixture('disconnected',4),200);
+    const duplicate=await stub.inspectFixture();
+    assert.equal(duplicate.sqlChanges,disconnected.sqlChanges);
+    assert.equal(duplicate.revision,disconnected.revision);
+    assert.equal(duplicate.connectionRevision,4);
+    for(const revision of [undefined,0,-1,1.5,'5',Number.MAX_SAFE_INTEGER+1])
+      assert.equal(await stub.connectionFixture('connected',revision),400);
+    assert.equal((await stub.inspectFixture()).revision,disconnected.revision);
+  } finally {await mf.dispose();}
+});
 
 test('pilot arms the first audio deadline at five seconds and pauses before an unattended round can end', {timeout:15_000}, async () => {
   const {mf, stub} = await runtime();
@@ -472,6 +534,55 @@ test('owner session disconnect pauses the live round and invalidates its socket 
   } finally { await mf.dispose(); }
 });
 
+test('disconnect batches validate atomically and preserve a fresh session outside the captured IDs', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const oldSessions=['retired-studio-session-a','retired-studio-session-b'];
+    for(const sid of oldSessions) await connectedStudio(mf,'studio',token('studio',{sid}));
+    await connectedStudio(mf,'viewer');
+    await start(mf);
+    const before=await advanceAudio(mf,stub,500);
+    // A malformed later ID must not revoke an earlier valid ID in the batch.
+    const invalid=[{}, {sessionIds:[]}, {sessionIds:[oldSessions[0],7]},
+      {sessionIds:Array(101).fill(oldSessions[0])}, {sessionIds:['x'.repeat(129)]},
+      {sessionIds:[oldSessions[0],'bad session']},
+      {sessionId:SESSION,sessionIds:oldSessions}, {sessionIds:'not-an-array'}];
+    for(const payload of invalid) {
+      assert.equal(await stub.disconnectBatchFixture(payload),400);
+      const after=await stub.inspectFixture();
+      assert.equal(after.revision,before.revision);
+      assert.equal(after.sqlChanges,before.sqlChanges);
+      assert.equal(after.lease!.id,before.lease!.id);
+      assert.ok(oldSessions.every(sid=>after.sockets.some(socket=>socket.sessionId===sid && socket.readyState===1)));
+    }
+    // Exercise the full bound, including the largest allowed ID length. The
+    // captured sessions predate the healthy owner; unconnected IDs are harmless.
+    const batch=[...oldSessions,...Array.from({length:98},(_,i)=>`retired-${i}-`.padEnd(128,'x'))];
+    assert.equal(await stub.disconnectBatchFixture({sessionIds:batch}),200);
+    const after=await stub.inspectFixture();
+    assert.equal(after.revision,before.revision+1,'One batch commits once, rather than once per session.');
+    assert.equal(after.phase,'active');
+    assert.equal(after.mic,'listening');
+    assert.equal(after.lease!.id,before.lease!.id);
+    assert.ok(after.sockets.some(socket=>socket.sessionId===SESSION && socket.readyState===1));
+    assert.ok(after.sockets.some(socket=>socket.role==='viewer' && socket.readyState===1));
+    assert.ok(after.sockets.every(socket=>!oldSessions.includes(socket.sessionId??'') || socket.readyState!==1));
+    assert.equal(await stub.disconnectBatchFixture({sessionIds:batch}),200);
+    const duplicate=await stub.inspectFixture();
+    assert.equal(duplicate.revision,after.revision);
+    assert.equal(duplicate.sqlChanges,after.sqlChanges);
+    assert.equal(duplicate.lease!.id,before.lease!.id);
+    assert.equal(await stub.disconnectBatchFixture({sessionIds:[SESSION,...oldSessions]}),200);
+    const revokedOwner=await stub.inspectFixture();
+    assert.equal(revokedOwner.revision,after.revision+1);
+    assert.equal(revokedOwner.phase,'paused');
+    assert.equal(revokedOwner.mic,'off');
+    assert.equal(revokedOwner.lease,null);
+    assert.ok(revokedOwner.sockets.some(socket=>socket.role==='viewer' && socket.readyState===1));
+    assert.ok(revokedOwner.sockets.every(socket=>socket.role!=='studio' || socket.readyState!==1));
+  } finally {await mf.dispose();}
+});
+
 test('refresh rechecks control admission and cannot keep a revoked session authorized', {timeout:15_000}, async () => {
   const {mf} = await runtime();
   try {
@@ -498,8 +609,8 @@ test('socket refresh cannot replace a viewer identity with a valid broadcaster c
 test('one viewer shares its HTTP and WebSocket refresh budget without spending Studio capacity', {timeout:15_000}, async () => {
   const {mf,stub} = await runtime();
   try {
-    // A test-only frozen clock makes the fixed-minute boundary deterministic.
-    // It is ahead of the signing clock, but inside each synthetic token's TTL.
+    // A test-only frozen clock makes the fixed-minute boundary deterministic;
+    // fixture credentials use the same clock as request validation.
     await stub.freezeAtFixture(Date.now()+30_000);
     await start(mf);
     const owner=await stub.inspectFixture();
@@ -513,7 +624,7 @@ test('one viewer shares its HTTP and WebSocket refresh budget without spending S
     const denied = nextSocketEvent(ws);
     ws.send('resync');
     assert.deepEqual(await denied,{kind:'close',code:1008});
-    const overflow = await mf.dispatchFetch(await endpoint(mf,'state'),{headers:{origin:ORIGIN,authorization:`Bearer ${token('viewer')}`}});
+    const overflow = await mf.dispatchFetch(await endpoint(mf,'state'),{headers:{origin:ORIGIN,authorization:`Bearer ${await fixtureToken(mf,'viewer')}`}});
     assert.equal(overflow.status,429);
     const studio=await state(mf);
     const renewal=await send(mf,{type:'microphone',armed:true,renew:true,leaseId:owner.lease!.id,socketId:owner.lease!.socketId},studio.revision);
@@ -532,7 +643,7 @@ test('invalid viewer frame bursts close those viewers while Studio retains its l
     // Forty signed identities stay below the 100-seat pilot cap while exceeding
     // the mutation queue's capacity if read-only disconnects were serialized.
     for(let index=0;index<40;index++) viewers.push(await connectedStudio(mf,'viewer',
-      token('viewer',{opaque_user_id:`U${1000+index}`,user_id:String(1000+index)})));
+      await fixtureToken(mf,'viewer',{opaque_user_id:`U${1000+index}`,user_id:String(1000+index)})));
     const closed=viewers.map(ws=>nextSocketEvent(ws));
     for(const ws of viewers) for(let index=0;index<8;index++) ws.send('{invalid-json');
     const renewal=await send(mf,{type:'microphone',armed:true,renew:true,leaseId:before.lease!.id,
@@ -651,6 +762,50 @@ test('queued audio anchors on its arrival time rather than the delayed first pro
       assert.equal(after.ownerSpeech!.firstAudioAt,initial.round!.segmentAt);
       assert.equal(after.ownerSpeech!.lastAudioAt,initial.round!.segmentAt+index*128);
     }
+  } finally {await mf.dispose();}
+});
+
+test('a 1.5 second uplink gap followed by twenty consistent owner audio frames keeps the microphone', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    // Align the segment so all twenty backlog frames hit the same fixed-second
+    // window that previously refused frame 17 with permanent close code 1008.
+    await stub.freezeAtFixture(Math.ceil(Date.now()/1000)*1000+30_500);
+    await start(mf);
+    const before=await advanceAudio(mf,stub,1000);
+    const firstArrival=before.round!.segmentAt+2500;
+    assert.equal(firstArrival%1000,0);
+    for(let index=1;index<=20;index++) {
+      const after=await stub.ownerMessageAtFixture(firstArrival+(index-1)*40,{type:'speech-audio',
+        leaseId:before.lease!.id,roundId:before.round!.id,epoch:before.round!.epoch,samples:16_000+index*2048});
+      assert.equal(after.mic,'listening',`Buffered audio frame ${index} disarmed the owner.`);
+      assert.equal(after.phase,'active');
+      assert.equal(after.lease!.id,before.lease!.id);
+      assert.equal(after.ownerSpeech!.samples,16_000+index*2048);
+      assert.ok(after.sockets.some(socket=>socket.role==='studio'&&socket.readyState===1));
+    }
+  } finally {await mf.dispose();}
+});
+
+test('an excessive owner audio burst closes with a retryable code', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const owner=await start(mf);
+    const before=await advanceAudio(mf,stub,1000);
+    const arrival=before.round!.segmentAt+2500;
+    const frame=(index:number)=>({type:'speech-audio',leaseId:before.lease!.id,
+      roundId:before.round!.id,epoch:before.round!.epoch,samples:16_000+index});
+    // Small, monotonic sample deltas keep every frame valid while exhausting
+    // admission tokens. Sequential delivery isolates the audio bucket from the
+    // separate mutation-queue cap, and a frozen clock prevents a refill.
+    for(let index=1;index<=48;index++) {
+      const after=await stub.ownerMessageAtFixture(arrival,frame(index));
+      assert.equal(after.mic,'listening');
+      assert.equal(after.ownerSpeech!.samples,16_000+index);
+    }
+    const closed=nextSocketEvent(owner);
+    owner.send(JSON.stringify(frame(49)));
+    assert.deepEqual(await closed,{kind:'close',code:1013});
   } finally {await mf.dispose();}
 });
 
@@ -792,10 +947,18 @@ test('a round-scoped pause survives unrelated chat revisions while a stale epoch
     for(let index=0;index<10;index++) await stub.chatFixture({eventId:`race-${index}`,channelId:'123',at:snapshot.now,kind:'message',
       messageId:`race-message-${index}`,userId:String(1000+index),name:`viewer${index}`,text:'1234567890'});
     assert.ok((await stub.inspectFixture()).revision>snapshot.revision);
+    // Reproduce the CI race deliberately: the host crosses a whole second while
+    // workerd remains frozen. Its host-minted JWT must still fail production
+    // future-iat validation, while the shared fixture helper uses workerd time.
+    await new Promise(resolve=>setTimeout(resolve,1100));
+    assert.ok(Math.floor(Date.now()/1000)>Math.floor(snapshot.now/1000));
+    const futureIssued=await mf.dispatchFetch(await endpoint(mf,'state'),{headers:{
+      origin:ORIGIN,authorization:`Bearer ${token()}`}});
+    assert.equal(futureIssued.status,401,'Future-issued credentials must not become valid to make a fixture pass.');
     await send(mf,{type:'pause',roundId:snapshot.round!.id,epoch:snapshot.round!.epoch},snapshot.revision);
     assert.equal((await stub.inspectFixture()).phase,'paused');
     const invalid=await mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',headers:{
-      origin:ORIGIN,authorization:`Bearer ${token()}`,'content-type':'application/json'},body:JSON.stringify({id:randomUUID(),
+      origin:ORIGIN,authorization:`Bearer ${await fixtureToken(mf)}`,'content-type':'application/json'},body:JSON.stringify({id:randomUUID(),
       generation:1,expectedRevision:snapshot.revision,action:{type:'resume',roundId:snapshot.round!.id,epoch:snapshot.round!.epoch}})});
     assert.equal(invalid.status,409,'Relaxed revisions must not let a previous round epoch resume.');
     assert.equal((await stub.inspectFixture()).phase,'paused');

@@ -227,7 +227,7 @@ export function createExtensionClient({ config, path, parse, onData, onStatus, f
 
 /** Edge pilot: retain the room connection across brief tab switches, never poll. */
 export function createEdgeExtensionClient({ config, path, parse, onData, onStatus,
-  WebSocketImpl = globalThis.WebSocket, setTimer = setTimeout, clearTimer = clearTimeout, now = Date.now }) {
+  WebSocketImpl = globalThis.WebSocket, setTimer = setTimeout, clearTimer = clearTimeout, now = Date.now, random = Math.random }) {
   let authorization = null, socket = null, timer = null, deadline = null, hiddenTimer = null, lastView = null;
   let stopped = false, visible = true, generation = 0, retries = 0, lastRevision = -1, roomGeneration = -1;
   let connectedOnce = false, retryUntil = 0;
@@ -304,7 +304,8 @@ export function createEdgeExtensionClient({ config, path, parse, onData, onStatu
         return;
       }
       if (!retryUntil) retryUntil = now() + 300000;
-      const delay = Math.min(60000, 1000 * 2 ** Math.min(retries++, 6));
+      const cap = Math.min(60000, 1000 * 2 ** Math.min(retries++, 6));
+      const delay = Math.round(cap * (0.5 + 0.5 * random()));
       if (now() + delay > retryUntil) {
         report('unavailable', 'The round is still unavailable. Try again when your connection returns.');
         return;

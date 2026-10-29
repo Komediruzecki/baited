@@ -18,14 +18,14 @@ const identityToken = (opaque, nonce = 1) => `header.${Buffer.from(JSON.stringif
 const frame = (revision = 1) => ({ type: 'snapshot', protocol: 1, revision, generation: 1, room: {
   channel: 'streamer', phase: 'idle', serverTime: 10000, round: null, result: null,
 } });
-function harness() {
+function harness(random = () => 1) {
   Socket.opened = [];
   const timers = new Map(), states = [], statuses = [];
   let nextId = 0, clock = 1000;
   const client = createEdgeExtensionClient({ config, path: '/api/extension/state', parse: readState,
     onData: (state) => states.push(state), onStatus: (status) => statuses.push(status), WebSocketImpl: Socket,
     setTimer: (callback, delay) => { const id = ++nextId; timers.set(id, { callback, delay }); return id; },
-    clearTimer: (id) => timers.delete(id), now: () => clock });
+    clearTimer: (id) => timers.delete(id), now: () => clock, random });
   return { client, timers, states, statuses, advance: (ms) => { clock += ms; } };
 }
 
@@ -127,6 +127,19 @@ test('an established connection retries a temporary outage for at most five minu
     assert.ok(attempts > 5, 'An established OBS/panel connection should survive more than five short failures.');
     assert.ok(elapsed <= 300000);
     assert.equal(h.statuses.at(-1).kind, 'unavailable');
+  } finally { h.client.destroy(); }
+});
+
+test('native recovery jitter spreads retries inside the exponential cap and destroy cancels them', () => {
+  const h = harness(() => 0);
+  try {
+    h.client.authorize(auth()); Socket.opened[0].receive(frame()); Socket.opened[0].close(1006, '');
+    const retry = [...h.timers.entries()][0];
+    assert.equal(retry[1].delay, 500);
+    h.advance(500); h.timers.delete(retry[0]); retry[1].callback();
+    Socket.opened[1].close(1006, '');
+    assert.equal([...h.timers.values()][0].delay, 1000);
+    h.client.destroy(); assert.equal(h.timers.size, 0);
   } finally { h.client.destroy(); }
 });
 

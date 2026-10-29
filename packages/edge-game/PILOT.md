@@ -12,7 +12,7 @@ The proposed isolated hostname is `pilot-baited.maff.app`. It is a proposal in c
 
 ## Limits that can be changed together
 
-See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Invalid values fail closed.
+See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Admission settings fail closed when invalid. The bot budget instead defaults to 15 when invalid or zero and clamps values above 18.
 
 | Configuration | Prepared value | Meaning |
 | --- | --- | --- |
@@ -29,11 +29,13 @@ See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Invalid values fail closed
 
 Room controls and explicit state refreshes each have a 120/minute budget per role and identity. Viewer joins allow 12/minute per identity; Studio/OBS joins allow 120/minute. Viewer traffic cannot consume the Studio's buckets. Viewer sockets are capped at four per identity. Studio and OBS share eight reserved connection slots. The pilot requires viewers to sign into Twitch; identity sharing is not required. Brief tab visibility changes keep the socket; five minutes hidden releases it.
 
-Frames and commands are limited to 8 KiB. A viewer may send four frames/second; Studio allows 16 for audio progress. Invalid viewer commands close that connection before entering the mutation queue. The gateway additionally allows 600 dynamic requests/minute/IP and 10 OAuth initiations/minute/IP using Cloudflare's approximate, per-location rate limiter. Verify that namespace IDs `2026102901` and `2026102902` are unique in the deployment account before activation. These are abuse controls, not exact global quotas.
+Incoming frames and commands are limited to 8 KiB; viewer clients accept outgoing snapshots up to 64 KiB. A viewer may send four frames/second; ordinary Studio frames allow 16/second. The exact active microphone owner has a separate audio token bucket with a 48-frame burst allowance and 16/second refill, so a brief valid backlog can catch up. Every audio frame still passes sample-clock checks; exhausting that bucket closes with retryable code 1013. Invalid viewer commands close that connection before entering the mutation queue. The gateway additionally allows 600 dynamic requests/minute/IP and 10 OAuth initiations/minute/IP using Cloudflare's approximate, per-location rate limiter. Verify that namespace IDs `2026102901` and `2026102902` are unique in the deployment account before activation. These are abuse controls, not exact global quotas.
 
 The 1,000 ms CPU allowance leaves headroom for room persistence and audience fanout; it is a ceiling, not reserved compute or a measured requirement. The earlier 50 ms setting was too aggressive without a worst-case provider profile. Cloudflare applies this setting to Durable Object invocations too. [Cloudflare limits](https://developers.cloudflare.com/durable-objects/platform/limits/)
 
 The active microphone has a 30-second lease renewed every 10 seconds and is bound to the exact Studio tab. A new round pauses if no audio timing arrives within five seconds, or if progress subsequently stops for 2.5 seconds. Late frames from a paused or finished round are ignored. Renewals return state in their response; there is no follow-up polling GET.
+
+To enforce the first test as one channel, set both `EDGE_CHANNEL_LOGIN_ALLOWLIST=komediruzecki7` and `EDGE_MAX_CHANNELS=1`. Leaving three allowlisted names with a ceiling of one fails configuration validation; it does not select the first name. Restore the three-name allowlist and ceiling together when expanding.
 
 Adding another invited streamer is a small config change: add the exact login, increase `EDGE_MAX_CHANNELS` as needed, review it, and redeploy configuration. Existing cookies do not grant a removed channel continued admission. Before removing a channel, disconnect its Twitch subscriptions and end its active test; do not rely on an allowlist edit alone as cleanup.
 
@@ -59,10 +61,10 @@ Broadcaster role protection stops accidental peeking with the broadcaster’s kn
 
 ## Build and review before activation
 
-1. Finish the requested personal Opus review and its fix-verification pass, assess each finding and rerun affected checks. Keep the PR draft if a blocking issue remains. See [REVIEW-DISPOSITION.md](./REVIEW-DISPOSITION.md).
+1. Assess the completed irch Opus staff review and verify its repairs. Keep the PR draft if a blocking issue remains. See [REVIEW-DISPOSITION.md](./REVIEW-DISPOSITION.md).
 2. Let the existing PR checks validate the application, Extension, landing, review-host and edge package. The new edge checks also build the selected static pilot assets.
 3. Build the pilot frontend with `pnpm --filter @baited/edge-game build:pilot-assets`.
-4. Build a separately named native Extension ZIP with `EXTENSION_TRANSPORT=edge` and the exact pilot API/Studio origin. [`pilot-extension.env.tmpl`](./pilot-extension.env.tmpl) supplies the public configuration and the Proton reference for the public Extension client ID. A ZIP built with fixture values is not upload-ready.
+4. Build a separately named native Extension ZIP with `EXTENSION_TRANSPORT=edge` and the exact pilot API/Studio origin. [`pilot-extension.env.tmpl`](./pilot-extension.env.tmpl) supplies the public configuration and the Proton reference for the public Extension client ID. A ZIP built with fixture values is not upload-ready. Pass `--version` explicitly to `packages/app/scripts/build-extension.mjs` (the script defaults to 0.0.1), plus distinct `--out-dir` and `--zip` paths. Match the owner-selected Twitch version; the currently prepared pilot ZIP is labeled 0.0.3.
 5. Review the actual Cloudflare account’s remaining included usage. The published allowances are shared with other projects; the $5 plan is not a hard spending cap.
 6. Record the chosen hostname, account, commit, time window, initial channels and stop procedure. Obtain the final activation decision before creating bindings, routing or provider workload.
 
@@ -87,11 +89,11 @@ No submission for Twitch review, production tag or public launch is part of this
 | --- | --- |
 | OAuth | Correct account signs in; non-allowlisted channel is denied; wrong/replayed OAuth state fails. |
 | Secret separation | Viewer sees word and clues; broadcaster Extension, Studio and OBS do not see them during the round. |
-| Real clues | A second account’s Twitch chat clue arrives once in Studio. |
-| Real Moonshine | Speech stays in the browser; spoken target produces a catch for streamer confirmation. |
+| Real clues | A second account’s Twitch chat clue arrives once in Studio. Deleting a clue or timing out its author removes the hint. |
+| Real Moonshine | Speech stays in the browser; spoken target produces a catch for streamer confirmation. Speak across the buzzer, try a sentence longer than ten seconds, then keep Studio hidden for six minutes while playing. |
 | Result | Confirmation updates Studio, viewer and OBS consistently. |
-| Interruption | Closing/disconnecting the microphone pauses the round; no false escaped win is awarded. |
-| Reconnect | Refresh viewer/OBS and restore the current state; expired credentials cannot retain access. |
+| Interruption | Closing/disconnecting the microphone pauses the round; no false escaped win is awarded. Reload Studio mid-round: remaining time is preserved and the mic needs manual re-enabling. Try one short network interruption. |
+| Reconnect | Refresh viewer/OBS and restore the current state; expired credentials cannot retain access. Leave OBS running unattended for at least 30 minutes across credential renewals. |
 | Baity | Enabled announcements arrive without duplicate floods; off means no new queued announcements. |
 | Stop | Disconnect chat and confirm Twitch subscription removal; close Studio and confirm the idle path separately. |
 | Device | Native Twitch desktop, iPhone/tablet and the installed OBS Browser Source are checked with real accounts. |
@@ -106,7 +108,9 @@ This pilot does not expose Card Maker or account deletion UI. Data deletion is a
 
 To end an ordinary test: finish/pause the round, disable the microphone, choose Disconnect chat, confirm subscription removal, sign out and remove the pilot OBS source. Failed Twitch DELETE requests remain in a durable retry queue; the UI must not claim removal before confirmation.
 
-For a full pilot shutdown, disconnect each registered channel while the control service is still reachable, verify the shared bot queue is drained/dropped, close admission, remove public routing and allow existing short-lived socket credentials to expire. A disabled gateway flag alone does not erase namespaces or instantly terminate every existing socket. If OAuth was revoked upstream or Twitch deletion fails, verify removal through the Twitch API before declaring ingestion stopped. Delete cloud data/resources only with an exact, approved retention decision.
+For a full pilot shutdown, disconnect each registered channel while the control service is still reachable and verify upstream subscription removal, verify the shared bot queue is drained/dropped, then set `EDGE_PILOT_ENABLED=false`, remove public routing and allow existing short-lived socket credentials to expire. Do not flip the flag before subscription cleanup: it also stops Control alarms and would stall pending deletion retries. A disabled gateway flag alone does not erase namespaces or instantly terminate every existing socket. If OAuth was revoked upstream or Twitch deletion fails, verify removal through the Twitch API before declaring ingestion stopped. Delete cloud data/resources only with an exact, approved retention decision.
+
+Stop the test immediately if a live secret appears in a Studio/OBS/broadcaster frame, another channel’s state becomes visible, microphone pauses repeat on a stable connection, webhooks repeatedly return 503, a pilot subscription cannot be removed, or usage rises unexpectedly. Before first connection, verify account-level logging does not capture authorization headers and configure billing notifications; neither a notification nor the pilot limits is a hard spending cap.
 
 ## Follow-ups after a successful pilot
 

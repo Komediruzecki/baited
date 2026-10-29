@@ -205,7 +205,8 @@ for (const count of [1, 3]) test(`combined pilot: ${count} channel(s), real OAut
       const transport = new EdgeRoomTransport({ origin: ORIGIN, bootstrap: async () => bootstrap,
         socket: (url, protocols) => new Socket(url, protocols) as unknown as WebSocket,
         fetch: async (url, init) => await request(new URL(String(url)).pathname, {
-          ...init, headers: { origin: ORIGIN, ...Object.fromEntries(new Headers(init?.headers)) },
+          ...init, headers: { ...(!['GET', 'HEAD'].includes((init?.method ?? 'GET').toUpperCase()) ? { origin: ORIGIN } : {}),
+            ...Object.fromEntries(new Headers(init?.headers)) },
         }) as unknown as Response });
       clients.push(transport); return transport;
     };
@@ -288,6 +289,18 @@ for (const count of [1, 3]) test(`combined pilot: ${count} channel(s), real OAut
     assert.ok(final.receipts.every((receipt: any) => receipt.status === 'sent'));
     assert.ok(final.credentialsEncrypted);
     for (const room of rooms) assert.equal((await room.inspectFixture()).outbox, 0, 'Acknowledged actual outbox entries drain.');
+    // Same-origin GET/HEAD deliberately omit Origin in this browser fixture.
+    // Connect/disconnect must refresh over the authenticated socket instead.
+    for (let i = 0; i < count; i++) {
+      const headers = { cookie: sessions[i]!, 'x-csrf-token': bootstraps[i]!.csrf! };
+      assert.equal((await request('/api/edge/chat', jsonPost({ connected: false }, headers))).status, 200);
+      assert.equal((await studios[i]!.refresh()).room!.connection.status, 'offline');
+      assert.equal((await request('/api/edge/chat', jsonPost({ connected: true }, headers))).status, 200);
+      assert.equal((await studios[i]!.refresh()).room!.connection.status, 'offline');
+    }
+    await sleep(1100);
+    for (let i = 0; i < count; i++) await control.pumpFixture();
+    for (const studio of studios) assert.equal((await studio.refresh()).room!.connection.status, 'connected');
   } finally {
     clients.forEach((client) => client.destroy());
     await mf.dispose();

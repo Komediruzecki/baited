@@ -20,12 +20,12 @@ const snapshot = (revision = 1): EdgeSnapshot => ({ type: 'snapshot', protocol: 
   socketId: '00000000-0000-4000-8000-000000000001',
   room: { id: 'edge-1234', phase: 'active', serverTime: Date.now(), score: {}, settings: {},
     round: { id: 'round-1', epoch: 1 } } as GameView });
-function harness() {
+function harness(random = () => 1) {
   const sockets: Socket[] = [], calls: { url: string; init?: RequestInit }[] = [];
   const issued: EdgeBootstrap[] = [], signals: AbortSignal[] = [];
   let bootstrapCount = 0, failState = false;
   let bootstrapError: unknown, pendingBootstrap: Promise<EdgeBootstrap> | undefined;
-  const client = new EdgeRoomTransport({ origin: 'https://pilot.example',
+  const client = new EdgeRoomTransport({ origin: 'https://pilot.example', random,
     bootstrap: async (signal) => {
       bootstrapCount++; signals.push(signal!);
       if (bootstrapError) throw bootstrapError;
@@ -70,6 +70,60 @@ test('edge uses one socket with credential subprotocol and no snapshot polling',
     h.sockets[0].receive(snapshot(1));
     assert.equal((await h.client.state()).revision, 2, 'late snapshots cannot rewind the visible game');
   } finally { h.client.destroy(); }
+});
+
+test('control refresh coalesces requests and waits for a socket snapshot, without any HTTP GET', async () => {
+  const h = harness();
+  try {
+    await ready(h);
+    let settled = false;
+    const first = h.client.refresh().then((value) => { settled = true; return value; });
+    const second = h.client.refresh(); await flush();
+    assert.equal(settled, false);
+    assert.deepEqual(h.sockets[0].sent, ['resync']);
+    assert.equal(h.calls.length, 0);
+    h.sockets[0].receive(snapshot(2));
+    assert.equal((await first).revision, 2); assert.equal((await second).revision, 2);
+    assert.equal(h.calls.length, 0);
+    const again = h.client.refresh(); await flush(); h.sockets[0].receive(snapshot(2));
+    assert.equal((await again).revision, 2, 'An unchanged authoritative snapshot also completes a resync.');
+  } finally { h.client.destroy(); }
+});
+
+test('resync timeout clears the shared waiter, and close or destroy rejects every waiting caller', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 100000 });
+  const h = harness();
+  try {
+    await ready(h);
+    const first = assert.rejects(h.client.refresh(), /update.*has not arrived/);
+    const second = assert.rejects(h.client.refresh(), /update.*has not arrived/);
+    await flush(); t.mock.timers.tick(10000); await Promise.all([first, second]);
+    const next = h.client.refresh(); await flush(); h.sockets[0].receive(snapshot(2)); await next;
+    t.mock.timers.tick(10000); assert.equal(h.client.connected, true, 'A completed resync clears its timeout.');
+    const closed = assert.rejects(h.client.refresh(), /connection ended/i); await flush();
+    h.sockets[0].close(1006, 'Offline'); await closed;
+    const reopen = h.client.state(); await flush(); h.sockets[1].receive(snapshot(3)); await reopen;
+    const destroyed = assert.rejects(h.client.refresh(), /connection has closed/i); await flush();
+    h.client.destroy(); await destroyed;
+    assert.equal(h.calls.length, 0);
+  } finally { h.client.destroy(); t.mock.timers.reset(); }
+});
+
+test('reconnect and credential retry jitter spread attempts inside the exponential bounds', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 100000 });
+  const h = harness(() => 0);
+  try {
+    await ready(h); h.client.subscribe(() => {}, () => {});
+    h.bootstrapError(Object.assign(new Error('Temporary'), { status: 503 }));
+    t.mock.timers.tick(180000); await flush(); assert.equal(h.count(), 2);
+    t.mock.timers.tick(499); await flush(); assert.equal(h.count(), 2);
+    h.bootstrapError(); t.mock.timers.tick(1); await flush(); assert.equal(h.count(), 3);
+    const renewed = h.issued.at(-1)!;
+    h.sockets[0].receive({ type: 'auth-refreshed', expiresAt: renewed.tokenExpiresAt });
+    h.sockets[0].close(1006, 'Offline');
+    t.mock.timers.tick(499); await flush(); assert.equal(h.sockets.length, 1);
+    t.mock.timers.tick(1); await flush(); assert.equal(h.sockets.length, 2);
+  } finally { h.client.destroy(); t.mock.timers.reset(); }
 });
 
 test('Moonshine sends timing and final text on the authenticated socket, never audio', async () => {

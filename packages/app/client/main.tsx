@@ -42,6 +42,7 @@ import type {
   ChatBotStatus,
 } from '../shared/types';
 import { request, isEdgeRuntime, subscribeEdge } from './api';
+import { createRuntimeSessionLoader } from './runtime-session';
 import { Microphone } from './microphone';
 import { SpeechLab } from './SpeechLab';
 import { CardArt } from './CardArt';
@@ -2094,18 +2095,22 @@ function Privacy() {
 }
 function App() {
   const [session, setSession] = useState<SessionInfo | null>(null),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [retrying, setRetrying] = useState(false);
+  const sessionLoader = useRef<ReturnType<typeof createRuntimeSessionLoader<SessionInfo>> | null>(null);
   const path = location.pathname.split('/').filter(Boolean),
-    reload = useCallback(() => {
-      void request<SessionInfo>('/api/session')
-        .then((s) => {
-          setSession(s);
-          setError('');
-        })
-        .catch((e) => setError(e.message));
-    }, []);
+    reload = useCallback(() => { sessionLoader.current?.reload(); }, []);
   useEffect(() => {
-    if (path[0] !== 'speech-lab') reload();
+    if (path[0] === 'speech-lab') return;
+    const loader = createRuntimeSessionLoader<SessionInfo>({
+      load: (signal) => request<SessionInfo>('/api/session', undefined, undefined, signal),
+      automatic: ['overlay', 'play'].includes(path[0]),
+      onSession: (value) => { setSession(value); setError(''); setRetrying(false); },
+      onError: (failure, scheduled) => { setError(failure.message); setRetrying(scheduled); },
+    });
+    sessionLoader.current = loader;
+    loader.reload();
+    return () => { loader.destroy(); if (sessionLoader.current === loader) sessionLoader.current = null; };
   }, [reload]);
   if (path[0] === 'privacy' && session) return <Privacy />;
   if (path[0] === 'speech-lab') return <SpeechLab />;
@@ -2118,6 +2123,7 @@ function App() {
     return (
       <div className="loading">
         <p role="alert">{error}</p>
+        {retrying && <p role="status">Reconnecting automatically…</p>}
         <Button onClick={reload}>Try again</Button>
       </div>
     );

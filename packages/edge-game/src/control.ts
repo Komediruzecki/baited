@@ -5,6 +5,7 @@ import { allowedLogins, cookieValue, decryptValue, encryptValue, maximumChannels
   randomToken, sameOrigin, sameText, secretBytes, sessionCookie, SESSION_COOKIE, sha256, signPilotCapability, studioIdleMilliseconds, verifyWebhook } from './control-auth.js';
 import { CONTROL_LIMITS, type ControlEnv, type ControlSession, type ControlState, type Credentials, type RegisteredChannel,
   type RoomAnnouncement, type TwitchChatEvent, type TwitchUser } from './control-types.js';
+import { internalFetch } from './internal-fetch.js';
 
 const ID = /^[1-9][0-9]{0,24}$/;
 const CALLBACK = '/auth/twitch/callback';
@@ -132,6 +133,16 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   }
   private async persist(): Promise<void> {
     try {
+      // Every path (OAuth, verification, revoke, stop, idle and recovery) goes
+      // through this checkpoint. Assign projection revisions here so a delayed
+      // cross-object push can never overwrite a later connection decision.
+      for (const channel of Object.values(this.data.channels)) {
+        const previous = this.committed.channels[channel.id];
+        const connected = this.allowed(channel) && channel.chatWanted !== false && channel.subscriptionStatus === 'enabled';
+        channel.connectionRevision = (previous?.connectionRevision ?? 0) +
+          (!previous?.connectionRevision || previous.connectionConnected !== connected ? 1 : 0);
+        channel.connectionConnected = connected;
+      }
       const base = { ...this.data }; const next = new Map<string, string>();
       for (const field of CONTROL_MAPS) {
         for (const [id, value] of Object.entries(this.data[field] ?? {})) next.set(JSON.stringify([field, id]), JSON.stringify(value));
@@ -213,6 +224,26 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       const url = new URL(request.url);
       if (url.pathname === CALLBACK && request.method === 'GET') return await this.callback(request, url);
       if (url.pathname === '/api/edge/chat' && request.method === 'POST') return await this.chatConnection(request);
+      if (url.pathname === '/api/edge/overlay' && request.method === 'POST') {
+        await this.ready;
+        if (!this.configured()) return json({ error: 'The hosted pilot is not configured.' }, 503);
+        if (url.origin !== publicOrigin(this.env) || url.username || url.password || url.hash) return denied();
+        // This public capability exchange is read-only. A slow request body must
+        // never occupy the queue shared by signed chat and session mutations.
+        return await this.overlay(request);
+      }
+      if (url.pathname === '/api/edge/session' && request.method === 'GET') {
+        const response = await this.serial(() => this.handle(request));
+        if (response.ok) {
+          const session = await this.session(request, this.committed);
+          if (!session) return denied();
+          // Reconcile outside the Control queue. A lost subscription push heals
+          // on bootstrap; Room rejects any late projection with an old revision.
+          await this.roomControl(session.channel.id, { type: 'connection', login: session.channel.login });
+          if (!await this.session(request, this.committed)) return denied();
+        }
+        return response;
+      }
       if (url.pathname === '/api/session' && request.method === 'GET' || url.pathname === WEBHOOK && request.method === 'POST') {
         await this.ready;
         if (!this.configured()) return json({ error: 'The hosted pilot is not configured.' }, 503);
@@ -225,7 +256,12 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         const body = await boundedControlBody(request);
         const signature = await verifyWebhook(request, body, this.env.TWITCH_EVENTSUB_SECRET);
         if (!signature) return denied();
-        return await this.serial(() => { this.prune(); return this.webhook(body, signature); });
+        const result = await this.serial(() => { this.prune(); return this.webhook(body, signature); });
+        if (result instanceof Response) return result;
+        // The inbox is already durable. Waiting for a Room must not occupy the
+        // shared control queue used by other channels and session revocation.
+        await this.deliver(result.delivery);
+        return new Response(null, { status: 204 });
       }
       // Room authentication must not wait behind a control operation delivering a
       // webhook into that same room. Read only the last committed auth snapshot.
@@ -248,7 +284,6 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     if (url.origin === 'https://control.internal' && request.method === 'POST') return this.internal(url.pathname, request);
     if (url.origin !== publicOrigin(this.env) || url.username || url.password || url.hash) return denied();
     if (url.pathname === '/auth/twitch' && request.method === 'GET') return this.beginOAuth('broadcaster');
-    if (url.pathname === '/api/edge/overlay' && request.method === 'POST') return this.overlay(request);
     const session = await this.session(request);
     if (url.pathname === '/api/session' && request.method === 'GET') return json({ runtime: 'edge', authenticated: !!session, twitchReady: true,
       demoAvailable: false, speechReady: true, ...(session ? { user: { name: session.channel.name, mode: 'twitch' }, csrf: session.value.csrf } : {}) });
@@ -414,9 +449,13 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   private async overlay(request: Request): Promise<Response> {
     if (!sameOrigin(request, publicOrigin(this.env)) || !request.headers.get('content-type')?.startsWith('application/json')) return denied();
     const value = object(JSON.parse(await boundedControlBody(request)));
-    const channel = value && ID.test(value.channelId ?? '') ? this.data.channels[value.channelId] : undefined;
+    const channel = value && ID.test(value.channelId ?? '') ? this.committed.channels[value.channelId] : undefined;
     if (!this.allowed(channel) || typeof value?.key !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(value.key) || !sameText(await sha256(value.key), channel.overlayKeyHash)) return denied();
-    return json({ channelId: channel.id, ...(await signPilotCapability(this.env, { channelId: channel.id, role: 'overlay', sessionId: `overlay:${channel.id}` })) });
+    const capability = await signPilotCapability(this.env, { channelId: channel.id, role: 'overlay', sessionId: `overlay:${channel.id}` });
+    const current = this.committed.channels[channel.id];
+    if (!this.allowed(current) || current.credentials?.ciphertext !== channel.credentials?.ciphertext ||
+      current.generation !== channel.generation || current.overlayKeyHash !== channel.overlayKeyHash) return denied();
+    return json({ channelId: channel.id, ...capability });
   }
   private async internal(path: string, request: Request): Promise<Response> {
     const input = object(JSON.parse(await boundedControlBody(request)));
@@ -499,8 +538,13 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     });
   }
   private async roomControl(channelId: string, event: Record<string, unknown>): Promise<void> {
-    const response = await this.roomStub(channelId).fetch('https://room.internal/internal/control', { method: 'POST',
-      headers: { 'content-type': 'application/json' }, body: JSON.stringify({ channelId, ...event }) });
+    // A timeout does not undo work already admitted by Room. A monotonically
+    // ordered projection lets Room ignore a late push after a newer decision.
+    const channel = this.committed.channels[channelId];
+    const payload = event.type === 'connection' ? { channelId, type: 'connection', login: channel?.login,
+      status: channel?.connectionConnected === true ? 'connected' : 'disconnected', connectionRevision: channel?.connectionRevision ?? 0 } : { channelId, ...event };
+    const response = await internalFetch(this.roomStub(channelId), 'https://room.internal/internal/control', { method: 'POST',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
     if (!response.ok) throw new Error('room_unavailable');
   }
   private async revokeChannel(channel: RegisteredChannel): Promise<void> {
@@ -511,7 +555,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     channel.subscriptionStatus = 'revoked'; await this.persist();
     // Revoke the durable session before closing sockets. A failed push cannot
     // admit new commands; the room also rechecks durable session authorization.
-    for (const sessionId of sessions) await this.roomControl(channel.id, { type: 'disconnect', sessionId }).catch(() => {});
+    if (sessions.length) await this.roomControl(channel.id, { type: 'disconnect', sessionIds: sessions }).catch(() => {});
   }
   private async subscribe(channelId: string): Promise<void> {
     return this.providerOperation(`subscribe:${channelId}`, async () => {
@@ -594,7 +638,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     channel.deleteRetryAt = Date.now() + 1000; await this.persist();
     await this.roomControl(channel.id, { type: 'connection', status: 'disconnected', detail: 'Reconnecting Twitch chat.', login: channel.login }).catch(() => {});
   }
-  private async webhook(body: string, signature: NonNullable<Awaited<ReturnType<typeof verifyWebhook>>>): Promise<Response> {
+  private async webhook(body: string, signature: NonNullable<Awaited<ReturnType<typeof verifyWebhook>>>): Promise<Response | { delivery: string }> {
     const ignored = () => new Response(null, { status: 204 });
     let payload: Record<string, any> | null;
     try { payload = object(JSON.parse(body)); } catch { return ignored(); }
@@ -648,22 +692,40 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     // Persist before delivery. Room deduplication makes a retry after eviction safe.
     this.inboxQuery('INSERT INTO twitch_inbox (id,expires_at,next_at,payload) VALUES (?,?,?,?)', signature.id,
       Math.max(Date.now(), normalized.at) + CONTROL_LIMITS.webhookMs, Date.now(), JSON.stringify(normalized));
-    await this.schedule(); await this.deliver(normalized);
-    return new Response(null, { status: 204 });
-  }
-  private async deliver(event: TwitchChatEvent): Promise<void> {
-    try {
-      const channel = this.data.channels[event.channelId];
-      if (!this.allowed(channel) || channel.chatWanted === false) { this.inboxQuery('DELETE FROM twitch_inbox WHERE id = ?', event.eventId); return; }
-      const response = await this.roomStub(event.channelId).fetch('https://room.internal/internal/twitch-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(event) });
-      if (!response.ok && !(response.status >= 400 && response.status < 500 && response.status !== 429)) throw new Error('room_delivery_failed');
-      this.inboxQuery('UPDATE twitch_inbox SET delivered = 1, payload = NULL WHERE id = ?', event.eventId);
-    } catch {
-      const row = this.inboxQuery<{ attempts: number }>('SELECT attempts FROM twitch_inbox WHERE id = ?', event.eventId)[0];
-      const attempts = (row?.attempts ?? 0) + 1;
-      this.inboxQuery('UPDATE twitch_inbox SET attempts = ?, next_at = ? WHERE id = ?', attempts, Date.now() + Math.min(60_000, 1000 * 2 ** Math.min(attempts, 6)), event.eventId);
-    }
     await this.schedule();
+    return { delivery: normalized.eventId };
+  }
+  private async deliver(eventId: string): Promise<void> {
+    await this.providerOperation(`room-delivery:${eventId}`, async () => {
+      const event = await this.serial(async () => {
+        const row = this.inboxQuery<{ payload: string }>('SELECT payload FROM twitch_inbox WHERE id = ? AND delivered = 0', eventId)[0];
+        if (!row) return null;
+        const current = JSON.parse(row.payload) as TwitchChatEvent;
+        const channel = this.data.channels[current.channelId];
+        if (!this.allowed(channel) || channel.chatWanted === false) {
+          this.inboxQuery('DELETE FROM twitch_inbox WHERE id = ?', eventId); await this.schedule(); return null;
+        }
+        return current;
+      });
+      if (!event) return;
+      let delivered = false;
+      try {
+        const response = await internalFetch(this.roomStub(event.channelId), 'https://room.internal/internal/twitch-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(event) });
+        delivered = response.ok || response.status >= 400 && response.status < 500 && response.status !== 429;
+      } catch { /* Keep the committed inbox entry for a bounded, idempotent retry. */ }
+      await this.serial(async () => {
+        // Disconnect or another completed attempt may have removed the entry
+        // while the Room was working. Never resurrect a cancelled delivery.
+        const row = this.inboxQuery<{ attempts: number }>('SELECT attempts FROM twitch_inbox WHERE id = ? AND delivered = 0', eventId)[0];
+        if (!row) return;
+        if (delivered) this.inboxQuery('UPDATE twitch_inbox SET delivered = 1, payload = NULL WHERE id = ?', eventId);
+        else {
+          const attempts = row.attempts + 1;
+          this.inboxQuery('UPDATE twitch_inbox SET attempts = ?, next_at = ? WHERE id = ?', attempts, Date.now() + Math.min(60_000, 1000 * 2 ** Math.min(attempts, 6)), eventId);
+        }
+        await this.schedule();
+      });
+    });
   }
   private async roomEvent(input: RoomAnnouncement): Promise<Response> {
     if (typeof input.eventId !== 'string' || input.eventId.length > 160 || !object(input.safeView) || !object(input.event)) return json({ error: 'Invalid event.' }, 400);
@@ -833,11 +895,11 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     const work = await this.serial(async () => {
       if (!this.configured()) { await this.ctx.storage.deleteAlarm(); return null; }
       this.prune();
-      for (const c of Object.values(this.data.channels)) if (this.allowed(c) && c.chatWanted !== false && c.lastStudioAt &&
-        c.lastStudioAt + studioIdleMilliseconds(this.env) <= Date.now()) await this.stopChat(c, 'Studio has been inactive. Connect Twitch chat when you return.');
+      const idle = Object.values(this.data.channels).find((c) => this.allowed(c) && c.chatWanted !== false && c.lastStudioAt &&
+        c.lastStudioAt + studioIdleMilliseconds(this.env) <= Date.now());
+      if (idle) await this.stopChat(idle, 'Studio has been inactive. Connect Twitch chat when you return.');
       const stopping = Object.values(this.data.channels).find((c) => c.pendingDeletion?.length && (c.deleteRetryAt ?? 0) <= Date.now());
-      const pending = this.inboxQuery<{ payload: string }>('SELECT payload FROM twitch_inbox WHERE delivered = 0 AND next_at <= ? ORDER BY next_at LIMIT 8', Date.now());
-      for (const row of pending) await this.deliver(JSON.parse(row.payload) as TwitchChatEvent);
+      const pending = this.inboxQuery<{ id: string }>('SELECT id FROM twitch_inbox WHERE delivered = 0 AND next_at <= ? ORDER BY next_at LIMIT 8', Date.now()).map((row) => row.id);
       const channel = Object.values(this.data.channels).find((c) => this.needsSubscription(c) && (c.subscriptionRetryAt ?? 0) <= Date.now());
       const validate: (string | null)[] = [];
       if (this.data.nextValidationAt && this.data.nextValidationAt <= Date.now()) {
@@ -845,11 +907,12 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         validate.push(...Object.values(this.data.channels).filter((c) => this.allowed(c)).map((c) => c.id));
         if (this.data.bot) validate.push(null);
       }
-      await this.persist(); return { stopping: stopping?.id, subscribe: channel?.id, validate };
+      await this.persist(); return { stopping: stopping?.id, subscribe: channel?.id, validate, pending };
     });
     if (!work) return;
     // Twitch waits stay outside the shared mutation queue. Each operation captures
     // a durable intent and applies results only to that still-current generation.
+    for (const eventId of work.pending) await this.deliver(eventId);
     if (work.stopping) await this.deleteSubscriptions(work.stopping);
     if (work.subscribe) await this.subscribe(work.subscribe);
     await this.sendOne();

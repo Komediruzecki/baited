@@ -1,4 +1,5 @@
 import type { AwardBoard, GameView, Studio } from '../shared/types';
+import { retryDelay } from './retry';
 
 export interface EdgeBootstrap {
   channelId: string;
@@ -29,6 +30,7 @@ type Options = {
   bootstrap: (signal?: AbortSignal) => Promise<EdgeBootstrap>;
   fetch?: typeof fetch;
   socket?: (url: string, protocols: string[]) => WebSocket;
+  random?: () => number;
 };
 const messages: Record<string, string> = {
   stale_revision: 'The round changed before that action arrived. Check its state and try again.',
@@ -73,6 +75,8 @@ export class EdgeRoomTransport {
   private expiryTimer: ReturnType<typeof setTimeout> | undefined;
   private bootstrapAbort: AbortController | undefined;
   private pendingCredentials: EdgeBootstrap | undefined;
+  private resync: { promise: Promise<EdgeSnapshot>; resolve: (snapshot: EdgeSnapshot) => void;
+    reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> } | undefined;
   private renewing = false;
   private renewalFailures = 0;
   private failures = 0;
@@ -89,7 +93,7 @@ export class EdgeRoomTransport {
   private scheduleRetry() {
     if (!this.connectedOnce || this.stopped || !this.listeners.size || this.retryTimer !== undefined) return;
     if (!this.retryUntil) this.retryUntil = Date.now() + 300000;
-    const delay = Math.min(60000, 1000 * 2 ** Math.min(this.failures++, 6));
+    const delay = retryDelay(this.failures++, 60000, this.options.random);
     if (Date.now() + delay <= this.retryUntil)
       this.retryTimer = setTimeout(() => { this.retryTimer = undefined; void this.ensure().catch(() => this.report(true)); }, delay);
   }
@@ -154,6 +158,7 @@ export class EdgeRoomTransport {
             const snapshot = readEdgeSnapshot(frame);
             if (snapshot.socketId) this.boundSocketId = snapshot.socketId;
             this.accept(snapshot);
+            this.finishResync();
             if (!initialized) { initialized = true; this.connectedOnce = true; this.retryUntil = 0; this.failures = 0; clearTimeout(this.connectTimer); this.scheduleRenewal(); resolve(); }
           } else if (frame.type === 'auth-refreshed' && this.pendingCredentials) {
             // A delayed acknowledgement for an earlier renewal cannot validate
@@ -170,6 +175,7 @@ export class EdgeRoomTransport {
         this.socket = undefined;
         this.boundSocketId = undefined;
         this.snapshot = undefined;
+        this.finishResync(new Error('The connection ended before its update arrived. Reconnect to continue.'));
         clearTimeout(this.connectTimer); clearTimeout(this.renewTimer); clearTimeout(this.refreshTimer); clearTimeout(this.expiryTimer);
         this.bootstrapAbort?.abort();
         this.pendingCredentials = undefined;
@@ -198,7 +204,7 @@ export class EdgeRoomTransport {
   private retryRenewal(socket: WebSocket) {
     if (this.stopped || socket !== this.socket || socket.readyState !== 1) return;
     if (!this.credentials || this.credentials.tokenExpiresAt <= Date.now()) { socket.close(4000, 'Session expired. Reconnecting.'); return; }
-    const delay = Math.min(30000, 1000 * 2 ** Math.min(this.renewalFailures++, 5));
+    const delay = retryDelay(this.renewalFailures++, 30000, this.options.random);
     clearTimeout(this.renewTimer);
     this.renewTimer = setTimeout(() => { void this.renew(); }, delay);
   }
@@ -233,16 +239,26 @@ export class EdgeRoomTransport {
     if (!this.snapshot) throw new Error('The round has not connected yet.');
     return this.snapshot;
   }
-  /** Read once after a separate control-plane mutation; never used as a poll. */
+  private finishResync(error?: Error) {
+    const pending = this.resync;
+    if (!pending) return;
+    this.resync = undefined;
+    clearTimeout(pending.timer);
+    if (error) pending.reject(error);
+    else if (this.snapshot) pending.resolve(this.snapshot);
+  }
+  /** Refresh after a control-plane mutation over the already authenticated socket. */
   async refresh(): Promise<EdgeSnapshot> {
     await this.ensure();
-    const credentials = this.credentials!;
-    const response = await this.fetch(new URL(`/v1/rooms/${credentials.channelId}/state`, this.options.origin), {
-      headers: { Authorization: `Bearer ${credentials.token}` }, credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(10000),
-    });
-    if (!response.ok) throw new Error('The updated connection could not be loaded. Wait for Studio to reconnect.');
-    this.accept(readEdgeSnapshot(await response.json()));
-    return this.snapshot!;
+    if (this.resync) return this.resync.promise;
+    let resolve!: (snapshot: EdgeSnapshot) => void, reject!: (error: Error) => void;
+    const promise = new Promise<EdgeSnapshot>((yes, no) => { resolve = yes; reject = no; });
+    this.resync = { promise, resolve, reject, timer: setTimeout(() => {
+      this.finishResync(new Error('The updated connection has not arrived. Wait for Studio to reconnect.'));
+    }, 10000) };
+    try { this.socket!.send('resync'); }
+    catch { this.finishResync(new Error('The connection ended before its update arrived. Reconnect to continue.')); }
+    return promise;
   }
   command(action: Record<string, unknown>): Promise<EdgeSnapshot> {
     const task = this.operations.catch(() => {}).then(async () => {
@@ -307,6 +323,7 @@ export class EdgeRoomTransport {
   }
   destroy() {
     this.stopped = true;
+    this.finishResync(new Error('The connection has closed. Reload to reconnect.'));
     clearTimeout(this.renewTimer); clearTimeout(this.retryTimer); clearTimeout(this.connectTimer); clearTimeout(this.refreshTimer); clearTimeout(this.expiryTimer);
     this.bootstrapAbort?.abort(); this.bootstrapAbort = undefined;
     this.stopSpeech(); this.listeners.clear();

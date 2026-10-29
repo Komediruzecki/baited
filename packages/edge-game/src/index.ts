@@ -2,6 +2,7 @@ import { authenticateRequest } from "./auth.js";
 import { json, readBounded } from "./protocol.js";
 import { pilotLimits, pilotLogins } from "./pilot-policy.js";
 import { pilotIngress } from "./ingress.js";
+import { internalFetch } from "./internal-fetch.js";
 import type { Env } from "./room.js";
 export { ChannelRoom } from "./room.js";
 export { TwitchControl } from "./control.js";
@@ -79,7 +80,7 @@ export default {
       const internalHeaders=new Headers({"x-edge-identity":JSON.stringify(auth.identity)});
       if(pilot) {
         if(auth.identity.authKind!=="pilot-session" && auth.identity.authKind!=="twitch-extension") return json({error:"Access denied."},403);
-        const admission=await control(env).fetch(new Request("https://control.internal/internal/authorize",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({channelId:channel,sessionId:auth.identity.sessionId,role:auth.identity.authKind==='twitch-extension'?'viewer':auth.identity.role})}));
+        const admission=await internalFetch(control(env),new Request("https://control.internal/internal/authorize",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({channelId:channel,sessionId:auth.identity.sessionId,role:auth.identity.authKind==='twitch-extension'?'viewer':auth.identity.role})}));
         const data=await admission.json() as {allowed?:boolean;login?:string};
         if(!admission.ok || !data.allowed || !data.login) return json({error:"This channel is not connected to the pilot."},403);
         internalHeaders.set("x-edge-channel-login",data.login);
@@ -91,7 +92,7 @@ export default {
         try {body=await readBounded(request);} catch {return json({error:"Request too large."},413);}
       }
       const room=env.ROOMS.get(env.ROOMS.idFromName(`channel:${channel}`));
-      const response=await room.fetch(new Request(`https://room.internal/${route}`,{method:request.method,headers:internalHeaders,body}));
+      const response=await internalFetch(room,new Request(`https://room.internal/${route}`,{method:request.method,headers:internalHeaders,body}));
       return cors(response,request.headers.get("origin"));
     } catch { return json({error:"The pilot is temporarily unavailable. Try again shortly."},503); }
   },

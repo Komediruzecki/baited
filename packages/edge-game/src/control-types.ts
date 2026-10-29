@@ -41,6 +41,9 @@ export interface ControlSession {
 }
 export interface RegisteredChannel extends TwitchUser {
   generation?: number;
+  /** Monotonic connection projection, independent of provider-operation intents. */
+  connectionRevision?: number;
+  connectionConnected?: boolean;
   botGeneration?: number;
   credentials?: EncryptedValue;
   overlayKey: EncryptedValue;

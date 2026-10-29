@@ -17,6 +17,7 @@ export class FixtureControl extends TwitchControl {
   failDelete=false;
   rowsRead=0; holdValidation=false; releaseValidation=null; validationTask=null; conflict=false; dropped=false;
   holdProvider='';heldProvider='';releaseProvider=null;failCheckpoint=0;checkpointWrites=0;pageConflict=false;
+  overlayStream=null;overlayTask=null;overlayBody='';
   writeCheckpointRow(key,value) {
     super.writeCheckpointRow(key,value);if(this.failCheckpoint && ++this.checkpointWrites===this.failCheckpoint)throw new Error('fixture-storage-failure');
   }
@@ -26,6 +27,17 @@ export class FixtureControl extends TwitchControl {
   async fetch(request) {
     await this.ready;
     const url=new URL(request.url);
+    if (url.pathname==='/__fixture/overlay-hold') {
+      this.overlayBody=await request.text();
+      const body=new ReadableStream({start:controller=>{this.overlayStream=controller;controller.enqueue(new TextEncoder().encode('{'));}});
+      this.overlayTask=super.fetch(new Request('https://pilot.test/api/edge/overlay',{method:'POST',headers:{origin:'https://pilot.test','content-type':'application/json'},body}));
+      this.ctx.waitUntil(this.overlayTask);return Response.json({ok:true});
+    }
+    if (url.pathname==='/__fixture/overlay-release') {
+      if(!this.overlayStream)return Response.json({status:0});
+      this.overlayStream.enqueue(new TextEncoder().encode(this.overlayBody.slice(1)));this.overlayStream.close();this.overlayStream=null;
+      return Response.json({status:(await this.overlayTask).status});
+    }
     if (url.pathname==='/__fixture/state') return Response.json(this.committed);
     if (url.pathname==='/__fixture/durable-state') return Response.json(this.loadCheckpoint());
     if (url.pathname==='/__fixture/provider-hold') {
@@ -53,6 +65,14 @@ export class FixtureControl extends TwitchControl {
       });return Response.json({ok:true});
     }
     if (url.pathname==='/__fixture/rows') return Response.json({rowsRead:this.rowsRead,counts:this.ctx.storage.sql.exec('SELECT * FROM inbox_counts').toArray()[0]});
+    if (url.pathname==='/__fixture/pending-eight') {
+      for(let i=0;i<8;i++)this.ctx.storage.sql.exec('INSERT INTO twitch_inbox(id,expires_at,next_at,payload) VALUES(?,?,?,?)','queued-'+i,Date.now()+600000,Date.now(),JSON.stringify({eventId:'queued-'+i,channelId:'123',at:Date.now(),kind:'message',messageId:'queued-'+i,userId:'555',name:'viewer',text:'Queued clue',badges:[]}));
+      return Response.json({ok:true});
+    }
+    if (url.pathname==='/__fixture/hundred-sessions') {
+      await this.serial(async()=>{const template=Object.values(this.data.sessions)[0];for(let i=0;Object.keys(this.data.sessions).length<100;i++)this.data.sessions['fixture-session-'+i]={...template};await this.persist();});
+      return Response.json({ok:true});
+    }
     if (url.pathname==='/__fixture/rows-reset') {this.rowsRead=0;this.nextInboxPruneAt=0;return Response.json({ok:true});}
     if (url.pathname==='/__fixture/inbox') {
       this.ctx.storage.sql.exec("WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x<10000) INSERT INTO twitch_inbox(id,expires_at,next_at,delivered) SELECT 'fixture-old-'||x,?,0,1 FROM n",Date.now()+600000);
@@ -115,16 +135,27 @@ export class FixtureControl extends TwitchControl {
   }
 }
 export class FixtureRoom extends DurableObject {
+  failControl=false;holdPath='';releaseRoom=null;
   async fetch(request) {
     const url=new URL(request.url);const calls=await this.ctx.storage.get('calls')||[];
     if(url.pathname==='/__fixture/calls') return Response.json(calls);
+    if(url.pathname==='/__fixture/config') {this.failControl=url.searchParams.get('fail')==='true';this.holdPath=url.searchParams.get('hold')||'';return Response.json({ok:true});}
+    if(url.pathname==='/__fixture/release') {this.releaseRoom?.();this.releaseRoom=null;return Response.json({ok:true});}
+    if(url.pathname==='/__fixture/connection') return Response.json({connected:await this.ctx.storage.get('connected')||false});
     const body=await request.json();calls.push({path:url.pathname,body});await this.ctx.storage.put('calls',calls);
+    if(this.holdPath===url.pathname){this.holdPath='';await new Promise(resolve=>{this.releaseRoom=resolve});}
+    if(url.pathname==='/internal/control' && this.failControl)return new Response(null,{status:503});
+    if(body.type==='connection' && body.connectionRevision>(await this.ctx.storage.get('connectionRevision')||0))
+      await this.ctx.storage.put({connected:body.status==='connected',connectionRevision:body.connectionRevision});
     if(body.text==='fixture-retry' && calls.filter(c=>c.body.eventId===body.eventId).length===1) return new Response(null,{status:503});
     return Response.json({ok:true});
   }
 }
 export default {fetch(request,env) {
   const url=new URL(request.url);
+  if(url.pathname.startsWith('/__fixture/room-config/')) return env.ROOMS.get(env.ROOMS.idFromName('channel:'+url.pathname.split('/').pop())).fetch('https://room.internal/__fixture/config'+url.search);
+  if(url.pathname.startsWith('/__fixture/room-release/')) return env.ROOMS.get(env.ROOMS.idFromName('channel:'+url.pathname.split('/').pop())).fetch('https://room.internal/__fixture/release');
+  if(url.pathname.startsWith('/__fixture/room-connection/')) return env.ROOMS.get(env.ROOMS.idFromName('channel:'+url.pathname.split('/').pop())).fetch('https://room.internal/__fixture/connection');
   if(url.pathname.startsWith('/__fixture/room/')) return env.ROOMS.get(env.ROOMS.idFromName('channel:'+url.pathname.split('/').pop())).fetch('https://room.internal/__fixture/calls');
   if(url.pathname==='/__fixture/authorize') return env.CONTROL.get(env.CONTROL.idFromName('control-v1')).fetch('https://control.internal/internal/authorize',{method:'POST',body:request.body});
   if(url.pathname==='/__fixture/event') return env.CONTROL.get(env.CONTROL.idFromName('control-v1')).fetch('https://control.internal/internal/room-event',{method:'POST',body:request.body});
@@ -382,7 +413,7 @@ test('unsigned requests and a slow credential validation do not block signed cha
     assert.deepEqual(state.channels['123'].scopes, []); assert.equal(Object.keys(state.sessions).length, 0);
     assert.equal((await f.request('/api/session', { headers: { cookie } }).then(r => r.json()) as any).authenticated, false);
     const calls = await f.request('/__fixture/room/123').then(r => r.json()) as any[];
-    assert(calls.some(c => c.body.type === 'disconnect' && c.body.sessionId));
+    assert(calls.some(c => c.body.type === 'disconnect' && c.body.sessionIds?.length));
   } finally { await f.request('/__fixture/validation-release').catch(() => {}); await f.mf.dispose(); }
 });
 
@@ -453,6 +484,105 @@ async function bounded<T>(task: Promise<T>, message: string): Promise<T> {
   try { return await Promise.race([task, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(message)), 1000); })]); }
   finally { clearTimeout(timer!); }
 }
+test('a held overlay body cannot block signed chat, and a revocation before completion denies its capability', async () => {
+  const f = await fixture();
+  try {
+    const { cookie } = await login(f); await f.request('/__fixture/flush');
+    const bootstrap = await f.request('/api/edge/session', { headers: { cookie } }).then(r => r.json()) as any;
+    await f.request('/__fixture/overlay-hold', jsonPost({ channelId: '123', key: new URL(bootstrap.overlayUrl).hash.slice(5) }));
+    const chat = await bounded(f.request('/api/twitch/eventsub', webhook(event(), 'during-held-overlay')), 'signed chat waited for an unauthenticated overlay body');
+    assert.equal(chat.status, 204);
+    const revoked = event(); (revoked.subscription as any).status = 'authorization_revoked';
+    assert.equal((await bounded(f.request('/api/twitch/eventsub', webhook(revoked, 'revoke-held-overlay', 'revocation')), 'revocation waited for overlay body')).status, 204);
+    assert.equal((await f.request('/__fixture/overlay-release').then(r => r.json()) as any).status, 403);
+  } finally { await f.request('/__fixture/overlay-release').catch(() => {}); await f.mf.dispose(); }
+});
+
+test('Studio bootstrap heals a lost connection push with a durable monotonic projection', async () => {
+  const f = await fixture();
+  try {
+    await f.request('/__fixture/room-config/123?fail=true');
+    const { cookie } = await login(f); await f.request('/__fixture/flush');
+    const enabled = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(enabled.channels['123'].connectionConnected, true);
+    assert.equal(enabled.channels['123'].connectionRevision, 2);
+    assert.equal((await f.request('/__fixture/room-connection/123').then(r => r.json()) as any).connected, false);
+    assert.equal((await f.request('/api/edge/session', { headers: { cookie } })).status, 503, 'do not claim a successful bootstrap while Room is unavailable');
+    await f.request('/__fixture/room-config/123');
+    const bootstrap = await f.request('/api/edge/session', { headers: { cookie } }).then(r => r.json()) as any;
+    assert.equal(bootstrap.channelId, '123');
+    assert.equal((await f.request('/__fixture/room-connection/123').then(r => r.json()) as any).connected, true);
+    await f.request('/api/edge/session', { headers: { cookie } });
+    assert.equal((await f.request('/__fixture/state').then(r => r.json()) as any).channels['123'].connectionRevision, 2, 'repeated bootstrap preserves its projection revision');
+    assert.equal((await f.request('/api/edge/chat', jsonPost({ connected: false }, { cookie, 'x-csrf-token': bootstrap.csrf }))).status, 200);
+    const offline = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(offline.channels['123'].connectionConnected, false);
+    assert.equal(offline.channels['123'].connectionRevision, 3, 'stopping and offline share the same disconnected projection');
+  } finally { await f.mf.dispose(); }
+});
+
+test('internal Room waits expire after five seconds; bootstrap does not hold chat and delivery retries durably', { timeout: 20_000 }, async () => {
+  const f = await fixture();
+  try {
+    const { cookie } = await login(f); await f.request('/__fixture/flush');
+    await f.request('/__fixture/room-config/123?hold=/internal/control');
+    const started = Date.now();
+    const bootstrap = f.request('/api/edge/session', { headers: { cookie } });
+    await new Promise(resolve => setTimeout(resolve, 50));
+    assert.equal((await bounded(f.request('/api/twitch/eventsub', webhook(event(), 'while-room-control-waits')), 'bootstrap held Control queue during a Room wait')).status, 204);
+    assert.equal((await bootstrap).status, 503);
+    assert.ok(Date.now() - started >= 4900 && Date.now() - started < 7500, 'Room control wait obeys its five-second deadline');
+    await f.request('/__fixture/room-release/123');
+    assert.equal((await f.request('/api/edge/session', { headers: { cookie } })).status, 200);
+    await f.request('/__fixture/room-config/123?hold=/internal/twitch-chat');
+    const deliveryStarted = Date.now();
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(event('retry-after-timeout'), 'retry-after-timeout'))).status, 204);
+    assert.ok(Date.now() - deliveryStarted >= 4900 && Date.now() - deliveryStarted < 7500, 'Room delivery wait obeys its five-second deadline');
+    assert.equal((await f.request('/__fixture/rows').then(r => r.json()) as any).counts.pending, 1, 'timed-out delivery stays durably retryable');
+    await f.request('/__fixture/room-release/123'); await f.request('/__fixture/flush');
+    assert.equal((await f.request('/__fixture/rows').then(r => r.json()) as any).counts.pending, 0);
+  } finally { await f.request('/__fixture/room-release/123').catch(() => {}); await f.mf.dispose(); }
+});
+
+test('an eight-event alarm retry batch waits outside Control so another channel can deliver chat', async () => {
+  const f = await fixture(); let operation: Promise<Response> | undefined;
+  try {
+    await login(f); await login(f, 'lakeeko');
+    await f.request('/__fixture/flush'); await f.request('/__fixture/flush');
+    await f.request('/__fixture/room-config/123?hold=/internal/twitch-chat');
+    await f.request('/__fixture/pending-eight');
+    operation = f.request('/__fixture/flush');
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const other = event('other-channel-during-batch');
+    other.subscription.id = 'sub-456-channel.chat.message';
+    other.subscription.condition = { broadcaster_user_id: '456', user_id: '456' };
+    other.event.broadcaster_user_id = '456';
+    assert.equal((await bounded(f.request('/api/twitch/eventsub', webhook(other, 'other-channel-during-batch')), 'retry batch held unrelated signed chat')).status, 204);
+    await f.request('/__fixture/room-release/123');
+    assert.equal((await operation).status, 200);
+    assert.equal((await f.request('/__fixture/rows').then(r => r.json()) as any).counts.pending, 0);
+    const calls = await f.request('/__fixture/room/123').then(r => r.json()) as any[];
+    assert.equal(calls.filter(c => c.body.eventId?.startsWith('queued-')).length, 8, 'each committed event is delivered once');
+  } finally { await f.request('/__fixture/room-release/123').catch(() => {}); await operation?.catch(() => {}); await f.mf.dispose(); }
+});
+
+test('revoking one hundred saved sessions uses one bounded Room batch', { timeout: 12_000 }, async () => {
+  const f = await fixture();
+  try {
+    await login(f); await f.request('/__fixture/flush'); await f.request('/__fixture/hundred-sessions');
+    await f.request('/__fixture/room-config/123?hold=/internal/control');
+    const revoked = event(); (revoked.subscription as any).status = 'authorization_revoked';
+    const started = Date.now();
+    assert.equal((await f.request('/api/twitch/eventsub', webhook(revoked, 'revoke-hundred', 'revocation'))).status, 204);
+    assert.ok(Date.now() - started < 7500, 'one stalled projection does not become a per-session timeout loop');
+    const state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(Object.keys(state.sessions).length, 0);
+    const calls = await f.request('/__fixture/room/123').then(r => r.json()) as any[];
+    const batches = calls.filter(c => c.body.type === 'disconnect');
+    assert.equal(batches.length, 1);
+    assert.equal(new Set(batches[0].body.sessionIds).size, 100);
+  } finally { await f.request('/__fixture/room-release/123').catch(() => {}); await f.mf.dispose(); }
+});
 for (const kind of ['subscribe', 'delete', 'send', 'token']) test(`a stalled Twitch ${kind} request does not hold signed chat delivery`, async () => {
   const f = await fixture(); let operation: Promise<Response> | undefined;
   try {
@@ -507,7 +637,7 @@ test('authorization revocation clears grants and Studio sessions after explicit 
     assert.equal(state.channels['123'].credentials, undefined); assert.equal(state.channels['123'].active, false);
     assert.equal(Object.keys(state.sessions).length, 0);
     const calls = await f.request('/__fixture/room/123').then(r => r.json()) as any[];
-    assert(calls.some(c => c.body.type === 'disconnect' && c.body.sessionId));
+    assert(calls.some(c => c.body.type === 'disconnect' && c.body.sessionIds?.length));
   } finally { await f.mf.dispose(); }
 });
 

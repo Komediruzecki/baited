@@ -38,17 +38,27 @@ test('real edge clients share one authoritative round with role privacy, speech 
     import { DurableObject } from 'cloudflare:workers';
     export default gateway;
     export class MockControl extends DurableObject {
+      connected = true;
+      connectionRevision = 1;
       async fetch(request) {
         const path = new URL(request.url).pathname;
-        if (path === '/internal/authorize') return Response.json({allowed:true,login:'komediruzecki7'});
+        if (path === '/internal/authorize') return Response.json({allowed:true,login:'komediruzecki7',chatConnected:this.connected});
         if (path === '/internal/room-event') return Response.json({ok:true});
+        if (path === '/api/edge/chat') {
+          this.connected = (await request.json()).connected;
+          const updated = await this.env.ROOMS.get(this.env.ROOMS.idFromName('channel:123')).fetch(new Request('https://room.internal/internal/control', {
+            method:'POST',body:JSON.stringify({channelId:'123',login:'komediruzecki7',type:'connection',status:this.connected?'connected':'disconnected',connectionRevision:++this.connectionRevision})
+          }));
+          if (!updated.ok) return updated;
+          return Response.json({ok:true,connected:this.connected});
+        }
         return new Response('No provider in this fixture.', {status:503});
       }
     }
     export class ChannelRoom extends BaseRoom {
       async bootstrapFixture() {
         return (await this.fetch(new Request('https://room.internal/internal/control', {
-          method:'POST',body:JSON.stringify({channelId:'123',login:'komediruzecki7',type:'connection',status:'connected'})
+          method:'POST',body:JSON.stringify({channelId:'123',login:'komediruzecki7',type:'connection',status:'connected',connectionRevision:1})
         }))).status;
       }
     }
@@ -99,8 +109,11 @@ test('real edge clients share one authoritative round with role privacy, speech 
     }
     const fetchImpl: typeof fetch = async (input, init) => {
       calls.push(new URL(String(input)).pathname);
+      const headers = new Headers(init?.headers);
+      // Real browser same-origin GET/HEAD requests have no Origin header.
+      if (!['GET', 'HEAD'].includes(init?.method ?? 'GET')) headers.set('origin', ORIGIN);
       return await mf.dispatchFetch(route(String(input)), { ...init,
-        headers: { ...Object.fromEntries(new Headers(init?.headers)), origin: ORIGIN } }) as unknown as Response;
+        headers: Object.fromEntries(headers) }) as unknown as Response;
     };
     const client = (role: 'studio' | 'overlay') => {
       const value = new EdgeRoomTransport({ origin: ORIGIN,
@@ -158,6 +171,18 @@ test('real edge clients share one authoritative round with role privacy, speech 
     assert.equal(calls.length, 4, 'Four command receipts include their authoritative state; no follow-up GETs.');
     assert.ok(calls.every((path) => path.endsWith('/commands')));
     assert.ok(!statuses.includes('invalid'), 'The native parser accepts real room snapshots.');
+    const refusedGet = await fetchImpl(`${ORIGIN}/v1/rooms/123/state`, { headers: { authorization: `Bearer ${sign('studio')}` } });
+    assert.equal(refusedGet.status, 403, 'The fixture must reproduce browser GET Origin omission.');
+    const beforeControl = calls.length;
+    for (const connected of [false, true]) {
+      const response = await fetchImpl(`${ORIGIN}/api/edge/chat`, { method: 'POST',
+        headers: { 'content-type': 'application/json' }, body: JSON.stringify({ connected }) });
+      assert.equal(response.status, 200);
+      const updated = await studio.refresh();
+      assert.equal(updated.room!.connection.status, connected ? 'connected' : 'offline');
+    }
+    assert.deepEqual(calls.slice(beforeControl), ['/api/edge/chat', '/api/edge/chat'], 'Control refresh never makes an Origin-less state GET.');
+    assert.deepEqual(frames.slice(-2), ['resync', 'resync']);
   } finally {
     native?.destroy();
     clients.forEach((client) => client.destroy());

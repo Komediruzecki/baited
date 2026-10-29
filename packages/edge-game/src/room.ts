@@ -8,13 +8,14 @@ import { pilotLimits } from './pilot-policy.js';
 import { localTranscript, progressSchema } from '../../app/shared/local-speech.js';
 import { z } from 'zod';
 import type { ControlEnv } from './control-types.js';
+import { internalFetch } from './internal-fetch.js';
 
 export interface Env extends AuthEnv, ControlEnv { ROOMS: DurableObjectNamespace; ART: R2Bucket; CONTROL?: DurableObjectNamespace; ASSETS?: Fetcher }
 interface Speech { leaseId: string; roundId: string; epoch: number; samples: number; firstAudioAt: number; lastAudioAt: number; lastSequence: number }
 type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:'help'|'score'|'top'|'who';userId:string};
-interface Attachment { identity: AuthIdentity; lastInputAt: number; lastAuthRefreshAt?:number; sentViewRevision?:number; socketId?: string; microphoneLeases?:string[]; speech?: Speech; inputs?: {at:number;n:number} }
+interface Attachment { identity: AuthIdentity; lastInputAt: number; lastAuthRefreshAt?:number; sentViewRevision?:number; socketId?: string; microphoneLeases?:string[]; speech?: Speech; inputs?: {at:number;n:number}; audioInputs?:{at:number;tokens:number} }
 interface Lease { id:string; sessionId:string; socketId:string; expiresAt:number; lastAudioAt?:number; roundId?:string; epoch?:number }
-interface PilotState { lease:Lease|null; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>} }
+interface PilotState { lease:Lease|null; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; connectionRevision?:number; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>} }
 const eventSchema = z.object({eventId:z.string().min(1).max(200),channelId:z.string().regex(/^[1-9][0-9]{0,24}$/),
   at:z.number().finite(),kind:z.enum(['message','delete','clear-user']),messageId:z.string().min(1).max(200).optional(),
   userId:z.string().regex(/^[1-9][0-9]{0,24}$/),name:z.string().max(40).optional(),text:z.string().max(2000).optional(),
@@ -54,9 +55,9 @@ export class ChannelRoom extends DurableObject<Env> {
   private writePilot(state=this.pilotState) {
     this.ctx.storage.sql.exec('INSERT INTO pilot_state(id,body) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body',JSON.stringify(state));
   }
-  private async control(path:string, body:unknown, signal?:AbortSignal): Promise<Response> {
+  private async control(path:string, body:unknown): Promise<Response> {
     if (!this.env.CONTROL) throw new Error('Control unavailable.');
-    return this.env.CONTROL.get(this.env.CONTROL.idFromName('control-v1')).fetch(new Request(`https://control.internal${path}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal}));
+    return internalFetch(this.env.CONTROL.get(this.env.CONTROL.idFromName('control-v1')),new Request(`https://control.internal${path}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
   }
   private async flushOutbox() {
     if (!this.pilot()) return;
@@ -445,14 +446,29 @@ export class ChannelRoom extends DurableObject<Env> {
       if(!att || !identityIsCurrent(att.identity,this.channel,this.generation,now)) {ws.close(1008,'Authorization expired. Reconnect.');return;}
       if(att.identity.role==='viewer' && this.pending>=8) {ws.close(1013,'Reconnect to catch up.');return;}
       if(typeof message!=='string' || new TextEncoder().encode(message).length>LIMITS.commandBytes) {ws.close(1009,'Message too large.');return;}
-      const window=Math.floor(now/1000),inputs=att.inputs?.at===window?att.inputs:{at:window,n:0};
-      if(++inputs.n>(att.identity.canControl?16:4)) {ws.close(1008,'Too many messages.');return;}
-      att.inputs=inputs;
+      let data:Record<string,unknown>|undefined;
       if(message!=='resync') {
-        let data:Record<string,unknown>;
         try {data=JSON.parse(message);if(!data || typeof data!=='object')throw new Error();}
         catch {ws.close(1008,'Invalid message.');return;}
         if(!att.identity.canControl && data.type!=='refresh-auth') {ws.close(1008,'Read-only connection.');return;}
+      }
+      const lease=this.pilotState.lease;
+      const ownerAudio=data?.type==='speech-audio' && att.identity.canControl && lease && lease.expiresAt>now &&
+        lease.sessionId===att.identity.sessionId && lease.socketId===att.socketId && lease.id===data.leaseId;
+      if(ownerAudio) {
+        // A brief uplink/browser stall batches otherwise valid 128ms progress
+        // frames. Only the exact microphone owner gets a bounded catch-up burst;
+        // sample-clock validation still runs on every admitted audio frame.
+        const previous=att.audioInputs;
+        const tokens=Math.min(48,(previous?.tokens??48)+Math.max(0,now-(previous?.at??now))*16/1000);
+        if(tokens<1) {ws.close(1013,'Microphone backlog exceeded. Reconnect.');return;}
+        att.audioInputs={at:now,tokens:tokens-1};
+      } else {
+        const window=Math.floor(now/1000),inputs=att.inputs?.at===window?att.inputs:{at:window,n:0};
+        if(++inputs.n>(att.identity.canControl?16:4)) {ws.close(1008,'Too many messages.');return;}
+        att.inputs=inputs;
+      }
+      if(data) {
         if(data.type==='refresh-auth') {
           if(att.lastAuthRefreshAt && now-att.lastAuthRefreshAt<30_000) {ws.close(1008,'Too many authorization refreshes.');return;}
           att.lastAuthRefreshAt=now;
@@ -507,7 +523,7 @@ export class ChannelRoom extends DurableObject<Env> {
     if(next.subject!==att.identity.subject || next.role!==att.identity.role || next.authKind!==att.identity.authKind || next.sessionId!==att.identity.sessionId) {
       ws.close(1008,'Identity changed. Reconnect.');return;
     }
-    const check=await this.control('/internal/authorize',{channelId:this.channel,sessionId:next.sessionId,role:next.authKind==='twitch-extension'?'viewer':next.role},AbortSignal.timeout(5000));
+    const check=await this.control('/internal/authorize',{channelId:this.channel,sessionId:next.sessionId,role:next.authKind==='twitch-extension'?'viewer':next.role});
     if(check.status===429 || check.status>=500) throw new Error('Admission temporarily unavailable.');
     const body=await check.json() as {allowed?:boolean};
     await this.serial(async()=>{
@@ -589,25 +605,44 @@ export class ChannelRoom extends DurableObject<Env> {
   }
   private async internal(request:Request,path:string):Promise<Response> {
     if(request.method!=='POST') return json({error:'Not found.'},404);
-    const data=JSON.parse(await readBounded(request)) as Record<string,unknown>;
+    const data=JSON.parse(await readBounded(request,path==='/internal/control'?16_384:LIMITS.commandBytes)) as Record<string,unknown>;
     if(typeof data.channelId!=='string' || !/^[1-9][0-9]{0,24}$/.test(data.channelId) || (this.channel && this.channel!==data.channelId)) return json({error:'Access denied.'},403);
+    let disconnectedSessions:Set<string>|undefined;
+    if(path==='/internal/control' && data.type==='disconnect') {
+      const hasSingle=data.sessionId!==undefined,hasBatch=data.sessionIds!==undefined;
+      const ids=hasSingle?[data.sessionId]:data.sessionIds;
+      if(hasSingle===hasBatch || !Array.isArray(ids) || ids.length<1 || ids.length>100 ||
+        !ids.every(id=>typeof id==='string' && /^[A-Za-z0-9:_-]{1,128}$/.test(id))) return json({error:'Invalid sessions.'},400);
+      disconnectedSessions=new Set(ids as string[]);
+    }
     await this.reconcile();
     if(path==='/internal/control') {
       const channel=data.channelId;
       if(!this.game && (typeof data.login!=='string' || !/^[a-z0-9_]{1,25}$/.test(data.login))) return json({error:'Not connected.'},409);
       const candidate=this.game?this.bind(Game.restore(this.game.checkpoint(),()=>this.now)):this.fresh(channel,String(data.login));
       const pilot=structuredClone(this.pilotState);
+      let revokedSockets:WebSocket[]=[];
       if(data.type==='connection') {
         if(data.status!=='connected' && data.status!=='disconnected') return json({error:'Invalid state.'},400);
+        if(!Number.isSafeInteger(data.connectionRevision) || Number(data.connectionRevision)<1) return json({error:'Invalid connection revision.'},400);
+        // Control repeats its latest committed status during bootstrap. An old
+        // delayed push or duplicate must not pause a newly reconnected game.
+        if(Number(data.connectionRevision)<=(pilot.connectionRevision??0)) return json({ok:true});
+        pilot.connectionRevision=Number(data.connectionRevision);
         pilot.chatConnected=data.status==='connected';
         candidate.connection={status:pilot.chatConnected?'connected':'offline',detail:pilot.chatConnected?'Twitch chat connected.':'Twitch chat disconnected. Reconnect before playing.'};
         if(!pilot.chatConnected) {pilot.lease=null;candidate.mic='off';candidate.pauseIfActive();}
       } else if(data.type==='disconnect') {
-        if(typeof data.sessionId!=='string') return json({error:'Invalid state.'},400);
-        for(const ws of this.openSockets()) if(this.attachment(ws)?.identity.sessionId===data.sessionId) ws.close(1008,'Signed out.');
-        if(pilot.lease?.sessionId===data.sessionId) {pilot.lease=null;candidate.mic='off';candidate.pauseIfActive();}
+        // These are the sessions captured when Control committed revocation.
+        // A delayed batch cannot revoke a new sign-in on the same channel.
+        revokedSockets=this.openSockets().filter(ws=>disconnectedSessions!.has(this.attachment(ws)?.identity.sessionId??''));
+        const revokeLease=!!pilot.lease && disconnectedSessions!.has(pilot.lease.sessionId);
+        if(!revokedSockets.length && !revokeLease) return json({ok:true});
+        if(revokeLease) {pilot.lease=null;candidate.mic='off';candidate.pauseIfActive();}
       } else return json({error:'Not found.'},404);
-      await this.commit(candidate,this.revision+1,this.generation,undefined,pilot);this.broadcast();return json({ok:true});
+      await this.commit(candidate,this.revision+1,this.generation,undefined,pilot);
+      for(const ws of revokedSockets) ws.close(1008,'Signed out.');
+      this.broadcast();return json({ok:true});
     }
     if(path!=='/internal/twitch-chat') return json({error:'Not found.'},404);
     const event=eventSchema.parse(data);
