@@ -14,7 +14,7 @@ The sections below describe the supplied design foundation.
 
 ## Direction
 
-BAIT uses the visual cues of a Twitch workspace: charcoal surfaces, purple actions, a compact sidebar, clear connection status and readable chat-like content. The supplied redesign and icon references guided the direction. Their artwork and icons are not bundled. The project owner supplied the BAIT logo. Its original PNG is retained. The UI uses an imagegen background-extraction derivative with true alpha transparency; CSS crops the empty margins for a header wordmark and the first letter for a compact sidebar. An original SVG streamer illustration remains in the landing example.
+BAIT uses the visual cues of a Twitch workspace: charcoal surfaces, purple actions, a compact sidebar, clear connection status and readable chat-like content. The supplied redesign and icon references guided the direction. Their artwork and icons are not bundled. The project owner supplied the BAIT logo. Its original PNG is retained. The UI uses an AI background-extraction derivative with true alpha transparency; CSS crops the empty margins for a header wordmark and the first letter for a compact sidebar. An original SVG streamer illustration remains in the landing example.
 
 The [Twitch homepage](https://www.twitch.tv/) and [official brand page](https://brand.twitch.com/) were reviewed on October 24, 2026. Inter and Inter Tight are bundled from Google Fonts under the SIL Open Font License; Twitch’s proprietary typeface and logos are not used.
 
@@ -42,8 +42,8 @@ Primary references: [Material interaction](https://m3.material.io/foundations/in
 
 The newer Twitch reference supplied by the owner guided square corners, a clipped lower-right edge and a solid purple shadow extending down and right. The OBS clock, mission progress and score now share one frame. Its document remains transparent outside the frame; the active word and forbidden clues never appear in its response. Amber marks a pause and green marks a win. The logo remains BAIT’s supplied artwork.
 
-The same hard shadow and square card face appear on the studio round, viewer target and landing teaching cards. Mission progress uses three small rectangular cards. The [official UNO mobile site](https://www.letsplayuno.com/) informed the bold card hierarchy and short teaching sequence. No UNO cards, logo, sounds or rule text are bundled.
+The same hard shadow and square card face appear on the studio round, viewer target and landing teaching cards. Mission progress uses three small rectangular cards. Classic card-game presentation informed the bold card hierarchy and short teaching sequence. No third-party cards, logos, sounds or rule text are bundled.
 
-The [Hasbro instruction library](https://instructions.hasbro.com/worldwide) was reviewed as a reference for a short rulebook structure. The main screen teaches three actions, while a native disclosure holds optional rules. The [quick rules](quick-rules.md) put goal, setup, play and outcomes on one page. These are BAIT’s rules and design choices, with no claim of publisher approval.
+Published tabletop rulebooks were reviewed as a reference for a short rulebook structure. The main screen teaches three actions, while a native disclosure holds optional rules. The [quick rules](quick-rules.md) put goal, setup, play and outcomes on one page. These are BAIT’s rules and design choices, with no claim of any publisher's approval.
 
 These are implementation choices, not an accessibility certification. Browser checks and remaining live integration checks are recorded in [validation.md](validation.md).

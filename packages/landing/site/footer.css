@@ -1,9 +1,9 @@
 /*
- * The footer closes the page. It draws on the owner's references: dennissnellenberg.com for the
- * call to action (a big two-line title with a round picture and a rule with a large circular
- * "Get in touch" button sitting on it), monochrome-studio.com for the one-line bar under the rule
- * and the pixel buttons, and flowty.co for the giant logo running off the bottom edge. It rises
- * over "The cards" with a pixelated edge, and the logo assembles from square pixels (footer.js).
+ * The footer closes the page. It draws on the owner's references for the call to action (a big
+ * two-line title with a round picture and a rule with a large circular "Get in touch" button
+ * sitting on it), the one-line bar under the rule, the pixel buttons and the giant logo running
+ * off the bottom edge. It rises over "The cards" with a pixelated edge, and the logo assembles
+ * from square pixels (footer.js).
  *
  * The footer takes the cards' charcoal face #242426, with the cards' off-white #fffdf7 for its
  * letters (14.5:1) and the brand violet #7721e5 for the giant logo and the button's hover.
@@ -142,9 +142,9 @@
   transition-delay: 0.12s;
 }
 
-/* The bar, in monochrome-studio.com's copyright style: the trademark notice on the left and the pages
-   with small pixel icons in the middle of the page, on one axis with "Watch the round" and the
-   giant logo below. The circle keeps the right-hand side. */
+/* The bar: the trademark notice on the left and the pages with small pixel icons in the middle of
+   the page, on one axis with "Watch the round" and the giant logo below. The circle keeps the
+   right-hand side. */
 .footer-bar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -219,7 +219,7 @@
 .site-footer .footer-watch .px-icon {
   --px: 2px;
 }
-/* The giant pixel logo runs off the bottom edge, as on flowty.co. Its 37 columns span the screen
+/* The giant pixel logo runs off the bottom edge. Its 37 columns span the screen
    edge to edge, and the crop falls between pixel rows: the top 5 of its 10 rows show. */
 .footer-mark {
   position: relative;

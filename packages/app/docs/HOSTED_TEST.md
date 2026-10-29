@@ -42,19 +42,19 @@ These commands assume the checked changes have been copied or fast-forwarded to 
 Build the current application image once after a code change:
 
 ```sh
-rtk proxy timeout 15m docker build -t baited-hosted-test:local /home/maff/foss/twigame/bait-repository
+timeout 15m docker build -t baited-hosted-test:local /home/maff/foss/twigame/bait-repository
 ```
 
 Start the backend in one terminal:
 
 ```sh
-rtk proxy pass-cli run --env-file /home/maff/foss/twigame/bait-repository/packages/app/docs/baited.hosted-backend.env.tmpl -- node /home/maff/foss/twigame/bait-repository/ops/hosted-test.mjs backend
+pass-cli run --env-file /home/maff/foss/twigame/bait-repository/packages/app/docs/baited.hosted-backend.env.tmpl -- node /home/maff/foss/twigame/bait-repository/ops/hosted-test.mjs backend
 ```
 
 Start the named tunnel in a second terminal after its token has been stored in Proton:
 
 ```sh
-rtk proxy pass-cli run --env-file /home/maff/foss/twigame/bait-repository/packages/app/docs/baited.hosted-tunnel.env.tmpl -- node /home/maff/foss/twigame/bait-repository/ops/hosted-test.mjs tunnel
+pass-cli run --env-file /home/maff/foss/twigame/bait-repository/packages/app/docs/baited.hosted-tunnel.env.tmpl -- node /home/maff/foss/twigame/bait-repository/ops/hosted-test.mjs tunnel
 ```
 
 Each process runs in the foreground and stops after three hours. Ctrl+C stops that process immediately; stop both terminals when the test is finished. Restart both with the same commands. An occupied backend port or container error fails rather than selecting another port. Keep this PC awake and connected during Paolo's test. This is a coordinated test service, not an unattended production deployment.
@@ -80,8 +80,8 @@ Do not substitute a Quick Tunnel. Cloudflare documents that Quick Tunnels do not
 ### Check the service
 
 ```sh
-rtk proxy curl --fail --silent --show-error -H 'Host: play-baited.maff.app' http://127.0.0.1:3300/api/health
-rtk proxy curl --fail --silent --show-error https://play-baited.maff.app/api/health
+curl --fail --silent --show-error -H 'Host: play-baited.maff.app' http://127.0.0.1:3300/api/health
+curl --fail --silent --show-error https://play-baited.maff.app/api/health
 ```
 
 Both must return a successful health response. The public page must use trusted HTTPS. `/api/session` should report `demoAvailable: false`. Keep logs free of OAuth tokens, cookies and shared secrets.
@@ -89,7 +89,7 @@ Both must return a successful health response. The public page must use trusted 
 ## Build the upload ZIP
 
 ```sh
-rtk proxy pass-cli run --env-file /home/maff/foss/twigame/bait-repository/packages/app/docs/baited.hosted-extension.env.tmpl -- pnpm --dir /home/maff/foss/twigame/bait-repository build:extension
+pass-cli run --env-file /home/maff/foss/twigame/bait-repository/packages/app/docs/baited.hosted-extension.env.tmpl -- pnpm --dir /home/maff/foss/twigame/bait-repository build:extension
 ```
 
 Upload `packages/app/dist/baited-v0.0.1.zip`. Do not use `--local-preview`. The ZIP contains the panel/config frontend and public connection settings. The backend, signing secret, OAuth secret, encryption key and speech model do not belong in it.

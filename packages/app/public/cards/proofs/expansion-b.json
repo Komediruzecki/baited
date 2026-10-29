@@ -1,6 +1,6 @@
 {
   "generatedOn": "2026-10-25",
-  "tool": "ChatGPT built-in image_gen",
+  "tool": "AI image generation",
   "styleReference": "concepts/bait-bomb/assets/bait-bomb-logo.png",
   "referenceMethod": "Visual inspection of the bomb emblem and approved penguin proof, followed by explicit text description of their pixel style in each prompt.",
   "assets": [

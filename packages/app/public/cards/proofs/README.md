@@ -1,6 +1,6 @@
 # Baited card illustration proofs
 
-Six approved original illustration proofs generated on October 25, 2026 with the built-in ChatGPT `image_gen` tool: banana, penguin, microwave, dragon, volcano and monocle.
+Six approved original illustration proofs generated on October 25, 2026 with an image model: banana, penguin, microwave, dragon, volcano and monocle.
 
 The approved bomb emblem in `concepts/bait-bomb/assets/bait-bomb-logo.png` supplied the visual reference. The prompts used its stepped pixel contours, dark aubergine outlines, cream highlights and orange accents. Each subject was generated separately. These files contain no card frame, title, clue text or logo; the app supplies those elements.
 
@@ -22,7 +22,7 @@ The owner approved the original six and requested more cards. Twelve additional 
 
 ## 60-card expansion
 
-The next batch added illustrations for the 54 remaining original targets and six new targets: mushroom, ghost, donut, hedgehog, gramophone and hourglass. That brought the catalogue to 78 illustrated, playable targets. The new files use approved existing illustrations as style references. Each was generated separately with the built-in ChatGPT image tool; titles, clue restrictions, questions and card furniture remain live interface elements rather than pixels in the artwork.
+The next batch added illustrations for the 54 remaining original targets and six new targets: mushroom, ghost, donut, hedgehog, gramophone and hourglass. That brought the catalogue to 78 illustrated, playable targets. The new files use approved existing illustrations as style references. Each was generated separately with the same image model; titles, clue restrictions, questions and card furniture remain live interface elements rather than pixels in the artwork.
 
 `expansion-60-a.json` and `expansion-60-b.json` retain the exact prompts, style references, generation identifiers, measured dimensions, bytes and original SHA-256 hashes. Visual review is recorded separately from the owner's selection. All 18 earlier originals are preserved. No production release is implied by these source assets.
 

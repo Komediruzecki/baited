@@ -1,15 +1,14 @@
-// The ribbons behind the hero, as on 1minus1.com: their guide paths, layout and timing, read from
-// their build on 2026-10-28 (_nuxt/DzSAX5xB.js and DJOfzmf8.js for the mechanism; DSdjeV90.js,
-// IWp108lH.js, DzlCe3fk.js and 3m5z6t4t.js for the paths). A ribbon is a hundred squares of 100 CSS
-// px set along a smooth curve through one of four guide paths, so close together that they overlap
-// into a single band with stepped edges. The squares never move: the sweep is their opacity. They
-// come on one after another along the curve over a second, then go in the same order over the
-// next, each fading in half a second, and the next ribbon follows three seconds later. The first
-// comes with the hero's entrance, as the arrival curtain goes (pixels.js); after it the others take
-// turns, the first last, round and round while the hero is on screen. The squares are their colour
-// on their deep purple (styles.css), on a canvas laid behind the page where the ribbons fall, so
-// they scroll with it. Theirs stop below 1024px; ours go on, phones included, the whole drawing
-// smaller in step with the screen's width (trailScale). None with reduced motion.
+// The ribbons behind the hero, after the owner's reference: four guide paths, with their layout
+// and timing. A ribbon is a hundred squares of 100 CSS px set along a smooth curve through one of
+// the guide paths, so close together that they overlap into a single band with stepped edges. The
+// squares never move: the sweep is their opacity. They come on one after another along the curve
+// over a second, then go in the same order over the next, each fading in half a second, and the
+// next ribbon follows three seconds later. The first comes with the hero's entrance, as the arrival
+// curtain goes (pixels.js); after it the others take turns, the first last, round and round while
+// the hero is on screen. The squares are a dark violet on the page's deep purple (styles.css), on a
+// canvas laid behind the page where the ribbons fall, so they scroll with it. Below 1024px they
+// still draw, phones included, the whole drawing smaller in step with the screen's width
+// (trailScale). None with reduced motion.
 import { CLEARED_EVENT } from './pixels.js'
 
 export const TRAIL_SETTINGS = Object.freeze({
@@ -29,7 +28,7 @@ export const TRAIL_SETTINGS = Object.freeze({
 // widths already do, so a phone shows the 1024px drawing scaled down.
 export const trailScale = (viewportWidth) => Math.min(1, viewportWidth / TRAIL_SETTINGS.fullWidth)
 
-// Their four guide paths, and where each lies: as wide as a share of the screen up to a cap, and
+// The four guide paths, and where each lies: as wide as a share of the screen up to a cap, and
 // offset from the hero's top and from one of its sides, in CSS px at full size (trailScale).
 export const TRAIL_ROUTES = [
   {
@@ -158,8 +157,8 @@ export function ribbonCenters(points, count = TRAIL_SETTINGS.count, divisions = 
 }
 
 // How much of each square of a ribbon shows, `reveal` and `erase` being how far its showing and
-// its going have got (0 to 1). Theirs staggers one short tween per square inside each; this is
-// the same in closed form: a square comes on whole, and fades as power2.out runs from 1 to 0.
+// its going have got (0 to 1). One short staggered tween per square inside each would do it; this
+// is the same in closed form: a square comes on whole, and fades as power2.out runs from 1 to 0.
 export function squareOpacities(reveal, erase, out = new Float32Array(TRAIL_SETTINGS.count)) {
   const { count, stagger, localFadeDuration } = TRAIL_SETTINGS
   const revealSpan = (count - 1) * stagger // 0.99 s of the ribbon's own time…

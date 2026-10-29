@@ -1,11 +1,11 @@
 /*
  * How a round works. On desktop the cards rise one by one and build a stack while the
  * visitor scrolls; on touch screens and phones they stack with position: sticky.
- * The pattern is adapted from the voicetaggods.com "why stack". The stacking motion lives in
- * why-stack.js and the little scenes inside the cards in why-scenes.js.
+ * The stacking motion lives in why-stack.js and the little scenes inside the cards in
+ * why-scenes.js.
  *
  * Card colors are Material Design 3 color roles generated from the brand violet #9146FF with
- * Google's material-color-utilities (SchemeContent, light). Every card uses one container role
+ * material-color-utilities (SchemeContent, light). Every card uses one container role
  * with its matching "on" role for all of its text. The screens inside the cards (chat, stream,
  * speech) use the dark scheme's surfaces and on-surface roles from the same seed.
  */
@@ -59,7 +59,7 @@
   margin-bottom: clamp(40px, 6vw, 80px);
   padding-inline: var(--pad);
 }
-/* Sized up after lifeatspotify.com, where section headings and body copy run large. */
+/* Sized up: section headings and body copy run large. */
 .why-vtg h2 {
   font-size: clamp(42px, 5vw, 100px);
 }
@@ -169,7 +169,7 @@
   background: var(--why-card-bg);
   box-shadow: 0 -14px 30px -16px rgb(18 5 42 / 60%);
 }
-/* The step's number, giant and faint behind the card's words, after 1minus1.com's services. */
+/* The step's number, giant and faint behind the card's words. */
 .why-card__number {
   position: absolute;
   z-index: -1;

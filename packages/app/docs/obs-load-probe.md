@@ -49,7 +49,7 @@ The registered task run is `bc3311e50e1a4f3cab679e1668ec8a36` under the shared `
 The helper requires the prepared task scene and `scratch/obs-motion.mp4`. It refuses to run while any OBS process is active and refuses an estimate that would exceed the task's 75 MiB recording allowance. It never deletes recordings. Coordinate with the speech test before starting it.
 
 ```sh
-rtk proxy timeout 180 python3 /home/maff/foss/worktrees/twigame/bait-preview/scripts/benchmark-obs.py \
+timeout 180 python3 /home/maff/foss/worktrees/twigame/bait-preview/scripts/benchmark-obs.py \
   --run /run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/bc3311e50e1a4f3cab679e1668ec8a36 \
   --label repeat-loaded --seconds 120
 ```

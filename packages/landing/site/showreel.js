@@ -1,4 +1,4 @@
-// The film's flight, after 1minus1.com (their page measured in headless Chrome, 2026-10-28): the page
+// The film's flight, after the owner's reference (measured in headless Chrome, 2026-10-28): the page
 // opens on the film as a card tilted beside the headline, in front of it (behind it on a phone, until
 // the flight brings it forward). Scrolling straightens it, squares its corners and grows it into a
 // player in the middle of the screen, while the headline's lines slide off to the left. As in the
@@ -215,8 +215,8 @@ export function initShowreel({ gsap, ScrollTrigger } = {}) {
     // (styles.css). The variable lives on the heading, whose lines the typing replaces (reveal.js).
     if (phone.matches) title?.style.setProperty('--hero-slide', at.toFixed(4))
   }
-  // After their timing: the card starts growing with the first scroll and has landed as the
-  // showreel's top passes 18% of the screen, then rides up and sticks.
+  // After the reference's timing: the card starts growing with the first scroll and has landed
+  // as the showreel's top passes 18% of the screen, then rides up and sticks.
   const range = { trigger: hero, start: 0, endTrigger: reel, end: 'top 18%' }
   scrubbed(
     {
@@ -335,7 +335,7 @@ export function initShowreel({ gsap, ScrollTrigger } = {}) {
     })
   }
 
-  // The sheets deal in from alternate sides, after 1minus1's service cards: "How it plays" from the
+  // The sheets deal in from alternate sides, after the owner's reference: "How it plays" from the
   // left, "The cards" from the right. The sheet's ground and what sits near its top edge turn
   // (styles.css): the heading and, on "How it plays", the steps beside it, which otherwise stuck out
   // past the leaning edge and were cut off there; on "The cards", the deck's help under the heading,

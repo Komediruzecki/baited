@@ -28,15 +28,15 @@ The interface uses purple and charcoal Twitch cues, square cards with a hard off
 
 ## Inspirations
 
-BAIT draws on secret-word conversation games, including Word Sneak, and the forbidden-clue idea in [Taboo](https://instructions.hasbro.com/en-us/instruction/taboo-game-instructions-manual). The target lists and clue cards were written for BAIT. Its contribution is adapting that conversational format to a live Twitch audience, with separate synchronized views, microphone detection, private guesses and streamer-selected awards. Guest/co-streamer missions remain future work.
+BAIT draws on secret-word conversation games and the forbidden-clue idea of classic party word games. The target lists and clue cards were written for BAIT. Its contribution is adapting that conversational format to a live Twitch audience, with separate synchronized views, microphone detection, private guesses and streamer-selected awards. Guest/co-streamer missions remain future work.
 
-UNO informed the bold card presentation and quick teaching sequence; Hasbro’s instruction library informed the goal/setup/play structure. BAIT uses its own artwork, terminology and rule text.
+Classic card games informed the bold card presentation and quick teaching sequence; published tabletop rulebooks informed the goal/setup/play structure. BAIT uses its own artwork, terminology and rule text.
 
-## How Codex contributed
+## How the AI coding agent contributed
 
-Codex researched the official hackathon and API documentation, designed the roles and data boundaries, wrote the game engine and integrations, and built the interface. It ran automated tests and exercised the app in a browser. That work caught stale audio buffers, connection recovery issues and a dependency advisory; fixes were checked before packaging.
+The coding agent researched the official hackathon and API documentation, designed the roles and data boundaries, wrote the game engine and integrations, and built the interface. It ran automated tests and exercised the app in a browser. That work caught stale audio buffers, connection recovery issues and a dependency advisory; fixes were checked before packaging.
 
-The genuine session identifier is `01a16ee8-4685-73a1-8477-a738186e6ffc`. Its source is recorded in `docs/codex-session.json`.
+The genuine session identifier is `01a16ee8-4685-73a1-8477-a738186e6ffc`. Its source is recorded in [build provenance](build-provenance.md).
 
 ## What we learned
 

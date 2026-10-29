@@ -7,7 +7,7 @@ Suggested division of the remaining work for maff and Paolo. These are proposed 
 | Runtime, Twitch/speech setup, bug fixes and test receipts | maff | Paolo runs the independent viewer/judge walkthrough |
 | Rules clarity, visual review, logo rights and real hint examples | Paolo | maff checks the copy against actual behavior |
 | Two-person live rehearsal | maff as streamer, Paolo as viewer; swap if useful | Both confirm secrecy, timing and whether the trap feels fun |
-| Demo recording and editing | Paolo | maff verifies that the Twitch and Codex footage is genuine and no credentials appear |
+| Demo recording and editing | Paolo | maff verifies that the Twitch and build-session footage is genuine and no credentials appear |
 | Final form and team invites | Representative chosen by both | Other person accepts the invite and checks the final links |
 
 The two-person development team can demonstrate streamer-plus-viewer play. A two-microphone co-streamer mode is not required and is not implemented.
@@ -18,7 +18,7 @@ The two-person development team can demonstrate streamer-plus-viewer play. A two
 - [ ] Confirm the latest local tests/build/browser evidence and remaining defects in `validation.md`.
 - [ ] Confirm both entrants satisfy age, residence and conflict-of-interest conditions. Croatia is not named in the published exclusion list; that does not establish either person's full eligibility.
 - [ ] Confirm ownership of the original source and permission to use the supplied BAIT logo and any recorded people/material. Preserve original assets.
-- [ ] Confirm the source's creation during the event period and the original main Codex session candidate.
+- [ ] Confirm the source's creation during the event period and the original main build-session candidate.
 - [x] Create the owner-authorized private repository: [Komediruzecki/bait](https://github.com/Komediruzecki/bait).
 - [ ] Verify the final tested checkpoint is pushed and review the exact contents before granting judge access. Sharing with `testing@devpost.com` remains a separate owner decision; no invitation has been sent.
 - [ ] Approve the actual host/domain, operating cost and secret-reference configuration. Follow the runbook rather than pasting values into `.env`.
@@ -29,7 +29,7 @@ The two-person development team can demonstrate streamer-plus-viewer play. A two
 - [ ] Test near-deadline speech, ordinary long sentences, pause/resume, disconnect, win reversal, mission completion and wrong private guess.
 - [ ] Have the other person open the public viewer link from another device/network and follow the judge instructions.
 - [ ] Record the operator's availability and keep usage free to judges.
-- [ ] Record the 2:45 video from actual play and Codex evidence. Check a public/unlisted YouTube link signed out.
+- [ ] Record the 2:45 video from actual play and build-session evidence. Check a public/unlisted YouTube link signed out.
 - [ ] Capture and label 3–5 screenshots. Remove secrets and unrelated private context.
 
 ## Before the event deadline
@@ -44,4 +44,4 @@ The two-person development team can demonstrate streamer-plus-viewer play. A two
 
 Target the team review for **1 November**; the official deadline is **2 November 2026 at 23:00 Zagreb**. Do not spend the last day adding optional mechanics. Six-word showdown, a bank-or-risk mission bonus and guest microphone relay remain future proposals until the existing live loop is proven.
 
-Sources: [event FAQ](https://twitchcon-codex.devpost.com/resources), [official rules](https://twitchcon-codex.devpost.com/rules). The FAQ confirms eligible teams without a stated size cap. The owners' eligibility and consent remain personal confirmations.
+Sources: the event FAQ and official rules on Devpost. The FAQ confirms eligible teams without a stated size cap. The owners' eligibility and consent remain personal confirmations.

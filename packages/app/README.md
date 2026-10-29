@@ -8,9 +8,9 @@ Chat gets **banana**. Someone asks about smoothies. The streamer says it. Chat w
 
 Baited runs alongside a normal Twitch stream. Viewers see the secret word in the Twitch panel or companion page and drop hints in chat. Moonshine listens locally in the streamer's browser. It proposes a catch; the streamer confirms it before chat earns a win.
 
-Baited is an independent project created with Codex on October 24, 2026. There are no payments or subscriptions.
+Baited is an independent project created on October 24, 2026. There are no payments or subscriptions.
 
-The source package records that creation date and its original Codex session. See [build provenance](docs/build-provenance.md) and the [local Devpost draft](devpost-submission.md). This application now lives in `packages/app` of the private [baited repository](https://github.com/Komediruzecki/baited), alongside the separate landing package.
+The source package records that creation date and its original build session. See [build provenance](docs/build-provenance.md) and the [local Devpost draft](devpost-submission.md). This application now lives in `packages/app` of the private [baited repository](https://github.com/Komediruzecki/baited), alongside the separate landing package.
 
 ## Run it now
 
@@ -49,7 +49,7 @@ Keep `PUBLIC_URL` and the address you open identical, including `localhost` vers
 - An authoritative game engine with difficulty pools, pause/resume, deadlines, cooldowns, automatic rounds, shared streaks, participation records, and `!skip` votes.
 - Twitch authorization-code OAuth, encrypted server-side tokens, refresh deduplication, startup/hourly validation, and EventSub chat over WebSockets with recovery.
 - Microphone-only PCM capture through an AudioWorklet. Moonshine runs in a browser worker by default; its proposed catches require broadcaster confirmation. Deepgram remains an optional server-side adapter for automatic scoring.
-- A [100-target built-in deck](docs/deck-100.md) with separate ChatGPT-generated pixel illustrations, reduced-motion support and opt-in Sound Lab effects adapted from Keys. The owner approved the full deck for the development test. Fonts and licenses are bundled locally. Open `/card-proofs` to review the illustrated deck and audition the sounds.
+- A [100-target built-in deck](docs/deck-100.md) with separate AI-generated pixel illustrations, reduced-motion support and opt-in Sound Lab effects adapted from Keys. The owner approved the full deck for the development test. Fonts and licenses are bundled locally. Open `/card-proofs` to review the illustrated deck and audition the sounds.
 
 The Cards workbench also supports [image uploads and a pixel/ASCII editor](docs/card-art-studio.md). Artwork is screened on the backend before saving; images stay in the channel owner’s library and are attached to cards by immutable ID. The scanner reduces sexual-content risk but cannot guarantee suitability.
 
@@ -155,6 +155,6 @@ docs/           Research, architecture, submission copy, demo script
 licenses/       Third-party notices and full license texts
 ```
 
-Original BAIT code, illustration and sound are MIT licensed. The user-supplied logo is documented separately in [public/brand/README.md](public/brand/README.md). Material icons, dependencies and fonts retain their own licenses. Run `pnpm run licenses` from `packages/app` after dependency changes to refresh the bundled notices. The original package's Codex session ID and its recorded source are retained in [docs/codex-session.json](docs/codex-session.json).
+Original BAIT code, illustration and sound are MIT licensed. The user-supplied logo is documented separately in [public/brand/README.md](public/brand/README.md). Material icons, dependencies and fonts retain their own licenses. Run `pnpm run licenses` from `packages/app` after dependency changes to refresh the bundled notices. The original package's build session ID is recorded in [build provenance](docs/build-provenance.md).
 
 Before publishing the supplied logo, the owners still need to confirm its rights. See the [two-person release checklist](docs/team-and-release-checklist.md). The [tabletop options](docs/tabletop-options.md) document is research for future playtests; those additions are not included in the implemented feature list.

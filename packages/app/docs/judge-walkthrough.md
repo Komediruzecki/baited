@@ -10,7 +10,7 @@ The operator should provide the configured speech service and hosting free of ch
 
 ## Local core test, about two minutes
 
-1. Install with `rtk pnpm install --frozen-lockfile`. For this improvement checkout, build and start the isolated compiled preview using [local-preview.md](local-preview.md); open its verified URL. A normal development checkout can use `rtk pnpm dev` at `http://localhost:3000`.
+1. Install with `pnpm install --frozen-lockfile`. For this improvement checkout, build and start the isolated compiled preview using [local-preview.md](local-preview.md); open its verified URL. A normal development checkout can use `pnpm dev` at `http://localhost:3000`.
 2. Select **Try the local demo**. Start a round.
 3. Open the viewer-room link in a second tab. The word appears there and stays absent from the studio.
 4. In the studio’s Demo controls, send chat under a test chatter name. The unique participant count increases. Repeated messages under the same name do not create extra participants.

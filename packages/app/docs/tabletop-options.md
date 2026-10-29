@@ -13,24 +13,24 @@ I inspected README.md, docs/mechanics.md, docs/quick-rules.md, and the relevant 
 - Call the bait permits one private typed guess per word. A correct guess escapes the word and active mission; a miss adds 15 seconds.
 - You baited me gives the streamer one manually selected clean hint to award after a win. BAIT does not infer which person caused the spoken word.
 
-The current mechanics document already credits Taboo and describes UNO as a presentation/teaching reference. Merely renaming these existing mechanics would not add play depth.
+The current mechanics document already credits forbidden-clue party games and classic card-game presentation as references. Merely renaming these existing mechanics would not add play depth.
 
 ## Primary rules inspected
 
-These observations come from the linked official instruction sheets, not fan summaries. They describe the specified editions; rules can differ between editions.
+These observations come from the publishers' official instruction sheets, not fan summaries. They describe the specified editions; rules can differ between editions.
 
 | Source | Rule actually inspected | What it suggests for BAIT |
 | --- | --- | --- |
-| [Mattel UNO, sheet 53641](https://service.mattel.com/instruction_sheets/53641.pdf), page 1, Action Cards and Penalties | Skip and Reverse alter the next turn. A disputed Wild Draw Four can be challenged, with a penalty for the wrong side. This particular sheet labels stacking as a house-rule variant. | A scarce interruption or challenge creates a decision. BAIT's existing typed guess already supplies a challenge with a cost. A full card deck would add explanation and state without fixing the core loop. |
-| [Hasbro Taboo A4626 guide](https://instructions.hasbro.com/api/download/A4626_en-gb_taboo-game-instructions-manual.pdf), pages 1–2 | Forbidden clues are policed by the opposing team. An optional die changes a turn before its timer starts, including one-guesser and all-play variations. | Round-specific constraints can create variety without changing the objective. Do not import teamwide punishment for bad hints into open Twitch chat, where one stranger could deliberately sabotage everyone. |
-| [Hasbro Ultimate Catch Phrase E9580 guide](https://instructions.hasbro.com/api/download/E9580_en-us_ultimate-catch-phrase-game-for-ages-12-and-up.pdf), page 2 | A correct answer transfers the device to the opposition while a shared 90-second timer continues. A 15-second stall instead passes to a teammate. The team left holding it loses the round. | Transfer responsibility while preserving time pressure. A co-streamer relay could create a visible handoff, but needs explicit active-speaker routing. |
-| [Hasbro Cranium 16577 guide](https://instructions.hasbro.com/api/download/16577_en-ca_cranium.pdf), page 4 | The other teams choose the final activity's card box; failing that activity permits another attempt on a later turn. | Let the audience choose a final-round constraint rather than adding more hidden scoring. The PDF's earlier pages have poor text extraction; this report relies only on the legible final-activity rule. |
+| A shedding card game's official instruction sheet, page 1, action cards and penalties | Skip and reverse cards alter the next turn. A disputed penalty card can be challenged, with a penalty for the wrong side. This particular sheet labels stacking as a house-rule variant. | A scarce interruption or challenge creates a decision. BAIT's existing typed guess already supplies a challenge with a cost. A full card deck would add explanation and state without fixing the core loop. |
+| A forbidden-word party game's official guide, pages 1–2 | Forbidden clues are policed by the opposing team. An optional die changes a turn before its timer starts, including one-guesser and all-play variations. | Round-specific constraints can create variety without changing the objective. Do not import teamwide punishment for bad hints into open Twitch chat, where one stranger could deliberately sabotage everyone. |
+| A pass-the-device word game's official guide, page 2 | A correct answer transfers the device to the opposition while a shared 90-second timer continues. A 15-second stall instead passes to a teammate. The team left holding it loses the round. | Transfer responsibility while preserving time pressure. A co-streamer relay could create a visible handoff, but needs explicit active-speaker routing. |
+| A multi-activity party game's official guide, page 4 | The other teams choose the final activity's card box; failing that activity permits another attempt on a later turn. | Let the audience choose a final-round constraint rather than adding more hidden scoring. The PDF's earlier pages have poor text extraction; this report relies only on the legible final-activity rule. |
 
 The ideas below are proposed BAIT adaptations. They are not rules from those games or claims that no other game has used similar mechanics.
 
 ## 1. Six-word showdown: the smallest useful addition
 
-Use the Taboo modifier principle for one optional round: chat must craft an award-eligible hint in at most six words. Ordinary Twitch conversation continues. The streamer still tries to avoid the secret target, and microphone detection still decides the community win.
+Use the forbidden-word game's modifier principle for one optional round: chat must craft an award-eligible hint in at most six words. Ordinary Twitch conversation continues. The streamer still tries to avoid the secret target, and microphone detection still decides the community win.
 
 Suggested state rules:
 
@@ -47,7 +47,7 @@ Acceptance test: a seven-word clean hint remains in Twitch but cannot win the aw
 
 ## 2. Bank or bait: stronger strategy, more state
 
-Proposed addition to three-word missions, inspired by the earlier chat's risk/reward direction and tabletop challenge costs. This is not an UNO rule.
+Proposed addition to three-word missions, inspired by the earlier chat's risk/reward direction and tabletop challenge costs. This is not a rule from the card game above.
 
 After the second successful word, chat can bank a small mission bonus or risk it for a larger bonus by landing the third word. Existing word wins remain untouched. Illustrative tuning: bank one bonus point now, or earn three on success and zero on expiry/streamer escape. These numbers need playtesting.
 
@@ -55,7 +55,7 @@ Use one server-timed decision window during cooldown; count one latest vote per 
 
 ## 3. Pass the mic: future co-streamer mode
 
-Catch Phrase suggests a relay for a streamer and one guest: after each successful bait, responsibility moves to the other speaker while a shared clock continues. Only the active speaker's correctly routed microphone can trigger the next target. Show that speaker prominently and require their ready confirmation before recognition resumes. Resolve expiry against the active side, not whichever network event arrives last.
+The pass-the-device game suggests a relay for a streamer and one guest: after each successful bait, responsibility moves to the other speaker while a shared clock continues. Only the active speaker's correctly routed microphone can trigger the next target. Show that speaker prominently and require their ready confirmation before recognition resumes. Resolve expiry against the active side, not whichever network event arrives last.
 
 This could make BAIT work well as a two-streamer segment, but it is larger than a new card. It requires separate microphone/session ownership, guest consent, attribution, reconnect handling and a tested handoff. The development team's two members can instead demonstrate the existing game as streamer plus viewer; a two-person development team does not require a two-streamer game mode.
 
@@ -63,4 +63,4 @@ This could make BAIT work well as a two-streamer segment, but it is larger than 
 
 For this deadline, first make the current game work reliably on a real stream. If there is time for one experiment, test Six-word showdown. If it feels like needless restriction, remove it from the submission plan. Bank or bait is the next design experiment after that; Pass the mic is a future mode.
 
-Use original BAIT wording, targets, clue lists, artwork and audio. Keep commercial game names in research attribution rather than product branding, and do not copy their card lists or visual assets. The references establish mechanical inspiration, not an endorsement or license.
+Use original BAIT wording, targets, clue lists, artwork and audio. Keep commercial games out of product branding, and do not copy their card lists or visual assets. The references establish mechanical inspiration, not an endorsement or license.

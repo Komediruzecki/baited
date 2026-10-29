@@ -50,8 +50,8 @@ The guess must be one word. Invalid or stale submissions do not consume an attem
 
 ## Inspirations
 
-The project draws on secret-word conversation games, including Word Sneak, and forbidden-clue play from [Hasbro’s Taboo](https://instructions.hasbro.com/en-us/instruction/taboo-game-instructions-manual). BAIT uses its own target and clue content. It adapts these ideas to a live Twitch audience with shared scoring, synchronized role-specific views, microphone detection, private guesses and a streamer-selected award.
+The project draws on secret-word conversation games and the forbidden-clue play of classic party word games. BAIT uses its own target and clue content. It adapts these ideas to a live Twitch audience with shared scoring, synchronized role-specific views, microphone detection, private guesses and a streamer-selected award.
 
 The supplied BAIT logo is documented in [the brand asset notes](../public/brand/README.md). The application keeps its own interface and artwork rather than importing commercial game cards or branding.
 
-The [official UNO mobile site](https://www.letsplayuno.com/) informed the short teaching sequence and bold card presentation. [Hasbro’s instruction library](https://instructions.hasbro.com/worldwide) informed the separation of goal, setup, play and optional rules. BAIT retains its own game loop and terminology.
+Classic card games informed the short teaching sequence and bold card presentation. Published tabletop rulebooks informed the separation of goal, setup, play and optional rules. BAIT retains its own game loop and terminology.

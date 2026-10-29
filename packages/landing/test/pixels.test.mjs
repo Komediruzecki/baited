@@ -55,13 +55,13 @@ test('the pixel logo is a full grid with a straight I, and its files are drawn f
   assert.ok(rows[0].includes('#') && rows.some((row) => row[0] === '#'))
 })
 
-test("the hero's ribbons lie along 1minus1's four guide paths, a hundred fixed squares each", () => {
+test("the hero's ribbons lie along four guide paths, a hundred fixed squares each", () => {
   assert.deepEqual(
     { ...TRAIL_SETTINGS },
     { count: 100, squareSize: 100, color: '#26024a', stagger: 0.01, localFadeDuration: 0.5, revealSeconds: 1, exitSeconds: 1, gapSeconds: 3, fullWidth: 1024 },
-    'their settings'
+    'the ribbon settings'
   )
-  // Their paths read back to their points, the one horizontal step included.
+  // The paths read back to their points, the one horizontal step included.
   const two = parseGuidePoints(TRAIL_ROUTES[0].d)
   assert.deepEqual([two[0], two.at(-1)], [[637.889, 0.425781], [561.889, 1185.43]])
   assert.ok(parseGuidePoints(TRAIL_ROUTES[3].d).some(([x, y]) => x === 278.15 && y === 335.487))

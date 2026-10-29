@@ -6,7 +6,7 @@ Updated 26 October 2026. This is the current draft; archived BAIT/Deepgram docum
 
 **Verified source snapshot:** `d93edb9780f0607112e83debcbab154758f0a3a1` in the private [Komediruzecki/baited repository](https://github.com/Komediruzecki/baited). Current design work may be ahead of this snapshot. Recheck screenshots and the final revision after the redesign lands.
 
-**Existing entry:** [Edit Baited project details](https://devpost.com/submit-to/31742-codex-x-twitchcon-hackathon/manage/submissions/1266473-baited/project_details/edit). This is the owner's edit URL, not a public Try it out link.
+**Existing entry:** Baited's project details, opened from the owner's Devpost dashboard (Manage submissions → Baited → Project details). That is the owner's edit page, not a public Try it out link.
 
 ## Project name
 
@@ -42,7 +42,7 @@ One server-side game state machine controls rounds, deadlines, votes and scores.
 
 Moonshine runs in a browser worker using WebAssembly. The microphone audio stays on the streamer's computer in this mode. Finalized transcript text and timing metadata go to the authenticated game server for matching. No hosted speech API key is needed for this path.
 
-We used OpenAI Codex throughout implementation, debugging, testing and integration. ChatGPT image generation supplied separate card illustrations; the app renders the word, clue text and controls as interface elements. This lets us improve readability without regenerating the artwork. Procedural sound effects use Web Audio. The landing runs on Cloudflare Workers, and our Hosted Test backend currently runs on a Linux computer behind a named Cloudflare Tunnel.
+We used an AI coding agent throughout implementation, debugging, testing and integration. An image model supplied separate card illustrations; the app renders the word, clue text and controls as interface elements. This lets us improve readability without regenerating the artwork. Procedural sound effects use Web Audio. The landing runs on Cloudflare Workers, and our Hosted Test backend currently runs on a Linux computer behind a named Cloudflare Tunnel.
 
 ## Challenges we ran into
 
@@ -76,11 +76,11 @@ The sections below are field values and preparation notes, not part of the publi
 
 ## Built with
 
-Suggested 20 tags, within the user-supplied limit of 25. Match Devpost's available tag spelling when saving:
+Suggested 18 tags, within the user-supplied limit of 25. Match Devpost's available tag spelling when saving:
 
-`TypeScript`, `JavaScript`, `React`, `Node.js`, `Express`, `Vite`, `Twitch`, `Twitch Extensions`, `Twitch EventSub`, `Moonshine`, `WebAssembly`, `Web Audio API`, `Web Workers`, `WebSockets`, `Server-Sent Events`, `Cloudflare Workers`, `Cloudflare Tunnel`, `OBS Studio`, `OpenAI Codex`, `ChatGPT`.
+`TypeScript`, `JavaScript`, `React`, `Node.js`, `Express`, `Vite`, `Twitch`, `Twitch Extensions`, `Twitch EventSub`, `Moonshine`, `WebAssembly`, `Web Audio API`, `Web Workers`, `WebSockets`, `Server-Sent Events`, `Cloudflare Workers`, `Cloudflare Tunnel`, `OBS Studio`.
 
-Deepgram, Whisper and ElevenLabs are not tags for the chosen speech path. An explicit legacy Deepgram adapter remains in the source; the current default is Moonshine.
+Hosted speech services, including Deepgram, are not tags for the chosen speech path. An explicit legacy Deepgram adapter remains in the source; the current default is Moonshine.
 
 ## Try it out links
 
@@ -103,29 +103,29 @@ The following limits come from the owner's pasted Devpost form on 26 October 202
 
 - Gallery: up to 15 JPG, PNG or GIF files, each no larger than 5 MB; 3:2 preferred.
 - Demo: a YouTube URL, public or unlisted without a password. Only the first three minutes will be reviewed.
-- Show the project working on Twitch and how OpenAI Codex was used.
+- Show the project working on Twitch and how the AI coding agent was used to build it.
 
 Six [format-ready review images](submission/media-review/README.md) are prepared from the actual local Studio, native fixture/standalone viewer, Card Lab, landing deck and browser HUD captures, plus an 18-illustration artwork sheet. All are 1500 × 1000 PNGs below 5 MB. They are private feature-branch review material; no replacement card edition has been chosen. A seventh staged-hero image is marked review-only and excluded from upload candidates because its film retains historical crossed-out clue styling. Re-render it after the edition is selected.
 
-Real Twitch round screenshots, actual OBS/Codex evidence and the approved YouTube demo are still needed. Review and refresh product captures after the chosen design is applied. The personal media plan retains the 2:50 storyboard. No gallery files or video were uploaded by this pass.
+Real Twitch round screenshots, actual OBS and build-session evidence and the approved YouTube demo are still needed. Review and refresh product captures after the chosen design is applied. The personal media plan retains the 2:50 storyboard. No gallery files or video were uploaded by this pass.
 
-## Codex-use field, if requested
+## AI-use field, if requested
 
-OpenAI Codex was used to inspect the supplied project, implement and debug the Twitch connection and Extension, integrate browser-local Moonshine speech, build game-state and security checks, prepare assets, and maintain the unified app/landing workspace. Supporting footage should show actual code changes or tests from those sessions.
+An AI coding agent was used to inspect the supplied project, implement and debug the Twitch connection and Extension, integrate browser-local Moonshine speech, build game-state and security checks, prepare assets, and maintain the unified app/landing workspace. Supporting footage should show actual code changes or tests from those sessions.
 
 Recorded session candidates from the source provenance:
 
 - Original package build: `01a16ee8-4685-73a1-8477-a738186e6ffc`.
 - Later audit, integration, design and implementation thread: `01a16ffb-42f5-7b02-b9bf-6e7e3e2dc1e7`.
 
-Confirm the field's exact wording and which thread contains most of the submitted work before selecting one. Do not claim this choice has been confirmed by the owners. Keep a truthful credit record for other tools used, including Claude's design guidance and ChatGPT-generated illustrations.
+Confirm the field's exact wording and which thread contains most of the submitted work before selecting one. Do not claim this choice has been confirmed by the owners. Keep a truthful credit record for other tools used, including the AI design guidance and the AI-generated illustrations.
 
 ## Before saving online and submitting
 
 1. Reconnect the existing Devpost app and read the existing project, form and current rules. Preserve the existing entry; do not create a duplicate. Check team membership, required fields, deadline and reviewer-access requirements from that live source.
 2. Review and save the title, tagline, About text, tags and appropriate links. Read back the saved values. This draft is preparation, not authorization to final-submit.
 3. Finish the card/product redesign and capture the approved state. Replace all planned media with real, checked files.
-4. Record and upload the working Twitch + Codex demo to YouTube. Verify that the video opens signed out and the required proof appears before 3:00.
+4. Record and upload the working Twitch and build-session demo to YouTube. Verify that the video opens signed out and the required proof appears before 3:00.
 5. Arrange a judge-accessible test and source-access route. Hosted Test remains allowlisted, and the Linux backend is not permanent hosting. Keep private source access separate from making the repository public.
 6. Record the final source revision, Extension version/ZIP identity and actual verification receipts. Resolve or disclose the deferred Firefox blank-panel and OBS reconnection issues. Do not claim cross-browser or physical mobile acceptance without those tests.
 7. Confirm submission-specific declarations with both entrants, including contribution and asset rights. This pass has not changed team membership, granted access, submitted to Devpost or submitted the Extension for Twitch review.

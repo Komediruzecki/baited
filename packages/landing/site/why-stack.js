@@ -1,5 +1,4 @@
-// How a round works: the step cards build a stack while the visitor scrolls.
-// Adapted from the voicetaggods.com "why stack" (GSAP + ScrollTrigger).
+// How a round works: the step cards build a stack while the visitor scrolls (GSAP + ScrollTrigger).
 //
 // Desktop with a mouse: the stack stays pinned beside the intro, centred on the screen. The first
 // card is already in place; each next card flies up from the bottom of the screen, tilted, and

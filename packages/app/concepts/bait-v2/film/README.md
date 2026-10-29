@@ -2,16 +2,16 @@
 
 An original, staged Baited Extension concept. This is a rendered illustration of a round, not a recording or evidence of live speech recognition. Fictional streamer, game, dialogue and chat names.
 
-The composition follows Opus's BAIT v2 design direction and 32-second storyboard. The desktop master is 1920×1080; the phone master is independently arranged at 1080×1200. Both share `timeline.js`, have the same chapter positions, and use local fonts and assets. Generated images are not remote runtime dependencies.
+The composition follows the BAIT v2 design direction and 32-second storyboard. The desktop master is 1920×1080; the phone master is independently arranged at 1080×1200. Both share `timeline.js`, have the same chapter positions, and use local fonts and assets. Generated images are not remote runtime dependencies.
 
 ## Source and asset provenance
 
 - `masters/film-16x9.html` and `masters/film-9x10.html`: editable HTML scene, chat and captions. `index.html` mirrors the desktop master for discovery; production preparation copies the selected master to an isolated renderer project.
 - `film.css`: composition coordinates and sprite cells. No CSS transitions, timers or random visual state.
 - `timeline.js`: paused GSAP timeline registered after fonts load. Direct seeking determines every visual state.
-- `art/mossbyte-poses.png`: original ChatGPT image generation, six expressions in a transparent 3×2 sheet. Green beanie, headset, cream hoodie and warm plum outlines. Talk, squint, smug, shout, facepalm, laugh.
-- `art/little-isle.png`: original ChatGPT image generation. A fictional pixel island-builder scene with turquoise sea, a hut and an unmistakable crater. No third-party game footage.
-- `art/effects-sheet.png`: original ChatGPT image generation. Three archived orange hook-bomb emotes, two hammer poses and a smoke puff, arranged in a transparent 3×2 sheet. Only the two hammer poses and smoke puff are used in the current film. No Twitch emotes.
+- `art/mossbyte-poses.png`: original AI image generation, six expressions in a transparent 3×2 sheet. Green beanie, headset, cream hoodie and warm plum outlines. Talk, squint, smug, shout, facepalm, laugh.
+- `art/little-isle.png`: original AI image generation. A fictional pixel island-builder scene with turquoise sea, a hut and an unmistakable crater. No third-party game footage.
+- `art/effects-sheet.png`: original AI image generation. Three archived orange hook-bomb emotes, two hammer poses and a smoke puff, arranged in a transparent 3×2 sheet. Only the two hammer poses and smoke puff are used in the current film. No Twitch emotes.
 - `art/volcano.png`: approved project card art. The eruption is built independently from original SVG shapes and shares the island crater anchor.
 - `art/baited-logo-white.webp`: unchanged copy of the owner's approved white wordmark from `packages/landing/site/assets/brand/`, used on both bookends, both card backs and the chat emotes.
 - `art/bait-bomb.png`: archived earlier artwork, preserved unchanged and no longer used by the film.
@@ -47,13 +47,13 @@ export HYPERFRAMES_HISTORY_ROOT="$BAIT_RENDER_RUN/scratch/cache/history"
 export TMPDIR="$BAIT_RENDER_RUN/scratch/tmp"
 export NODE_COMPILE_CACHE="$BAIT_RENDER_RUN/scratch/cache/node"
 export XDG_CACHE_HOME="$BAIT_RENDER_RUN/scratch/cache"
-rtk proxy mkdir -p "$TMPDIR" "$BAIT_RENDER_RUN/deliverables" "$BAIT_RENDER_RUN/scratch/raw-logs"
-rtk proxy node "$BAIT_SOURCE/prepare.mjs" "$BAIT_RENDER_RUN"
-rtk proxy timeout 120 node "$BAIT_SOURCE/export-audio.mjs" "$BAIT_RENDER_RUN"
-rtk proxy timeout 600 node "$HF_TOOLCHAIN/node_modules/hyperframes/bin/hyperframes.mjs" check "$BAIT_RENDER_RUN/scratch/desktop" --json
-rtk proxy timeout 600 node "$HF_TOOLCHAIN/node_modules/hyperframes/bin/hyperframes.mjs" check "$BAIT_RENDER_RUN/scratch/phone" --json
-rtk proxy timeout 1200 node "$HF_TOOLCHAIN/node_modules/hyperframes/bin/hyperframes.mjs" render "$BAIT_RENDER_RUN/scratch/desktop" --format mp4 --fps 30 --quality looks --low-memory-mode --output "$BAIT_RENDER_RUN/deliverables/master-desktop.mp4"
-rtk proxy timeout 1200 node "$HF_TOOLCHAIN/node_modules/hyperframes/bin/hyperframes.mjs" render "$BAIT_RENDER_RUN/scratch/phone" --format mp4 --fps 30 --quality looks --low-memory-mode --output "$BAIT_RENDER_RUN/deliverables/master-phone.mp4"
+mkdir -p "$TMPDIR" "$BAIT_RENDER_RUN/deliverables" "$BAIT_RENDER_RUN/scratch/raw-logs"
+node "$BAIT_SOURCE/prepare.mjs" "$BAIT_RENDER_RUN"
+timeout 120 node "$BAIT_SOURCE/export-audio.mjs" "$BAIT_RENDER_RUN"
+timeout 600 node "$HF_TOOLCHAIN/node_modules/hyperframes/bin/hyperframes.mjs" check "$BAIT_RENDER_RUN/scratch/desktop" --json
+timeout 600 node "$HF_TOOLCHAIN/node_modules/hyperframes/bin/hyperframes.mjs" check "$BAIT_RENDER_RUN/scratch/phone" --json
+timeout 1200 node "$HF_TOOLCHAIN/node_modules/hyperframes/bin/hyperframes.mjs" render "$BAIT_RENDER_RUN/scratch/desktop" --format mp4 --fps 30 --quality looks --low-memory-mode --output "$BAIT_RENDER_RUN/deliverables/master-desktop.mp4"
+timeout 1200 node "$HF_TOOLCHAIN/node_modules/hyperframes/bin/hyperframes.mjs" render "$BAIT_RENDER_RUN/scratch/phone" --format mp4 --fps 30 --quality looks --low-memory-mode --output "$BAIT_RENDER_RUN/deliverables/master-phone.mp4"
 ```
 
 For a timing review, use 15fps and `--quality draft`, with distinct draft output paths. The media status receipt must identify drafts. All long-running producers need their own deadline. Do not delete another run's assets or caches to make room; request a larger allocation instead.
@@ -66,7 +66,7 @@ The player stays muted initially. Sound is an explicit, nonpersistent choice. No
 
 ## Art review corrections
 
-Opus accepted all three generated sheets with fixes, without regeneration. Actual source alpha measurements corrected the review's by-eye transparency assumption: both sprite sheets are RGBA with fully transparent regions, plus a low-alpha glow. The composition removes that glow with an alpha-only SVG filter, crops above the hoodie bands, aligns each pose and mirrors the hammer-down frame. The original source PNG hashes remain unchanged. The facepalm hand was inspected at 400% in the composed frame.
+The art review accepted all three generated sheets with fixes, without regeneration. Actual source alpha measurements corrected the review's by-eye transparency assumption: both sprite sheets are RGBA with fully transparent regions, plus a low-alpha glow. The composition removes that glow with an alpha-only SVG filter, crops above the hoodie bands, aligns each pose and mirrors the hammer-down frame. The original source PNG hashes remain unchanged. The facepalm hand was inspected at 400% in the composed frame.
 
 The island remains a completed hut under repair, as accepted in the art review. The eruption is built from three original SVG jet poses, flat orange glow steps, deterministic lava arcs and a slope tongue. Short camera moves replace the long drift. At that review stage the original bomb logo appeared on the bookends and generated bomb emotes stayed in chat. The subsequent BAITED wordmark refresh replaces both placements at source level. Chapter stills now use settled frames at 16.5s and 30.3s.
 

@@ -14,7 +14,7 @@ The Extension ZIP includes this original mask and excludes the archived B varian
 
 `baited-wordmark-b.png` is retained as the earlier approved B exploration, superseded by the owner's original-logo decision. SHA-256: `582e724d1a5d9b9b69e2b7105c3905ebf9cf6e71262afa4015be8ffbff79efd7`. The app copy at `public/brand/baited-wordmark-b.png` is identical. Neither is the current displayed logo. The landing's A/B/C proofs remain preserved in `packages/landing/site/lab/brand/`.
 
-The eighteen `card-*.png` files are byte-identical copies of the corresponding approved illustrations in `public/cards/proofs/`: banana, penguin, microwave, dragon, volcano, monocle, pizza, robot, rocket, pirate, cactus, jellyfish, telescope, saxophone, octopus, boomerang, narwhal and parachute. They were originally generated through ChatGPT image generation for this project and approved by the owner. The source images remain unchanged.
+The eighteen `card-*.png` files are byte-identical copies of the corresponding approved illustrations in `public/cards/proofs/`: banana, penguin, microwave, dragon, volcano, monocle, pizza, robot, rocket, pirate, cactus, jellyfish, telescope, saxophone, octopus, boomerang, narwhal and parachute. They were originally generated with an image model for this project and approved by the owner. The source images remain unchanged.
 
 ## Prism back, 2026-10-28
 

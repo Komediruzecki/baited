@@ -1,6 +1,6 @@
 # Card surface assets
 
-Seven original materials were generated with ChatGPT image generation using the exact prompts in [the prompt catalogue](../card-surface-prompts.json), under [Opus’s design direction](../card-surfaces-opus-design.md). [manifest.json](manifest.json) records each full prompt, prompt hash, original PNG hash and dimensions, archive path, crop geometry, encoder arguments, quality, runtime hash and file budget. The tool did not return a model identifier.
+Seven original materials were generated with an image model using the exact prompts in [the prompt catalogue](../card-surface-prompts.json), under [the written design direction](../card-surfaces-design.md). [manifest.json](manifest.json) records each full prompt, prompt hash, original PNG hash and dimensions, archive path, crop geometry, encoder arguments, quality, runtime hash and file budget. The tool did not return a model identifier.
 
 ## Runtime exports
 
@@ -26,7 +26,7 @@ Masters are deliverables outside the served tree. No original PNG, prompt or pro
 
 ## Glass
 
-Glass is an original code-only SVG material, not a generated raster or an image of glass. Opus specified its optics from the [supplied reference](../glass-reference.md); see the [Glass design](../card-glass-opus-design.md). Only the decorative light and ruled lines enter the displacement filter. The sprite and all typography remain outside it. The seven generated materials and their provenance above remain unchanged.
+Glass is an original code-only SVG material, not a generated raster or an image of glass. Its optics were specified from the [supplied reference](../glass-reference.md); see the [Glass design](../card-glass-design.md). Only the decorative light and ruled lines enter the displacement filter. The sprite and all typography remain outside it. The seven generated materials and their provenance above remain unchanged.
 
 ## Dither
 

@@ -29,7 +29,7 @@ The starting policy is fixed in `server/card-art-policy.ts`:
 
 Blocked, uncertain and unavailable results all prevent attachment. There is no bypass button. These are conservative product thresholds, not measured accuracy figures. Changing them requires a new policy version and validation; a timeout never becomes approval.
 
-An external moderation service could broaden category coverage later, but images would leave this server and require a separate privacy and provider decision. OpenAI's moderation endpoint supports images and is currently free; some categories are text-only, and its documentation says it is not a CSAM detection system. This implementation does not call it or use any external moderation key. [OpenAI moderation guide](https://developers.openai.com/api/docs/guides/moderation)
+An external moderation service could broaden category coverage later, but images would leave this server and require a separate privacy and provider decision. One hosted moderation endpoint reviewed for this supports images and is currently free; some of its categories are text-only, and its documentation says it is not a CSAM detection system. This implementation does not call any external moderation service or use an external moderation key.
 
 ## Runtime and provenance
 

@@ -18,5 +18,4 @@ packages/landing/**
 !packages/landing/site/styles.css
 packages/app/concepts
 packages/app/docs
-packages/app/.impeccable
 packages/app/tests

@@ -1,8 +1,7 @@
 {
-  "generator": "A/B/C proofs: Built-in ChatGPT image generation; default: unchanged owner-supplied JPEG",
+  "generator": "A/B/C proofs: generated with an image model; default: unchanged owner-supplied JPEG",
   "reference": "Owner attachment 1000063284.jpg, angular black BAITED wordmark",
   "reference_sha256": "994ca992fd8d9fc6dde8da8283d7898ba87d975a8c29518e2477d55c87f6f086",
-  "design_lead": "Claude Opus, claude-opus-5-5",
   "prompts": "brand-prompts.md",
   "default": "original",
   "default_file": "site/assets/brand/baited-original-mask.svg",
