@@ -4,11 +4,11 @@ Checked October 24, 2026, before development.
 
 ## Official submission requirements
 
-The [official rules](https://twitchcon-codex.devpost.com/rules) set the development window to October 23 at 10 a.m. Pacific through November 2 at 2 p.m. Pacific, 2026. Entries must be new, original work built with Codex, connected to Twitch, and runnable as described. Permitted third-party tools remain subject to their licenses.
+The official rules on Devpost set the development window to October 23 at 10 a.m. Pacific through November 2 at 2 p.m. Pacific, 2026. Entries must be new, original work built with the event's AI coding agent, connected to Twitch, and runnable as described. Permitted third-party tools remain subject to their licenses.
 
-Submission needs an accessible source repository, English description and testing instructions, the genuine Codex session ID, and a public YouTube demonstration shorter than three minutes showing Twitch operation and Codex use. Judges need free access through the end of judging. Entrants must check the rules’ age, location, ownership and conflict-of-interest conditions themselves.
+Submission needs an accessible source repository, English description and testing instructions, the genuine coding-agent session ID, and a public YouTube demonstration shorter than three minutes showing Twitch operation and how the agent was used. Judges need free access through the end of judging. Entrants must check the rules’ age, location, ownership and conflict-of-interest conditions themselves.
 
-The four equally weighted criteria are originality, impact for streamers and communities, technical implementation/Codex use, and design/entertainment. The [overview](https://twitchcon-codex.devpost.com/) emphasizes a functioning Twitch experience. The [resources](https://twitchcon-codex.devpost.com/resources) link the developer documentation and dates.
+The four equally weighted criteria are originality, impact for streamers and communities, technical implementation/coding-agent use, and design/entertainment. The event overview emphasizes a functioning Twitch experience. Its resources page links the developer documentation and dates.
 
 This build started from an empty workspace on October 24. No proprietary application source was imported. Original artwork is made in CSS/SVG, and the short sound is synthesized. Full dependency license texts accompany the source.
 

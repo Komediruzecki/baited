@@ -29,7 +29,7 @@
 
 .island{background:url('art/little-isle.png') center/cover}.eruption{background:url('art/volcano.png') center top/contain no-repeat}.card-art{width:100%;height:100%;background:url('art/volcano.png') center/contain no-repeat;image-rendering:pixelated}.split-card .card-art{height:350px;width:360px;margin:auto}.phone .split-card .card-art{height:265px;width:270px}
 
-/* Opus art-review fixes: non-destructive source registration and alpha masks. */
+/* Art-review fixes: non-destructive source registration and alpha masks. */
 .world{transform-origin:67.5% 100%}.island,.avatar,.builder-sprite,.smoke,.chat-line .emote,.card-art{image-rendering:auto}
 .facecam{background:linear-gradient(to bottom,#7655a2 0 34%,#604386 34% 68%,#4e346c 68% 100%)}
 .avatar-frame{position:absolute;inset:0}.avatar{filter:url(#sprite-alpha);transform:scale(1.22);transform-origin:50% 35%}.phone .avatar{transform:scale(1.38);transform-origin:50% 44%}
@@ -39,7 +39,7 @@
 .crater-fx{position:absolute;left:67.5%;top:16.5%;width:0;height:0;z-index:4}.eruption-code{position:absolute;left:-140px;top:-100px;width:280px;height:300px;overflow:visible;shape-rendering:crispEdges}.crater-glow,.jet,.lava-tongue,.lava-core{opacity:0}.lava-blob{position:absolute;left:-7px;top:-7px;width:14px;height:14px;background:#ff943d;border:3px solid #431f2c;opacity:0;clip-path:polygon(20% 0,80% 0,80% 20%,100% 20%,100% 80%,80% 80%,80% 100%,20% 100%,20% 80%,0 80%,0 20%,20% 20%)}.phone .crater-fx{transform:scale(.834)}
 .bookend-logo{width:760px;height:auto;object-fit:contain;image-rendering:auto}.phone .bookend-logo{width:640px;height:auto}.phone .widget{width:600px;min-width:0}
 
-/* Opus mockup review: one secret colour; keep the game visible through the phone pick. */
+/* Mockup review: one secret colour; keep the game visible through the phone pick. */
 .card-back b,.back-only b{color:#c7b1d4}
 .phone .pick{top:608px;height:592px;padding:24px 40px;background:#201c28;border-top:3px solid #c9a8ff}
 .phone .pick-title{font-size:46px;line-height:1.2;margin-bottom:10px}

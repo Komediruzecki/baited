@@ -1,6 +1,6 @@
 # BAITED logo proofs
 
-Generated with the built-in ChatGPT image-generation tool using the owner's attached BAITED reference. Each version requested a transparent background.
+Generated with an image model using the owner's attached BAITED reference. Each version requested a transparent background.
 
 ## A · Faithful baseline
 

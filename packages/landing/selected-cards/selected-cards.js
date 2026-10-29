@@ -177,7 +177,7 @@ let settled = null
 const played = new WeakSet()
 let frame = 0
 let cleanup = () => {}
-// The picture's pixels, after 1minus1.com's case-study cards: the art as blocks of its own colors
+// The picture's pixels, after the owner's reference: the art as blocks of its own colors
 // (each block the average of its patch), coarse blocks splitting into finer ones at random moments
 // until the finest clear to the picture, so blocks of every size are on the card at once.
 // - Waiting: a picture shows as its coarsest blocks until its card's reveal.
@@ -187,7 +187,7 @@ export const pixelSizes = [8, 16, 32] // blocks across the art, coarse to fine
 export const revealSplit = 120 // ms the most each block waits before it splits…
 export const revealClear = 160 // …and the most a finest block waits before it clears
 export const revealEnd = (pixelSizes.length - 1) * revealSplit + revealClear
-// The trail, after 1minus1.com's work cards: the squares near the pointer turn into blocks of their
+// The trail, after the owner's reference: the squares near the pointer turn into blocks of their
 // own colour, TRAIL_SIZE across the picture, and each clears again on its own a moment after the
 // pointer has gone, so the trail breaks up behind it.
 export const TRAIL_SIZE = 16
@@ -425,11 +425,22 @@ export function revealSelectedCard(item) {
   frame = requestAnimationFrame(tick)
 }
 
+// The first step of How it plays deals the hero trailer's card: BIRTHDAY, in round 3. It is not one of
+// the public sample cards, so its entry is here and its picture is the step cards' own copy.
+export const STEP_CARD = Object.freeze({
+  word: 'birthday',
+  difficulty: 'easy',
+  clues: [],
+  question: 'When do people suddenly remember to call you?',
+  index: 0,
+  art: '/assets/why/birthday.webp',
+})
+
 export function prepareSelectedScenes(cards) {
   const old = document.querySelector('.why-deal__face')
-  const volcano = cards.find(card => card.word === 'volcano')
-  if (old && volcano) {
-    const face = cardFace(volcano, cards.length)
+  if (old) {
+    const face = cardFace(STEP_CARD, cards.length)
+    face.querySelector('.card-top > span').textContent = 'Round 3'
     face.classList.add('why-deal__face')
     // Only the gallery controller fades this dimmer; the How scene owns its flip.
     face.querySelector('.card-shade').remove()

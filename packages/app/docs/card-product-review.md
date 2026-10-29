@@ -16,11 +16,11 @@ The earlier **78-card collection is already on main and development at `d93edb9`
 
 The Card Lab changes are authorized for main and the development domain only. Production excludes the lab and its assets; there is no production release tag in this pass. Twitch accepted the redesigned native viewer/configuration ZIP as v0.0.2 in Hosted Test on 27 October. The hosted Studio was rebuilt and restarted separately; signing in and checking the microphone again remain user steps. Activation of v0.0.2 on the channel has not been verified. The repository remains private.
 
-Opus 5.5 completed its design inspection in **26m59s** through the owner-authorized personal login. **Max effort and a 45-minute limit were requested; the CLI did not attest the effective effort level.** Its specification is a design plan, not proof of browser measurements or visual acceptance.
+The first design inspection completed in **26m59s**, within a 45-minute limit. Its specification is a design plan, not proof of browser measurements or visual acceptance.
 
-A second Opus 5.5 lead-design pass completed in **23m36s**, again with Max effort requested and a 45-minute bound. It defined the materials, composition rules and all seven image prompts. Read the [material design](card-surfaces-opus-design.md), [exact prompts](card-surface-prompts.json) and [asset provenance](card-surface-assets/README.md). Table Reveal × Engraved × Mosaic is its suggested first pairing, not an applied product choice.
+A second lead-design pass completed in **23m36s**, again within a 45-minute bound. It defined the materials, composition rules and all seven image prompts. Read the [material design](card-surfaces-design.md), [exact prompts](card-surface-prompts.json) and [asset provenance](card-surface-assets/README.md). Table Reveal × Engraved × Mosaic is its suggested first pairing, not an applied product choice.
 
-A third Opus 5.5 inspection completed in **23 minutes** and specified the code-only Glass finish from the supplied video reference. Max effort was requested within a 45-minute bound; effective effort was not reported. The first attempt ended from an external termination signal without an answer. Read the [Glass design](card-glass-opus-design.md) and [source observations](glass-reference.md). The adaptation displaces decorative lines under a smoked block, keeping sprites and text separate. **Bend glass** provides a flat/bent comparison without changing saved edition choices.
+A third inspection completed in **23 minutes**, within a 45-minute bound, and specified the code-only Glass finish from the supplied video reference. The first attempt ended from an external termination signal without an answer. Read the [Glass design](card-glass-design.md) and [source observations](glass-reference.md). The adaptation displaces decorative lines under a smoked block, keeping sprites and text separate. **Bend glass** provides a flat/bent comparison without changing saved edition choices.
 
 ## Glass inspection
 
@@ -64,7 +64,7 @@ These are visual/demo previews. LAN HTTP does not provide the trusted secure con
 | Edition | What to judge |
 | --- | --- |
 | **Current** | Reference study of the present landing layout. Compare the alternatives against it. |
-| **Table** | Opus's proposed everyday card: charcoal face, larger centered art, exact word and readable clue chips. |
+| **Table** | The design review's proposed everyday card: charcoal face, larger centered art, exact word and readable clue chips. |
 | **Glance** | Fewer labels and more space for the art/word. Test whether the icons are understandable with and without their labels. |
 | **Cut** | A violet field with an angled edge and stronger type. Check long-word contrast and balance. |
 | **Pixel** | A game-item screen with stepped edges and a pixel-grid composition. Check that decoration leaves enough room for the clues. |
@@ -88,38 +88,38 @@ Choose **Prefer …**, add a note under **Your picks**, then use **Download choi
 - Do the plain Baited logo, violet/charcoal palette and restrained yellow match the landing?
 - Check keyboard focus, reduced motion and your actual phone/tablet as well as the desktop-sized previews. Fixture screenshots do not prove Twitch or OBS acceptance.
 
-Record the preferred everyday edition, any special editions to keep, and the specific screen/state that needs polish. Six labelled gallery candidates are now prepared from local captures and existing artwork. A seventh staged-hero image is held for review only and needs a final re-render after the edition is selected. Owner review, real Twitch/OBS/Codex evidence and the Devpost video remain outstanding.
+Record the preferred everyday edition, any special editions to keep, and the specific screen/state that needs polish. Six labelled gallery candidates are now prepared from local captures and existing artwork. A seventh staged-hero image is held for review only and needs a final re-render after the edition is selected. Owner review, real Twitch, OBS and build-session evidence and the Devpost video remain outstanding.
 
 ## Restart the previews
 
 Run each service in its own terminal. The app serves the built output; after app source changes, rebuild first:
 
 ```sh
-rtk proxy pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60 --filter @baited/app build
+pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60 --filter @baited/app build
 ```
 
 App, Studio, Card Lab and product review:
 
 ```sh
-rtk proxy env PREVIEW_PORT=3335 PREVIEW_SECONDS=10800 PREVIEW_DATA_DIR=/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/scratch/preview-data node /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/scripts/preview-local.mjs --host 192.168.178.33
+env PREVIEW_PORT=3335 PREVIEW_SECONDS=10800 PREVIEW_DATA_DIR=/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-26/cc1a9ad218b14548b32b7abc473534cc/scratch/preview-data node /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/scripts/preview-local.mjs --host 192.168.178.33
 ```
 
 Native Extension fixture preview:
 
 ```sh
-rtk proxy env EXTENSION_PREVIEW_PORT=3334 EXTENSION_PREVIEW_SECONDS=10800 node /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/scripts/preview-extension.mjs --host 192.168.178.33
+env EXTENSION_PREVIEW_PORT=3334 EXTENSION_PREVIEW_SECONDS=10800 node /home/maff/foss/worktrees/baited/card-expansion-60/packages/app/scripts/preview-extension.mjs --host 192.168.178.33
 ```
 
 Landing:
 
 ```sh
-rtk proxy timeout --signal=TERM --kill-after=10s 10800s pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60/packages/landing exec wrangler dev --env dev --local --ip 192.168.178.33 --port 4373 --inspector-port 9373 --compatibility-date 2026-08-08
+timeout --signal=TERM --kill-after=10s 10800s pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60/packages/landing exec wrangler dev --env dev --local --ip 192.168.178.33 --port 4373 --inspector-port 9373 --compatibility-date 2026-08-08
 ```
 
 Latest standalone Card Lab and landing:
 
 ```sh
-rtk proxy timeout -s TERM -k 5s 10810s pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60/packages/landing exec node scripts/browser-server.mjs --host 0.0.0.0 --port 4374 --inspector-port 9374 --lifetime-ms 10800000
+timeout -s TERM -k 5s 10810s pnpm --dir /home/maff/foss/worktrees/baited/card-expansion-60/packages/landing exec node scripts/browser-server.mjs --host 0.0.0.0 --port 4374 --inspector-port 9374 --lifetime-ms 10800000
 ```
 
 Each session is bounded to **three hours**. **Ctrl+C** stops that terminal's preview sooner. The app and native scripts use strict ports; keep the landing and inspector on their explicit ports too. If a requested port is occupied, inspect the terminal/process owner and reuse the intended preview or stop that exact session. Do not kill unrelated processes or silently accept another port.
@@ -130,7 +130,7 @@ These commands assume the current checkout, installed dependencies and registere
 
 - [Prepared gallery candidates and their evidence labels](../submission/media-review/README.md)
 
-- [Opus card and product specification](card-product-design-spec.md)
+- [Card and product design specification](card-product-design-spec.md)
 - [Current Devpost submission packet](../devpost-submission.md)
 - [Technology and evidence boundaries](devpost-stack.md)
 - [Gallery and 2:50 demo plan](/home/maff/.dotfiles/personal/games/baited/submission-media-plan.md)

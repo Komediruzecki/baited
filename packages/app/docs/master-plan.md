@@ -51,7 +51,7 @@ Rewritten 28 October 2026 after PR #8 (stream layer) and PR #12 (its follow-ups)
 | --- | --- | --- |
 | 1 | **Extension and Baity test** (next session) | Rebuild the hosted image from `main`, upload Extension 0.0.3 (`--version 0.0.3`, `overlay.html` as the video overlay view), then on a test channel: Baity posts with the Chat Bot badge, every `!bait` command answers, a moderator delete and a timeout remove hints, the overlay shows the card, the pick and the MVPs. |
 | 2 | Finish the HOSTED_TEST checklist | Every open item above ticked, with screenshots and an OBS recording saved through `agent-out`. |
-| 3 | Make Baity a VIP, or exempt it from caps filters | Nightbot, Fossabot and Streamlabs Cloudbot leave its loud lines alone on the test channel. |
+| 3 | Make Baity a VIP, or exempt it from caps filters | Other chat bots' caps filters leave its loud lines alone on the test channel. |
 | 4 | Devpost entry | Video, description, repository access and judge instructions reviewed by both of us and submitted before the deadline. |
 | 5 | Extension review submission | Listing, privacy and terms URLs, images, walkthrough and reviewer availability. Twitch estimates 8 to 14 days. |
 | 6 | Spoiler-check tuning | The open gaps from the 27 October audit covered by tests, without new false positives on ordinary hints. |
@@ -79,7 +79,7 @@ Earlier creative proposals (Six-word showdown, themed decks, reveal sequence, Ba
 
 ## Devpost
 
-The rules allow Twitch chat, overlay and API integrations; native Extension approval is not required. Two eligible individuals can enter as a team with one representative. Prepare a public YouTube demo under three minutes showing working Twitch play and Codex use, the main Codex session ID, source, assets and run instructions, and the English description. Private GitHub is allowed with the judge access the [official rules](https://twitchcon-codex.devpost.com/rules) name; inviting judges is an owner decision.
+The rules allow Twitch chat, overlay and API integrations; native Extension approval is not required. Two eligible individuals can enter as a team with one representative. Prepare a public YouTube demo under three minutes showing working Twitch play and how the coding agent was used, the main build-session ID, source, assets and run instructions, and the English description. Private GitHub is allowed with the judge access the official rules name; inviting judges is an owner decision.
 
 Working documents: [submission draft](submission.md), [team checklist](team-and-release-checklist.md), [demo script](demo-script.md), [judge walkthrough](judge-walkthrough.md), [game-hosting runbook](deployment-runbook.md).
 

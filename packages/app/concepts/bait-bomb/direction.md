@@ -6,7 +6,7 @@ The old two-column promotional hero and repeated feature cards are rejected. The
 
 Grounded candidates, ordered before assignment: chat raid graphics; comic censorship strips; television game-title sequences; bait-and-hook graphic staging; collectible card packaging; arcade attract screens; street-poster interventions. These span screen notation, print, physical objects and broadcast motion.
 
-Impeccable direction seed e3785e96 assigned candidate 4. The resulting Hook Line direction uses the supplied hooked bomb to catch a spoken target. It does not introduce fishing scenery. Challengers: the festival sheet has strong hierarchy but its no-image rule conflicts with the supplied bomb; layered papercut offers useful overlap but weakens the pixel identity; a drawn zine explains well but is less aligned with the supplied mark. None replaces the chosen world.
+A random direction seed (e3785e96) assigned candidate 4. The resulting Hook Line direction uses the supplied hooked bomb to catch a spoken target. It does not introduce fishing scenery. Challengers: the festival sheet has strong hierarchy but its no-image rule conflicts with the supplied bomb; layered papercut offers useful overlap but weakens the pixel identity; a drawn zine explains well but is less aligned with the supplied mark. None replaces the chosen world.
 
 Three composition probes hold that world fixed: a full-page hook line through conversation; a dealt hand framing the bomb; a censor strip that opens on the caught word. Choose the clearest dramatic demonstration using the taste skill, then make a separate coded local study. These are review artifacts, not deployment approval.
 
@@ -14,8 +14,8 @@ Three composition probes hold that world fixed: a full-page hook line through co
 
 - https://design.maff.app/library/cartridge-shelf/: desktop page and a cartridge selection inspected. Subject-specific objects organize the entire page. The initial selection capture did not establish the completed playback state.
 - https://design.maff.app/library/holo-cases/: desktop live view and next-case button tested. Object rotation, caption and state change together. Borrow physical card selection, omit the file-library chrome and pastel environment.
-- https://mobbin.com/sites/sections/47c5f830-b25e-4912-8484-47377cd8a238: Shopify Editions supplied screenshot inspected. One dominant object and a direct play invitation establish focus. This is still-image evidence, not verified motion.
-- Mobbin's Deel and ExpressVPN results were visually inspected and rejected as composition references: their conventional marketing structure repeats the problem in the current BAIT page.
+- A supplied screenshot of a product-launch page from a design-reference library was inspected. One dominant object and a direct play invitation establish focus. This is still-image evidence, not verified motion.
+- Two other marketing pages from the same library were visually inspected and rejected as composition references: their conventional marketing structure repeats the problem in the current BAIT page.
 
 ## Motion and acceptance
 

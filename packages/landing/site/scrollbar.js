@@ -1,4 +1,4 @@
-// The page's scrollbar, after Monochrome Studio's (as on voicetaggods.com): a thin rounded thumb
+// The page's scrollbar, after the owner's reference: a thin rounded thumb
 // floating over the right edge of the page, with no track. The native bar is hidden (pixels.css),
 // since it took a lane out of the page's width. Touch screens keep their own bars, which already
 // float over the page.

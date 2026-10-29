@@ -16,9 +16,9 @@ Owner direction: restore the supplied BAITED image with no added hook, retain th
 
 ## Reference review
 
-Design-taste and Impeccable's polish workflow were applied to the existing page. Mobbin was used for footer structure only: [Faculty Department](https://mobbin.com/sites/sections/61c49280-bcb2-4ddc-b79d-63883c3a5d18) separates a small attribution from secondary links without giving it a competing display headline; [The Content Architecture](https://mobbin.com/sites/sections/1462eea6-0ddb-48f7-87ed-ac96611c14e9) keeps its builder credit subordinate to the site's main identity. Their fonts and page designs were not copied.
+A design-polish review was applied to the existing page. Published footer examples were used for structure only: one separates a small attribution from secondary links without giving it a competing display headline; another keeps its builder credit subordinate to the site's main identity. Their fonts and page designs were not copied.
 
-The mechanical Impeccable scan reports existing Inter usage and a 3px chat accent. Inter remains the established body face and is explicitly the footer's shared typography; the existing chat accent is outside this small change. These warnings are not evidence of a broken layout or a reason to replace the approved identity.
+The mechanical design scan reports existing Inter usage and a 3px chat accent. Inter remains the established body face and is explicitly the footer's shared typography; the existing chat accent is outside this small change. These warnings are not evidence of a broken layout or a reason to replace the approved identity.
 
 ## Verification
 

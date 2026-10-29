@@ -39,7 +39,7 @@ The approved original wordmark and upload-ready logo, icon and discovery exports
 
 The built-in game deck has 100 targets: 35 easy, 34 medium and 31 hard. The public landing shows ten fixed example cards; its build includes only those card records and artwork. [The deck notes](packages/app/docs/deck-100.md) cover the latest 22 targets and verification. [Card artwork and provenance](packages/app/public/cards/proofs/README.md) records each illustration batch. Artwork is separate from titles, clue restrictions and example questions. Run `node packages/app/scripts/sync-card-art.mjs --check` to verify the unchanged source image copies used by the app, native Extension and landing. Updating the landing does not update an installed Twitch Extension; that requires a rebuilt ZIP and a new Hosted Test upload.
 
-The development-only [Card Lab](https://dev.baited.maff.app/card-lab/) compares card editions, materials, backs and gameplay states at panel, phone and Studio sizes. It uses synthetic rounds, and review choices stay in that browser without changing the game. The route and its assets are excluded from production. See [the design and test record](packages/app/docs/card-product-review.md) for local previews, Opus's direction and the checks completed so far.
+The development-only [Card Lab](https://dev.baited.maff.app/card-lab/) compares card editions, materials, backs and gameplay states at panel, phone and Studio sizes. It uses synthetic rounds, and review choices stay in that browser without changing the game. The route and its assets are excluded from production. See [the design and test record](packages/app/docs/card-product-review.md) for local previews, the design direction and the checks completed so far.
 
 ## Deployment and access
 

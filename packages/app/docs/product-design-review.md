@@ -1,12 +1,12 @@
 # baited product design review
 
-This work applies Opus's critique to the streamer studio, native Twitch viewer/configuration, standalone viewer and OBS source. The approved landing and B logo remain the visual authority. The game stays private; this pass does not deploy, upload the Extension, open a PR or tag production.
+This work applies a design critique to the streamer studio, native Twitch viewer/configuration, standalone viewer and OBS source. The approved landing and B logo remain the visual authority. The game stays private; this pass does not deploy, upload the Extension, open a PR or tag production.
 
 ## Current status: 2026-10-26
 
-A fresh inspect-only review completed on 26 October using the verified `irch` account and `claude-opus-5-5`, with explicit Max effort and a 45-minute deadline. The review ran for 21 minutes 37 seconds. The receipt verifies the account before and after; Max was requested through the CLI, not independently observable as an effective server setting. Opus inspected the pre-fix implementation, landing references and curated browser evidence. Codex implemented its recommendations and checked the resulting screens. This is not final approval by Opus or the owner.
+A fresh inspect-only design review completed on 26 October, within a 45-minute deadline. The review ran for 21 minutes 37 seconds. It inspected the pre-fix implementation, landing references and curated browser evidence. Its recommendations were then implemented and the resulting screens checked. This is not final approval by the owner.
 
-Review and evidence: `/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-26/60dfe3fa2d544eb794006883802da269`. The complete critique is `deliverables/opus-product-review.md`; the receipt is `scratch/opus-inspect-root/receipt.json`. Post-fix source assessment and the one final Impeccable detector pass are in `evidence/browser-after/`.
+Review and evidence: `/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-26/60dfe3fa2d544eb794006883802da269`. The complete critique is in that run's `deliverables/` folder and its receipt under `scratch/`. Post-fix source assessment and the one final design-detector pass are in `evidence/browser-after/`.
 
 Implemented:
 
@@ -19,7 +19,7 @@ Implemented:
 
 The final local suite passes 191 tests. Type checking and production build pass. Browser checks include actual local demo start/pause/resume and a simulated speech-final catch, same-card confirmation, idle recovery, 320/390 px decisions, native width/word fitting, broadcaster redaction, configuration and reduced motion. OBS fixtures cover pending privacy, artwork and generic results, and mission expiry. Frozen visual fixtures prove appearance only, not timing. The complete validation ledger distinguishes these from real microphone and broadcast acceptance.
 
-An unuploaded v0.0.1 ZIP with 32 frontend files is in `deliverables/baited-v0.0.1-opus-polish.zip` under the evidence run. It targets the existing local HTTPS rehearsal (`https://localhost:3443`, studio `http://localhost:3000`), using only its existing public client configuration. SHA-256: `7a00f8d6dae19300aad954255d4539e218d4288a725aac74604613adcce10d53`. It excludes fixture helpers, backend code, secrets and Moonshine models.
+An unuploaded v0.0.1 polish ZIP with 32 frontend files is in the evidence run's `deliverables/` folder. It targets the existing local HTTPS rehearsal (`https://localhost:3443`, studio `http://localhost:3000`), using only its existing public client configuration. SHA-256: `7a00f8d6dae19300aad954255d4539e218d4288a725aac74604613adcce10d53`. It excludes fixture helpers, backend code, secrets and Moonshine models.
 
 Real Twitch installation, physical microphone recognition, OBS compositing, remote Paolo participation and physical phone acceptance remain separate checks. The safe visual previews are `http://127.0.0.1:3330` and `http://127.0.0.1:3322`; they do not replace the authenticated rehearsal.
 
@@ -35,11 +35,11 @@ Each screen has a different job:
 - Standalone viewer room: the same secret-card loop with community context and existing game controls.
 - OBS: a transparent, compact broadcast graphic with time and round status. No active secret, transcript or automatic audio.
 
-## Opus handoff
+## Design-review handoff
 
-Use the ask-claude inspect profile, verified `irch` subscription account, explicit `claude-opus-5-5` and Max effort, with a 45-minute deadline. Read source and screenshots; a text-only critique is insufficient. Claude remains read-only. Do not change account or model silently if quota remains unavailable.
+Run the review as a read-only inspection with a 45-minute deadline. Read source and screenshots; a text-only critique is insufficient. The reviewer remains read-only. Do not change the reviewer silently if it is unavailable.
 
-Include the shared product-voice skill, Impeccable Operate/craft guidance, and `/home/maff/.claude/skills/deciding-by-evidence-and-taste/SKILL.md` with its applicable taste profile. The current user brief and this project's approved landing outrank cross-project taste examples. Keep any verdict in this project or the output run, not in global memory files.
+Include the shared product-voice guidance, the Operate/craft design guidance, and the owner's evidence-and-taste decision guide with its applicable taste profile. The current user brief and this project's approved landing outrank cross-project taste examples. Keep any verdict in this project or the output run, not in global memory files.
 
 Evidence directory: `/run/media/maff/Game_Shared/agent-out-live/twigame/2026-10-25/921bde0ea7304d94b47d938f73a4cb66/evidence`. Read the verification receipt first, then the before/after Studio images, setup, native viewer/config, standalone viewer and OBS images. Inspect actual screenshots at desktop and phone sizes, including long-word and failure states.
 

@@ -45,14 +45,14 @@ Register `${PUBLIC_URL}/auth/twitch/callback` exactly in the Twitch Developer Co
 2. Install the frozen lockfile and build on the selected host or approved build environment. These commands do not deploy anything by themselves:
 
    ```sh
-   rtk pnpm install --frozen-lockfile
-   rtk pnpm build
+   pnpm install --frozen-lockfile
+   pnpm build
    ```
 
 3. Configure the persistent disk and a private reference-only production template. The process-launch form is below; replace the explicit placeholder paths first. This is a runbook command, not a process started during preparation:
 
    ```sh
-   rtk proxy pass-cli run --env-file /ABSOLUTE/PRIVATE/bait.production.env.tmpl -- pnpm --dir /ABSOLUTE/BAIT/CHECKOUT start
+   pass-cli run --env-file /ABSOLUTE/PRIVATE/bait.production.env.tmpl -- pnpm --dir /ABSOLUTE/BAIT/CHECKOUT start
    ```
 
 4. Configure the selected host's process manager to preserve those environment values and stop cleanly. Do not enable restart services, timers or public exposure until that deployment is approved.
@@ -71,4 +71,4 @@ Retain the prior verified build and a protected backup of the state directory us
 
 The private [source repository](https://github.com/Komediruzecki/bait) exists. Verify the final pushed revision and arrange the official private-repository judge access. The final packet still needs a tested HTTPS URL, Twitch channel, available operator and playable YouTube video. Provide hosting and speech usage free to judges. A simulated local demo is useful for evaluating the rules but is not proof of Twitch integration.
 
-Plan to freeze the reviewable packet on 1 November and complete the owner's final entry before **2 November 2026, 23:00 Zagreb**. Formal rules and the displayed schedule conflict on judging dates; retain the submitted version and free access through **16 November, 02:00 Zagreb**, the later formal endpoint. See the [official rules](https://twitchcon-codex.devpost.com/rules) and [schedule](https://twitchcon-codex.devpost.com/details/dates). No registration or terms agreement is established by this runbook.
+Plan to freeze the reviewable packet on 1 November and complete the owner's final entry before **2 November 2026, 23:00 Zagreb**. Formal rules and the displayed schedule conflict on judging dates; retain the submitted version and free access through **16 November, 02:00 Zagreb**, the later formal endpoint. See the event's official rules and schedule on Devpost. No registration or terms agreement is established by this runbook.

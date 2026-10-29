@@ -5,7 +5,7 @@ Use the application package at `/home/maff/foss/worktrees/baited/unified-workspa
 Build from any directory after source or asset changes:
 
 ```sh
-rtk proxy pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app build
+pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app build
 ```
 
 ## Streamer Studio and standalone room
@@ -13,7 +13,7 @@ rtk proxy pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages
 Start in its own terminal, after the previous instance has stopped:
 
 ```sh
-rtk proxy timeout --foreground 10810s env PREVIEW_PORT=3330 PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app preview:local
+timeout --foreground 10810s env PREVIEW_PORT=3330 PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app preview:local
 ```
 
 Open [the local app](http://127.0.0.1:3330/) and choose **Try the local demo** if prompted. Start, pause and resume a round. The viewer-room and OBS links are available in **Stream setup**. Both are scoped to this demo room. **Local speech test** beside the microphone contains the explicit demo word reveal and optional transcript display.
@@ -30,7 +30,7 @@ Additional review surfaces:
 Start in a second terminal:
 
 ```sh
-rtk proxy timeout --foreground 10810s env EXTENSION_PREVIEW_PORT=3322 EXTENSION_PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app preview:extension
+timeout --foreground 10810s env EXTENSION_PREVIEW_PORT=3322 EXTENSION_PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app preview:extension
 ```
 
 Open [the Extension workbench](http://127.0.0.1:3322/). Choose viewer/configuration, panel width and the fixture state. This serves the actual Extension HTML, CSS, JavaScript and artwork, with a local fixture replacing Twitch authorization and game responses. It does not sign into Twitch, capture a microphone or change the real channel. The fixture Helper and workbench are excluded from the installable ZIP.
@@ -44,11 +44,11 @@ Both commands bind to `127.0.0.1` by default, use a strict port and stop after t
 For design review from another device on the same network, explicitly bind the computer's private IPv4 address. Its current Ethernet address is `192.168.178.33`; update it if the network assigns a different address. Stop the corresponding localhost previews first, then run each command in its own terminal:
 
 ```sh
-rtk proxy timeout --foreground 10810s env PREVIEW_PORT=3330 PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app preview:local --host 192.168.178.33
+timeout --foreground 10810s env PREVIEW_PORT=3330 PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app preview:local --host 192.168.178.33
 ```
 
 ```sh
-rtk proxy timeout --foreground 10810s env EXTENSION_PREVIEW_PORT=3322 EXTENSION_PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app preview:extension --host 192.168.178.33
+timeout --foreground 10810s env EXTENSION_PREVIEW_PORT=3322 EXTENSION_PREVIEW_SECONDS=10800 pnpm --dir /home/maff/foss/worktrees/baited/unified-workspace/packages/app preview:extension --host 192.168.178.33
 ```
 
 Open [Studio](http://192.168.178.33:3330/) or [the Extension workbench](http://192.168.178.33:3322/) on the tablet. Studio uses a separate demo store at `data/lan-preview`; choose **Try the local demo** to enter. The LAN option requires a credential-free development configuration and pins requests to the selected host and origin. The Extension workbench adapts its fixture runtime only; the installable Twitch bundle is unchanged.

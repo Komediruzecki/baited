@@ -22,7 +22,7 @@ test('the facecam alternates talking and resting, so its loop repeats cleanly', 
   assert.ok(TALK_BEATS.every((beat) => beat > 0 && beat < 1))
 })
 
-test('the chat never types the secret word, and the one off-limits clue it types gets called out', async () => {
+test("the chat is the trailer's: it steers toward the word and never types it", async () => {
   const html = await readFile(new URL('../site/index.html', import.meta.url), 'utf8')
   const feed = html.match(/<ol class="why-chat__feed">([\s\S]*?)<\/ol>/)[1]
   const lines = [...feed.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((match) =>
@@ -32,8 +32,8 @@ test('the chat never types the secret word, and the one off-limits clue it types
       .trim()
   )
   assert.ok(lines.length >= 12)
-  assert.equal(lines.filter((line) => /volcano|eruption/i.test(line)).length, 0)
-  const slips = lines.flatMap((line, index) => (/\blava\b/i.test(line) ? [index] : []))
-  assert.equal(slips.length, 1)
-  assert.match(lines[slips[0] + 1], /off limits/)
+  assert.equal(lines.filter((line) => /birthday/i.test(line)).length, 0)
+  for (const hint of ['happy special day king', 'make a wish', 'cake']) {
+    assert.ok(lines.some((line) => line.includes(hint)), `chat hints "${hint}"`)
+  }
 })

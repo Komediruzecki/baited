@@ -212,10 +212,10 @@
               <span class="small-square"></span>Example round <span class="tab-dot">·</span><span>Twitch Extension concept</span>
             </div>
             <div
-              class="film-frame"
+              class="film-frame is-muted"
               id="film-frame"
               tabindex="0"
-              aria-label="Example round film. Click, Space or K to play or pause. Arrow keys skip between moments."
+              aria-label="The baited trailer. Click, Space or M to turn the sound on or off. Arrow keys skip between moments."
             >
               <video
                 id="hero-film"
@@ -227,22 +227,20 @@
                 poster="/media/poster-desktop.avif"
                 data-src="/media/hero-desktop.mp4"
                 data-webm="/media/hero-desktop.webm"
-                data-webm-type='video/webm; codecs="av01.0.05M.08,opus"'
-                aria-label="The Spicy Mountain. A staged baited round with fictional streamer mossbyte."
+                data-webm-type='video/webm; codecs="av01.0.08M.08,opus"'
+                aria-label="The baited trailer: a staged round with fictional streamer bateoh, whose chat gets the word BIRTHDAY."
               >
                 <source src="/media/hero-desktop.mp4" type="video/mp4" />
                 <track kind="captions" src="/media/captions.vtt" srclang="en" label="English" />
-                Your browser cannot play this film. Read the round below.
+                Your browser cannot play this film.
               </video>
-              <button class="film-big-play" id="film-big-play" type="button" aria-label="Play the example" hidden>
+              <button class="film-big-play" id="film-big-play" type="button" aria-label="Play the trailer" hidden>
                 <svg class="icon" aria-hidden="true"><use href="#i-play" /></svg>
               </button>
               <div class="film-hud">
-                <button id="film-toggle" type="button" aria-label="Pause the example" aria-controls="hero-film">
-                  <svg class="icon" aria-hidden="true"><use id="film-toggle-icon" href="#i-pause" /></svg>
-                </button>
-                <button id="film-sound" type="button" aria-label="Turn sound on" aria-pressed="false" aria-controls="hero-film">
-                  <svg class="icon" aria-hidden="true"><use id="film-sound-icon" href="#i-muted" /></svg>
+                <button class="film-sound" id="film-sound" type="button" aria-label="Turn sound on" aria-pressed="false" aria-controls="hero-film">
+                  <svg class="icon" aria-hidden="true"><use id="film-sound-icon" href="#i-muted" /></svg
+                  ><span class="film-sound__label" aria-hidden="true">Sound on</span>
                 </button>
               </div>
             </div>
@@ -285,25 +283,25 @@
                         <div class="why-deal__back"><img src="/assets/brand/baited-pixel-white.svg" alt="" width="370" height="100" loading="lazy" decoding="async" /></div>
                         <div class="bait-card why-deal__face">
                           <span class="card-top"
-                            ><span>01<small>/ 18</small></span
-                            ><span class="card-pips"><i class="is-filled"></i><i class="is-filled"></i><i></i></span
+                            ><span>Round 3</span
+                            ><span class="card-pips"><i class="is-filled"></i><i></i><i></i></span
                           ></span>
                           <span class="card-art"
                             ><img
-                              src="/cards/proofs/volcano.png"
+                              src="/assets/why/birthday.webp"
                               alt=""
-                              width="1254"
-                              height="1254"
+                              width="640"
+                              height="640"
                               loading="lazy"
                               decoding="async"
                               draggable="false"
                           /></span>
-                          <span class="card-word card-word--volcano">VOLCANO</span>
+                          <span class="card-word card-word--birthday">BIRTHDAY</span>
                           <span class="card-forbidden"
                             ><span class="card-forbidden__label">Keep out of chat</span
-                            ><span class="card-clues"><span>LAVA</span><span>ERUPTION</span></span></span
+                            ><span class="card-clues"><span class="no-clues">Only the word itself</span></span></span
                           >
-                          <span class="card-question">Where would you definitely not build a house?</span>
+                          <span class="card-question">When do people suddenly remember to call you?</span>
                           <span class="card-footer"
                             ><img
                               src="/assets/brand/baited-pixel-white.svg"
@@ -334,12 +332,12 @@
                       <p class="why-chat__head"><span>Stream chat</span><small>made-up names</small></p>
                       <div class="why-chat__lines">
                         <ol class="why-chat__feed">
-                          <li><b class="u-owl">owlbear_ok</b>: that hut is crooked</li>
-                          <li><b class="u-snacks">sir_snacks</b>: gm moss</li>
-                          <li><b class="u-fern">fernbrake</b>: build your hut RIGHT next to it, best view</li>
-                          <li><b class="u-owl">owlbear_ok</b>: is it supposed to smoke like that</li>
+                          <li><b class="u-jen">jiggin_jen</b>: oh this one is EASY</li>
+                          <li><b class="u-tackle">tacklebox9</b>: act natural chat</li>
+                          <li><b class="u-frost">frostedfin</b>: shhh</li>
+                          <li><b class="u-lowkey">lowkeylinus</b>: LOCKED IN</li>
                           <li>
-                            <b class="u-snacks">sir_snacks</b>:
+                            <b class="u-pond">pondlurker</b>:
                             <img
                               class="why-chat__emote"
                               src="/assets/brand/baited-pixel-white.svg"
@@ -350,14 +348,14 @@
                               decoding="async"
                             />
                           </li>
-                          <li><b class="u-crumb">crumbqueen</b>: moss what's that big thing behind your house</li>
-                          <li><b class="u-kettle">kettle_kid</b>: totally normal mountain</li>
-                          <li><b class="u-night">nightbus</b>: name the mountain, coward</li>
-                          <li><b class="u-dog">deadlinedog</b>: the LAVA view tho</li>
-                          <li><b class="u-kettle">kettle_kid</b>: dog that word is off limits</li>
-                          <li><b class="u-owl">owlbear_ok</b>: SPICY MOUNTAIN</li>
+                          <li><b class="u-reaper">Reaper</b>: happy special day king</li>
+                          <li><b class="u-tackle">tacklebox9</b>: happy special day!!</li>
+                          <li><b class="u-frost">frostedfin</b>: he doesnt know lmao</li>
+                          <li><b class="u-mud">mudpuppy</b>: make a wish bateoh</li>
+                          <li><b class="u-bass">big_bass_bri</b>: make a wish</li>
+                          <li><b class="u-crumb">crumbsnatcher</b>: cake</li>
                           <li>
-                            <b class="u-snacks">sir_snacks</b>:
+                            <b class="u-jen">jiggin_jen</b>:
                             <img
                               class="why-chat__emote"
                               src="/assets/brand/baited-pixel-white.svg"
@@ -386,8 +384,8 @@
                               decoding="async"
                             />
                           </li>
-                          <li><b class="u-crumb">crumbqueen</b>: why is the ground warm</li>
-                          <li><b class="u-fern">fernbrake</b>: moss look behind you</li>
+                          <li><b class="u-sprinkle">sprinkle_ops</b>: mmm cake</li>
+                          <li><b class="u-pond">pondlurker</b>: cake?</li>
                         </ol>
                       </div>
                       <p class="why-chat__input"><span>Send a message</span><b>Chat</b></p>
@@ -406,20 +404,11 @@
                     <div class="why-stream__window">
                       <div class="why-stream__game">
                         <img
-                          class="why-stream__isle"
-                          src="/assets/why/little-isle.webp"
+                          class="why-stream__lake"
+                          src="/assets/why/lake.webp"
                           alt=""
                           width="880"
                           height="495"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                        <img
-                          class="why-stream__smoke"
-                          src="/assets/why/smoke.webp"
-                          alt=""
-                          width="128"
-                          height="128"
                           loading="lazy"
                           decoding="async"
                         />
@@ -427,23 +416,23 @@
                         <span class="why-stream__cam">
                           <img
                             class="why-stream__pose is-rest"
-                            src="/assets/why/moss-smug.webp"
+                            src="/assets/why/bateoh-rest.webp"
                             alt=""
-                            width="208"
-                            height="208"
+                            width="256"
+                            height="256"
                             loading="lazy"
                             decoding="async"
                           />
                           <img
                             class="why-stream__pose is-talk"
-                            src="/assets/why/moss-talk.webp"
+                            src="/assets/why/bateoh-talk.webp"
                             alt=""
-                            width="208"
-                            height="208"
+                            width="256"
+                            height="256"
                             loading="lazy"
                             decoding="async"
                           />
-                          <span>mossbyte</span>
+                          <span>bateoh</span>
                         </span>
                       </div>
                       <div class="why-stream__studio">
@@ -475,13 +464,12 @@
                         <span>Heard on stream</span>
                         <span class="why-catch__level"><i></i><i></i><i></i><i></i><i></i></span>
                       </p>
-                      <p class="why-catch__before">Nope. I'm not naming the spicy mountain.</p>
                       <p class="why-catch__quote">
-                        The <span class="why-catch__word">volcano<span class="why-catch__tag">Detected</span></span> is going off!
+                        It ain't even my <span class="why-catch__word">birthday<span class="why-catch__tag">Detected</span></span>!
                       </p>
                       <p class="why-catch__result"><span>Round stopped</span><b>Chat wins +1</b></p>
                       <span class="why-catch__cam"
-                        ><img src="/assets/why/moss-shout.webp" alt="" width="208" height="208" loading="lazy" decoding="async"
+                        ><img src="/assets/why/bateoh-shock.webp" alt="" width="256" height="256" loading="lazy" decoding="async"
                       /></span>
                     </div>
                   </div>
@@ -553,7 +541,7 @@
           <span class="footer-title__line"
             ><span
               ><span class="footer-avatar"
-                ><img src="/assets/why/moss-shout.webp" alt="" width="208" height="208" loading="lazy" decoding="async" /></span
+                ><img src="/assets/why/bateoh-avatar.webp" alt="" width="320" height="320" loading="lazy" decoding="async" /></span
               >Ready to take</span
             ></span
           >
@@ -596,7 +584,7 @@
           ><span class="px-btn__box" aria-hidden="true"
             ><svg class="px-icon px-icon--up" viewBox="0 0 7 9" aria-hidden="true" focusable="false">
               <path d="M3 2h1v7H3zM3 0h1v1H3zM2 1h1v1H2zM4 1h1v1H4zM1 2h1v1H1zM5 2h1v1H5zM0 3h1v1H0zM6 3h1v1H6z" /></svg></span
-          ><span class="px-btn__label">Watch the round</span></a
+          ><span class="px-btn__label">Watch the trailer</span></a
         >
       </div>
       <div class="footer-mark" aria-hidden="true">
@@ -622,7 +610,6 @@
       <symbol id="i-play" viewBox="0 0 10 10">
         <path d="M1 1h2v1H1zM1 2h4v1H1zM1 3h6v1H1zM1 4h8v2H1zM1 6h6v1H1zM1 7h4v1H1zM1 8h2v1H1z" />
       </symbol>
-      <symbol id="i-pause" viewBox="0 0 10 10"><path d="M1 1h3v8H1zM6 1h3v8H6z" /></symbol>
       <symbol id="i-muted" viewBox="0 0 10 10">
         <path d="M4 1h1v1H4zM3 2h2v1H3zM0 3h5v4H0zM3 7h2v1H3zM4 8h1v1H4zM6 3h1v1H6zM9 3h1v1H9zM7 4h2v2H7zM6 6h1v1H6zM9 6h1v1H9z" />
       </symbol>

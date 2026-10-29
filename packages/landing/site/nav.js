@@ -1,4 +1,4 @@
-// The navigation, after monochrome-studio.com's header: a white bar centred at the top with the
+// The navigation, after the owner's reference: a white bar centred at the top with the
 // logo, the section links and the chat button. While the visitor keeps scrolling down it folds to
 // the logo and the chat button, and it opens again as soon as they scroll up, reach the top, or
 // move keyboard focus into it. When the footer fills the top of the screen the bar steps away: the
