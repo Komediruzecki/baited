@@ -596,7 +596,7 @@
   transform-origin: 0 50%;
 }
 
-/* 4. Round over: the speech check hears VOLCANO, boxes it and tags it as detected. */
+/* 4. Round over: the speech check hears BIRTHDAY, boxes it and tags it as detected. */
 .why-catch__window {
   display: flex;
   flex-direction: column;
@@ -615,12 +615,10 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.why-catch__heard .icon {
-  width: 15px;
-  height: 15px;
+/* The pixel microphone at a pixel and a half: about as tall as the level bars beside it. */
+.why-catch__heard .px-icon {
+  --px: 1.5px;
   color: var(--md-dark-primary);
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 .why-catch__level {
   display: inline-flex;
@@ -659,14 +657,9 @@
     scale: 1 1;
   }
 }
-.why-catch__before {
-  color: var(--md-dark-on-surface-variant);
-  font-size: clamp(0.74rem, 3.2cqi, 0.84rem);
-  line-height: 1.35;
-}
+/* The line of speech sits midway between the header and the result. */
 .why-catch__quote {
-  margin-top: -0.35em;
-  padding-top: 1em;
+  margin-block: auto;
   font:
     clamp(1.2rem, 7cqi, 1.8rem) / 1.25 Russo,
     Impact,
@@ -674,10 +667,14 @@
   letter-spacing: -0.005em;
   text-wrap: balance;
 }
+/* The box stands a little clear of the punctuation after the word. Its top margin keeps room for
+   the tag on whichever line the word lands, since an inline-block's margin grows its line box;
+   room above the whole quote let the tag cover the line before when the quote wrapped. */
 .why-catch__word {
   --draw: 1;
   position: relative;
   display: inline-block;
+  margin: 16px 0.14em 0 0;
   padding: 0 0.12em;
   color: var(--birthday);
   text-transform: uppercase;
@@ -707,10 +704,14 @@
   white-space: nowrap;
   transform-origin: 0 100%;
 }
+/* The result sits at the bottom left, beside the facecam, no wider than the room left of the cam
+   (31% of the window wide and 12px in, which leaves 8px between them), so on narrow cards its
+   chips stack. */
 .why-catch__result {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  max-width: calc(69% - 15px);
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.2;
@@ -755,9 +756,20 @@
   width: 100%;
   height: 100%;
 }
-/* On small phones there is no room beside the result, so the facecam steps aside. */
+/* On small phones there is no room beside the result, so the facecam steps aside and the result
+   takes the whole width. */
 @container why-scene (max-width: 330px) or (max-height: 240px) {
   .why-catch__cam {
+    display: none;
+  }
+  .why-catch__result {
+    max-width: none;
+  }
+}
+/* A phone on its side leaves the window too short for all three rows, so the header gives its room
+   to the line of speech. */
+@container why-scene (max-height: 155px) {
+  .why-catch__heard {
     display: none;
   }
 }
