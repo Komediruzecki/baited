@@ -28,6 +28,9 @@ importers:
       jose:
         specifier: ^6
         version: 6.2.13
+      lenis:
+        specifier: 1.3.23
+        version: 1.3.23(react@19.3.1)
       nsfwjs:
         specifier: 4.4.0
         version: 4.4.0(@tensorflow/tfjs@4.22.0(seedrandom@3.0.5))(buffer@6.0.3)
@@ -2129,6 +2132,20 @@ packages:
   kleur@4.1.5:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
     engines: {node: '>=6'}
+
+  lenis@1.3.23:
+    resolution: {integrity: sha512-YxYq3TJqj9sJNv0V9SkyQHejt14xwyIwgDaaMK89Uf9SxQfIszu+gTQSSphh6BWlLTNVKvvXAGkg+Zf+oFIevg==}
+    peerDependencies:
+      '@nuxt/kit': '>=3.0.0'
+      react: '>=17.0.0'
+      vue: '>=3.0.0'
+    peerDependenciesMeta:
+      '@nuxt/kit':
+        optional: true
+      react:
+        optional: true
+      vue:
+        optional: true
 
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
@@ -4704,6 +4721,10 @@ snapshots:
   json5@2.2.3: {}
 
   kleur@4.1.5: {}
+
+  lenis@1.3.23(react@19.3.1):
+    optionalDependencies:
+      react: 19.3.1
 
   lightningcss-android-arm64@1.32.0:
     optional: true

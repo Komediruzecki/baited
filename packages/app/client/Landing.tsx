@@ -5,8 +5,10 @@ import { productBrand, botNotices, BotSignInLink, Button, Modal } from './ui';
 import { ArrowUpRight, Mic, Play, ShieldCheck } from './pixel-icons';
 import { CardBack } from './CardBack';
 import { studioPathFromTab, studioSignInPath, studioTabFromPath } from './studio-navigation';
+import { useSmoothScroll } from './smooth-scroll';
 
 export default function Landing({ session, reload }: { session: SessionInfo; reload: () => void }) {
+  useSmoothScroll();
   const [setup, setSetup] = useState(false);
   const [busy, setBusy] = useState(false);
   const [code] = useState(() => new URLSearchParams(location.search).get('notice') ?? '');

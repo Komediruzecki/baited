@@ -10,6 +10,7 @@
 // scrubs everything with the scroll, bar the film's flight on a phone, which plays in its own time
 // once the page starts to scroll (FLIGHT_SECONDS). Reduced motion and pages without GSAP keep the
 // film in the hero.
+import { scrollPageTo, smoothScroll } from './smooth-scroll.js'
 
 export const FLIGHT_TILT = 14 // degrees the card leans in the hero
 export const FLIGHT_ROUND = 1 / 12 // its round corners, as a share of its width; its top right is square
@@ -145,6 +146,10 @@ export function initShowreel({ gsap, ScrollTrigger } = {}) {
   // reports 0, and then puts it back without reporting; so after each refresh the progress is set
   // to where the scroll is and handed over again. Without that the film stayed drawn at its hero
   // slot far above a landed showreel, and the sheets kept leaning, until the scroll crossed them.
+  // Where Lenis eases the wheel (smooth-scroll.js) the progress follows its scroll as it is
+  // (scrub: true): easing it a second time lagged behind the page. Without Lenis the progress eases
+  // itself, over half a second.
+  const scrub = smoothScroll ? true : 0.5
   const scrubbed = (scrollTrigger, apply) => {
     const state = { p: 0 }
     let tween = null
@@ -153,7 +158,7 @@ export function initShowreel({ gsap, ScrollTrigger } = {}) {
       apply(state.p)
       scrollTrigger.onRefresh?.(self)
     }
-    tween = gsap.to(state, { p: 1, ease: 'none', scrollTrigger: { scrub: 0.5, invalidateOnRefresh: true, ...scrollTrigger, onRefresh }, onUpdate: () => apply(state.p) })
+    tween = gsap.to(state, { p: 1, ease: 'none', scrollTrigger: { scrub, invalidateOnRefresh: true, ...scrollTrigger, onRefresh }, onUpdate: () => apply(state.p) })
     apply(0)
     tween.progress(tween.scrollTrigger.progress)
     return tween.scrollTrigger
@@ -300,7 +305,7 @@ export function initShowreel({ gsap, ScrollTrigger } = {}) {
   const watchFilm = () => {
     reel.classList.add('is-watching')
     document.dispatchEvent(new Event(WATCH_EVENT))
-    if (reel.getBoundingClientRect().top > 1) scrollTo({ top: stuckAt(), behavior: 'smooth' })
+    if (reel.getBoundingClientRect().top > 1) scrollPageTo(stuckAt())
     // The keys go to the film now (Space, K, arrows): the footer link it came from is far away.
     frame.focus({ preventScroll: true })
   }
@@ -322,8 +327,10 @@ export function initShowreel({ gsap, ScrollTrigger } = {}) {
         watchFilm()
       }
       if (Math.abs(scrollY - top) < 2) return arrive()
-      addEventListener('scrollend', arrive)
       setTimeout(arrive, 1800)
+      // Lenis says when it has got there; the browser's own smooth scroll ends in a scrollend.
+      if (smoothScroll) return scrollPageTo(top, { onComplete: arrive })
+      addEventListener('scrollend', arrive)
       scrollTo({ top, behavior: 'smooth' })
     })
   }

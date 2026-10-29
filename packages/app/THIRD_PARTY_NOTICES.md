@@ -160,6 +160,7 @@ Google Material Icons Outlined are bundled as SVG components under Apache 2.0. T
 | js-tokens | 4.0.0 | MIT |
 | jsesc | 3.1.0 | MIT |
 | json5 | 2.2.3 | MIT |
+| lenis | 1.3.23 | MIT |
 | lilconfig | 3.1.4 | MIT |
 | lines-and-columns | 1.2.4 | MIT |
 | load-tsconfig | 0.2.5 | MIT |

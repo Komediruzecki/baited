@@ -2,6 +2,7 @@
 // floating over the right edge of the page, with no track. The native bar is hidden (pixels.css),
 // since it took a lane out of the page's width. Touch screens keep their own bars, which already
 // float over the page.
+import { scrollPageTo } from './smooth-scroll.js'
 
 export const THUMB_MIN = 24 // px: the thumb never gets shorter than this
 
@@ -69,7 +70,9 @@ export function initPageScrollbar() {
       const range = metrics.content - metrics.view
       const travel = metrics.view - size
       if (range < 1 || travel < 1) return
-      window.scrollTo(0, Math.min(range, Math.max(0, drag.top + ((event.clientY - drag.y) * range) / travel)))
+      // At once, and through Lenis where it runs: it would otherwise ease the page back to where
+      // the wheel last sent it.
+      scrollPageTo(Math.min(range, Math.max(0, drag.top + ((event.clientY - drag.y) * range) / travel)), { smooth: false })
     })
     bar.addEventListener('pointerup', endDrag)
     bar.addEventListener('pointercancel', endDrag)

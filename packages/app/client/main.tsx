@@ -54,6 +54,8 @@ import { CutCard } from './CutCard';
 import { StreakBadge, StreakBadges, StreakCelebration, StreakCount, StreakRow } from './streak';
 import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease } from './safety';
+import { useSmoothScroll } from './smooth-scroll';
+import 'lenis/dist/lenis.css';
 import './style.css';
 import Landing from './Landing';
 import { studioPathFromTab, studioSignInPath, studioTabFromPath } from './studio-navigation';
@@ -163,6 +165,7 @@ function useLive<T>(url: string, onState: (s: T) => void, onError: (s: boolean) 
 type Capture = { microphone: Microphone; lease: MicrophoneLease };
 
 function Dashboard({ session, reload }: { session: SessionInfo; reload: () => void }) {
+  useSmoothScroll();
   const [studio, setStudio] = useState<Studio | null>(null),
     [offline, setOffline] = useState(false),
     [error, setError] = useState(''),
