@@ -1,8 +1,8 @@
-# Opus Glass design inspection
+# Glass design inspection
 
-27 October 2026. Opus 5.5 completed this read-only design consultation in **23 minutes**, with Max effort requested and a 45-minute deadline. The CLI reported Opus 5.5; effective effort remained unknown. An earlier attempt received an external termination signal before returning an answer. The second call used the same default login, model, effort request and deadline in a persistent terminal.
+27 October 2026. This read-only design consultation completed in **23 minutes**, within a 45-minute deadline. An earlier attempt received an external termination signal before returning an answer. The second attempt used the same settings and deadline in a persistent terminal.
 
-This is a proposed implementation plan, not browser evidence. Codex implements and checks it. The proposed scripted DOM mutations in the acceptance checklist are not used: an actual **Bend glass** control provides matched flat/bent views through the interface instead. No stock selection or live game card is changed. The proposal’s “tuned from screenshots” code comment was replaced with an explicit Opus attribution in the implementation; Opus did not run a browser. The tests exercise rendering behavior rather than mirroring CSS source text. Only Chromium is covered by the local browser inspection so far.
+This is a proposed implementation plan, not browser evidence. The implementation is built and checked separately. The proposed scripted DOM mutations in the acceptance checklist are not used: an actual **Bend glass** control provides matched flat/bent views through the interface instead. No stock selection or live game card is changed. The proposal’s “tuned from screenshots” code comment was not kept in the implementation, because the consultation did not run a browser. The tests exercise rendering behavior rather than mirroring CSS source text. Only Chromium is covered by the local browser inspection so far.
 
 Original answer SHA-256: `680d4b1ab8274d596f4a93b769e3eee0c6d771ab9403231a9b9501748849b004`.
 
@@ -14,11 +14,11 @@ Glass is a smoked glass block set around the item art. It bends a code-drawn cop
 - **Inside the block** they visibly bend.
 - **Never filtered:** the sprite, word, forbidden clues and clock aren't inside anything that gets filtered.
 
-It needs no image, no `backdrop-filter` and no motion. This was a read-only consultation and I didn't run a browser, so every visual result below needs Codex's screenshots.
+It needs no image, no `backdrop-filter` and no motion. This was a read-only consultation and I didn't run a browser, so every visual result below needs screenshots from the implementation.
 
 ## 1. Reference inspection
 
-Opus checked both contact sheets and eight selected full-resolution frames against the visual research. The source and observed values are recorded in [Glass reference](glass-reference.md). The video does not reveal its complete filter parameters or prove browser compatibility. The settings below are Opus's proposed adaptation.
+The consultation checked both contact sheets and eight selected full-resolution frames against the visual research. The source and observed values are recorded in [Glass reference](glass-reference.md). The video does not reveal its complete filter parameters or prove browser compatibility. The settings below are the proposed adaptation.
 
 ## 2. The Glass design
 
@@ -180,7 +180,7 @@ export function GlassLens({ size }: { size: GlassSize }) {
 
 ## 4. Acceptance, failure cases and the optional prompt
 
-**Acceptance checks for Codex**
+**Acceptance checks for the implementation**
 1. **The bend renders (in Chromium, Firefox and WebKit):**
    - Hide sprites by setting their style from script; don't inject a `<style>` tag, which the Content Security Policy blocks.
    - Screenshot `.cl-glass` with and without the `<g filter>` attribute. The two images must differ.
@@ -242,5 +242,5 @@ Strictly no text, letters, numbers, signatures, watermarks, logos, symbols, icon
 
 **Not checked:**
 - No browser was run.
-- Impeccable's `context.mjs` wasn't run because this was read-only.
+- The design-context script (`context.mjs`) wasn't run because this was read-only.
 - 19 of the 26 selected frames were seen only on the contact sheets plus `visual-review.md`.

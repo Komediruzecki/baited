@@ -2,7 +2,7 @@ import React, { useId } from 'react';
 
 export type GlassSize = 'xs' | 's' | 'l';
 
-// Opus's Baited values. The tutorial's frequency and final scale were cropped out.
+// Baited's own values. The tutorial's frequency and final scale were cropped out.
 export const glassOptics = {
   xs: { pitch: 9, line: 1.25, scale: 24, frequency: '0.022 0.03', blur: 0.6 },
   s: { pitch: 12, line: 1.5, scale: 40, frequency: '0.012 0.017', blur: 0.9 },

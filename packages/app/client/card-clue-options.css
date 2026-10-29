@@ -24,7 +24,7 @@
 @media(max-width:420px) { .cl-clue-study { padding:18px 0; border-inline:0; } .cl-clue-studies { gap:28px; } .cl-clue-study>header { padding-inline:12px; } }
 @media(forced-colors:active) { .cl-clue-study[data-selected=true] { border:2px solid Highlight; } }
 
-/* Opus clue studies. Boxes remains the original control; other editions keep their own rows. */
+/* Clue studies. Boxes remains the original control; other editions keep their own rows. */
 .cl-card[data-layout=table][data-clue]:where(:not([data-clue=baseline])) {
   --clue-ink:#fffdf7; --clue-mark:#c9a8ff; --clue-rule:#fffdf747; --clue-rule-soft:#fffdf724;
   --clue-track:.04em; --clue-line:16px; --minus-w:7px; --minus-h:2px; --minus-gap:3px;

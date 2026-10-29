@@ -27,7 +27,7 @@ const object = (value: unknown): value is Record<string, unknown> => !!value && 
 const isContext = (value: unknown): value is Context => contexts.some(item => item[0] === value);
 
 export function emptyClueReview(): ClueReview {
-  // Opus's provisional review proposal; this does not set the owner's preference.
+  // The provisional design-review proposal; this does not set the owner's preference.
   return { version: 1, selected: 'rail', preferred: null, picks: {}, updatedAt: '' };
 }
 

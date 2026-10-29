@@ -1,8 +1,0 @@
-{
-  "project": "BAIT",
-  "codex_session_id": "01a16ee8-4685-73a1-8477-a738186e6ffc",
-  "source": "Read directly from CODEX_THREAD_ID and CODEX_SESSION_ID; both environment variables matched.",
-  "recorded_on": "2026-10-24",
-  "created_during_session": true,
-  "note": "This is the genuine source session identifier, not a generated placeholder."
-}

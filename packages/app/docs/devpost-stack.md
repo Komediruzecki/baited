@@ -37,7 +37,7 @@ These are manifest declarations, not a report of every resolved lockfile version
 | Named Cloudflare Tunnel | HTTPS route to the PC-hosted game backend at `play-baited.maff.app`. The process must be running for remote tests. |
 | OBS Studio Browser source | Presents the public HUD in the stream. OBS does not perform Moonshine inference. |
 | Node test runner; Playwright | App/Extension unit and integration checks; landing browser checks. This documentation pass did not rerun the complete code test suite. |
-| OpenAI Codex; ChatGPT image generation | Implementation, debugging, checks and integration; separately generated card illustrations. Claude has also supplied design guidance. Do not describe all design decisions as coming from one tool. |
+| AI coding agent; AI image generation | Implementation, debugging, checks and integration; separately generated card illustrations. A separate AI design review has also supplied design guidance. Do not describe all design decisions as coming from one tool. |
 
 ## One round, across the three screens
 

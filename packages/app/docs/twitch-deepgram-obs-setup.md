@@ -18,7 +18,7 @@ Checked on 25 October 2026. This guide prepares a real provider rehearsal on thi
 
 The current audio path is **microphone → BAIT browser → BAIT server → Deepgram → BAIT result**. BAIT does not listen to the delayed Twitch video. OBS also captures the microphone for the recording; these are separate consumers of the same input device. This build uses English recognition and English target words. An ElevenLabs adapter has not been implemented or tested.
 
-**The static landing needs no speech service, microphone permission or provider key.** Its round is a scripted example. In the current live game, speech recognition detects the spoken target and scores the catch automatically; starting or resuming live play requires the configured provider and an armed microphone. A future mode could let a trusted moderator confirm a catch manually, but that mode is not implemented. Simulated transcripts are available only in the local demo. Neither speech recognition nor a particular provider is required by the [hackathon rules](https://twitchcon-codex.devpost.com/rules).
+**The static landing needs no speech service, microphone permission or provider key.** Its round is a scripted example. In the current live game, speech recognition detects the spoken target and scores the catch automatically; starting or resuming live play requires the configured provider and an armed microphone. A future mode could let a trusted moderator confirm a catch manually, but that mode is not implemented. Simulated transcripts are available only in the local demo. Neither speech recognition nor a particular provider is required by the hackathon rules.
 
 OBS is one broadcasting option. Software with an equivalent browser-source feature can also display the overlay, but this rehearsal uses OBS. Its Browser Source renders a webpage into a scene. It does not give viewers a clickable game inside the video. [OBS Browser Source](https://obsproject.com/kb/browser-source).
 
@@ -101,7 +101,7 @@ Generate the encryption key directly into the vault without displaying it. Keep 
 After the references are filled and Proton Pass CLI is signed in, run from any directory:
 
 ```sh
-rtk proxy timeout 10810 pass-cli run --env-file /home/maff/foss/worktrees/twigame/bait-preview/docs/bait.live-local.env.tmpl -- pnpm --dir /home/maff/foss/worktrees/twigame/bait-preview rehearsal:local
+timeout 10810 pass-cli run --env-file /home/maff/foss/worktrees/twigame/bait-preview/docs/bait.live-local.env.tmpl -- pnpm --dir /home/maff/foss/worktrees/twigame/bait-preview rehearsal:local
 ```
 
 The helper uses strict port 3000 on loopback, disables simulated inputs and keeps live local data under `~/.local/share/bait/live-local`. It runs for three hours by default. Keep the terminal open; **Ctrl+C** stops it earlier. An occupied port is an error, so stop only the earlier BAIT process before restarting.

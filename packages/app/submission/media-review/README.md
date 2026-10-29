@@ -28,7 +28,7 @@ Composition used only source crops, proportional resizing, solid padding and fac
 
 ## Still needed
 
-A real Twitch round with viewer card, live chat, catch confirmation and score change; actual OBS and Codex evidence; and the approved YouTube demo (first three minutes must contain all required proof). The final gallery may use fewer than 15 images. Do not fill it with repeated shots.
+A real Twitch round with viewer card, live chat, catch confirmation and score change; actual OBS and build-session evidence; and the approved YouTube demo (first three minutes must contain all required proof). The final gallery may use fewer than 15 images. Do not fill it with repeated shots.
 
 The matching durable export folder is:
 

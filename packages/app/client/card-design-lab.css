@@ -1,4 +1,4 @@
-/* Opus's Card Lab: a bright violet table, physical charcoal cards, precise UI. */
+/* Card Lab: a bright violet table, physical charcoal cards, precise UI. */
 .card-lab { --cl-paper:#fffdf7; --cl-lilac:#c9a8ff; --cl-face:#242426; min-height:100vh; padding:24px clamp(16px,4vw,64px) 40px; background:#121016; color:var(--cl-paper); font:400 14px/1.5 Inter,Arial,sans-serif; }
 .card-lab * { box-sizing:border-box; }
 .card-lab button,.card-lab input,.card-lab select,.card-lab textarea { font:inherit; }

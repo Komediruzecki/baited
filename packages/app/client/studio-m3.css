@@ -1,6 +1,6 @@
 /* The studio in Material 3: its containers and controls, in the landing's colours
    (packages/landing/site/why-stack.css holds the M3 roles from seed #9146FF), with
-   Duolingo's chunky, pressable bounce where the landing has no equivalent: buttons and
+   a chunky, pressable bounce where the landing has no equivalent: buttons and
    cards stand on a darker lip that collapses when pressed. Loaded last and scoped to
    the studio, sign-in and dialogs; the cards, fire streak, OBS and viewer room keep
    their own styles. Each selector matches or beats the rule it replaces, so load
@@ -38,7 +38,7 @@
   --m3-press: rgb(255 253 247 / 12%);
 }
 
-/* Containers: M3 filled cards, extra-large shape, standing on a Duolingo lip. */
+/* Containers: M3 filled cards, extra-large shape, standing on a pressable lip. */
 .studio-shell :is(.mission-card, .mic-card, .panel),
 .studio-shell :is(.studio-sound-section, .privacy-panel, .rehearsal-tools),
 .studio-shell .setup-steps > li > .setup-step {
@@ -195,7 +195,7 @@
 .studio-shell .timer > span {
   margin-left: 0;
 }
-/* A Duolingo progress bar: thick, round, with a highlight along the fill. */
+/* A playful progress bar: thick, round, with a highlight along the fill. */
 .studio-shell .round-progress {
   height: 12px;
   margin: 18px 0 0;
@@ -418,7 +418,7 @@ dialog.modal::backdrop {
   color: var(--m3-on-secondary-container);
 }
 
-/* Stream setup as a Duolingo path: numbered nodes that fill when a step is done. */
+/* Stream setup as a lesson path: numbered nodes that fill when a step is done. */
 .studio-shell .setup-steps {
   display: grid;
   gap: 16px;
@@ -449,7 +449,7 @@ dialog.modal::backdrop {
   box-shadow: 0 var(--m3-lip) 0 var(--m3-primary-lip);
 }
 
-/* Community: Duolingo stat tiles. */
+/* Community: chunky stat tiles. */
 .studio-shell .community-scoreline {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -474,7 +474,7 @@ dialog.modal::backdrop {
   font: 400 36px/1 var(--b-display);
 }
 
-/* Bait MVPs: a Duolingo podium for the streamer's top three picks. */
+/* Bait MVPs: a podium for the streamer's top three picks. */
 .studio-shell .mvp-board {
   grid-column: 1 / -1;
 }

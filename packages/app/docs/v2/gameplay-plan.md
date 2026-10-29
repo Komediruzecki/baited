@@ -1,4 +1,4 @@
-> Design proposal by Claude Opus 5.5, completed 25 October 2026 using the irch account. Max effort was requested; the CLI did not report an effective effort level. This is a local review study. Gameplay additions, live integration and release remain pending owner review. The original full response is preserved separately; see README.md for evidence and implementation corrections.
+> Design proposal, completed 25 October 2026. This is a local review study. Gameplay additions, live integration and release remain pending owner review. The original full response is preserved separately; see README.md for evidence and implementation corrections.
 
 # PLAN B: gameplay, surprises and the growing deck
 
@@ -137,7 +137,7 @@ Each row lists the player moment and an example, the rule or state change, the e
 - BAIT never deletes Twitch messages.
 - Flagged and verbatim hints only lose award eligibility.
 - Hint review text stays in memory for at most ten minutes after the round stops, and may be replaced sooner.
-- No feature punishes all of chat for one stranger's message (the Taboo lesson in `tabletop-options.md`).
+- No feature punishes all of chat for one stranger's message (the forbidden-word party game lesson in `tabletop-options.md`).
 
 **Low attendance.** Recommend Easy, 180 s and openers on. Moment stamps make even a slow catch fun to see.
 

@@ -1,0 +1,126 @@
+/* The landing's scrollbar (packages/landing/site/pixels.css): a 5px
+   rounded thumb with no track, drawn by scrollbars.ts over the page's right edge and inside every
+   element that scrolls on its own. Native bars stay hidden with a mouse or trackpad, everywhere;
+   touch screens keep their own floating bars. */
+@media (hover: hover) and (pointer: fine) {
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: none !important;
+  }
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+.page-scrollbar,
+scroll-thumb {
+  border-radius: 5px;
+  background-color: rgb(255 255 255 / 26%);
+  opacity: 0;
+  pointer-events: none;
+  touch-action: none;
+  transition:
+    opacity 0.2s linear,
+    background-color 0.2s linear;
+}
+.page-scrollbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 9998;
+  width: 5px;
+  height: 0;
+  will-change: transform;
+}
+/* Inside its scroller, as the last child. --scroll-thumb-inset keeps it off rounded corners. */
+scroll-thumb {
+  position: absolute;
+  z-index: 3;
+  display: block;
+}
+scroll-thumb[data-axis='y'] {
+  top: var(--scroll-thumb-inset, 4px);
+  right: 2px;
+  width: 5px;
+  height: var(--thumb-size, 0px);
+}
+scroll-thumb[data-axis='x'] {
+  bottom: 2px;
+  left: var(--scroll-thumb-inset, 4px);
+  width: var(--thumb-size, 0px);
+  height: 5px;
+}
+/* The thumb sits in the content it scrolls over, so the scroll position itself carries it, on the
+   compositor and frame for frame with the scroll. scrollbars.ts sets the travel; without these
+   timelines it moves the thumb on each scroll event instead. */
+@supports (animation-timeline: scroll()) {
+  scroll-thumb[data-axis='y'] {
+    animation:
+      scroll-thumb-y linear both,
+      scroll-thumb-follow-x linear both;
+    animation-timeline: scroll(nearest block), scroll(nearest inline);
+  }
+  scroll-thumb[data-axis='x'] {
+    animation:
+      scroll-thumb-x linear both,
+      scroll-thumb-follow-y linear both;
+    animation-timeline: scroll(nearest inline), scroll(nearest block);
+  }
+}
+@keyframes scroll-thumb-y {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, var(--thumb-travel), 0);
+  }
+}
+@keyframes scroll-thumb-x {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(var(--thumb-travel), 0, 0);
+  }
+}
+@keyframes scroll-thumb-follow-x {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: var(--thumb-follow) 0;
+  }
+}
+@keyframes scroll-thumb-follow-y {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 0 var(--thumb-follow);
+  }
+}
+.page-scrollbar.is-active,
+scroll-thumb.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.page-scrollbar:hover,
+.page-scrollbar.is-dragging,
+scroll-thumb:hover,
+scroll-thumb.is-dragging {
+  background-color: rgb(255 255 255 / 42%);
+}
+.modal {
+  --scroll-thumb-inset: 18px;
+}
+/* OBS captures the overlay page whole, so it never shows a thumb. */
+.overlay-body .page-scrollbar,
+.overlay-body scroll-thumb {
+  display: none;
+}
+@media (hover: none), (pointer: coarse), print {
+  .page-scrollbar,
+  scroll-thumb {
+    display: none;
+  }
+}

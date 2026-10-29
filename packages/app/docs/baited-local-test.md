@@ -32,8 +32,8 @@ The local certificate covers `localhost` and `127.0.0.1`, expires **24 November 
 Run once after source changes, from any directory:
 
 ```sh
-rtk proxy pnpm --dir /home/maff/foss/worktrees/twigame/baited-v0.0.1 build
-rtk proxy pass-cli run --env-file /home/maff/foss/worktrees/twigame/baited-v0.0.1/docs/baited.extension-build.env.tmpl -- node /home/maff/foss/worktrees/twigame/baited-v0.0.1/scripts/build-extension.mjs
+pnpm --dir /home/maff/foss/worktrees/twigame/baited-v0.0.1 build
+pass-cli run --env-file /home/maff/foss/worktrees/twigame/baited-v0.0.1/docs/baited.extension-build.env.tmpl -- node /home/maff/foss/worktrees/twigame/baited-v0.0.1/scripts/build-extension.mjs
 ```
 
 The Extension build writes `dist/extension/` and `dist/baited-v0.0.1.zip`. The ZIP contains only an explicit list of frontend files and fonts. It includes the public Extension ID and endpoint origins, never shared keys, OAuth secrets, fixtures, game data or Moonshine models. This local build points to localhost; rebuild with the approved hosted origins before a future Hosted Test.
@@ -42,13 +42,13 @@ Start these in three terminals:
 
 ```sh
 # UI review: strict 127.0.0.1:3322, sample data, no credentials.
-rtk proxy env EXTENSION_PREVIEW_PORT=3322 EXTENSION_PREVIEW_SECONDS=10800 node /home/maff/foss/worktrees/twigame/baited-v0.0.1/scripts/preview-extension.mjs
+env EXTENSION_PREVIEW_PORT=3322 EXTENSION_PREVIEW_SECONDS=10800 node /home/maff/foss/worktrees/twigame/baited-v0.0.1/scripts/preview-extension.mjs
 
 # Real game: strict 127.0.0.1:3000, public origin http://localhost:3000, Moonshine.
-rtk proxy pass-cli run --env-file /home/maff/foss/worktrees/twigame/baited-v0.0.1/docs/baited.local.env.tmpl -- node /home/maff/foss/worktrees/twigame/baited-v0.0.1/scripts/rehearse-local.mjs
+pass-cli run --env-file /home/maff/foss/worktrees/twigame/baited-v0.0.1/docs/baited.local.env.tmpl -- node /home/maff/foss/worktrees/twigame/baited-v0.0.1/scripts/rehearse-local.mjs
 
 # Local Extension: strict 127.0.0.1:3443, HTTPS, fixed read-only game API proxy.
-rtk proxy pass-cli run --env-file /home/maff/foss/worktrees/twigame/baited-v0.0.1/docs/baited.extension-https.env.tmpl -- node /home/maff/foss/worktrees/twigame/baited-v0.0.1/scripts/serve-extension-local.mjs
+pass-cli run --env-file /home/maff/foss/worktrees/twigame/baited-v0.0.1/docs/baited.extension-https.env.tmpl -- node /home/maff/foss/worktrees/twigame/baited-v0.0.1/scripts/serve-extension-local.mjs
 ```
 
 Each server stops after three hours. Ctrl+C stops that terminal's server immediately. Occupied ports fail rather than switching to another port. Restart the HTTPS server after rebuilding its frontend: it serves an in-memory snapshot. Proton must already be signed in. Launcher errors name missing fields without printing values.

@@ -1,9 +1,11 @@
 import { chapters } from './data.js'
 import { CLEARED_EVENT } from './pixels.js'
 
+// The trailer plays by itself, muted, and has no pause: its sound is half of it, so the one control
+// is sound, which sits large in the middle of the picture while it is off and the film has the
+// screen (styles.css, .film-frame.is-muted), and in the corner once it is on.
 const video = document.getElementById('hero-film')
 const frame = document.getElementById('film-frame')
-const toggle = document.getElementById('film-toggle')
 const sound = document.getElementById('film-sound')
 const state = document.getElementById('film-state')
 const bigPlay = document.getElementById('film-big-play')
@@ -12,7 +14,6 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)')
 let ratio = 0
 let inView = false
 let pageActive = true
-let userPaused = false
 let explicitPlay = false
 let blocked = false
 let failed = false
@@ -71,20 +72,18 @@ function renderStills() {
 }
 function shouldPlay() {
   return (
-    inView && pageActive && !curtainUp && !covered && !document.hidden && !userPaused && !blocked && !failed && !switching && (!reduced.matches || explicitPlay)
+    inView && pageActive && !curtainUp && !covered && !document.hidden && !blocked && !failed && !switching && (!reduced.matches || explicitPlay)
   )
 }
 function updateControls() {
   const active = !video.paused || pendingPlay !== null
-  const label = active ? 'Pause' : 'Play'
   frame.classList.toggle('is-paused', !active)
-  toggle.setAttribute('aria-label', `${label} the example`)
-  toggle.setAttribute('aria-busy', String(pendingPlay !== null))
-  document.getElementById('film-toggle-icon').setAttribute('href', active ? '#i-pause' : '#i-play')
+  frame.classList.toggle('is-muted', !soundOn)
   sound.setAttribute('aria-label', soundOn ? 'Turn sound off' : 'Turn sound on')
   sound.setAttribute('aria-pressed', String(soundOn))
   document.getElementById('film-sound-icon').setAttribute('href', soundOn ? '#i-sound' : '#i-muted')
-  bigPlay.hidden = !video.paused || failed || switching || (!blocked && !(reduced.matches && !explicitPlay) && !userPaused)
+  // The play button only starts a film that cannot start itself: blocked, reduced motion, failed.
+  bigPlay.hidden = !video.paused || failed || switching || (!blocked && !(reduced.matches && !explicitPlay))
   const message = failed
     ? "The film didn't load. Here's the round in seven frames."
     : blocked
@@ -176,7 +175,6 @@ function selectSource(force = false, mp4 = false) {
   updateControls()
 }
 function requestPlay(fromStart = false) {
-  userPaused = false
   explicitPlay = true
   blocked = false
   if (ratio > 0) inView = true
@@ -190,49 +188,45 @@ function requestPlay(fromStart = false) {
   }
   reconcile()
 }
-function togglePlay() {
-  if (!video.paused || pendingPlay !== null) {
-    userPaused = true
-    pauseForPolicy()
-  } else requestPlay()
+function toggleSound() {
+  soundOn = !soundOn
+  video.muted = !soundOn
+  updateControls()
 }
 function jumpChapter(index) {
   pendingSeek = chapters[Math.max(0, Math.min(chapters.length - 1, index))].time
   restorePosition()
-  if (!userPaused && !reduced.matches) requestPlay()
+  if (!reduced.matches) requestPlay()
 }
-toggle.addEventListener('click', togglePlay)
-// The footer's "Watch the round": the round from the start, with its sound on (showreel.js).
+// The footer's "Watch the trailer": the film from the start, with its sound on (showreel.js).
 document.addEventListener('showreel:watch', () => {
   soundOn = true
   video.muted = false
   requestPlay(true)
 })
 bigPlay.addEventListener('click', () => requestPlay())
-sound.addEventListener('click', () => {
-  soundOn = !soundOn
-  video.muted = !soundOn
-  updateControls()
-})
-// The pause and sound buttons sit in the corner of the film. A mouse click on the picture
-// plays or pauses it; a tap shows the buttons for a moment, like a phone video player.
+sound.addEventListener('click', toggleSound)
+// A click or a tap on the picture turns the sound on or off (or starts a film that could not start
+// by itself), and shows the corner button for a moment so the new state can be seen on a phone.
 function showHud() {
   frame.classList.add('is-hud')
   clearTimeout(hudTimer)
   hudTimer = setTimeout(() => frame.classList.remove('is-hud'), 2600)
 }
 video.addEventListener('pointerup', (event) => {
-  if (event.pointerType === 'mouse') {
-    if (event.button === 0) togglePlay()
-  } else if (video.paused && pendingPlay === null) requestPlay()
-  else showHud()
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+  if (video.paused && pendingPlay === null) requestPlay()
+  else {
+    toggleSound()
+    if (event.pointerType !== 'mouse') showHud()
+  }
 })
 frame.addEventListener('focusin', () => clearTimeout(hudTimer))
 frame.addEventListener('keydown', (event) => {
   if (event.target !== frame && event.target !== video) return
-  if (event.code === 'Space' || event.key.toLowerCase() === 'k') {
+  if (event.code === 'Space' || ['k', 'm'].includes(event.key.toLowerCase())) {
     event.preventDefault()
-    togglePlay()
+    toggleSound()
   } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
     event.preventDefault()
     const index = chapters.findLastIndex((chapter) => chapter.time <= video.currentTime + 0.1)

@@ -4,12 +4,13 @@ import test from 'node:test'
 import { curtainSize, leavesForPage, pixelColumns } from '../site/pixels.js'
 import { AWAY_AT, FLOAT_AT, FOLD_AT, morphPairs, navAway, navState, WAVE_HOP, WAVE_STEP, waveLift } from '../site/nav.js'
 import { filmCorners, fitAspect, FLIGHT_TILT, flightAt, quadMaskLayers, SHEET_SHIFT, SHEET_TILT, sheetAt, sheetOutline } from '../site/showreel.js'
-import { parseGuidePoints, ribbonCenters, ribbonPhase, routePoints, squareOpacities, TRAIL_ORDER, TRAIL_ROUTES, TRAIL_SETTINGS, TRAIL_TURN } from '../site/hero-scribble.js'
+import { parseGuidePoints, ribbonCenters, ribbonPhase, routePoints, squareOpacities, TRAIL_ORDER, TRAIL_ROUTES, TRAIL_SETTINGS, TRAIL_TURN, trailScale } from '../site/hero-scribble.js'
 import { atRest, GLITCH_FROM, GLITCH_FULL, glitchAmount, kick, PUSH_MAX, SPIN_MAX, stepSpring } from '../ribbon/ribbon-effects.js'
 import { PIXEL_LOGO,PIXEL_LOGO_COLS, pixelCircleRows, pixelCircleSvg, pixelLogoCells, pixelLogoSvg } from '../site/pixel-logo.js'
 import { PIXEL_LOGO_INKS } from '../scripts/build-pixel-logo.mjs'
 import { lineBoxes, splitWords } from '../site/reveal.js'
 import { THUMB_MIN, thumbFor } from '../site/scrollbar.js'
+import { catchUp, initSmoothScroll, LENIS_OPTIONS, yieldToOtherScrolls } from '../site/smooth-scroll.js'
 
 // The pixel layer: the curtain between pages, the floating navigation and the text reveals.
 // Their drawing and timing are checked in a browser.
@@ -54,13 +55,13 @@ test('the pixel logo is a full grid with a straight I, and its files are drawn f
   assert.ok(rows[0].includes('#') && rows.some((row) => row[0] === '#'))
 })
 
-test("the hero's ribbons lie along 1minus1's four guide paths, a hundred fixed squares each", () => {
+test("the hero's ribbons lie along four guide paths, a hundred fixed squares each", () => {
   assert.deepEqual(
     { ...TRAIL_SETTINGS },
-    { count: 100, squareSize: 100, color: '#26024a', stagger: 0.01, localFadeDuration: 0.5, revealSeconds: 1, exitSeconds: 1, gapSeconds: 3, minimumWidth: 1024 },
-    'their settings'
+    { count: 100, squareSize: 100, color: '#26024a', stagger: 0.01, localFadeDuration: 0.5, revealSeconds: 1, exitSeconds: 1, gapSeconds: 3, fullWidth: 1024 },
+    'the ribbon settings'
   )
-  // Their paths read back to their points, the one horizontal step included.
+  // The paths read back to their points, the one horizontal step included.
   const two = parseGuidePoints(TRAIL_ROUTES[0].d)
   assert.deepEqual([two[0], two.at(-1)], [[637.889, 0.425781], [561.889, 1185.43]])
   assert.ok(parseGuidePoints(TRAIL_ROUTES[3].d).some(([x, y]) => x === 278.15 && y === 335.487))
@@ -82,6 +83,24 @@ test("the hero's ribbons lie along 1minus1's four guide paths, a hundred fixed s
     const steps = centers.slice(1).map(([x, y], i) => Math.hypot(x - centers[i][0], y - centers[i][1])).sort((a, b) => a - b)
     assert.ok(steps[98] < steps[49] * 1.15, `${route.name}: no step much longer than the rest`)
     assert.ok(steps[98] < TRAIL_SETTINGS.squareSize * 0.75, `${route.name}: neighbouring squares overlap into one band`)
+  }
+})
+
+test('below 1024px, phones included, the ribbons are the 1024px drawing scaled down with the screen', () => {
+  assert.deepEqual([trailScale(1966), trailScale(1024), trailScale(512)], [1, 1, 0.5])
+  const scale = trailScale(390)
+  const phone = { left: 0, right: 390, top: 66 }
+  const full = { left: 0, right: 1024, top: 66 }
+  for (const route of TRAIL_ROUTES) {
+    const points = routePoints(route, phone, 390)
+    // Every point where the 1024px drawing has it, scaled about the hero's top left corner.
+    routePoints(route, full, 1024).forEach(([x, y], i) => {
+      assert.ok(Math.abs(points[i][0] - x * scale) < 1e-6 && Math.abs(points[i][1] - (66 + (y - 66) * scale)) < 1e-6, `${route.name}, point ${i}`)
+    })
+    // The squares shrink with it and still overlap into one band.
+    const centers = ribbonCenters(points)
+    const steps = centers.slice(1).map(([x, y], i) => Math.hypot(x - centers[i][0], y - centers[i][1]))
+    assert.ok(Math.max(...steps) < TRAIL_SETTINGS.squareSize * scale * 0.75, `${route.name}: one band on a phone`)
   }
 })
 
@@ -299,6 +318,67 @@ test('highlighter bars cover each line of words from its first word to its last'
   // A picture that opens a line (the footer's avatar) sits lower than the letters beside it; the
   // bar still starts at the top of the letters.
   assert.deepEqual(lineBoxes([{ left: 0, top: 10, right: 30, bottom: 34 }, word(40, 2, 90)]), [{ left: 0, top: 2, right: 90, bottom: 34 }])
+})
+
+test('every page eases the wheel with Lenis, self-hosted, after GSAP on the home page', async () => {
+  assert.deepEqual({ ...LENIS_OPTIONS }, { lerp: 0.165, wheelMultiplier: 1.25 }, 'the chosen settings')
+  const site = new URL('../site/', import.meta.url)
+  assert.match(await readFile(new URL('vendor/lenis/lenis.min.js', site), 'utf8'), /^\(function\(\)\{var e=`1\.3\.23`/, 'Lenis 1.3.23, unchanged')
+  for (const page of ['index.html', 'terms/index.html', 'privacy/index.html']) {
+    const html = await readFile(new URL(page, site), 'utf8')
+    const head = html.slice(0, html.indexOf('</head>'))
+    assert.match(head, /<link rel="stylesheet" href="\/vendor\/lenis\/lenis\.css" \/>/, `${page} has Lenis's styles`)
+    assert.match(head, /<script defer src="\/vendor\/lenis\/lenis\.min\.js"><\/script>/, `${page} loads Lenis`)
+  }
+  const home = await readFile(new URL('index.html', site), 'utf8')
+  const order = ['/vendor/gsap/ScrollTrigger.min.js', '/vendor/lenis/lenis.min.js', '/app.js'].map((src) => home.indexOf(`src="${src}"`))
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'Lenis after GSAP, and both before app.js starts it')
+})
+
+test("Lenis runs on GSAP's ticker, tells ScrollTrigger of every scroll and leaves GSAP its lag smoothing", () => {
+  const saved = { matchMedia: globalThis.matchMedia, addEventListener: globalThis.addEventListener }
+  const listeners = []
+  globalThis.matchMedia = () => ({ matches: false })
+  globalThis.addEventListener = (type) => listeners.push(type)
+  try {
+    const calls = []
+    class Lenis {
+      constructor(options) {
+        this.options = options
+      }
+      on(event, listener) {
+        calls.push(['on', event, listener])
+      }
+      raf(time) {
+        calls.push(['raf', time])
+      }
+    }
+    let tick = null
+    const gsap = { ticker: { add: (listener) => (tick = listener), lagSmoothing: (...args) => calls.push(['lagSmoothing', ...args]) } }
+    const ScrollTrigger = { update() {} }
+    const lenis = initSmoothScroll({ Lenis, gsap, ScrollTrigger })
+    assert.deepEqual(lenis.options, { ...LENIS_OPTIONS, autoRaf: false }, 'driven by the ticker, not its own frames')
+    tick(2.5)
+    assert.deepEqual(calls, [['on', 'scroll', ScrollTrigger.update], ['lagSmoothing', 500, 33], ['raf', 2500]])
+    assert.deepEqual(listeners, ['scroll'], 'it watches for scrolls not its own')
+    assert.equal(initSmoothScroll({ Lenis, gsap, ScrollTrigger }), lenis, 'one a page')
+  } finally {
+    Object.assign(globalThis, saved)
+  }
+})
+
+test('a scroll Lenis did not make takes over from its easing, and every trip sets off from where the page is', () => {
+  const calls = []
+  const lenis = (isScrolling, animatedScroll) => ({ isScrolling, animatedScroll, scrollTo: (y, options) => calls.push([y, options]) })
+  yieldToOtherScrolls(lenis('smooth', 2018.4), 2019) // its own frame, rounded by the browser
+  yieldToOtherScrolls(lenis('smooth', 2018.4), 6000) // a script's jump while it eased
+  yieldToOtherScrolls(lenis(false, 2018), 6000) // at rest Lenis follows the page's events by itself
+  yieldToOtherScrolls(lenis('native', 2018), 6000)
+  assert.deepEqual(calls.splice(0), [[6000, { immediate: true }]])
+  // A click before the event of a jump to the foot of the page: Lenis is brought there first.
+  catchUp(lenis(false, 5064), 6405)
+  catchUp(lenis(false, 5064), 5065)
+  assert.deepEqual(calls, [[6405, { immediate: true }]])
 })
 
 test('every page loads the curtain early, and nothing on the site is yellow', async () => {

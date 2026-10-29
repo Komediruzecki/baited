@@ -10,4 +10,4 @@ The rounded card edges match the approved landing rather than the earlier clippe
 
 State coverage by existing markup: waiting, active, paused, final-speech settling, broadcaster catch review, caught, escaped, overturned, mission completion/failure, reconnecting and room error. The stylesheet is scoped to `.viewer-room`, OBS classes and the existing public error view, leaving the privacy article and streamer studio to their own style owners.
 
-The 26 October Opus review prompted the typography, card and privacy changes. Local browser fixtures and regression tests cover these states; a real OBS capture still needs acceptance. Source and layout tests cannot establish physical device or broadcast behavior.
+The 26 October design review prompted the typography, card and privacy changes. Local browser fixtures and regression tests cover these states; a real OBS capture still needs acceptance. Source and layout tests cannot establish physical device or broadcast behavior.
