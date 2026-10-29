@@ -1,0 +1,26 @@
+// Prepared configuration only. No remote resource exists because this file exists.
+// Ordinary development uses Miniflare and never Wrangler's remote mode.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "baited-edge-poc",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-07",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "observability": { "enabled": false },
+  "limits": { "cpu_ms": 10 },
+  "vars": {
+    "EDGE_POC_ENABLED": "false",
+    "EDGE_ALLOWED_HOSTS": "",
+    "EDGE_ALLOWED_ORIGINS": "",
+    "EDGE_ALLOWED_CHANNELS": "",
+    "EDGE_LOCAL_FIXTURE_AUTH": "false",
+    "EDGE_STAGING_AUTH": "false"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "ChannelRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChannelRoom"] }],
+  "r2_buckets": [{ "binding": "ART", "bucket_name": "baited-edge-poc-art", "remote": false }]
+}
