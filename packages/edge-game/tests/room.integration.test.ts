@@ -28,6 +28,7 @@ interface Snapshot {
   room: GameView | null;
   awardBoard?: AwardBoard | null;
 }
+interface CommandResponse extends Receipt { snapshot: Snapshot }
 type LocalSocket = WebSocket;
 const studio: Actor = { role: 'studio', sub: 'fixture:studio' };
 const viewer: Actor = { role: 'viewer', sub: 'fixture:viewer' };
@@ -99,22 +100,41 @@ function command(action: Command['action'], expectedRevision: number, id = rando
   return { id, generation, expectedRevision, action };
 }
 
-async function send(mf: Miniflare, actor: Actor, input: Command, status = 200): Promise<Receipt> {
+function receiptMetadata(response: CommandResponse): Receipt {
+  const { snapshot: _snapshot, ...receipt } = response;
+  return receipt;
+}
+
+async function send(mf: Miniflare, actor: Actor, input: Command, status = 200): Promise<CommandResponse> {
   const response = await mf.dispatchFetch(await url(mf, 'commands'), {
     method: 'POST',
     headers: { ...headers(actor), 'content-type': 'application/json' },
     body: JSON.stringify(input),
   });
-  const body = await response.json() as Receipt;
+  const body = await response.json() as CommandResponse;
   assert.equal(response.status, status, JSON.stringify(body));
   assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  assert.equal(body.snapshot.type, 'snapshot');
+  assert.equal(body.snapshot.protocol, 1);
+  assert.equal(body.snapshot.generation, body.generation);
+  // Replayed receipt metadata stays fixed, but its attached projection describes
+  // the current room and must not rewind the client to the original command.
+  assert.ok(body.snapshot.revision >= body.revision);
+  if (actor.role !== 'studio') assert.equal('awardBoard' in body.snapshot, false);
+  if (actor.role !== 'viewer' && body.snapshot.room?.round &&
+      ['active', 'paused', 'settling'].includes(body.snapshot.room.phase)) hidden(body.snapshot);
   return body;
 }
 
 async function start(mf: Miniflare): Promise<Snapshot> {
   const receipt = await send(mf, studio, command({ type: 'start' }, 0));
-  assert.deepEqual(receipt, { ok: true, revision: 1, generation: 1 });
-  return state(mf);
+  assert.deepEqual(receiptMetadata(receipt), { ok: true, revision: 1, generation: 1 });
+  assert.equal(receipt.snapshot.revision, 1);
+  assert.equal(live(receipt.snapshot).phase, 'active');
+  hidden(receipt.snapshot);
+  const visible = await state(mf);
+  assert.equal(live(receipt.snapshot).round.id, live(visible).round.id);
+  return visible;
 }
 
 function hidden(snapshot: Snapshot): void {
@@ -294,7 +314,11 @@ test('receipts are idempotent and reject conflicting IDs, stale revisions, gener
   try {
     const first = command({ type: 'start' }, 0, 'start-once');
     const accepted = await send(mf, studio, first);
-    assert.deepEqual(await send(mf, studio, first), accepted);
+    const replayedStart = await send(mf, studio, first);
+    assert.deepEqual(receiptMetadata(replayedStart), receiptMetadata(accepted));
+    assert.equal(replayedStart.snapshot.revision, accepted.snapshot.revision);
+    assert.equal(live(replayedStart.snapshot).round.id, live(accepted.snapshot).round.id);
+    assert.ok(live(replayedStart.snapshot).serverTime >= live(accepted.snapshot).serverTime);
     const initial = await state(mf);
     const round = live(initial).round;
     const pause = { type: 'pause', roundId: round.id, epoch: round.epoch } as const;
@@ -313,7 +337,11 @@ test('receipts are idempotent and reject conflicting IDs, stale revisions, gener
     assert.equal(paused.round.epoch, round.epoch + 1);
     assert.equal((await send(mf, studio, command(pause, 2), 409)).code, 'action_unavailable');
     await send(mf, studio, command({ type: 'resume', roundId: round.id, epoch: paused.round.epoch }, 2));
-    assert.deepEqual(await send(mf, studio, pauseCommand), pausedReceipt);
+    const replayedPause = await send(mf, studio, pauseCommand);
+    assert.deepEqual(receiptMetadata(replayedPause), receiptMetadata(pausedReceipt));
+    assert.equal(replayedPause.snapshot.revision, 3);
+    assert.equal(live(replayedPause.snapshot).phase, 'active', 'A replayed pause receipt must carry the current resumed projection.');
+    assert.equal(live(replayedPause.snapshot).round.epoch, round.epoch + 2);
     const resumed = await state(mf);
     assert.equal(resumed.revision, 3);
     assert.equal(live(resumed).phase, 'active');
@@ -330,7 +358,10 @@ test('two viewers may reuse a client command ID without losing either vote', { t
     const alice = { ...viewer, sub: 'fixture:alice' };
     const bob = { ...viewer, sub: 'fixture:bob' };
     const first = await send(mf, alice, vote);
-    assert.deepEqual(await send(mf, alice, vote), first);
+    const replayed = await send(mf, alice, vote);
+    assert.deepEqual(receiptMetadata(replayed), receiptMetadata(first));
+    assert.equal(live(replayed.snapshot).voters, 1);
+    assert.equal(live(replayed.snapshot).round.target, round.target);
     const second = await send(mf, bob, vote);
     assert.equal(second.revision, first.revision + 1);
     const twoVotes = await state(mf);
@@ -395,7 +426,10 @@ test('an injected alarm failure rolls back state and receipt before a same-ID re
     assert.deepEqual(rolledBack.meta, []);
     assert.equal((await state(mf, viewer, 404)).revision, 0);
     const retry = await send(mf, studio, input);
-    assert.deepEqual(retry, { ok: true, revision: 1, generation: 1 });
+    assert.deepEqual(receiptMetadata(retry), { ok: true, revision: 1, generation: 1 });
+    assert.equal(retry.snapshot.revision, 1);
+    assert.equal(live(retry.snapshot).phase, 'active');
+    hidden(retry.snapshot);
     const committed = await stub.inspectFixture();
     assert.ok(committed.alarm !== null);
     assert.equal(committed.receipts, 1);
@@ -428,8 +462,16 @@ test('SQLite recovery retains paused rounds, votes, pending catches and replay r
     assert.equal(live(recovered).phase, 'paused');
     assert.equal(live(recovered).voters, 1);
     assert.equal(live(recovered).participants, 1);
-    assert.deepEqual(await send(mf, viewer, vote), voteReceipt);
-    assert.deepEqual(await send(mf, studio, pause), pauseReceipt);
+    const recoveredVote = await send(mf, viewer, vote);
+    const recoveredPause = await send(mf, studio, pause);
+    assert.deepEqual(receiptMetadata(recoveredVote), receiptMetadata(voteReceipt));
+    assert.deepEqual(receiptMetadata(recoveredPause), receiptMetadata(pauseReceipt));
+    for (const replay of [recoveredVote, recoveredPause]) {
+      assert.equal(replay.snapshot.revision, recovered.revision);
+      assert.equal(live(replay.snapshot).phase, 'paused');
+      assert.equal(live(replay.snapshot).voters, 1);
+      assert.equal(live(replay.snapshot).round.id, round.id);
+    }
     await send(mf, studio, command({ type: 'resume', roundId: round.id, epoch: live(recovered).round.epoch }, 3));
     const resumed = await state(mf);
     await send(mf, studio, command({ type: 'fixture-transcript', roundId: round.id,
@@ -446,7 +488,10 @@ test('SQLite recovery retains paused rounds, votes, pending catches and replay r
     assert.equal(live(recoveredCatch).score.wins, 0);
     const confirm = command({ type: 'catch', roundId: round.id, decision: 'confirm' }, 5, 'persistent-confirm');
     const confirmed = await send(mf, studio, confirm);
-    assert.deepEqual(await send(mf, studio, confirm), confirmed);
+    const replayedConfirm = await send(mf, studio, confirm);
+    assert.deepEqual(receiptMetadata(replayedConfirm), receiptMetadata(confirmed));
+    assert.equal(live(replayedConfirm.snapshot).score.wins, 1);
+    assert.equal(live(replayedConfirm.snapshot).history.length, 1);
     const final = live(await state(mf));
     assert.equal(final.score.wins, 1);
     assert.equal(final.score.played, 1);
