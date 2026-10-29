@@ -7,7 +7,9 @@
 // sheet, and later "The cards" over the finished steps (styles.css, .has-showreel). The film's real
 // place is the showreel, laid out at the size it lands at (it moves there on start); the hero shows
 // it scaled down into the hero's card slot, so the picture is never enlarged past its own size. GSAP
-// scrubs everything with the scroll. Reduced motion and pages without GSAP keep the film in the hero.
+// scrubs everything with the scroll, bar the film's flight on a phone, which plays in its own time
+// once the page starts to scroll (FLIGHT_SECONDS). Reduced motion and pages without GSAP keep the
+// film in the hero.
 
 export const FLIGHT_TILT = 14 // degrees the card leans in the hero
 export const FLIGHT_ROUND = 1 / 12 // its round corners, as a share of its width; its top right is square
@@ -21,8 +23,12 @@ export const WATCH_EVENT = 'showreel:watch' // on document: play the round from 
 export const UNWATCH_EVENT = 'showreel:unwatch' // on document: no longer watching; the film goes quiet
 // On a phone the film starts behind the headline and comes forward over it between these points of
 // its flight: the hero fades out where the film is, more and more, so the words sink behind the
-// film instead of jumping there.
+// film instead of jumping there. From the last point on, the film is in front of the hero.
 export const FILM_FORWARD = [0.04, 0.36]
+// On a phone the film does not follow the scroll on its way out: scrolling FLIGHT_START px sets it
+// off, and it flies for FLIGHT_SECONDS, easing out; back above FLIGHT_START it flies home.
+export const FLIGHT_START = 10
+export const FLIGHT_SECONDS = 0.9
 
 const lerp = (a, b, t) => a + (b - a) * t
 const clamp01 = (t) => Math.max(0, Math.min(1, t))
@@ -155,14 +161,32 @@ export function initShowreel({ gsap, ScrollTrigger } = {}) {
 
   let at = 0
   let heroMask = ''
+  // On a phone the film flies in its own time (fly, below): `heading` is where it is bound, 1 out
+  // and 0 home, and `flying` the tween taking it there. While it is out of its card it is held,
+  // fixed, in the middle of the screen (styles.css, .is-holding), and it flies out from `from`: its
+  // card on screen as it set off.
+  let heading = 0
+  let flying = null
+  let holding = false
+  let from = null
+  // The frame's own place on screen, untransformed: in the middle of the showreel's first screen,
+  // wherever the showreel is, or where it is held.
+  const frameBox = () => {
+    if (holding) {
+      const style = getComputedStyle(film)
+      return { left: parseFloat(style.left), top: parseFloat(style.top), width: film.offsetWidth, height: film.offsetHeight }
+    }
+    const reelBox = reel.getBoundingClientRect()
+    return { left: reelBox.left + film.offsetLeft, top: reelBox.top + film.offsetTop, width: film.offsetWidth, height: film.offsetHeight }
+  }
   // Where the slot and the frame are now, read on every frame rather than kept: the showreel sticks
   // to the top once landed, and fonts, a resize or a restored scroll can all move things after a
-  // measurement, which once left the card far from its slot or off the screen. The frame's own
-  // place is in the middle of the showreel's first screen, wherever the showreel is.
+  // measurement, which once left the card far from its slot or off the screen.
   const draw = () => {
-    const reelBox = reel.getBoundingClientRect()
-    const box = { left: reelBox.left + film.offsetLeft, top: reelBox.top + film.offsetTop, width: film.offsetWidth, height: film.offsetHeight }
-    const slotBox = slot.getBoundingClientRect()
+    const held = phone.matches && at > 0
+    if (held !== holding) reel.classList.toggle('is-holding', (holding = held))
+    const box = frameBox()
+    const slotBox = from || slot.getBoundingClientRect()
     // Without a frame or a slot to fly from (between layouts) there is nothing to draw yet.
     if (!box.width || !box.height || !slotBox.width || !slotBox.height) return
     const f = flightAt(at, slotBox, box)
@@ -174,38 +198,94 @@ export function initShowreel({ gsap, ScrollTrigger } = {}) {
     film.style.setProperty('--win-r', r)
     film.style.setProperty('--film-scale', f.scale.toFixed(4))
     // On a phone the hero lies over the film (styles.css); the film comes forward by masking the
-    // hero out where the film is (FILM_FORWARD).
+    // hero out where the film is (FILM_FORWARD). All the way forward it goes in front of the hero
+    // instead (.is-behind), so nothing has to follow the page while it scrolls on under the film.
     const strength = phone.matches ? smooth((at - FILM_FORWARD[0]) / (FILM_FORWARD[1] - FILM_FORWARD[0])) : 0
-    const heroBox = strength > 0 ? hero.getBoundingClientRect() : null
+    const ahead = strength >= 1
+    if (ahead !== hero.classList.contains('is-behind')) hero.classList.toggle('is-behind', ahead)
+    const heroBox = strength > 0 && !ahead ? hero.getBoundingClientRect() : null
     const mask = heroBox ? quadMask(filmCorners(f, box).map(([x, y]) => [x - heroBox.left, y - heroBox.top]), heroBox, strength) : ''
     if (mask !== heroMask) hero.style.maskImage = hero.style.webkitMaskImage = heroMask = mask
+    // The headline's lines slide off to the left with the flight, each by part of its own width
+    // (styles.css). The variable lives on the heading, whose lines the typing replaces (reveal.js).
+    if (phone.matches) title?.style.setProperty('--hero-slide', at.toFixed(4))
   }
   // After their timing: the card starts growing with the first scroll and has landed as the
-  // showreel's top passes 18% of the screen, then rides up and sticks. On a phone, where the player
-  // is a strip across the screen, it lands as the showreel sticks, in the middle of the screen,
-  // rather than flying down past the middle and coming back up.
-  const range = { trigger: hero, start: 0, endTrigger: reel, end: () => (phone.matches ? 'top top' : 'top 18%') }
-  const flight = scrubbed(
+  // showreel's top passes 18% of the screen, then rides up and sticks.
+  const range = { trigger: hero, start: 0, endTrigger: reel, end: 'top 18%' }
+  scrubbed(
     {
       ...range,
       onRefresh: draw,
       onUpdate: (self) => {
+        if (phone.matches) return
         reel.classList.toggle('is-landed', self.progress > 0.985)
         if (self.progress < 0.985) stopWatching()
       },
     },
     (p) => {
+      if (phone.matches) return
+      // Turned from a phone's layout to a wider one: the scroll has the film again.
+      flying?.kill()
+      flying = from = null
+      heading = 0
       at = p
       draw()
     }
   )
+  if (title) scrubbed(range, (p) => phone.matches || title.style.setProperty('--hero-slide', p.toFixed(4)))
+
+  // A phone flies the film in its own time instead. iOS scrolls the page on a thread of its own and
+  // runs scripts after it, so a film that a script moved back against the page at every scroll
+  // shook, a little behind the page or ahead of it. There the first FLIGHT_START px of scrolling set
+  // the film off from its card to the middle of the screen, where it waits, fixed, while the hero
+  // scrolls away and the showreel comes up under it and sticks with the film where it already is.
+  // Back above FLIGHT_START it flies home to its card.
+  const fly = (to) => {
+    if (to === heading && (flying || at === to)) return
+    heading = to
+    flying?.kill()
+    flying = null
+    // Out, it leaves its card where the card is at that moment; home, it lands on the card wherever
+    // the card has got to by then.
+    from = to ? slot.getBoundingClientRect() : null
+    const arrive = () => {
+      draw()
+      reel.classList.toggle('is-landed', at > 0.985)
+      if (at < 0.985) stopWatching()
+    }
+    // With its card off the screen (a page opened further down, a jump to a link) there is nothing
+    // to fly from: the film is simply there.
+    if (to && from.bottom <= 0) {
+      at = 1
+      return arrive()
+    }
+    const motion = { at }
+    flying = gsap.to(motion, {
+      at: to,
+      duration: FLIGHT_SECONDS * Math.abs(to - at),
+      ease: 'power2.out',
+      onUpdate: () => {
+        at = motion.at
+        arrive()
+      },
+      onComplete: () => {
+        flying = null
+      },
+    })
+  }
+  const setOff = ScrollTrigger.create({
+    start: FLIGHT_START,
+    end: 'max',
+    onUpdate: (self) => phone.matches && fly(self.progress > 0 ? 1 : 0),
+    onRefresh: (self) => phone.matches && fly(self.progress > 0 ? 1 : 0),
+  })
+  if (phone.matches) fly(setOff.progress > 0 ? 1 : 0)
+
   const redraw = new ResizeObserver(() => draw())
   redraw.observe(hero)
   redraw.observe(reel)
   document.fonts?.ready.then(draw)
-  // The headline's lines slide off to the left with the flight, each by part of its own width
-  // (styles.css). The variable lives on the heading, whose lines the typing replaces (reveal.js).
-  if (title) scrubbed(range, (p) => title.style.setProperty('--hero-slide', p.toFixed(4)))
 
   // "Watch the round" plays the round from the start with its sound (player.js). The film lands a
   // little down the screen; it sits in the middle once the showreel sticks to the top, which is where

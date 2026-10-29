@@ -4,7 +4,7 @@ import test from 'node:test'
 import { curtainSize, leavesForPage, pixelColumns } from '../site/pixels.js'
 import { AWAY_AT, FLOAT_AT, FOLD_AT, morphPairs, navAway, navState, WAVE_HOP, WAVE_STEP, waveLift } from '../site/nav.js'
 import { filmCorners, fitAspect, FLIGHT_TILT, flightAt, quadMaskLayers, SHEET_SHIFT, SHEET_TILT, sheetAt, sheetOutline } from '../site/showreel.js'
-import { parseGuidePoints, ribbonCenters, ribbonPhase, routePoints, squareOpacities, TRAIL_ORDER, TRAIL_ROUTES, TRAIL_SETTINGS, TRAIL_TURN } from '../site/hero-scribble.js'
+import { parseGuidePoints, ribbonCenters, ribbonPhase, routePoints, squareOpacities, TRAIL_ORDER, TRAIL_ROUTES, TRAIL_SETTINGS, TRAIL_TURN, trailScale } from '../site/hero-scribble.js'
 import { atRest, GLITCH_FROM, GLITCH_FULL, glitchAmount, kick, PUSH_MAX, SPIN_MAX, stepSpring } from '../ribbon/ribbon-effects.js'
 import { PIXEL_LOGO,PIXEL_LOGO_COLS, pixelCircleRows, pixelCircleSvg, pixelLogoCells, pixelLogoSvg } from '../site/pixel-logo.js'
 import { PIXEL_LOGO_INKS } from '../scripts/build-pixel-logo.mjs'
@@ -57,7 +57,7 @@ test('the pixel logo is a full grid with a straight I, and its files are drawn f
 test("the hero's ribbons lie along 1minus1's four guide paths, a hundred fixed squares each", () => {
   assert.deepEqual(
     { ...TRAIL_SETTINGS },
-    { count: 100, squareSize: 100, color: '#26024a', stagger: 0.01, localFadeDuration: 0.5, revealSeconds: 1, exitSeconds: 1, gapSeconds: 3, minimumWidth: 1024 },
+    { count: 100, squareSize: 100, color: '#26024a', stagger: 0.01, localFadeDuration: 0.5, revealSeconds: 1, exitSeconds: 1, gapSeconds: 3, fullWidth: 1024 },
     'their settings'
   )
   // Their paths read back to their points, the one horizontal step included.
@@ -82,6 +82,24 @@ test("the hero's ribbons lie along 1minus1's four guide paths, a hundred fixed s
     const steps = centers.slice(1).map(([x, y], i) => Math.hypot(x - centers[i][0], y - centers[i][1])).sort((a, b) => a - b)
     assert.ok(steps[98] < steps[49] * 1.15, `${route.name}: no step much longer than the rest`)
     assert.ok(steps[98] < TRAIL_SETTINGS.squareSize * 0.75, `${route.name}: neighbouring squares overlap into one band`)
+  }
+})
+
+test('below 1024px, phones included, the ribbons are the 1024px drawing scaled down with the screen', () => {
+  assert.deepEqual([trailScale(1966), trailScale(1024), trailScale(512)], [1, 1, 0.5])
+  const scale = trailScale(390)
+  const phone = { left: 0, right: 390, top: 66 }
+  const full = { left: 0, right: 1024, top: 66 }
+  for (const route of TRAIL_ROUTES) {
+    const points = routePoints(route, phone, 390)
+    // Every point where the 1024px drawing has it, scaled about the hero's top left corner.
+    routePoints(route, full, 1024).forEach(([x, y], i) => {
+      assert.ok(Math.abs(points[i][0] - x * scale) < 1e-6 && Math.abs(points[i][1] - (66 + (y - 66) * scale)) < 1e-6, `${route.name}, point ${i}`)
+    })
+    // The squares shrink with it and still overlap into one band.
+    const centers = ribbonCenters(points)
+    const steps = centers.slice(1).map(([x, y], i) => Math.hypot(x - centers[i][0], y - centers[i][1]))
+    assert.ok(Math.max(...steps) < TRAIL_SETTINGS.squareSize * scale * 0.75, `${route.name}: one band on a phone`)
   }
 })
 

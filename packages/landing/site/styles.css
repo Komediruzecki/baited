@@ -943,6 +943,10 @@ input {
   .has-showreel .hero :is(a, button) {
     pointer-events: auto;
   }
+  /* All the way forward, the film is in front of the hero rather than seen through its mask. */
+  .has-showreel .hero.is-behind {
+    z-index: 0;
+  }
   .hero.is-flight .hero-line {
     translate: calc(var(--hero-slide, 0) * -50%) 0;
   }
@@ -954,6 +958,20 @@ input {
   .showreel {
     --reel-gap: 8px;
     padding-bottom: 20svh;
+  }
+  /* Out of its card, the film waits fixed in the middle of the screen, where the showreel holds it
+     once stuck, so the page scrolls on under it with nothing to follow the scroll (showreel.js flies
+     it there in its own time). Its place in the showreel stays taken. */
+  .has-showreel .showreel.is-holding > .film-wrap {
+    position: fixed;
+    top: calc((var(--reel-h) - var(--reel-w) * 9 / 16) / 2);
+    left: calc((100% - var(--reel-w)) / 2);
+    margin: 0;
+  }
+  .has-showreel .showreel.is-holding::before {
+    content: '';
+    display: block;
+    height: var(--reel-h);
   }
   /* The player is a strip across the screen here, too small to carry its label: the label sits on
      the page just above it. */
