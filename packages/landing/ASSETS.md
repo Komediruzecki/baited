@@ -40,13 +40,33 @@ Every interface icon is original pixel art drawn for this landing on a small gri
 - `site/assets/irchiinnuss-wordmark.svg`: originally `disjoint-colliders/packages/brand/wordmarks/irchiinnuss-wordmark.svg`; the copied SVG is self-contained.
 - `site/assets/irchiinnuss-mark.svg`: preserved from the previous landing package, currently unused by v2.
 
-## Staged hero film
+## Hero film: the trailer
 
-`site/media/hero-desktop.*` is the 32-second rendered v2 film at 30 fps, delivered as H.264/AAC MP4 and AV1/Opus WebM at 1280 × 720. Its poster and seven chapter frames are AVIF. English captions are in `site/media/captions.vtt`. At the owner's request phones play this same 16:9 film, with the chat on the right as on desktop. The phone arrangement (720 × 800) is no longer served by the landing and remains in the concept package's `media/`.
+Since 29 October 2026 `site/media/hero-desktop.*` is the baited trailer, `BaitedTrailer.mp4`, supplied by Paolo (1920 × 1080, 60 fps, 46.7 s, H.264 High with 256 kbps stereo AAC; SHA-256 `32071a96…64532`). It is a staged round: fictional streamer bateoh fishing at sunset, his chat, the secret word BIRTHDAY, a called bait (CAKE) and the slip, closing on “BAITED · Coming to Twitch”. The trailer itself says “Staged round. Fictional streamer, game and chat.” Its voices are a narrator and the streamer, from the script Paolo supplied; `site/media/captions.vtt` follows that script, timed to the words with the app's local Moonshine speech bench.
+
+Encoded with FFmpeg 8.1 (BtbN win64 GPL build). The source audio peaks at +0.2 dBTP, so both deliveries take 1.5 dB off (−11.5 LUFS integrated, −1.1 dBTP); the mix is otherwise unchanged. The MP4 is H.264 High 3.1 at 1280 × 720 and 30 fps (libx264 slow, CRF 26, keyframes at most 4 s apart, `+faststart`) with 160 kbps AAC-LC; CRF 23 looked the same on the chat text and cost 2 MB more. The WebM is AV1 Main (level 4.0, so `av01.0.08M.08`) at the full 1920 × 1080 and 30 fps (SVT-AV1 4.2, preset 4, CRF 40) with 128 kbps Opus. The poster is the first frame and the seven chapter frames are the moments in `site/data.js`, all 1920 × 1080 AVIF (libaom-av1; poster CRF 28, chapters CRF 24). Both films decode fully.
+
+| File | Bytes | SHA-256 |
+| --- | --- | --- |
+| `hero-desktop.mp4` | 5,548,167 | `1e530a0d…302c8` |
+| `hero-desktop.webm` | 5,049,792 | `353f2298…56558` |
+| `poster-desktop.avif` | 56,306 | `6783b569…86966` |
+| `chapter-01.avif` | 75,869 | `dca31367…60b44` |
+| `chapter-02.avif` | 38,237 | `21509be1…3d615` |
+| `chapter-03.avif` | 56,763 | `7b78bca0…15b85` |
+| `chapter-04.avif` | 46,414 | `713f476a…52186` |
+| `chapter-05.avif` | 29,309 | `3f6037dd…591db` |
+| `chapter-06.avif` | 18,306 | `d6e6f2b5…e6b28` |
+| `chapter-07.avif` | 32,078 | `bbb47b7b…0f986` |
+| `captions.vtt` | 1,659 | `4f57bb88…8d0d4` |
+
+## The earlier staged film
+
+Until 29 October 2026 the hero showed the 32-second rendered v2 film at 30 fps, delivered as H.264/AAC MP4 and AV1/Opus WebM at 1280 × 720. Its poster and seven chapter frames were AVIF. English captions were in `site/media/captions.vtt`. At the owner's request phones played this same 16:9 film, with the chat on the right as on desktop. That film, its phone arrangement (720 × 800), stills and captions remain in the concept package's `media/`.
 
 Earlier on 26 October 2026 the film was rendered again without yellow, at the owner's request. Only colors changed in `film.css` and `timeline.js`: the secret word VOLCANO now uses its card's orange `#ff743c` (the chat card, the split screen, the catch tag and box, the celebration and the pick), the face-down card labels are lilac `#c9a8ff`, the confetti is white and the bookend wordmark is `#e2dbec`. The render used HyperFrames 0.8.198 with Playwright's headless Chromium 1243 and FFmpeg 6.1.1 (the README's command, 30 fps, quality `looks`). The audio streams were copied unchanged from the previous delivery, and the timing is identical. The MP4 is H.264 High (libx264, veryfast, CRF 23) and the WebM is AV1 Main (SVT-AV1, preset 8, CRF 46). The poster (quality 40) and chapter frames (quality 62) are AVIF stills from the 1920 × 1080 master at the README's times.
 
-The same day, all earlier bomb and typed `bait!` branding was replaced in the editable source with the owner's original white BAITED wordmark. This covers both bookends, both card backs and all chat emotes. Both layouts were rendered again with HyperFrames 0.8.198 and encoded with FFmpeg 9.0.2. Desktop MP4 uses libx264 veryfast at CRF 23; WebM uses SVT-AV1 preset 8 at CRF 47 and remains within the existing 1.8 MB target. All four desktop/phone videos decode fully and contain 960 frames at 30 fps. AAC and Opus packet hashes match the previous soundtrack. AVIF stills use libaom-av1, poster CRF 28 and chapter CRF 24. The current landing delivery is listed below.
+The same day, all earlier bomb and typed `bait!` branding was replaced in the editable source with the owner's original white BAITED wordmark. This covers both bookends, both card backs and all chat emotes. Both layouts were rendered again with HyperFrames 0.8.198 and encoded with FFmpeg 9.0.2. Desktop MP4 uses libx264 veryfast at CRF 23; WebM uses SVT-AV1 preset 8 at CRF 47 and remains within the existing 1.8 MB target. All four desktop/phone videos decode fully and contain 960 frames at 30 fps. AAC and Opus packet hashes match the previous soundtrack. AVIF stills use libaom-av1, poster CRF 28 and chapter CRF 24. Its last landing delivery is listed below.
 
 | File | Bytes | SHA-256 |
 | --- | --- | --- |
@@ -67,13 +87,21 @@ The soundtrack uses the project's existing Sound Lab deal and catch recipes. It 
 
 ## Step-card art
 
-The pictures inside the “How it plays” cards reuse the film's original art, cropped and resized to WebP in `site/assets/why/`. The source files are unchanged.
+Since 29 October 2026 the “How it plays” cards and the footer tell the trailer's round, with pictures cut from the trailer (above) into `site/assets/why/`:
+
+- `lake.webp` (880 × 495, WebP quality 85, `d2a01fb5…aa78b`): the fishing game at 16.0 s, scaled down. It replaces the island behind step 3's facecam; the volcano's smoke puff has no counterpart and is gone.
+- `bateoh-rest.webp`, `bateoh-talk.webp`, `bateoh-shock.webp`, `bateoh-grin.webp` (256 × 256, WebP quality 90; `c0ead1ce…4cec7`, `f119d604…9748f`, `1b8f1dc2…a277c`, `be4c7201…5ad29`): the same 680 × 680 square of the trailer's large facecam at 30.4 s (mouth shut), 30.6 s (talking), 31.0 s (“…oh no”) and 29.6 s (grinning). The framing is fixed from 29.4 s to 31.1 s, so rest and talk swap in place in step 3, and the square stops above the trailer's own name chip. Step 4 shows the shock and the footer's round picture the grin.
+- `birthday.webp` (640 × 640, WebP quality 88 with its alpha, `e7fc867a…76b37`): `site/cards/proofs/birthday.png` (`df52828c…f88b0`) for step 1's card, the trailer's BIRTHDAY. Public builds only copy the ten sample cards' PNGs, and BIRTHDAY is not one of them.
+
+The chat lines and names in step 2 are the trailer's chat. The earlier film's crops below remain in place, unused.
+
+The pictures inside the “How it plays” cards used to reuse the earlier film's original art, cropped and resized to WebP in `site/assets/why/`. The source files are unchanged.
 
 - `little-isle.webp` (880 × 495): the whole `site/film/art/little-isle.png` (SHA-256 `3b2aed2d…e695c`), scaled down.
 - `moss-talk.webp`, `moss-smug.webp`, `moss-shout.webp` (208 × 208): the talk, smug and shout cells of [`mossbyte-poses.png`](../app/concepts/bait-v2/film/art/mossbyte-poses.png) (SHA-256 `97b4b5c8…3f938`), registered with the film's per-pose offsets so the heads line up.
 - `smoke.webp` (128 × 128): the smoke puff from [`effects-sheet.png`](../app/concepts/bait-v2/film/art/effects-sheet.png) (SHA-256 `83f1a929…45946`), trimmed to its alpha. The three earlier hook-bomb crops, `emote-grin.webp`, `emote-smirk.webp` and `emote-laugh.webp` (64 × 64), remain archived in place. The step-card chat now uses the approved white BAITED wordmark instead.
 
-All three sheets are original ChatGPT image generations; their provenance is in [`art-provenance.json`](../app/concepts/bait-v2/film/art-provenance.json). The VOLCANO card in the first step reuses `site/cards/proofs/volcano.png` as the deck does, and the footer's round picture reuses `moss-shout.webp`.
+All three sheets are original AI-generated images; their provenance is in [`art-provenance.json`](../app/concepts/bait-v2/film/art-provenance.json). The VOLCANO card in the first step reused `site/cards/proofs/volcano.png` as the deck does, and the footer's round picture reused `moss-shout.webp`.
 
 ## Fonts
 

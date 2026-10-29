@@ -590,7 +590,8 @@ input {
   width: 30px;
   height: 30px;
 }
-/* Pause and sound sit in the corner of the film. They show on hover, focus or a tap, and stay while paused. */
+/* The sound button sits in the corner of the film. It shows on hover, focus or a tap, and stays while
+   the film is stopped. There is no pause: the trailer runs by itself (player.js). */
 .film-hud {
   position: absolute;
   right: 12px;
@@ -635,6 +636,83 @@ input {
 .film-hud .icon {
   width: 20px;
   height: 20px;
+}
+/* The sound button's word shows only while it sits in the middle (below). */
+.film-sound__label {
+  display: none;
+}
+/* Sound is half of the trailer. While it is off and the film has the screen (landed in the
+   showreel, or a plain player where there is no flight), the sound button sits large in the middle
+   of the picture, with its word, so turning it on is the obvious thing to do; once on, it goes back
+   to the corner. The play button takes the middle instead while the film is stopped. */
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-hud {
+  inset: var(--win-y, 0px) var(--win-x, 0px);
+  display: grid;
+  place-items: center;
+  opacity: 1;
+  transform: none;
+  pointer-events: none;
+}
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: auto;
+  height: 56px;
+  padding: 0 24px 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  font:
+    18px / 1 Russo,
+    Impact,
+    sans-serif;
+  letter-spacing: 0.02em;
+  pointer-events: auto;
+  animation: sound-call 2.4s ease-in-out infinite;
+}
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound:hover {
+  background: #efe6ff;
+}
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound .icon {
+  width: 24px;
+  height: 24px;
+}
+:is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound__label {
+  display: inline;
+}
+/* On a phone the landed player is a strip across the screen: the button keeps to a third of it. */
+@media (max-width: 700px) {
+  :is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound {
+    gap: 9px;
+    height: 44px;
+    padding: 0 18px 0 15px;
+    font-size: 15px;
+  }
+  :is(html:not(.has-showreel), .showreel.is-landed) .film-frame.is-muted:not(.is-paused) .film-sound .icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+/* A slow ring goes out from the button, like a speaker. */
+@keyframes sound-call {
+  0% {
+    box-shadow:
+      0 10px 32px rgb(16 6 36 / 45%),
+      0 0 0 0 rgb(255 253 247 / 50%);
+  }
+  70%,
+  100% {
+    box-shadow:
+      0 10px 32px rgb(16 6 36 / 45%),
+      0 0 0 14px rgb(255 253 247 / 0%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .film-sound {
+    animation: none !important;
+  }
 }
 
 /* After 1minus1.com, on wide screens: the headline runs across the hero with the film as a tilted
@@ -780,8 +858,8 @@ input {
   margin: calc((var(--reel-h) - var(--reel-w) * 9 / 16) / 2) auto;
   transform-origin: 50% 50%;
 }
-/* While it flies the card is too small for its buttons: a click on it plays or pauses the film, and
-   the buttons show only while it is paused or has the keyboard. */
+/* While it flies the card is too small for its button: a click on it turns the sound on or off, and
+   the button shows only while the film is stopped or has the keyboard. */
 @media (hover: hover) {
   .showreel:not(.is-landed) .film-frame:hover:not(.is-paused, :focus-within, .is-hud) .film-hud {
     opacity: 0;

@@ -69,9 +69,9 @@
   vertical-align: -0.06em;
 }
 .footer-avatar img {
+  display: block;
   width: 100%;
-  height: auto;
-  margin-top: 8%;
+  height: 100%;
 }
 
 /* The one divider: the circle sits on it, and the bar runs under it up to the circle. */

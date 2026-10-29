@@ -425,11 +425,22 @@ export function revealSelectedCard(item) {
   frame = requestAnimationFrame(tick)
 }
 
+// The first step of How it plays deals the hero trailer's card: BIRTHDAY, in round 3. It is not one of
+// the public sample cards, so its entry is here and its picture is the step cards' own copy.
+export const STEP_CARD = Object.freeze({
+  word: 'birthday',
+  difficulty: 'easy',
+  clues: [],
+  question: 'When do people suddenly remember to call you?',
+  index: 0,
+  art: '/assets/why/birthday.webp',
+})
+
 export function prepareSelectedScenes(cards) {
   const old = document.querySelector('.why-deal__face')
-  const volcano = cards.find(card => card.word === 'volcano')
-  if (old && volcano) {
-    const face = cardFace(volcano, cards.length)
+  if (old) {
+    const face = cardFace(STEP_CARD, cards.length)
+    face.querySelector('.card-top > span').textContent = 'Round 3'
     face.classList.add('why-deal__face')
     // Only the gallery controller fades this dimmer; the How scene owns its flip.
     face.querySelector('.card-shade').remove()

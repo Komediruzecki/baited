@@ -10,7 +10,7 @@
  * speech) use the dark scheme's surfaces and on-surface roles from the same seed.
  */
 .why-vtg {
-  --volcano: #ff743c; /* VOLCANO's own color, as on its card (styles.css .card-word--volcano) */
+  --birthday: #f8a7d4; /* BIRTHDAY's own color, as on its card (styles.css .card-word--birthday) */
   --md-primary-container: #9146ff;
   --md-on-primary-container: #fffcff;
   --md-secondary-container: #c39ffd;
@@ -373,27 +373,37 @@
 .why-chat__feed b {
   font-weight: 700;
 }
-/* Chat names: Material 3 tone 80 at seven hues, each 10:1 on the chat surface. */
-.u-fern {
+/* Chat names: Material 3 tone 80 at ten hues, each about 10:1 on the chat surface, each the hue
+   that name has in the trailer's chat. */
+.u-bass {
   color: #84da7d;
 }
-.u-owl {
+.u-mud {
   color: #c6c0ff;
 }
 .u-crumb {
   color: #fface7;
 }
-.u-snacks {
+.u-lowkey {
   color: #c5cf44;
 }
-.u-kettle {
+.u-frost {
   color: #88ceff;
 }
-.u-night {
+.u-sprinkle {
   color: #ffb4ab;
 }
-.u-dog {
+.u-tackle {
   color: #ffb779;
+}
+.u-jen {
+  color: #63dbc6;
+}
+.u-pond {
+  color: #b8c4ff;
+}
+.u-reaper {
+  color: #ffb0c8;
 }
 .why-chat__emote {
   display: inline-block;
@@ -430,35 +440,23 @@
   flex-direction: column;
   background: var(--md-dark-surface);
 }
-/* The game fills the window above the studio bar. The 16:9 island picture covers it, kept to
-   the top edge, so --rw and --rh are its drawn width and height in this box's units. */
+/* The game fills the window above the studio bar: the trailer's fishing lake at sunset, kept to
+   the penguin on its dock at the left, while the facecam sits over the water on the right. */
 .why-stream__game {
-  --rw: max(100cqw, 177.78cqh);
-  --rh: max(100cqh, 56.25cqw);
   container: why-game / size;
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  background: #36a6d6;
+  background: #2a1d57;
 }
-.why-stream__isle {
+.why-stream__lake {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 45% 0;
-}
-/* The puff sits on the crater, 68.75% across and 16% down the island picture, and drifts up. */
-.why-stream__smoke {
-  position: absolute;
-  top: calc(0.17 * var(--rh) - 0.11 * var(--rw));
-  left: calc(45cqw + 0.1825 * var(--rw));
-  width: calc(0.11 * var(--rw));
-  height: auto;
-  transform-origin: 50% 100%;
-  opacity: 0.9;
+  object-position: 15% 30%;
 }
 .why-stream__live {
   position: absolute;
@@ -495,13 +493,12 @@
   border-radius: 8px;
   background: linear-gradient(#5c3aa6 0 34%, #4d2f93 34% 67%, #402680 67%);
 }
+/* Two frames of the trailer's facecam, the same framing, mouth shut and open: talking swaps them. */
 .why-stream__pose {
   position: absolute;
-  top: 8%;
-  left: 0;
+  inset: 0;
   width: 100%;
-  height: auto;
-  transition: translate 0.12s ease-out;
+  height: 100%;
 }
 .why-stream__pose.is-talk,
 .why-stream__cam.is-talking .is-rest {
@@ -509,9 +506,6 @@
 }
 .why-stream__cam.is-talking .is-talk {
   opacity: 1;
-}
-.why-stream__cam.is-talking .why-stream__pose {
-  translate: 0 -3%;
 }
 .why-stream__cam > span {
   position: absolute;
@@ -685,14 +679,14 @@
   position: relative;
   display: inline-block;
   padding: 0 0.12em;
-  color: var(--volcano);
+  color: var(--birthday);
   text-transform: uppercase;
 }
 .why-catch__word::after {
   content: '';
   position: absolute;
   inset: -0.06em -0.04em -0.02em;
-  border: 2px solid var(--volcano);
+  border: 2px solid var(--birthday);
   border-radius: 4px;
   clip-path: inset(0 calc((1 - var(--draw)) * 100%) 0 0);
 }
@@ -702,7 +696,7 @@
   left: -0.04em;
   padding: 2px 6px 1px;
   border-radius: 4px 4px 4px 0;
-  background: var(--volcano);
+  background: var(--birthday);
   color: var(--ink);
   font:
     800 9.5px / 1.25 Inter,
@@ -757,9 +751,9 @@
   background: linear-gradient(#5c3aa6 0 34%, #4d2f93 34% 67%, #402680 67%);
 }
 .why-catch__cam img {
+  display: block;
   width: 100%;
-  height: auto;
-  margin-top: 6%;
+  height: 100%;
 }
 /* On small phones there is no room beside the result, so the facecam steps aside. */
 @container why-scene (max-width: 330px) or (max-height: 240px) {
