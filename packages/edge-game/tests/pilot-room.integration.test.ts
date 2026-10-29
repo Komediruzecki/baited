@@ -31,6 +31,7 @@ interface FixtureStub {
   chatFixture(event: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }>;
   disconnectFixture(): Promise<number>;
   disconnectBatchFixture(payload:Record<string,unknown>): Promise<number>;
+  disconnectWithStorageFailureFixture(payload:Record<string,unknown>): Promise<number>;
   connectionFixture(status:string,revision:unknown): Promise<number>;
   clockFixture(): Promise<number>;
   freezeAtFixture(at: number): Promise<void>;
@@ -179,6 +180,13 @@ before(async () => {
             return (await this.fetch(new Request('https://room.internal/internal/control', {
               method:'POST',body:JSON.stringify({...payload,channelId:'123',type:'disconnect'})
             }))).status;
+          }
+          async disconnectWithStorageFailureFixture(payload) {
+            // Abort the actual SQLite checkpoint, rather than mocking the
+            // Room commit method or bypassing its transaction boundary.
+            this.ctx.storage.sql.exec("CREATE TRIGGER fixture_fail_checkpoint BEFORE INSERT ON meta BEGIN SELECT RAISE(ABORT,'fixture_checkpoint_failure'); END");
+            try {return await this.disconnectBatchFixture(payload);}
+            finally {this.ctx.storage.sql.exec('DROP TRIGGER fixture_fail_checkpoint');}
           }
           async connectionFixture(status,revision) {
             return (await this.fetch(new Request('https://room.internal/internal/control', {
@@ -580,6 +588,33 @@ test('disconnect batches validate atomically and preserve a fresh session outsid
     assert.equal(revokedOwner.lease,null);
     assert.ok(revokedOwner.sockets.some(socket=>socket.role==='viewer' && socket.readyState===1));
     assert.ok(revokedOwner.sockets.every(socket=>socket.role!=='studio' || socket.readyState!==1));
+  } finally {await mf.dispose();}
+});
+
+test('a failed revocation checkpoint still closes captured sockets and preserves the fresh microphone owner', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const retired='retired-before-new-sign-in';
+    await connectedStudio(mf,'studio',await fixtureToken(mf,'studio',{sid:retired}));
+    await connectedStudio(mf,'viewer');
+    await start(mf);
+    const before=await advanceAudio(mf,stub,500);
+    assert.equal(await stub.disconnectWithStorageFailureFixture({sessionIds:[retired]}),503,
+      'The checkpoint failure must remain retryable, not become a success receipt.');
+    const after=await stub.inspectFixture();
+    assert.equal(after.revision,before.revision,'The failed transaction must not publish its checkpoint.');
+    assert.deepEqual(after.lease,before.lease,'Revocation must not reassign or clear the unaffected owner lease.');
+    assert.equal(after.mic,'listening');
+    assert.equal(after.phase,'active');
+    assert.ok(after.sockets.every(socket=>socket.sessionId!==retired || socket.readyState!==1));
+    assert.ok(after.sockets.some(socket=>socket.sessionId===SESSION && socket.readyState===1));
+    assert.ok(after.sockets.some(socket=>socket.role==='viewer' && socket.readyState===1));
+    assert.equal(await stub.disconnectBatchFixture({sessionIds:[retired]}),200);
+    const healthy=await stub.ownerMessageAtFixture(before.round!.segmentAt+628,{type:'speech-audio',
+      leaseId:before.lease!.id,roundId:before.round!.id,epoch:before.round!.epoch,samples:10_048});
+    assert.equal(healthy.lease!.id,before.lease!.id);
+    assert.equal(healthy.ownerSpeech!.samples,10_048);
+    assert.equal(healthy.mic,'listening');
   } finally {await mf.dispose();}
 });
 

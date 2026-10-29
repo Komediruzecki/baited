@@ -912,10 +912,12 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     if (!work) return;
     // Twitch waits stay outside the shared mutation queue. Each operation captures
     // a durable intent and applies results only to that still-current generation.
-    for (const eventId of work.pending) await this.deliver(eventId);
     if (work.stopping) await this.deleteSubscriptions(work.stopping);
     if (work.subscribe) await this.subscribe(work.subscribe);
     await this.sendOne();
     for (const channelId of work.validate) await this.validateCredential(channelId);
+    // Retry waits are bounded individually but can add up across eight attempts.
+    // Finish due cleanup, subscriptions, announcements and auth checks first.
+    for (const eventId of work.pending) await this.deliver(eventId);
   }
 }

@@ -61,14 +61,14 @@ Broadcaster role protection stops accidental peeking with the broadcaster’s kn
 
 ## Build and review before activation
 
-1. Assess the completed irch Opus staff review and verify its repairs. Keep the PR draft if a blocking issue remains. See [REVIEW-DISPOSITION.md](./REVIEW-DISPOSITION.md).
+1. Review the completed irch Opus staff review and repair confirmation, plus the final regression/CI results. Keep the PR draft if a blocking issue remains. See [REVIEW-DISPOSITION.md](./REVIEW-DISPOSITION.md).
 2. Let the existing PR checks validate the application, Extension, landing, review-host and edge package. The new edge checks also build the selected static pilot assets.
 3. Build the pilot frontend with `pnpm --filter @baited/edge-game build:pilot-assets`.
 4. Build a separately named native Extension ZIP with `EXTENSION_TRANSPORT=edge` and the exact pilot API/Studio origin. [`pilot-extension.env.tmpl`](./pilot-extension.env.tmpl) supplies the public configuration and the Proton reference for the public Extension client ID. A ZIP built with fixture values is not upload-ready. Pass `--version` explicitly to `packages/app/scripts/build-extension.mjs` (the script defaults to 0.0.1), plus distinct `--out-dir` and `--zip` paths. Match the owner-selected Twitch version; the currently prepared pilot ZIP is labeled 0.0.3.
 5. Review the actual Cloudflare account’s remaining included usage. The published allowances are shared with other projects; the $5 plan is not a hard spending cap.
 6. Record the chosen hostname, account, commit, time window, initial channels and stop procedure. Obtain the final activation decision before creating bindings, routing or provider workload.
 
-The branch has no automatic deployment workflow. Its prepared config has `workers_dev: false`, `preview_urls: false`, empty routes and `EDGE_PILOT_ENABLED: false`. A local build or PR merge is not a deployment instruction.
+No workflow deploys this game Worker. A later merge can still trigger the existing development landing/Card Lab workflow; that does not activate the game backend. The prepared Worker config has `workers_dev: false`, `preview_urls: false`, empty routes and `EDGE_PILOT_ENABLED: false`. A local build or PR merge is not a deployment instruction.
 
 ## Activation sequence, once authorized
 
@@ -108,7 +108,7 @@ This pilot does not expose Card Maker or account deletion UI. Data deletion is a
 
 To end an ordinary test: finish/pause the round, disable the microphone, choose Disconnect chat, confirm subscription removal, sign out and remove the pilot OBS source. Failed Twitch DELETE requests remain in a durable retry queue; the UI must not claim removal before confirmation.
 
-For a full pilot shutdown, disconnect each registered channel while the control service is still reachable and verify upstream subscription removal, verify the shared bot queue is drained/dropped, then set `EDGE_PILOT_ENABLED=false`, remove public routing and allow existing short-lived socket credentials to expire. Do not flip the flag before subscription cleanup: it also stops Control alarms and would stall pending deletion retries. A disabled gateway flag alone does not erase namespaces or instantly terminate every existing socket. If OAuth was revoked upstream or Twitch deletion fails, verify removal through the Twitch API before declaring ingestion stopped. Delete cloud data/resources only with an exact, approved retention decision.
+For a full pilot shutdown, disconnect each registered channel while the control service is still reachable and verify upstream subscription removal, verify the shared bot queue is drained/dropped, then set `EDGE_PILOT_ENABLED=false`, remove public routing and allow existing short-lived socket credentials to expire. Do not flip the flag before subscription cleanup: it also stops Control alarms and would stall pending deletion retries. A disabled gateway flag alone does not erase namespaces or instantly terminate every existing socket. If OAuth was revoked upstream or Twitch deletion fails, verify removal through the Twitch API before declaring ingestion stopped. Delete cloud data/resources only with an exact, approved retention decision. Do not wipe Control state while keeping Room state: connection revisions belong to the same deployment history and must be restored consistently.
 
 Stop the test immediately if a live secret appears in a Studio/OBS/broadcaster frame, another channel’s state becomes visible, microphone pauses repeat on a stable connection, webhooks repeatedly return 503, a pilot subscription cannot be removed, or usage rises unexpectedly. Before first connection, verify account-level logging does not capture authorization headers and configure billing notifications; neither a notification nor the pilot limits is a hard spending cap.
 

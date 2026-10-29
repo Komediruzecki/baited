@@ -640,8 +640,12 @@ export class ChannelRoom extends DurableObject<Env> {
         if(!revokedSockets.length && !revokeLease) return json({ok:true});
         if(revokeLease) {pilot.lease=null;candidate.mic='off';candidate.pauseIfActive();}
       } else return json({error:'Not found.'},404);
-      await this.commit(candidate,this.revision+1,this.generation,undefined,pilot);
-      for(const ws of revokedSockets) ws.close(1008,'Signed out.');
+      try {await this.commit(candidate,this.revision+1,this.generation,undefined,pilot);}
+      finally {
+        // Control already revoked these exact sessions. A checkpoint outage must
+        // not leave their existing sockets usable until capability expiry.
+        for(const ws of revokedSockets) try {ws.close(1008,'Signed out.');}catch{/* already closed */}
+      }
       this.broadcast();return json({ok:true});
     }
     if(path!=='/internal/twitch-chat') return json({error:'Not found.'},404);

@@ -548,7 +548,7 @@ test('an eight-event alarm retry batch waits outside Control so another channel 
   const f = await fixture(); let operation: Promise<Response> | undefined;
   try {
     await login(f); await login(f, 'lakeeko');
-    await f.request('/__fixture/flush'); await f.request('/__fixture/flush');
+    for (let i = 0; i < 6; i++) await f.request('/__fixture/flush');
     await f.request('/__fixture/room-config/123?hold=/internal/twitch-chat');
     await f.request('/__fixture/pending-eight');
     operation = f.request('/__fixture/flush');
@@ -558,6 +558,7 @@ test('an eight-event alarm retry batch waits outside Control so another channel 
     other.subscription.condition = { broadcaster_user_id: '456', user_id: '456' };
     other.event.broadcaster_user_id = '456';
     assert.equal((await bounded(f.request('/api/twitch/eventsub', webhook(other, 'other-channel-during-batch')), 'retry batch held unrelated signed chat')).status, 204);
+    assert((await f.request('/__fixture/room/456').then(r => r.json()) as any[]).some(call => call.body.eventId === 'other-channel-during-batch'));
     await f.request('/__fixture/room-release/123');
     assert.equal((await operation).status, 200);
     assert.equal((await f.request('/__fixture/rows').then(r => r.json()) as any).counts.pending, 0);
@@ -582,6 +583,42 @@ test('revoking one hundred saved sessions uses one bounded Room batch', { timeou
     assert.equal(batches.length, 1);
     assert.equal(new Set(batches[0].body.sessionIds).size, 100);
   } finally { await f.request('/__fixture/room-release/123').catch(() => {}); await f.mf.dispose(); }
+});
+
+test('due subscription deletion and bot sending finish before a held Room retry batch', async () => {
+  const f = await fixture(); let operation: Promise<Response> | undefined;
+  try {
+    const owner = await login(f); const other = await login(f, 'lakeeko');
+    for (let i = 0; i < 6; i++) await f.request('/__fixture/flush');
+    const ownerBootstrap = await f.request('/api/edge/session', { headers: { cookie: owner.cookie } }).then(r => r.json()) as any;
+    const otherBootstrap = await f.request('/api/edge/session', { headers: { cookie: other.cookie } }).then(r => r.json()) as any;
+    const bot = await f.request('/api/bot/authorize', jsonPost({}, { cookie: owner.cookie, 'x-csrf-token': ownerBootstrap.csrf }));
+    const url = new URL((await bot.json() as any).url);
+    assert.equal((await f.request(`/auth/twitch/callback?state=${url.searchParams.get('state')}&code=bot`, { headers: { cookie: cookies(bot) } })).status, 302);
+    await f.request('/__fixture/fail-delete?value=true');
+    assert.equal((await f.request('/api/edge/chat', jsonPost({ connected: false }, { cookie: other.cookie, 'x-csrf-token': otherBootstrap.csrf }))).status, 503);
+    await f.request('/__fixture/fail-delete?value=false');
+    const game = new Game({ id: 'fixture-room', owner: '123', channel: 'komediruzecki7', mode: 'demo', overlayKey: 'unused', settings: { ...defaults, chatBot: true }, history: [], priorWins: 0, priorPlayed: 0, priorBest: 0, leaders: {} });
+    game.start();
+    assert.equal((await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: 'before-held-retries', safeView: game.view('overlay'), event: { type: 'start' } }))).status, 200);
+    await f.request('/__fixture/room-config/123?hold=/internal/twitch-chat');
+    await f.request('/__fixture/pending-eight');
+    operation = f.request('/__fixture/flush');
+    await bounded((async () => {
+      for (;;) {
+        const calls = await f.request('/__fixture/room/123').then(r => r.json()) as any[];
+        if (calls.some(call => call.body.eventId === 'queued-0')) break;
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    })(), 'alarm did not reach the held Room retry');
+    const state = await f.request('/__fixture/state').then(r => r.json()) as any;
+    assert.equal(state.channels['456'].subscriptionStatus, 'offline', 'due deletion completed while the Room retry remains held');
+    assert.equal(state.channels['456'].pendingDeletion.length, 0);
+    assert.equal(state.queue.length, 0, 'due bot message was not delayed by pending chat delivery');
+    assert.equal(state.receipts.filter((receipt: any) => receipt.status === 'sent').length, 1);
+    await f.request('/__fixture/room-release/123');
+    assert.equal((await operation).status, 200);
+  } finally { await f.request('/__fixture/room-release/123').catch(() => {}); await operation?.catch(() => {}); await f.mf.dispose(); }
 });
 for (const kind of ['subscribe', 'delete', 'send', 'token']) test(`a stalled Twitch ${kind} request does not hold signed chat delivery`, async () => {
   const f = await fixture(); let operation: Promise<Response> | undefined;
