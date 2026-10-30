@@ -6,6 +6,7 @@ import { allowedLogins, cookieValue, decryptValue, encryptValue, maximumChannels
 import { CONTROL_LIMITS, type ControlEnv, type ControlSession, type ControlState, type Credentials, type RegisteredChannel,
   type RoomAnnouncement, type TwitchChatEvent, type TwitchUser } from './control-types.js';
 import { internalFetch } from './internal-fetch.js';
+import { oauthDiagnostic, OAuthProviderError, type OAuthPhase } from './oauth-diagnostics.js';
 
 const ID = /^[1-9][0-9]{0,24}$/;
 const CALLBACK = '/auth/twitch/callback';
@@ -94,8 +95,15 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     try { return await result; } finally { this.waiting--; }
   }
   /** Override in the isolated fixture only; production uses bounded native fetch. */
-  protected externalFetch(input: string, init?: RequestInit): Promise<Response> {
-    return fetch(input, { ...init, signal: AbortSignal.timeout(5000), redirect: 'error' });
+  protected async externalFetch(input: string, init?: RequestInit): Promise<Response> {
+    // workerd rejects redirect:'error' before sending. Manual mode plus an
+    // explicit refusal keeps credentials on the original Twitch endpoint.
+    const response = await fetch(input, { ...init, signal: AbortSignal.timeout(5000), redirect: 'manual' });
+    if (response.status >= 300 && response.status < 400) {
+      await response.body?.cancel();
+      throw new Error('provider_redirect');
+    }
+    return response;
   }
   /** Fixture instrumentation measures actual SQLite rows read, not an estimate. */
   protected inboxQuery<T extends Record<string, SqlStorageValue>>(query: string, ...bindings: SqlStorageValue[]): T[] {
@@ -346,6 +354,16 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     return asJson ? json({ url: auth.href }, 200, headers) : new Response(null, { status: 302, headers: { ...headers, location: auth.href } });
   }
   private async callback(request: Request, url: URL): Promise<Response> {
+    let phase: OAuthPhase = 'state';
+    try { return await this.completeCallback(request, url, (next) => { phase = next; }); }
+    catch (error) {
+      const diagnostic = oauthDiagnostic(phase, error);
+      console.warn(JSON.stringify(diagnostic));
+      return json({ error: 'Twitch connection could not be completed. Try again.', code: `oauth_${phase}_${diagnostic.reason}` }, 503,
+        { 'set-cookie': oauthCookie('', 0) });
+    }
+  }
+  private async completeCallback(request: Request, url: URL, phase: (next: OAuthPhase) => void): Promise<Response> {
     const clear = { 'set-cookie': oauthCookie('', 0) };
     const prepared = await this.serial(async () => {
       if (!this.configured() || url.origin !== publicOrigin(this.env) || url.username || url.password || url.hash) return denied();
@@ -362,7 +380,8 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     });
     if (prepared instanceof Response) return prepared;
     const { code, pending } = prepared;
-    const c = await this.exchange(code, pending.kind);
+    const c = await this.exchange(code, pending.kind, phase);
+    phase('session-storage');
     return this.serial(async () => {
     if (pending.kind === 'bot' && (!pending.initiatingSession || !this.data.sessions[pending.initiatingSession] ||
       !this.allowed(this.data.channels[this.data.sessions[pending.initiatingSession]!.channelId]))) return denied();
@@ -401,7 +420,10 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   private async tokenCall(parameters: Record<string, string>): Promise<Record<string, any>> {
     const response = await this.externalFetch('https://id.twitch.tv/oauth2/token', { method: 'POST', body: new URLSearchParams({
       client_id: this.env.TWITCH_CLIENT_ID!, client_secret: this.env.TWITCH_CLIENT_SECRET!, ...parameters }) });
-    if (!response.ok) throw new Error(parameters.grant_type === 'refresh_token' && [400, 401].includes(response.status) ? 'token_revoked' : 'token_exchange_failed');
+    if (!response.ok) {
+      if (parameters.grant_type === 'authorization_code') throw new OAuthProviderError(response.status);
+      throw new Error(parameters.grant_type === 'refresh_token' && [400, 401].includes(response.status) ? 'token_revoked' : 'token_exchange_failed');
+    }
     const data = object(await response.json());
     if (!data || typeof data.access_token !== 'string' || data.access_token.length > 4096 || !Number.isFinite(data.expires_in) || data.expires_in <= 0) throw new Error('invalid_token_response');
     return data;
@@ -415,10 +437,13 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       !Array.isArray(value.scopes) || value.scopes.length > 100 || !value.scopes.every((s: unknown) => typeof s === 'string') || !required.every((s) => value.scopes.includes(s))) throw new Error('token_revoked');
     return { userId: value.user_id as string, login: value.login as string, scopes: value.scopes as string[] };
   }
-  private async exchange(code: string, kind: 'broadcaster' | 'bot'): Promise<Credentials> {
+  private async exchange(code: string, kind: 'broadcaster' | 'bot', phase: (next: OAuthPhase) => void): Promise<Credentials> {
+    phase('token-exchange');
     const tokens = await this.tokenCall({ grant_type: 'authorization_code', code, redirect_uri: `${publicOrigin(this.env)}${CALLBACK}` });
     if (typeof tokens.refresh_token !== 'string' || tokens.refresh_token.length > 4096) throw new Error('invalid_refresh_token');
+    phase('token-validation');
     const valid = await this.validateToken(tokens.access_token, kind === 'bot' ? BOT_SCOPES : BROADCASTER_SCOPES);
+    phase('identity');
     const response = await this.externalFetch('https://api.twitch.tv/helix/users', { headers: { authorization: `Bearer ${tokens.access_token}`, 'client-id': this.env.TWITCH_CLIENT_ID! } });
     if (!response.ok) throw new Error('identity_unavailable');
     const payload = object(await response.json()); const user = payload && Array.isArray(payload.data) && payload.data.length === 1 ? userShape(payload.data[0]) : null;

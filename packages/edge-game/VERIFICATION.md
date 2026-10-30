@@ -4,13 +4,15 @@
 
 ## Active provider checks, 30 October 2026
 
-The owner authorized `komediruzecki7` and `lakeeko`, with a two-channel ceiling and 100 participants/100 viewer sockets per channel. Cloudflare version `f35137d9-9393-44b6-8124-16b1bc94370e` serves the exact custom domain `pilot-baited.maff.app`; workers.dev, preview URLs and synthetic authentication remain disabled. All six secrets are retained.
+The owner authorized `komediruzecki7` and `lakeeko`, with a two-channel ceiling and 100 participants/100 viewer sockets per channel. The initial Cloudflare version was `f35137d9-9393-44b6-8124-16b1bc94370e`; the OAuth compatibility repair is deployed as `fdb8c95a-1d4c-485f-99c7-24cee8b9776c` on the same exact custom domain `pilot-baited.maff.app`. workers.dev, preview URLs and synthetic authentication remain disabled. All six secrets are retained.
 
 HTTPS checks passed: health reports an enabled allowlisted pilot; Studio returns 200 and renders Connect Twitch in the in-app browser; signed-out session metadata returns 200; protected session and room state return 401; an unsigned webhook returns JSON 403; Card Maker and Card Lab return 404. Read-only Twitch inspection found zero existing app EventSub subscriptions. The previously uploaded 0.0.3 edge ZIP is confirmed in Hosted Test with matching MD5 `e0c01f07740576980001c31635e5164b`. No review was submitted.
 
 These checks do not establish a real OAuth grant, chat connection, microphone round, Paolo session or OBS playback on the cloud pilot. See [ACTIVE-PILOT.md](./ACTIVE-PILOT.md) for the receipt and owner steps. Sanitized activation evidence is in registered run `baited/2026-10-30/587efe961f254b15b20a29a5b8659ab5`.
 
 ## Completed local evidence
+
+30 October OAuth repair: the first real owner authorization returned 503 because production native fetch used unsupported `redirect: 'error'`. New tests preserve the production method and intercept networking with a native workerd outbound fixture. All seven failed before the repair and passed afterward, including successful POST/form/auth headers, five redirect codes with no forwarding, and the actual five-second abort. The 25 existing Control/diagnostic checks passed. `tsc --noEmit` passed. Callback diagnostics use only fixed categories and bounded provider status; no raw exception/provider/request material is logged. The irch review could not start because the isolated profile was logged out; no fallback account was used. Fresh live authorization acceptance is pending. Evidence run: `baited/2026-10-30/95282fecd33c472c93d11146c8d7600f`.
 
 | Check | Evidence |
 | --- | --- |

@@ -11,7 +11,7 @@ The cloud endpoint is active. The PC server and tunnel remain stopped. The repos
 | Item | Verified state |
 | --- | --- |
 | Worker | `baited-edge-pilot` |
-| Provider version | `f35137d9-9393-44b6-8124-16b1bc94370e` |
+| Provider version | `fdb8c95a-1d4c-485f-99c7-24cee8b9776c` (OAuth compatibility repair) |
 | Public endpoint | Exact custom domain `pilot-baited.maff.app` |
 | Alternate addresses | workers.dev and preview URLs disabled |
 | Enabled mode | Real allowlisted pilot; POC, local fixture and synthetic staging auth disabled |
@@ -22,7 +22,17 @@ The cloud endpoint is active. The PC server and tunnel remain stopped. The repos
 | Excluded features | Card Maker, uploads, custom decks, scanning, R2, D1 and Containers |
 | Twitch package | Version 0.0.3 edge ZIP uploaded; Hosted Test confirmed; MD5 `e0c01f07740576980001c31635e5164b` |
 
-The runtime source remains `a102da0`; activation changes only the deployment configuration and operator documentation. This receipt supersedes the status in [INACTIVE-DEPLOYMENT.md](./INACTIVE-DEPLOYMENT.md), which is retained as a historical checkpoint.
+The initial activation used runtime source `a102da0`. The current deployment adds the OAuth compatibility repair described below. This receipt supersedes the status in [INACTIVE-DEPLOYMENT.md](./INACTIVE-DEPLOYMENT.md), which is retained as a historical checkpoint.
+
+### OAuth runtime repair
+
+The owner's first real sign-in returned a generic 503. Production Twitch requests used `redirect: 'error'`, which workerd rejects before any network request. The older OAuth fixtures replaced this method and missed the runtime difference. The repair uses `manual`, explicitly rejects all 3xx responses without forwarding credentials, and retains the five-second abort.
+
+A new offline native-workerd fixture failed all seven checks before the repair and passed afterward: successful POST/form/auth headers, 301/302/303/307/308 rejection after one original request, and timeout. Existing Control/OAuth tests and safe diagnostic tests also passed. Callback failures now expose only fixed phase/reason categories and bounded provider status; no callback queries, provider bodies, cookies or tokens are logged. Historical observability remains disabled. A fresh owner OAuth retry is still required; do not reload or share a previously consumed callback URL.
+
+The requested new irch Opus pass could not start because its previously verified isolated profile is logged out (`account_unavailable`). No alternative account was used. Independent source review and native regression proof completed; this is not an Opus approval or a successful live OAuth grant.
+
+Repair evidence: registered run `baited/2026-10-30/95282fecd33c472c93d11146c8d7600f`.
 
 ## What passed
 

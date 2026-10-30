@@ -262,7 +262,12 @@ test('wrong browser, identity scopes, account allowlist and channel limits fail 
   try {
     const start = await f.request('/auth/twitch'); const url = new URL(start.headers.get('location')!);
     assert.equal((await f.request(`/auth/twitch/callback?state=${url.searchParams.get('state')}&code=komediruzecki7`)).status, 400);
-    for (const code of ['wrongclient', 'missingscope']) assert.equal((await login(f, code)).callback.status, 503);
+    for (const code of ['wrongclient', 'missingscope']) {
+      const response = (await login(f, code)).callback;
+      assert.equal(response.status, 503);
+      assert.deepEqual(await response.json(), { error: 'Twitch connection could not be completed. Try again.',
+        code: 'oauth_token-validation_token_revoked' });
+    }
     assert.equal((await login(f, 'outsider')).callback.status, 403);
     assert.equal((await login(f)).callback.status, 302);
     assert.equal((await login(f, 'lakeeko')).callback.status, 409);
