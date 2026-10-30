@@ -59,13 +59,23 @@ Twitch settings/upload proof is in registered run:
 
 1. The testing streamer opens Studio and signs into Twitch as `komediruzecki7` or `lakeeko`. Review and approve the requested permissions. Other logins cannot register a pilot channel.
 2. In Studio, connect Twitch chat and wait for its connected status. The preflight found no subscription conflict; recheck if another environment has connected since then. Do not delete another callback automatically.
-3. On that streamer's Twitch channel, install/activate Baited 0.0.3 from Hosted Test and choose the panel or video-overlay placement. Twitch tester access and the backend streamer allowlist are separate: Paolo (`yahwehwastaken`) needs tester access to view the unreleased Extension, but does not need to be a pilot streamer.
+3. On that streamer's Twitch channel, install/activate Baited 0.0.3 from Hosted Test and choose the panel or video-overlay placement. During Hosted Test, each viewer needs Twitch's **Testing Account Allowlist** access. The **Streamer Allowlist** and backend streamer allowlist are separate: Paolo (`yahwehwastaken`) needs tester access to view the unreleased Extension, but does not need to be a pilot streamer.
 4. Copy a fresh OBS URL from this Studio into the OBS Browser Source. The old PC-server URL cannot connect to this pilot. The OBS HUD shows public round information; the Twitch-native Extension separately shows the secret card to viewers and the card back to the broadcaster.
-5. Enable the microphone and wait for Moonshine. Paolo opens the testing channel while signed into his own allowlisted Twitch account. Start one round; he should see the secret word and send a clue through chat.
+5. Enable the microphone and wait for Moonshine. Paolo opens the testing channel while signed into his own allowlisted Twitch account. Mobile viewers complete the acceptance steps below. Start one round; he should see the secret word and send a clue through chat.
 6. Confirm the clue appears once in Studio. Say the target, confirm the catch, and check that Studio, Paolo's view and OBS agree on the result. The live secret must remain hidden in Studio, OBS and the broadcaster's Extension view.
 7. Optional Baity announcements require separate bot authorization. Only `komediruzecki7` can initiate that operator flow, using the configured bot account. Then enable announcements in game settings.
 
 Complete the interruption, renewal and device checks in [PILOT.md](./PILOT.md) before increasing admission or inviting more streamer channels.
+
+### Viewer setup in the Twitch iOS app
+
+1. Sign into the Twitch app with the account added to the **Testing Account Allowlist**, then open the testing streamer's live channel.
+2. Open **Extensions**, select **Baited** and tap **Accept test extension** when prompted. Accepting the general notice that the channel uses Extensions does not complete this separate test acceptance.
+3. Keep Baited's Extension view open while the streamer starts a round. The secret word and clues appear there during the round. The OBS video shows the shared public HUD/reveal; it does not replace the viewer's secret-card view.
+
+If Baited is missing, check tester access and that the version is back in Hosted Test. The active version must have mobile support enabled with **Mobile Viewer Path = `viewer.html`**.
+
+**Owner-confirmed, 30 October 2026:** a separate viewer account saw the secret card in the Twitch iOS app after tapping **Accept test extension**. This is a real-device viewer-flow result, not an automated test or a capacity benchmark.
 
 ## See what Moonshine heard
 
