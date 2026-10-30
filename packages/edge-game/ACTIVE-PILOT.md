@@ -69,6 +69,8 @@ Complete the interruption, renewal and device checks in [PILOT.md](./PILOT.md) b
 
 For a one-screen setup, keep Twitch chat on a phone/tablet beside the PC. [Chat setup](./CHAT-SETUP.md) covers the installed Chatterino app, its floating desktop overlay and the separate public-chat widget plan for OBS.
 
+For recording, use the [Arch/Hyprland setup guide](./recording/README.md) and [three-round conversation runbook](./recording/THREE-CLIPS.md). They separate the streamer's desktop chat, the recorded public HUD/chat and the viewer's secret-card capture.
+
 ### Viewer setup in the Twitch iOS app
 
 1. Sign into the Twitch app with the account added to the **Testing Account Allowlist**, then open the testing streamer's live channel.

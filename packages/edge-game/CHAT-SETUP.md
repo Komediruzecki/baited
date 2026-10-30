@@ -41,7 +41,7 @@ The [official Linux guide](https://chatterino.com/linux) recommends `yay -S chat
 
    This opens only that public channel with plugins disabled. Start by reading chat without adding an account. Sending messages or moderation may require a separate login; review that consent yourself. Never paste an OAuth token into a command, Baited or a setup document.
 2. Select the channel split and press **Ctrl+Alt+N** to open its floating overlay. This shortcut is documented in the [official changelog](https://chatterino.com/changelog).
-3. Place the chat where it leaves the game and Baited HUD readable. Start with a windowed/borderless game. Increase chat text size, then check it at normal viewing distance. If Hyprland does not keep it above the game, test a floating/pinned window rule for that exact window before changing desktop-wide rules. Exclusive fullscreen and click-through behavior are not yet verified here.
+3. Place the chat where it leaves the game and Baited HUD readable. On this PC, if the chat tiles beside the game, focus that chat window and press **Super+Space** once to make it float. The owner confirmed this works on 30 October 2026. Maximize the game with **Super+Ctrl+F**, retaining Waybar. Increase chat text size, then check it at normal viewing distance. Exclusive fullscreen and click-through behavior are not yet verified here.
 4. Ask Paolo to send an ordinary clue and check that it arrives while the game has focus. Minimize and restore the overlay; verify new messages still arrive.
 5. Record a short OBS clip and inspect it. A whole-display capture can include the floating chat; a chosen game/window capture may exclude it. Confirm the actual result with the capture method you use.
 
@@ -80,6 +80,6 @@ Chatterino connects directly to Twitch and its emote providers. It does not join
 - The streamer's chat tools show ordinary chat, not Baited's live secret-card view.
 - The phone/tablet remains a usable fallback.
 
-Installation checks passed. These live GUI, focus and capture checks remain for the owner; this task did not start a stream, send a chat message or deploy Baited.
+Installation checks passed. The owner subsequently confirmed that chat loads and **Super+Space** makes its window float. Capture, game focus, reconnect and recording checks remain for the owner; no stream, chat message or Baited deployment was started by the agent. See the [Arch recording guide and three-round plan](./recording/README.md).
 
 Install evidence: registered run `baited/2026-10-30/ae9e92ff9da24434bf352b28ac84d765`.
