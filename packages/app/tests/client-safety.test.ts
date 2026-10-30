@@ -49,16 +49,22 @@ function microphoneHarness() {
     originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
     Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
   };
-  const track = { onended: null as (() => void) | null, stopped: 0, stop() { this.stopped++; } };
-  const stream = { getTracks: () => [track] };
+  class FakeTrack extends EventTarget {
+    onended: (() => void) | null = null;
+    readyState = 'live'; muted = false; stopped = 0;
+    stop() { this.stopped++; this.readyState = 'ended'; }
+  }
+  const track = new FakeTrack();
+  const stream = { getTracks: () => [track], getAudioTracks: () => [track] };
   const node = () => ({ connect() {}, disconnect() {} });
   const posts: { enabled: boolean; generation: number }[] = [];
   let port: { onmessage?: (e: { data: { buffer: ArrayBuffer; generation: number } }) => void; postMessage: (v: { enabled: boolean; generation: number }) => void };
-  class FakeContext {
+  class FakeContext extends EventTarget {
+    state = 'suspended';
     audioWorklet = { addModule: async () => {} };
     destination = {};
-    resume = async () => {};
-    close = async () => {};
+    resume = async () => { this.state = 'running'; };
+    close = async () => { this.state = 'closed'; };
     createMediaStreamSource = node;
     createGain = () => ({ ...node(), gain: { value: 1 } });
   }
@@ -208,6 +214,8 @@ test('a delayed arm response compensates only its cancelled capture lease', asyn
   assert.equal(await next.arm(), true);
   release();
   assert.equal(await pending, false);
+  // Cancellation now settles promptly; detached compensation follows the late acknowledgement.
+  await new Promise<void>((resolve) => setImmediate(resolve));
   assert.equal(current, 'next');
   assert.equal(old.active, false);
   assert.equal(next.active, true);

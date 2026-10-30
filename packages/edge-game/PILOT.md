@@ -67,6 +67,8 @@ The next build confirms a detected Moonshine catch automatically after 15 second
 
 These changes are prepared locally, not part of the recorded active deployment. A game Worker deployment updates Studio/backend behavior; a separately uploaded Twitch ZIP updates native Extension copy and spacing. Neither happens on a PR push. See [the chat-delivery investigation](./CHAT-DELIVERY-REPAIR-2026-10-30.md) for the incoming-command repair, current evidence and retest procedure. Do not interrupt an active test to apply the update without coordinating it.
 
+The same prepared update adds [microphone recovery](../app/docs/microphone-recovery.md): bounded checks, visible interruption messages, explicit retry after a lost capture, and current-owner audio lease refresh when background timers slow down. The audio-gap pause and exact session/tab/round ownership checks remain enforced. No microphone code can keep a sleeping PC recording.
+
 1. Review the completed irch Opus staff review and repair confirmation, plus the final regression/CI results. Keep the PR draft if a blocking issue remains. See [REVIEW-DISPOSITION.md](./REVIEW-DISPOSITION.md).
 2. Let the existing PR checks validate the application, Extension, landing, review-host and edge package. The new edge checks also build the selected static pilot assets.
 3. Build the pilot frontend with `pnpm --filter @baited/edge-game build:pilot-assets`.

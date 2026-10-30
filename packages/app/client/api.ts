@@ -90,13 +90,13 @@ export async function request<T>(path: string, body?: unknown, csrf?: string, si
     if (!session.authenticated) clearEdge();
     return session;
   }
-  if (!edgeMode) return direct(path, body, csrf);
+  if (!edgeMode) return direct(path, body, csrf, signal);
   if (path === '/api/logout' || path.startsWith('/api/account/')) {
     const result = await direct<T>(path, body, csrf); clearEdge(); return result;
   }
   if (path === '/api/studio' || path.startsWith('/api/studio/')) {
     const transport = studioEdge();
-    let snapshot = await transport.state();
+    let snapshot = await transport.state(signal);
     if (body !== undefined) {
       const value = body as Record<string, unknown>;
       if (path === '/api/studio/action' && ['connect', 'disconnect'].includes(String(value.action))) {
@@ -116,7 +116,7 @@ export async function request<T>(path: string, body?: unknown, csrf?: string, si
       else if (path === '/api/studio/award') action = { type: 'award', ...value };
       else if (path === '/api/studio/microphone') action = { type: 'microphone', ...value, renew: value.renew === true };
       else throw new Error('The pilot uses the Baited deck. Card making is available in the local app.');
-      snapshot = await transport.command(action);
+      snapshot = await transport.command(action, signal);
       if (path === '/api/studio/microphone') return { armed: value.armed === true } as T;
       if (path === '/api/studio/guess') return { correct: snapshot.room?.result?.reason === 'guess',
         bonus: snapshot.room?.round?.wrongGuessBonus ?? 0, studio: edgeStudio(snapshot, transport.bootstrap!) } as T;

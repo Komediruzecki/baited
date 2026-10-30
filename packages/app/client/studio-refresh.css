@@ -135,6 +135,9 @@
 .studio-shell .mic-card h3 { margin: 0 0 10px; color: var(--b-paper); font: 600 19px/1.3 var(--b-ui); letter-spacing: -.02em; }
 .studio-shell .mic-card > p { min-height: 0; max-width: none; margin: 0 0 18px; color: var(--b-muted); font: 400 13px/1.65 var(--b-ui); text-align: left; }
 .studio-shell .mic-card .mic-review-note { margin: 18px 0; padding-top: 14px; border-top: 1px solid var(--b-line); font-size: 12px; }
+.studio-shell .mic-card > .mic-feedback { grid-column: 1 / -1; min-width: 0; overflow-wrap: anywhere; }
+.studio-shell .mic-card > .error-banner.mic-feedback { margin-bottom: 18px; }
+.studio-shell .mic-card:has(> .mic-feedback) { display: block; }
 .studio-shell .mic-review-note strong { color: var(--b-copy); font-weight: 600; }
 .studio-shell .mic-card > .button { width: 100%; margin: 0; }
 .studio-shell .mic-footnote { display: flex; gap: 6px; align-items: flex-start; justify-content: flex-start; margin: 12px 0 0; color: var(--b-muted); font: 400 11px/1.5 var(--b-ui); text-align: left; }

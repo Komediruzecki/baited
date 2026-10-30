@@ -15,7 +15,8 @@ interface Speech { leaseId: string; roundId: string; epoch: number; samples: num
 type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:'help'|'score'|'top'|'who';userId:string};
 interface Attachment { identity: AuthIdentity; lastInputAt: number; lastAuthRefreshAt?:number; sentViewRevision?:number; socketId?: string; microphoneLeases?:string[]; speech?: Speech; inputs?: {at:number;n:number}; audioInputs?:{at:number;tokens:number} }
 interface Lease { id:string; sessionId:string; socketId:string; expiresAt:number; lastAudioAt?:number; roundId?:string; epoch?:number }
-interface PilotState { lease:Lease|null; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; connectionRevision?:number; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>} }
+interface PilotState { lease:Lease|null; microphoneStopRevision?:number; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; connectionRevision?:number; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>} }
+const AUDIO_LEASE_REFRESH_MS=10_000;
 const eventSchema = z.object({eventId:z.string().min(1).max(200),channelId:z.string().regex(/^[1-9][0-9]{0,24}$/),
   at:z.number().finite(),kind:z.enum(['message','delete','clear-user']),messageId:z.string().min(1).max(200).optional(),
   userId:z.string().regex(/^[1-9][0-9]{0,24}$/),name:z.string().max(40).optional(),text:z.string().max(2000).optional(),
@@ -235,6 +236,23 @@ export class ChannelRoom extends DurableObject<Env> {
       : lease.roundId===game.round?.id && lease.epoch===game.round.epoch && lease.lastAudioAt
         ? lease.lastAudioAt+pilotLimits(this.env).speechGapMs : game.round!.segmentAt+5_000;
   }
+  private async refreshAudioLease(lease:Lease,speech:Speech,receivedAt:number):Promise<void> {
+    const lifetime=pilotLimits(this.env).microphoneLeaseMs;
+    if(receivedAt<lease.expiresAt-lifetime+AUDIO_LEASE_REFRESH_MS) return;
+    // Only validated, currently owned active audio reaches here. Its server
+    // arrival time can keep capture alive when background UI timers throttle,
+    // but queued audio cannot buy extra time at its later processing time.
+    // Persist at the heartbeat cadence, never per audio frame; the 2.5s gap
+    // remains independently enforced from the last accepted socket attachment.
+    const next=structuredClone(this.pilotState);
+    next.lease={...lease,expiresAt:receivedAt+lifetime,lastAudioAt:receivedAt,
+      roundId:speech.roundId,epoch:speech.epoch};
+    await this.ctx.storage.transaction(async()=>{
+      this.writePilot(next);
+      await this.schedule(this.game,this.generation,this.receiptAt,next);
+    });
+    this.pilotState=next;
+  }
   private async reconcile(): Promise<void> {
     this.now = Date.now(); this.closeStale();
     if (!this.game) return;
@@ -302,8 +320,13 @@ export class ChannelRoom extends DurableObject<Env> {
         const old=pilot.lease;
         if (!a.armed) {
           if (old && (old.id!==a.leaseId || old.sessionId!==identity.sessionId)) throw new Error('lease_owner');
+          // A canceled arm may still be in flight before it creates a lease.
+          // One durable revision barrier retires all pre-cancel initial arms;
+          // ordinary intervening chat revisions and exact-owner renewals remain valid.
+          pilot.microphoneStopRevision=this.revision+1;
           pilot.lease=null;game.mic='off';game.pauseIfActive();break;
         }
+        if (!a.renew && command.expectedRevision<(pilot.microphoneStopRevision??0)) throw new Error('lease_owner');
         if ((old && old.expiresAt>this.now && (old.id!==a.leaseId || old.sessionId!==identity.sessionId || old.socketId!==socket.socketId)) ||
           (a.renew && (!old || old.expiresAt<=this.now || old.id!==a.leaseId || old.sessionId!==identity.sessionId))) throw new Error('lease_owner');
         pilot.lease={id:a.leaseId,sessionId:identity.sessionId,socketId:socket.socketId,expiresAt:this.now+pilotLimits(this.env).microphoneLeaseMs,
@@ -349,7 +372,11 @@ export class ChannelRoom extends DurableObject<Env> {
     const pilot=structuredClone(this.pilotState);
     if (this.pilot() && !this.takeRate(pilot,this.actorRate(identity,'control'),pilotLimits(this.env).controlsPerMinute)) return {status:429,body:{ok:false,code:'rate_limit',revision:this.revision,generation:this.generation}};
     try { this.dispatch(candidate, identity, command, pilot); }
-    catch { return {status:409,body:{ok:false,code:'action_unavailable',revision:this.revision,generation:this.generation}}; }
+    catch (error) {
+      const code=command.action.type==='microphone' && error instanceof Error &&
+        (error.message==='lease_owner' || error.message==='studio_not_connected') ? error.message : 'action_unavailable';
+      return {status:409,body:{ok:false,code,revision:this.revision,generation:this.generation}};
+    }
     const generation = this.generation + (command.action.type === 'revoke-connections' ? 1 : 0);
     const body: Receipt = {ok:true,revision:this.revision+1,generation};
     await this.commit(candidate, body.revision, generation, {key,hash,body},pilot);
@@ -573,7 +600,13 @@ export class ChannelRoom extends DurableObject<Env> {
         const drift=receivedAt-speech.firstAudioAt-parsed.samples/16;
         if(drift < -500 || drift>2000) throw new Error('speech_timing');
         speech.samples=parsed.samples;speech.lastAudioAt=receivedAt;
-        att.speech=speech;ws.serializeAttachment(att);await this.schedule();return;
+        await this.refreshAudioLease(lease,speech,receivedAt);
+        // Admission can update its counters while durable renewal awaits.
+        // Publish only accepted speech onto the latest attachment, never the
+        // older input/auth metadata captured at the start of this operation.
+        const current=this.attachment(ws);
+        if(!current || current.socketId!==lease.socketId || current.identity.sessionId!==lease.sessionId) throw new Error('speech_binding');
+        current.speech=speech;ws.serializeAttachment(current);await this.schedule();return;
       }
       const transcript=localTranscript({type:'final',sequence:data.sequence,line:data.line},
         {...speech,audioSeconds:speech.samples/16000},this.now);

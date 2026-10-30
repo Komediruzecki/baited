@@ -54,7 +54,8 @@ import { nextStreakTier, streakMilestone } from '../extension/presentation.js';
 import { CutCard } from './CutCard';
 import { StreakBadge, StreakBadges, StreakCelebration, StreakCount, StreakRow } from './streak';
 import { SoundControls } from './SoundControls';
-import { microphoneReady, MicrophoneLease } from './safety';
+import { microphoneReady, MicrophoneLease, microphoneLeaseMessage } from './safety';
+import { MicrophoneFeedback } from './microphone-feedback';
 import { useSmoothScroll } from './smooth-scroll';
 import 'lenis/dist/lenis.css';
 import './style.css';
@@ -188,7 +189,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     });
   const [micStatus, setMicStatus] = useState('off'),
     [level, setLevel] = useState(0),
-    [consent, setConsent] = useState(false);
+    [consent, setConsent] = useState(false),
+    [micIssue, setMicIssue] = useState(''),
+    [micRecovering, setMicRecovering] = useState(false);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
   const [cardsDirty, setCardsDirty] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
@@ -217,7 +220,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       owner.microphone.stop();
       if (capture.current === owner) {
         setConsent(false);
-        if (message) setError(message);
+        setMicRecovering(false);
+        if (message) { setMicIssue(message); setError(message); }
       }
       try {
         await owner.lease.cancel();
@@ -226,10 +230,12 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           if (capture.current === owner) receive(fresh);
         }
       } catch {
-        if (capture.current === owner)
+        if (capture.current === owner) {
+          setMicIssue((current) => current || 'Microphone stopped. Check the connection and pause the round before continuing.');
           setError(
             'Microphone stopped. Check the connection and pause the round before continuing.',
           );
+        }
       }
     },
     [receive],
@@ -240,7 +246,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       if (lost) {
         setTranscriptLines(transcriptBuffer.current.setEnabled(false));
         setTranscriptEnabled(false);
-        if (capture.current) void pauseForMicrophone(capture.current, undefined, false);
+        if (capture.current?.lease.active) void pauseForMicrophone(capture.current,
+          'Studio lost its connection. Wait for it to reconnect, then enable your microphone again.', false);
         else setConsent(false);
         void request<SessionInfo>('/api/session')
           .then((s) => {
@@ -280,15 +287,24 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     const owner = capture.current;
     if (!consent || offline || !owner?.lease.active) return;
     const renew = () =>
-      void owner.lease.renew().catch(() => {
+      void owner.lease.renew().catch((error: unknown) => {
         if (capture.current === owner && owner.lease.active)
           void pauseForMicrophone(
             owner,
-            'Microphone readiness could not be confirmed. Reconnect, then enable it again.',
+            microphoneLeaseMessage(error),
           );
       });
     const interval = setInterval(renew, 10000);
-    return () => clearInterval(interval);
+    const returned = () => { if (document.visibilityState === 'visible') renew(); };
+    document.addEventListener('visibilitychange', returned);
+    window.addEventListener('pageshow', returned);
+    window.addEventListener('online', returned);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', returned);
+      window.removeEventListener('pageshow', returned);
+      window.removeEventListener('online', returned);
+    };
   }, [consent, offline, g?.mode, pauseForMicrophone]);
   const action = async (action: string) => {
     if (currentStudio.current?.room.phase === 'settling') return;
@@ -330,6 +346,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     }
   };
   const stopMic = () => {
+    setMicIssue('');
+    setMicRecovering(false);
     if (capture.current) void pauseForMicrophone(capture.current);
   };
   const enableMic = async () => {
@@ -342,6 +360,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const acceptMic = async () => {
     setModal('');
     setError('');
+    setMicIssue('');
+    setMicRecovering(false);
     setConsent(false);
     setTranscriptLines(transcriptBuffer.current.clear());
     const previous = capture.current;
@@ -349,8 +369,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       ? previous.lease.cancel().catch(() => {})
       : Promise.resolve();
     previous?.microphone.stop();
-    const lease = new MicrophoneLease(crypto.randomUUID(), (body) =>
-      request('/api/studio/microphone', body, session.csrf),
+    const lease = new MicrophoneLease(crypto.randomUUID(), (body, signal) =>
+      request('/api/studio/microphone', body, session.csrf, signal),
+      { onRecovery: (recovering) => { if (capture.current?.lease === lease) setMicRecovering(recovering); } },
     );
     const owner: Capture = {
       lease,
@@ -383,13 +404,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     await previousCancelled;
     if (!enabled || capture.current !== owner || !lease.active) return;
     try {
-      if ((await lease.arm()) && capture.current === owner && owner.microphone.enabled)
+      if ((await lease.arm()) && capture.current === owner && owner.microphone.enabled) {
+        setMicIssue('');
         setConsent(true);
-    } catch {
+      }
+    } catch (error: unknown) {
       if (capture.current === owner && lease.active)
         void pauseForMicrophone(
           owner,
-          'Microphone readiness could not be confirmed. Reconnect, then enable it again.',
+          microphoneLeaseMessage(error),
         );
     }
   };
@@ -850,7 +873,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     </div>
                   </div>
                   <h3>
-                    {settling
+                    {micIssue
+                      ? 'Microphone stopped'
+                      : micRecovering
+                        ? 'Checking connection'
+                      : settling
                       ? 'Checking final words'
                       : micStatus.startsWith('Loading Moonshine')
                         ? 'Loading the speech model'
@@ -865,7 +892,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                               : 'Microphone off'}
                   </h3>
                   <p>
-                    {modelLoading
+                    {micIssue
+                      ? 'Speech detection is off until you enable the microphone again.'
+                      : modelLoading
                       ? 'The model is cached in this browser after it downloads.'
                       : settling
                       ? 'Listening has stopped. Waiting for the final word check.'
@@ -880,6 +909,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                             : 'Enable your microphone to listen for the secret word.'}
                   </p>
                   {modelLoading && modelProgress && <div className="model-progress"><progress aria-label="Speech model download" max={100} value={Math.min(100, Number(modelProgress[1]))} /><span>{modelProgress[1]}%</span></div>}
+                  <MicrophoneFeedback issue={micIssue} recovering={micRecovering} />
                   {studio.speechProvider === 'moonshine' && (
                     <p className="mic-review-note">
                       <strong>Catches confirm automatically.</strong> You have 15 seconds to reject a misheard word. You can also reverse a win afterward.
@@ -899,7 +929,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       ? 'Cancel model loading'
                       : consent
                         ? 'Disable microphone'
-                        : 'Enable microphone'}
+                        : micIssue ? 'Try microphone again' : 'Enable microphone'}
                   </Button>
                   <div className="mic-footnote">
                     <ShieldCheck size={12} />
@@ -1078,7 +1108,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <>
               <p>
                 {studio.speechProvider === 'moonshine'
-                  ? 'baited will load Moonshine Tiny on this computer, then ask for your microphone. Recognition runs here during active rounds. Only final words and timing go to the game server.'
+                  ? 'Baited will ask for microphone access and load Moonshine Tiny at the same time. Speech recognition runs on this computer during active rounds. Final phrases and timing go to the game server; audio stays here.'
                   : 'baited will request your microphone and stream it through this server to Deepgram during active rounds only.'}
               </p>
               <p className="muted">

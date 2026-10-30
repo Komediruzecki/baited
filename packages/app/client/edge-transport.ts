@@ -39,8 +39,25 @@ const messages: Record<string, string> = {
   microphone_required: 'Enable your microphone before starting the round.',
   pilot_full: 'All pilot places are in use. Try again when a game finishes.',
   rate_limited: 'Too many actions arrived together. Wait a moment and try again.',
+  lease_owner: 'This microphone session ended or moved to another Studio tab. Enable it again here.',
+  studio_not_connected: 'Studio is disconnected. Wait for it to reconnect, then enable your microphone again.',
+};
+const speechMessages: Record<string, string> = {
+  mic_expired: 'This microphone session ended. Enable your microphone again, then resume the round.',
+  speech_rejected: 'The audio timing was interrupted. Enable your microphone again, then resume the round.',
 };
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+/** Cancel one caller's wait without canceling a connection shared by other callers. */
+function waitForSignal<T>(pending: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return pending;
+  if (signal.aborted) return Promise.reject(new DOMException('The request was canceled.', 'AbortError'));
+  let abort!: () => void;
+  const cancelled = new Promise<never>((_, reject) => {
+    abort = () => reject(new DOMException('The request was canceled.', 'AbortError'));
+    signal.addEventListener('abort', abort, { once: true });
+  });
+  return Promise.race([pending, cancelled]).finally(() => signal.removeEventListener('abort', abort));
+}
 export function readEdgeBootstrap(value: unknown): EdgeBootstrap {
   if (!record(value) || typeof value.channelId !== 'string' || !/^[1-9][0-9]{0,24}$/.test(value.channelId) ||
       typeof value.token !== 'string' || value.token.length > 4096 || !/^[A-Za-z0-9_.-]+$/.test(value.token) ||
@@ -166,7 +183,10 @@ export class EdgeRoomTransport {
             if (frame.expiresAt !== this.pendingCredentials.tokenExpiresAt || frame.expiresAt <= Date.now()) return;
             clearTimeout(this.refreshTimer);
             this.credentials = this.pendingCredentials; this.pendingCredentials = undefined; this.renewalFailures = 0; this.scheduleRenewal();
-          } else if (frame.type === 'speech-error' || frame.type === 'error') this.stopSpeech('The microphone connection was rejected. Enable it again.');
+          } else if (frame.type === 'speech-error' || frame.type === 'error') {
+            const code = typeof frame.code === 'string' && Object.hasOwn(speechMessages, frame.code) ? frame.code : undefined;
+            this.stopSpeech(code ? speechMessages[code] : 'The microphone connection was rejected. Enable it again.', code);
+          }
         } catch { this.stopSpeech('The game connection could not be read. Enable the microphone again.'); socket.close(4000, 'Invalid response.'); }
       };
       socket.onerror = () => { if (this.socket === socket) this.report(true); };
@@ -234,8 +254,9 @@ export class EdgeRoomTransport {
       else this.retryRenewal(socket);
     } finally { this.renewing = false; }
   }
-  async state(): Promise<EdgeSnapshot> {
-    await this.ensure();
+  async state(signal?: AbortSignal): Promise<EdgeSnapshot> {
+    if (signal?.aborted) throw new DOMException('The request was canceled.', 'AbortError');
+    await waitForSignal(this.ensure(), signal);
     if (!this.snapshot) throw new Error('The round has not connected yet.');
     return this.snapshot;
   }
@@ -260,9 +281,25 @@ export class EdgeRoomTransport {
     catch { this.finishResync(new Error('The connection ended before its update arrived. Reconnect to continue.')); }
     return promise;
   }
-  command(action: Record<string, unknown>): Promise<EdgeSnapshot> {
-    const task = this.operations.catch(() => {}).then(async () => {
+  command(action: Record<string, unknown>, signal?: AbortSignal): Promise<EdgeSnapshot> {
+    const controller = new AbortController();
+    let onAbort!: () => void, timeout: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_, reject) => {
+      onAbort = () => reject(new DOMException('The request was canceled.', 'AbortError'));
+      controller.signal.addEventListener('abort', onAbort, { once: true });
+      timeout = setTimeout(() => {
+        reject(new DOMException('The request timed out.', 'TimeoutError'));
+        controller.abort();
+      }, 10000);
+    });
+    const abort = () => controller.abort();
+    if (signal?.aborted) abort();
+    else signal?.addEventListener('abort', abort, { once: true });
+    const operation = this.operations.catch(() => {}).then(async () => {
+      const cancelled = () => { if (controller.signal.aborted) throw new DOMException('The request was canceled.', 'AbortError'); };
+      cancelled();
       await this.ensure();
+      cancelled();
       const credentials = this.credentials!, snapshot = this.snapshot!;
       if (action.type === 'microphone') {
         if (!this.boundSocketId) throw new Error('This Studio connection needs to refresh before enabling the microphone. Reload Studio.');
@@ -270,17 +307,31 @@ export class EdgeRoomTransport {
       }
       const response = await this.fetch(new URL(`/v1/rooms/${credentials.channelId}/commands`, this.options.origin), {
         method: 'POST', headers: { Authorization: `Bearer ${credentials.token}`, 'content-type': 'application/json' },
-        credentials: 'omit', cache: 'no-store', redirect: 'error',
-        signal: AbortSignal.timeout(10000),
+        credentials: 'omit', cache: 'no-store', redirect: 'error', signal: controller.signal,
         body: JSON.stringify({ id: crypto.randomUUID(), generation: snapshot.generation, expectedRevision: snapshot.revision, action }),
       });
-      const result = await response.json() as { ok?: boolean; code?: string; snapshot?: unknown };
+      const body: unknown = await response.json().catch(() => undefined);
+      cancelled();
+      const result = record(body) ? body : {};
+      const code = typeof result.code === 'string' && Object.hasOwn(messages, result.code) ? result.code : undefined;
+      // Even a refused stale action may carry a newer authoritative projection.
+      if (result.snapshot !== undefined) this.accept(readEdgeSnapshot(result.snapshot));
+      // Keep only safe HTTP/code metadata. Provider messages may contain private detail.
+      if (!response.ok || result.ok !== true) throw Object.assign(
+        new Error(code ? messages[code] : 'That action could not be completed. Check the round and try again.'),
+        { status: response.status, ...(code ? { code } : {}) },
+      );
       // The authority attaches the current role projection to its receipt.
       // No follow-up state GET can consume the viewer budget or stop a mic lease.
-      if (result.snapshot !== undefined) this.accept(readEdgeSnapshot(result.snapshot));
-      if (!response.ok || !result.ok) throw new Error(messages[result.code ?? ''] ?? 'That action could not be completed. Check the round and try again.');
       if (result.snapshot === undefined) throw new Error('The action arrived, but its result could not be loaded. Wait for the round to reconnect.');
       return this.snapshot!;
+    });
+    // Queue time and shared connection setup count toward the same deadline.
+    // The abandoned task keeps its abort guards, so it cannot dispatch later.
+    const task = Promise.race([operation, deadline]).finally(() => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', abort);
+      controller.signal.removeEventListener('abort', onAbort);
     });
     this.operations = task;
     return task;
@@ -313,12 +364,12 @@ export class EdgeRoomTransport {
     });
     return bridge;
   }
-  private stopSpeech(message?: string) {
+  private stopSpeech(message?: string, code?: string) {
     const bridge = this.speech?.socket;
     this.speech = undefined;
     if (!bridge) return;
     bridge.readyState = 3;
-    if (message) bridge.onmessage?.({ data: JSON.stringify({ type: 'error', message }) });
+    if (message) bridge.onmessage?.({ data: JSON.stringify({ type: 'error', message, ...(code ? { code } : {}) }) });
     bridge.onclose?.({ code: message ? 1008 : 1000, reason: message ? 'Connection lost.' : 'round-ended' });
   }
   destroy() {

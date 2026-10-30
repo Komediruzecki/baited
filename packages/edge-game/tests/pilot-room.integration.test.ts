@@ -19,7 +19,12 @@ interface Inspection {
   alarm: number | null; now: number; revision: number; phase: string; mic: string;
   round: { id: string; epoch: number; segmentAt: number; endsAt: number | null; remaining: number; duration: number; result?: string } | null;
   lease: {id:string;socketId:string;expiresAt:number;sessionId:string} | null;
+  persistedLease: Inspection['lease'];
+  microphoneStopRevision?:number;
+  persistedMicrophoneStopRevision?:number;
+  leaseWrites:number;
   ownerSpeech?: {firstAudioAt:number;lastAudioAt:number;samples:number;lastSequence:number};
+  ownerAdmission?: {inputs?:{at:number;n:number};audioInputs?:{at:number;tokens:number}};
   chatReceipts: number; history: number; participants: number; sqlChanges: number; outbox: number;
   chatConnected: boolean; connectionRevision: number;
   sockets: {role:string;sessionId?:string;expiresAt:number;generation:number;readyState:number}[];
@@ -41,6 +46,11 @@ interface FixtureStub {
   enqueueOutboxFixture(at: number, expiresAt: number): Promise<Inspection>;
   flushOutboxAtFixture(at: number): Promise<Inspection>;
   receiptStatsFixture(): Promise<{count:number;indexedCount:number;indexedRowsRead:number}>;
+  recoverFixture(): Promise<Inspection>;
+  failOwnerMessageAtFixture(at:number,message:Record<string,unknown>): Promise<Inspection>;
+  failAlarmOwnerMessageAtFixture(at:number,message:Record<string,unknown>): Promise<Inspection>;
+  interleaveOwnerAudioFixture(at:number,message:Record<string,unknown>): Promise<Inspection>;
+  microphoneCommandFixture(action:Record<string,unknown>,revision:number,recover?:boolean,failAlarm?:boolean):Promise<{status:number;body:Receipt;inspection:Inspection}>;
 }
 let script: string;
 const fixtureClocks=new WeakMap<Miniflare,FixtureStub>();
@@ -86,7 +96,17 @@ before(async () => {
           }
         }
         export class ChannelRoom extends BaseRoom {
+          failNextSchedule=false;
+          interleaveNextSchedule=undefined;
+          async schedule(...args) {
+            const interleave=this.interleaveNextSchedule;this.interleaveNextSchedule=undefined;
+            if(interleave) interleave();
+            if(this.failNextSchedule) {this.failNextSchedule=false;throw new Error('fixture_audio_alarm_failure');}
+            return super.schedule(...args);
+          }
           async bootstrapFixture() {
+            this.ctx.storage.sql.exec('CREATE TABLE fixture_lease_writes(id INTEGER PRIMARY KEY,n INTEGER NOT NULL); INSERT INTO fixture_lease_writes VALUES(1,0)');
+            this.ctx.storage.sql.exec("CREATE TRIGGER fixture_count_lease_writes AFTER UPDATE ON pilot_state WHEN json_extract(OLD.body,'$.lease.expiresAt') < json_extract(NEW.body,'$.lease.expiresAt') BEGIN UPDATE fixture_lease_writes SET n=n+1 WHERE id=1; END");
             return (await this.fetch(new Request('https://room.internal/internal/control', {
               method:'POST', body:JSON.stringify({channelId:'123', login:'komediruzecki7', type:'connection', status:'connected',connectionRevision:1})
             }))).status;
@@ -95,8 +115,14 @@ before(async () => {
             const self = this;
             return {alarm: await this.ctx.storage.getAlarm(), now:self.now, revision:self.revision,
               phase:self.game.phase, mic:self.game.mic, lease:self.pilotState.lease,
+              persistedLease:JSON.parse(this.ctx.storage.sql.exec('SELECT body FROM pilot_state WHERE id=1').one().body).lease,
+              microphoneStopRevision:self.pilotState.microphoneStopRevision,
+              persistedMicrophoneStopRevision:JSON.parse(this.ctx.storage.sql.exec('SELECT body FROM pilot_state WHERE id=1').one().body).microphoneStopRevision,
+              leaseWrites:this.ctx.storage.sql.exec('SELECT n FROM fixture_lease_writes WHERE id=1').one().n,
               chatConnected:self.pilotState.chatConnected,connectionRevision:self.pilotState.connectionRevision??0,
               ownerSpeech:this.ctx.getWebSockets().map(ws=>ws.deserializeAttachment()).find(att=>att?.socketId===self.pilotState.lease?.socketId)?.speech,
+              ownerAdmission:this.ctx.getWebSockets().map(ws=>ws.deserializeAttachment()).filter(att=>att?.socketId===self.pilotState.lease?.socketId)
+                .map(att=>({inputs:att.inputs,audioInputs:att.audioInputs}))[0],
               round:self.game.round ? {id:self.game.round.id, epoch:self.game.round.epoch, segmentAt:self.game.round.segmentAt,
                 endsAt:self.game.round.endsAt, remaining:self.game.round.remaining, duration:self.game.round.duration, result:self.game.round.result} : null,
               history:self.game.data.history.length,
@@ -137,6 +163,51 @@ before(async () => {
             Date.now=()=>processedAt;
             release();await blocked;await work;
             return this.inspectFixture();
+          }
+          async recoverFixture() {
+            // Reconstruct from the real SQLite checkpoint and hibernation
+            // attachments without replacing the production event handlers.
+            return new ChannelRoom(this.ctx,this.env).inspectFixture();
+          }
+          async microphoneCommandFixture(action,expectedRevision,recover=false,failAlarm=false) {
+            const target=recover?new ChannelRoom(this.ctx,this.env):this;
+            const identity=this.ctx.getWebSockets().map(ws=>ws.deserializeAttachment()?.identity).find(identity=>identity?.canControl);
+            if(!identity) throw new Error('The fixture has no Studio identity.');
+            target.failNextSchedule=failAlarm;
+            try {
+              const response=await target.fetch(new Request('https://room.internal/commands',{method:'POST',
+                headers:{'x-edge-identity':JSON.stringify(identity),'content-type':'application/json'},
+                body:JSON.stringify({id:crypto.randomUUID(),generation:target.generation,expectedRevision,action})}));
+              return {status:response.status,body:await response.json(),inspection:await target.inspectFixture()};
+            } finally {target.failNextSchedule=false;}
+          }
+          async failOwnerMessageAtFixture(at,message) {
+            this.ctx.storage.sql.exec("CREATE TRIGGER fixture_fail_audio_lease BEFORE INSERT ON pilot_state BEGIN SELECT RAISE(ABORT,'fixture_audio_lease_failure'); END");
+            try {return await this.ownerMessageAtFixture(at,message);}
+            finally {this.ctx.storage.sql.exec('DROP TRIGGER fixture_fail_audio_lease');}
+          }
+          async failAlarmOwnerMessageAtFixture(at,message) {
+            this.failNextSchedule=true;
+            try {return await this.ownerMessageAtFixture(at,message);}
+            finally {this.failNextSchedule=false;}
+          }
+          async interleaveOwnerAudioFixture(at,message) {
+            Date.now=()=>at;
+            const owner=this.ctx.getWebSockets().find(ws=>ws.deserializeAttachment()?.socketId===this.pilotState.lease?.socketId);
+            if(!owner) throw new Error('The fixture has no microphone owner.');
+            let queued=[];
+            // Run real admission handlers before the current renewal publishes
+            // its speech attachment. Their mutations queue behind this frame.
+            this.interleaveNextSchedule=()=>{
+              queued=[this.webSocketMessage(owner,'resync'),this.webSocketMessage(owner,
+                JSON.stringify({...message,samples:message.samples+2048}))];
+            };
+            try {
+              await this.webSocketMessage(owner,JSON.stringify(message));
+              if(queued.length!==2) throw new Error('The fixture did not interleave renewal.');
+              await Promise.all(queued);
+              return this.inspectFixture();
+            } finally {this.interleaveNextSchedule=undefined;}
           }
           async closeOwnerAtFixture(at,code=1000) {
             Date.now = () => at;
@@ -849,6 +920,223 @@ test('queued audio anchors on its arrival time rather than the delayed first pro
   } finally {await mf.dispose();}
 });
 
+test('active owner audio refreshes its durable lease without a browser heartbeat and silence still pauses', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(Math.ceil(Date.now()/1000)*1000);
+    await start(mf);
+    const initial=await stub.inspectFixture();
+    const startAt=initial.round!.segmentAt;
+    let after=initial;
+    // Firefox can throttle the 10-second UI heartbeat while its audio worklet
+    // continues emitting 128ms capture progress. No microphone commands here.
+    for(let index=1;index<=351;index++) {
+      after=await stub.ownerMessageAtFixture(startAt+index*128,{type:'speech-audio',leaseId:initial.lease!.id,
+        roundId:initial.round!.id,epoch:initial.round!.epoch,samples:index*2048});
+      assert.equal(after.phase,'active',`Valid audio lost its lease at ${index*128}ms.`);
+      assert.equal(after.mic,'listening');
+    }
+    assert.equal(after.revision,initial.revision,'Audio liveness does not publish a game mutation per frame.');
+    assert.equal(after.leaseWrites-initial.leaseWrites,4,'Refresh once per 10 seconds, rather than every 128ms audio frame.');
+    assert.equal(after.lease!.expiresAt,startAt+316*128+30_000);
+    assert.deepEqual(after.persistedLease,after.lease,'The accepted extension must be durable.');
+    const recovered=await stub.recoverFixture();
+    assert.deepEqual(recovered.lease,after.lease,'Room reconstruction must retain the exact renewed lease.');
+    assert.deepEqual(recovered.ownerSpeech,after.ownerSpeech);
+    const lastAudioAt=startAt+351*128;
+    const beforeGap=await stub.flushOutboxAtFixture(lastAudioAt+2_499);
+    assert.equal(beforeGap.phase,'active');
+    const slept=await stub.flushOutboxAtFixture(lastAudioAt+2_500);
+    assert.equal(slept.phase,'paused','A live lease cannot conceal a silent/sleeping capture.');
+    assert.equal(slept.mic,'error');
+    assert.equal(slept.lease,null);
+    assert.equal(slept.history,0);
+    assert.equal(slept.round!.remaining,initial.round!.duration-(lastAudioAt+2_500-startAt));
+  } finally {await mf.dispose();}
+});
+
+test('paused and stale-round audio cannot refresh a lease, and expired capture cannot rearm itself', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(Math.ceil(Date.now()/1000)*1000);
+    await start(mf);
+    const active=await advanceAudio(mf,stub,1000);
+    await send(mf,{type:'pause',roundId:active.round!.id,epoch:active.round!.epoch},active.revision);
+    const paused=await stub.inspectFixture();
+    const frame={type:'speech-audio',leaseId:paused.lease!.id,roundId:paused.round!.id,
+      epoch:paused.round!.epoch,samples:16_000+2048};
+    const ignored=await stub.ownerMessageAtFixture(paused.round!.segmentAt+11_000,frame);
+    assert.deepEqual(ignored.lease,paused.lease);
+    assert.deepEqual(ignored.persistedLease,paused.persistedLease);
+    await send(mf,{type:'resume',roundId:paused.round!.id,epoch:paused.round!.epoch},ignored.revision);
+    const resumed=await stub.inspectFixture();
+    const stale=await stub.ownerMessageAtFixture(resumed.round!.segmentAt+128,frame);
+    assert.equal(stale.phase,'active');
+    assert.deepEqual(stale.lease,resumed.lease,'An old epoch cannot extend capture authority.');
+    await send(mf,{type:'pause',roundId:stale.round!.id,epoch:stale.round!.epoch},stale.revision);
+    const expired=await stub.ownerMessageAtFixture(stale.lease!.expiresAt,frame);
+    assert.equal(expired.lease,null,'Even correctly bound late audio cannot resurrect an expired lease.');
+    assert.equal(expired.persistedLease,null);
+    assert.equal(expired.mic,'error');
+  } finally {await mf.dispose();}
+});
+
+test('unowned audio cannot refresh another session or Studio tab microphone lease', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(Math.ceil(Date.now()/1000)*1000);
+    await start(mf);
+    const secondary=await connectedStudio(mf);
+    const otherSession=await connectedStudio(mf,'studio',await fixtureToken(mf,'studio',{sid:'another-studio-session'}));
+    const viewer=await connectedStudio(mf,'viewer');
+    const initial=await stub.inspectFixture();
+    for(let index=1;index<=78;index++) {
+      await stub.ownerMessageAtFixture(initial.round!.segmentAt+index*128,{type:'speech-audio',leaseId:initial.lease!.id,
+        roundId:initial.round!.id,epoch:initial.round!.epoch,samples:index*2048});
+    }
+    const before=await stub.inspectFixture();
+    const frame={type:'speech-audio',leaseId:initial.lease!.id,roundId:initial.round!.id,
+      epoch:initial.round!.epoch,samples:79*2048};
+    await stub.freezeAtFixture(initial.round!.segmentAt+79*128);
+    for(const attacker of [secondary,otherSession,viewer]) {
+      const closed=nextSocketEvent(attacker);
+      attacker.send(JSON.stringify(frame));
+      assert.deepEqual(await closed,{kind:'close',code:1008});
+      const unchanged=await stub.inspectFixture();
+      assert.deepEqual(unchanged.lease,before.lease);
+      assert.deepEqual(unchanged.persistedLease,before.persistedLease);
+      assert.equal(unchanged.leaseWrites,before.leaseWrites);
+      assert.equal(unchanged.phase,'active');
+    }
+    const owner=await stub.ownerMessageAtFixture(initial.round!.segmentAt+79*128,frame);
+    assert.equal(owner.leaseWrites,before.leaseWrites+1);
+    assert.equal(owner.lease!.expiresAt,initial.round!.segmentAt+79*128+30_000);
+  } finally {await mf.dispose();}
+});
+
+test('queued active audio refreshes from receipt time and cannot extend a lease after it expired in the queue', {timeout:15_000}, async () => {
+  for(const expiresInQueue of [false,true]) {
+    const {mf,stub}=await runtime();
+    try {
+      await stub.freezeAtFixture(Math.ceil(Date.now()/1000)*1000);
+      await start(mf);
+      const initial=await stub.inspectFixture();
+      for(let index=1;index<=78;index++) {
+        await stub.ownerMessageAtFixture(initial.round!.segmentAt+index*128,{type:'speech-audio',leaseId:initial.lease!.id,
+          roundId:initial.round!.id,epoch:initial.round!.epoch,samples:index*2048});
+      }
+      const receivedAt=initial.round!.segmentAt+79*128;
+      const processedAt=expiresInQueue?initial.lease!.expiresAt:receivedAt+1000;
+      const after=await stub.queuedOwnerMessageFixture(receivedAt,processedAt,{type:'speech-audio',leaseId:initial.lease!.id,
+        roundId:initial.round!.id,epoch:initial.round!.epoch,samples:79*2048});
+      if(expiresInQueue) {
+        assert.equal(after.lease,null);
+        assert.equal(after.persistedLease,null);
+        assert.equal(after.mic,'error');
+        assert.equal(after.phase,'paused');
+        assert.equal(after.leaseWrites,0);
+      } else {
+        assert.equal(after.lease!.expiresAt,receivedAt+30_000,'Processing delay cannot mint extra capture lifetime.');
+        assert.equal(after.phase,'active');
+        assert.equal(after.leaseWrites,1);
+        assert.deepEqual(after.persistedLease,after.lease);
+      }
+    } finally {await mf.dispose();}
+  }
+});
+
+test('malformed current-owner audio at the refresh boundary cannot extend microphone authority', {timeout:15_000}, async () => {
+  for(const invalid of ['duplicate','future','malformed'] as const) {
+    const {mf,stub}=await runtime();
+    try {
+      await stub.freezeAtFixture(Math.ceil(Date.now()/1000)*1000);
+      await start(mf);
+      const initial=await stub.inspectFixture();
+      for(let index=1;index<=78;index++) {
+        await stub.ownerMessageAtFixture(initial.round!.segmentAt+index*128,{type:'speech-audio',leaseId:initial.lease!.id,
+          roundId:initial.round!.id,epoch:initial.round!.epoch,samples:index*2048});
+      }
+      const before=await stub.inspectFixture();
+      assert.equal(before.lease!.expiresAt,initial.lease!.expiresAt);
+      const samples=invalid==='duplicate'?78*2048:invalid==='future'?78*2048+8193:'not-samples';
+      const rejected=await stub.ownerMessageAtFixture(initial.round!.segmentAt+79*128,{type:'speech-audio',leaseId:initial.lease!.id,
+        roundId:initial.round!.id,epoch:initial.round!.epoch,samples});
+      assert.equal(rejected.lease,null);
+      assert.equal(rejected.persistedLease,null);
+      assert.equal(rejected.phase,'paused');
+      assert.equal(rejected.mic,'error');
+    } finally {await mf.dispose();}
+  }
+});
+
+test('an audio lease renewal storage failure cannot publish uncommitted liveness or sample progress', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(Math.ceil(Date.now()/1000)*1000);
+    await start(mf);
+    const initial=await stub.inspectFixture();
+    for(let index=1;index<=78;index++) {
+      await stub.ownerMessageAtFixture(initial.round!.segmentAt+index*128,{type:'speech-audio',leaseId:initial.lease!.id,
+        roundId:initial.round!.id,epoch:initial.round!.epoch,samples:index*2048});
+    }
+    const before=await stub.inspectFixture();
+    const failed=await stub.failOwnerMessageAtFixture(initial.round!.segmentAt+79*128,{type:'speech-audio',leaseId:initial.lease!.id,
+      roundId:initial.round!.id,epoch:initial.round!.epoch,samples:79*2048});
+    assert.deepEqual(failed.lease,before.lease);
+    assert.deepEqual(failed.persistedLease,before.persistedLease);
+    assert.deepEqual(failed.ownerSpeech,before.ownerSpeech,'Failed durable renewal cannot publish accepted sample progress.');
+    assert.equal(failed.revision,before.revision);
+    const recovered=await stub.recoverFixture();
+    assert.deepEqual(recovered.lease,before.lease);
+  } finally {await mf.dispose();}
+});
+
+test('audio lease renewal preserves admission counters changed before its attachment is published', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(Math.ceil(Date.now()/1000)*1000);
+    await start(mf);
+    const initial=await stub.inspectFixture();
+    for(let index=1;index<=78;index++) {
+      await stub.ownerMessageAtFixture(initial.round!.segmentAt+index*128,{type:'speech-audio',leaseId:initial.lease!.id,
+        roundId:initial.round!.id,epoch:initial.round!.epoch,samples:index*2048});
+    }
+    const at=initial.round!.segmentAt+79*128;
+    const after=await stub.interleaveOwnerAudioFixture(at,{type:'speech-audio',leaseId:initial.lease!.id,
+      roundId:initial.round!.id,epoch:initial.round!.epoch,samples:79*2048});
+    assert.equal(after.phase,'active');
+    assert.equal(after.ownerSpeech!.samples,80*2048,'Both ordered audio frames must be accepted.');
+    assert.deepEqual(after.ownerAdmission!.audioInputs,{at,tokens:46},'A durable renewal must not refund an admitted audio token.');
+    assert.deepEqual(after.ownerAdmission!.inputs,{at:Math.floor(at/1000),n:1},'Publishing speech must retain a concurrent resync admission.');
+    assert.deepEqual(after.persistedLease,after.lease);
+  } finally {await mf.dispose();}
+});
+
+test('an audio renewal alarm failure rolls back its lease write before safely pausing capture', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(Math.ceil(Date.now()/1000)*1000);
+    await start(mf);
+    const initial=await stub.inspectFixture();
+    for(let index=1;index<=78;index++) {
+      await stub.ownerMessageAtFixture(initial.round!.segmentAt+index*128,{type:'speech-audio',leaseId:initial.lease!.id,
+        roundId:initial.round!.id,epoch:initial.round!.epoch,samples:index*2048});
+    }
+    const before=await stub.inspectFixture();
+    const failed=await stub.failAlarmOwnerMessageAtFixture(initial.round!.segmentAt+79*128,{type:'speech-audio',leaseId:initial.lease!.id,
+      roundId:initial.round!.id,epoch:initial.round!.epoch,samples:79*2048});
+    assert.equal(failed.lease,null);
+    assert.equal(failed.persistedLease,null);
+    assert.equal(failed.mic,'error');
+    assert.equal(failed.phase,'paused');
+    assert.equal(failed.leaseWrites,before.leaseWrites,'A failed alarm transaction must roll back its lease extension.');
+    assert.equal(failed.history,0);
+    const recovered=await stub.recoverFixture();
+    assert.equal(recovered.lease,null);
+    assert.equal(recovered.phase,'paused');
+  } finally {await mf.dispose();}
+});
+
 test('a 1.5 second uplink gap followed by twenty consistent owner audio frames keeps the microphone', {timeout:15_000}, async () => {
   const {mf,stub}=await runtime();
   try {
@@ -933,6 +1221,117 @@ test('a retired lease frame on the same Studio socket cannot close its replaceme
       roundId:resumed.round!.id,epoch:resumed.round!.epoch,samples:2048});
     assert.equal(healthy.ownerSpeech!.samples,2048);
     assert.equal(healthy.mic,'listening');
+  } finally {await mf.dispose();}
+});
+
+test('a canceled initial microphone arm cannot arrive late and recreate its lease', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await connectedStudio(mf);
+    const before=await state(mf), leaseId=randomUUID();
+    // The arm was sent first but is delayed on the network. Cancellation is
+    // authoritative even if its exact capture has not arrived at the Room yet.
+    const stopped=await send(mf,{type:'microphone',armed:false,leaseId},before.revision);
+    const response=await mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',
+      headers:{origin:ORIGIN,authorization:`Bearer ${await fixtureToken(mf)}`,'content-type':'application/json'},
+      body:JSON.stringify({id:randomUUID(),generation:1,expectedRevision:before.revision,
+        action:{type:'microphone',armed:true,leaseId}})});
+    assert.equal(response.status,409,'An initial arm sent before cancellation cannot recreate the lease.');
+    assert.equal((await response.json() as Receipt).code,'lease_owner');
+    const after=await stub.inspectFixture();
+    assert.equal(after.lease,null);
+    assert.equal(after.mic,'off');
+    assert.equal(after.microphoneStopRevision,stopped.revision);
+    assert.equal(after.persistedMicrophoneStopRevision,stopped.revision);
+  } finally {await mf.dispose();}
+});
+
+test('microphone cancellation after arm fences late requests without affecting a replacement lease', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await connectedStudio(mf);
+    const before=await state(mf), oldId=randomUUID();
+    const armed=await send(mf,{type:'microphone',armed:true,leaseId:oldId},before.revision);
+    const stopped=await send(mf,{type:'microphone',armed:false,leaseId:oldId},armed.revision);
+    const stale=await stub.microphoneCommandFixture({type:'microphone',armed:true,leaseId:oldId},before.revision);
+    assert.equal(stale.status,409);assert.equal(stale.body.code,'lease_owner');
+    assert.equal(stale.inspection.lease,null);
+    const replacementId=randomUUID();
+    const replacement=await send(mf,{type:'microphone',armed:true,leaseId:replacementId},stopped.revision);
+    const lateCancel=await stub.microphoneCommandFixture({type:'microphone',armed:false,leaseId:oldId},replacement.revision);
+    assert.equal(lateCancel.status,409);assert.equal(lateCancel.body.code,'lease_owner');
+    assert.equal(lateCancel.inspection.lease!.id,replacementId);
+    assert.equal(lateCancel.inspection.mic,'listening');
+    assert.equal(lateCancel.inspection.revision,replacement.revision);
+    assert.equal(lateCancel.inspection.microphoneStopRevision,stopped.revision,'A rejected old-ID cancel cannot fence the replacement.');
+    assert.equal(lateCancel.inspection.persistedMicrophoneStopRevision,stopped.revision);
+  } finally {await mf.dispose();}
+});
+
+test('microphone cancellation barrier survives recovery before a delayed initial arm', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await connectedStudio(mf);
+    const before=await state(mf), leaseId=randomUUID();
+    const stopped=await send(mf,{type:'microphone',armed:false,leaseId},before.revision);
+    const recovered=await stub.microphoneCommandFixture({type:'microphone',armed:true,leaseId},before.revision,true);
+    assert.equal(recovered.status,409);assert.equal(recovered.body.code,'lease_owner');
+    assert.equal(recovered.inspection.lease,null);
+    assert.equal(recovered.inspection.microphoneStopRevision,stopped.revision);
+    assert.equal(recovered.inspection.persistedMicrophoneStopRevision,stopped.revision);
+  } finally {await mf.dispose();}
+});
+
+test('microphone arms tolerate unrelated revisions after cancellation and exact-owner renewals keep older-revision support', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await connectedStudio(mf);
+    const before=await state(mf), leaseId=randomUUID();
+    const stopped=await send(mf,{type:'microphone',armed:false,leaseId:randomUUID()},before.revision);
+    await send(mf,{type:'settings',settings:{...before.room.settings,duration:90}},stopped.revision);
+    const armed=await send(mf,{type:'microphone',armed:true,leaseId},stopped.revision);
+    assert.ok(armed.revision>stopped.revision+1,'The arm is based on a revision older than unrelated settings changes.');
+    const renewed=await stub.microphoneCommandFixture({type:'microphone',armed:true,renew:true,leaseId},before.revision);
+    assert.equal(renewed.status,200);
+    assert.equal(renewed.inspection.lease!.id,leaseId);
+    assert.equal(renewed.inspection.microphoneStopRevision,stopped.revision);
+  } finally {await mf.dispose();}
+});
+
+test('failed microphone cancellation rolls back its lease and durable revision barrier', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await connectedStudio(mf);
+    const before=await state(mf), leaseId=randomUUID();
+    const armed=await send(mf,{type:'microphone',armed:true,leaseId},before.revision);
+    const failed=await stub.microphoneCommandFixture({type:'microphone',armed:false,leaseId},armed.revision,false,true);
+    assert.equal(failed.status,400,'The command handler returns a safe failure when the transaction cannot commit.');
+    assert.equal(failed.inspection.lease!.id,leaseId);
+    assert.equal(failed.inspection.mic,'listening');
+    assert.equal(failed.inspection.microphoneStopRevision,undefined);
+    assert.equal(failed.inspection.persistedMicrophoneStopRevision,undefined);
+    assert.equal(failed.inspection.revision,armed.revision);
+    const recovered=await stub.recoverFixture();
+    assert.equal(recovered.lease!.id,leaseId);
+    assert.equal(recovered.microphoneStopRevision,undefined);
+  } finally {await mf.dispose();}
+});
+
+test('microphone dispatch exposes only known actionable failure codes', {timeout:15_000}, async () => {
+  const {mf}=await runtime();
+  try {
+    const before=await state(mf);
+    const response=await mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',
+      headers:{origin:ORIGIN,authorization:`Bearer ${await fixtureToken(mf)}`,'content-type':'application/json'},
+      body:JSON.stringify({id:randomUUID(),generation:1,expectedRevision:before.revision,
+        action:{type:'microphone',armed:true,leaseId:randomUUID()}})});
+    assert.equal(response.status,409);
+    assert.equal((await response.json() as Receipt).code,'studio_not_connected');
+    const unavailable=await mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',
+      headers:{origin:ORIGIN,authorization:`Bearer ${await fixtureToken(mf)}`,'content-type':'application/json'},
+      body:JSON.stringify({id:randomUUID(),generation:1,expectedRevision:before.revision,action:{type:'start'}})});
+    assert.equal(unavailable.status,409);
+    assert.equal((await unavailable.json() as Receipt).code,'action_unavailable');
   } finally {await mf.dispose();}
 });
 

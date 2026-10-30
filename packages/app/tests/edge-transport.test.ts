@@ -25,6 +25,7 @@ function harness(random = () => 1) {
   const issued: EdgeBootstrap[] = [], signals: AbortSignal[] = [];
   let bootstrapCount = 0, failState = false;
   let bootstrapError: unknown, pendingBootstrap: Promise<EdgeBootstrap> | undefined;
+  let commandResponse: ((init?: RequestInit) => Response | Promise<Response>) | undefined;
   const client = new EdgeRoomTransport({ origin: 'https://pilot.example', random,
     bootstrap: async (signal) => {
       bootstrapCount++; signals.push(signal!);
@@ -35,11 +36,12 @@ function harness(random = () => 1) {
     socket: (url, protocols) => { const socket = new Socket(url, protocols); sockets.push(socket); return socket as unknown as WebSocket; },
     fetch: (async (url: URL | RequestInfo, init?: RequestInit) => {
       calls.push({ url: String(url), init });
-      return String(url).endsWith('/commands') ? Response.json({ ok: true, revision: 2, generation: 1, ...(failState ? {} : { snapshot: snapshot(2) }) })
+      return String(url).endsWith('/commands') ? commandResponse?.(init) ?? Response.json({ ok: true, revision: 2, generation: 1, ...(failState ? {} : { snapshot: snapshot(2) }) })
         : failState ? Response.json({ error: 'unavailable' }, { status: 503 }) : Response.json(snapshot(2));
     }) as typeof fetch });
   return { client, sockets, calls, issued, signals, failState: () => { failState = true; }, count: () => bootstrapCount,
     bootstrapError: (error?: unknown) => { bootstrapError = error; },
+    commandResponse: (response: (init?: RequestInit) => Response | Promise<Response>) => { commandResponse = response; },
     pendingBootstrap: (pending: Promise<EdgeBootstrap>) => { pendingBootstrap = pending; } };
 }
 async function ready(h: ReturnType<typeof harness>) {
@@ -160,6 +162,138 @@ test('socket loss stops the microphone and a new connection never rearms it', as
     speech.send(JSON.stringify({ type: 'audio', samples: 4096 }));
     assert.equal(h.sockets[1].sent.length, 0);
   } finally { h.client.destroy(); }
+});
+
+for (const [code, expected] of [
+  ['mic_expired', /session ended/],
+  ['speech_rejected', /audio timing was interrupted/],
+  ['unknown_provider_error', /connection was rejected/],
+] as const) test(`speech rejection ${code} keeps a safe, actionable cause`, async () => {
+  const h = harness();
+  try {
+    await ready(h);
+    const speech = h.client.speechSocket('round-1', 1, 'lease-1');
+    const errors: { code?: string; message: string }[] = [];
+    speech.onmessage = (event) => { const frame = JSON.parse(event.data); if (frame.type === 'error') errors.push(frame); };
+    await flush();
+    h.sockets[0].receive({ type: 'speech-error', code, message: 'UNTRUSTED PROVIDER DETAIL' });
+    assert.equal(speech.readyState, 3);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0].message, expected);
+    assert.doesNotMatch(errors[0].message, /UNTRUSTED/);
+    assert.equal(errors[0].code, code === 'unknown_provider_error' ? undefined : code);
+  } finally { h.client.destroy(); }
+});
+
+for (const [status, code] of [[403, 'lease_owner'], [503, 'untrusted_detail']] as const)
+  test(`command failure HTTP ${status} preserves safe metadata for lease recovery`, async () => {
+    const h = harness();
+    try {
+      await ready(h);
+      h.commandResponse(() => Response.json({ ok: false, code, message: 'UNTRUSTED PROVIDER DETAIL' }, { status }));
+      await assert.rejects(h.client.command({ type: 'microphone', armed: true, renew: true, leaseId: 'lease-1' }), (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal((error as Error & { status: number }).status, status);
+        assert.equal((error as Error & { code?: string }).code, code === 'lease_owner' ? code : undefined);
+        assert.doesNotMatch(error.message, /UNTRUSTED|untrusted_detail/);
+        return true;
+      });
+    } finally { h.client.destroy(); }
+  });
+
+test('an aborted queued command sends no request or mutation', async () => {
+  const h = harness();
+  try {
+    await ready(h);
+    const controller = new AbortController(); controller.abort();
+    await assert.rejects(h.client.command({ type: 'microphone', armed: true, renew: true, leaseId: 'lease-1' }, controller.signal), { name: 'AbortError' });
+    assert.equal(h.calls.length, 0);
+  } finally { h.client.destroy(); }
+});
+
+test('command cancellation aborts an in-flight fetch and removes its external listener', async () => {
+  const h = harness();
+  try {
+    await ready(h);
+    const controller = new AbortController();
+    let attached = 0, removed = 0, fetchSignal: AbortSignal | undefined;
+    const add = controller.signal.addEventListener.bind(controller.signal), remove = controller.signal.removeEventListener.bind(controller.signal);
+    controller.signal.addEventListener = (...args: Parameters<AbortSignal['addEventListener']>) => { attached++; add(...args); };
+    controller.signal.removeEventListener = (...args: Parameters<AbortSignal['removeEventListener']>) => { removed++; remove(...args); };
+    h.commandResponse((init) => new Promise<Response>((_, reject) => {
+      fetchSignal = init?.signal ?? undefined;
+      fetchSignal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+    }));
+    const pending = assert.rejects(h.client.command({ type: 'microphone', armed: true, renew: true, leaseId: 'lease-1' }, controller.signal), { name: 'AbortError' });
+    await flush(); controller.abort(); await pending;
+    assert.equal(fetchSignal?.aborted, true);
+    assert.equal(attached, 1); assert.equal(removed, 1);
+  } finally { h.client.destroy(); }
+});
+
+test('a non-JSON service failure retains HTTP status without exposing its body', async () => {
+  const h = harness();
+  try {
+    await ready(h);
+    h.commandResponse(() => new Response('PRIVATE upstream detail', { status: 502 }));
+    await assert.rejects(h.client.command({ type: 'microphone', armed: true, renew: true, leaseId: 'lease-1' }), (error: unknown) => {
+      assert.equal((error as { status: number }).status, 502);
+      assert.doesNotMatch((error as Error).message, /PRIVATE/); return true;
+    });
+  } finally { h.client.destroy(); }
+});
+
+test('abort while connecting settles the command and prevents its late dispatch', async () => {
+  const h = harness();
+  let release!: (value: EdgeBootstrap) => void;
+  h.pendingBootstrap(new Promise<EdgeBootstrap>((resolve) => { release = resolve; }));
+  const controller = new AbortController();
+  let settled = false;
+  const first = h.client.command({ type: 'microphone', armed: true, leaseId: 'old' }, controller.signal)
+    .then(() => { settled = true; }, (error) => { settled = true; assert.equal(error.name, 'AbortError'); });
+  try {
+    await flush(); controller.abort(); await flush();
+    assert.equal(settled, true, 'Abort must not wait for shared connection setup.');
+    const next = h.client.command({ type: 'pause', roundId: 'round-1', epoch: 1 });
+    release(bootstrap()); await flush(); h.sockets[0].receive(snapshot()); await next; await first;
+    assert.equal(h.calls.length, 1);
+    assert.equal(JSON.parse(h.calls[0].init!.body as string).action.type, 'pause');
+  } finally { release(bootstrap()); h.client.destroy(); }
+});
+
+test('whole-command timeout releases the queue even when fetch ignores abort', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 100000 });
+  const h = harness();
+  let release!: (response: Response) => void, signal: AbortSignal | undefined;
+  try {
+    await ready(h);
+    h.commandResponse((init) => { signal = init?.signal ?? undefined; return new Promise<Response>((resolve) => { release = resolve; }); });
+    const pending = assert.rejects(h.client.command({ type: 'microphone', armed: true, leaseId: 'old' }), { name: 'TimeoutError' });
+    await flush(); t.mock.timers.tick(10000); await pending;
+    assert.equal(signal?.aborted, true);
+    h.commandResponse(() => Response.json({ ok: true, snapshot: snapshot(2) }));
+    await h.client.command({ type: 'pause', roundId: 'round-1', epoch: 1 });
+    release(Response.json({ ok: true, snapshot: snapshot(100) })); await flush();
+    assert.equal(h.client.current?.revision, 2, 'An abandoned late receipt cannot replace current state.');
+  } finally { h.client.destroy(); t.mock.timers.reset(); }
+});
+
+test('a caller can cancel its state wait without aborting shared connection setup', async () => {
+  const h = harness();
+  let release!: (value: EdgeBootstrap) => void;
+  h.pendingBootstrap(new Promise<EdgeBootstrap>((resolve) => { release = resolve; }));
+  const controller = new AbortController();
+  let settled = false;
+  const pending = h.client.state(controller.signal).then(() => { settled = true; }, (error) => {
+    settled = true; assert.equal(error.name, 'AbortError');
+  });
+  try {
+    await flush(); controller.abort(); await flush();
+    assert.equal(settled, true);
+    assert.equal(h.signals[0].aborted, false, 'Other subscribers still own the shared bootstrap.');
+    const other = h.client.state(); release(bootstrap()); await flush(); h.sockets[0].receive(snapshot());
+    await other; await pending;
+  } finally { release(bootstrap()); h.client.destroy(); }
 });
 
 test('token renewal uses the same room socket and keeps the current microphone binding', async () => {
