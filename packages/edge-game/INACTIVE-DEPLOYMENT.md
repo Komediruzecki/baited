@@ -1,5 +1,7 @@
 # Inactive Cloudflare pilot: receipt and Twitch setup
 
+**Historical checkpoint, superseded on 30 October 2026.** The pilot is now active for `komediruzecki7` and `lakeeko`, and the ZIP/Twitch setup below has been completed. See [ACTIVE-PILOT.md](./ACTIVE-PILOT.md) for current status, verified endpoint and next test. The original inactive receipt below is retained as evidence of what had and had not happened at that checkpoint.
+
 Verified on 30 October 2026 (Europe/Zagreb). The owner authorized secret generation and an inactive deployment for **komediruzecki7 only**, with Twitch settings left to the owner. The private repository and PR remain private and unmerged. No production tag was created.
 
 ## What is complete

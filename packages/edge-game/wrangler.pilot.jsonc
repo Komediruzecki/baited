@@ -1,5 +1,5 @@
-// INACTIVE PILOT. Deployed without public routes, workers.dev or preview URLs.
-// Enable the reviewed pilot and add its exact route only at the launch checkpoint.
+// Owner-authorized pilot for two invited streamer channels.
+// Keep synthetic auth, workers.dev and preview URLs disabled.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "baited-edge-pilot",
@@ -7,7 +7,7 @@
   "compatibility_date": "2026-09-07",
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [],
+  "routes": [{ "pattern": "pilot-baited.maff.app", "custom_domain": true }],
   "observability": { "enabled": false },
   "limits": { "cpu_ms": 1000 },
   // Approximate per-location thresholds; these are not a global spending cap.
@@ -23,14 +23,14 @@
   },
   "vars": {
     "EDGE_POC_ENABLED": "false",
-    "EDGE_PILOT_ENABLED": "false",
+    "EDGE_PILOT_ENABLED": "true",
     "EDGE_LOCAL_FIXTURE_AUTH": "false",
     "EDGE_STAGING_AUTH": "false",
     "EDGE_PUBLIC_ORIGIN": "https://pilot-baited.maff.app",
     "EDGE_ALLOWED_HOSTS": "pilot-baited.maff.app",
     "EDGE_ALLOWED_ORIGINS": "https://pilot-baited.maff.app,https://54ysfu9jbragbdbvown2n8zrrli0g0.ext-twitch.tv",
-    "EDGE_CHANNEL_LOGIN_ALLOWLIST": "komediruzecki7",
-    "EDGE_MAX_CHANNELS": "1",
+    "EDGE_CHANNEL_LOGIN_ALLOWLIST": "komediruzecki7,lakeeko",
+    "EDGE_MAX_CHANNELS": "2",
     "EDGE_STUDIO_IDLE_MINUTES": "15",
     "EDGE_MAX_PARTICIPANTS": "100",
     "EDGE_MAX_VIEWER_SOCKETS": "100",

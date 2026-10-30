@@ -1,6 +1,14 @@
 # Pilot verification
 
-29 October 2026 implementation evidence, followed by the authorized inactive deployment. The Worker is deployed with the pilot flag disabled and no public route. The PC server/tunnel were not restarted. This record distinguishes local tests from real provider acceptance.
+29 October 2026 implementation evidence, followed by the inactive deployment and the authorized activation on 30 October 2026. Historical local/build results below describe their original checkpoints. The PC server/tunnel were not restarted. This record distinguishes local tests from real provider acceptance.
+
+## Active provider checks, 30 October 2026
+
+The owner authorized `komediruzecki7` and `lakeeko`, with a two-channel ceiling and 100 participants/100 viewer sockets per channel. Cloudflare version `f35137d9-9393-44b6-8124-16b1bc94370e` serves the exact custom domain `pilot-baited.maff.app`; workers.dev, preview URLs and synthetic authentication remain disabled. All six secrets are retained.
+
+HTTPS checks passed: health reports an enabled allowlisted pilot; Studio returns 200 and renders Connect Twitch in the in-app browser; signed-out session metadata returns 200; protected session and room state return 401; an unsigned webhook returns JSON 403; Card Maker and Card Lab return 404. Read-only Twitch inspection found zero existing app EventSub subscriptions. The previously uploaded 0.0.3 edge ZIP is confirmed in Hosted Test with matching MD5 `e0c01f07740576980001c31635e5164b`. No review was submitted.
+
+These checks do not establish a real OAuth grant, chat connection, microphone round, Paolo session or OBS playback on the cloud pilot. See [ACTIVE-PILOT.md](./ACTIVE-PILOT.md) for the receipt and owner steps. Sanitized activation evidence is in registered run `baited/2026-10-30/587efe961f254b15b20a29a5b8659ab5`.
 
 ## Completed local evidence
 
@@ -18,9 +26,9 @@
 | Built UI | Headless desktop Studio, 390px mobile setup, native panel, hidden OBS and confirmed result passed with no JavaScript errors. Refused admissions show a manual retry rather than an automatic reconnect loop. |
 | Speech delivery | Lease renewal changes Studio state without sending unchanged viewer/OBS snapshots. Audio is not uploaded; the local test uses synthetic sample counters/final text, not microphone capture. |
 | Pilot assets | Selected static frontend, 100 card images and pinned Moonshine runtime built without loading env files or copying server data. |
-| Extension ZIP | Edge-transport ZIP built using the public Extension client ID injected from Proton. Version label 0.0.3, 124 files, 66,171,159 bytes. Not uploaded to Twitch. |
+| Extension ZIP | Edge-transport ZIP built using the public Extension client ID injected from Proton. Version label 0.0.3, 124 files, 66,171,159 bytes. Not uploaded at this local-build checkpoint; the later Hosted Test upload is recorded above. |
 
-The Extension build hash is `0e1e2f46ba0e4ce0eb8b1550881fa16e0e0c16eb8e7f5c9283bb7af8f2f48bcf`. The filename distinguishes it from the existing Node/PC version. Twitch asset-upload acceptance and native playback are still live checks.
+The Extension build hash is `0e1e2f46ba0e4ce0eb8b1550881fa16e0e0c16eb8e7f5c9283bb7af8f2f48bcf`. The filename distinguishes it from the existing Node/PC version. The later upload is confirmed above; native Twitch playback remains a live check.
 
 Curated evidence is in the registered `baited/2026-10-29/7156c8cc3ce84c69992e7930a5c1c797` output run. Browser checks used fixtures and headless desktop engines. They do not establish physical iPhone behavior or live Twitch compatibility.
 
@@ -41,6 +49,6 @@ PR #26 is ready for review and remains unmerged. All four packages passed at run
 
 ## Not established yet
 
-The later authorized deployment created the Worker, static assets and two Durable Object namespaces, and uploaded six secret bindings. Provider metadata confirms the pilot is disabled, all public routing is absent, and only `komediruzecki7` is allowlisted. See [INACTIVE-DEPLOYMENT.md](./INACTIVE-DEPLOYMENT.md). No public game workload or bucket was activated. No actual Twitch OAuth/EventSub/bot flow, hosted microphone test, Twitch ZIP upload, OBS native run, provider billing measurement, load generator, existing-game data migration or production release ran. Local limits and passing fixtures do not establish 1,000-player or 100,000-viewer capacity.
+The [inactive deployment receipt](./INACTIVE-DEPLOYMENT.md) is historical; the current active two-channel configuration is recorded above. No actual user OAuth grant, EventSub/bot flow, hosted microphone test, Paolo round, OBS native run, provider billing measurement, load generator, existing-game data migration or production release ran on this cloud pilot. No R2 bucket, D1 database or Container was activated. Local limits and passing fixtures do not establish 1,000-player or 100,000-viewer capacity.
 
-See [PILOT.md](./PILOT.md) for the concrete activation and first-live-round sequence. Code-review confirmation is complete. The current PR checks record final-head CI; real provider acceptance is still separate.
+See [PILOT.md](./PILOT.md) for the first-live-round sequence. Code-review confirmation is complete. The current PR checks record exact-head CI; the real account/device/game acceptance remains separate from the passing public deployment checks.
