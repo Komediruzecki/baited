@@ -71,3 +71,41 @@ test('webhook verifier authenticates exact raw bytes and rejects replay-age/sign
   assert.equal(await verifyWebhook(make({ 'twitch-eventsub-message-type': 'invalid' }), body, secret, now), null);
   assert.equal(await verifyWebhook(make({ 'twitch-eventsub-message-signature': 'sha256=' + '0'.repeat(64) }), body, secret, now), null);
 });
+
+test('webhook IDs are opaque: padding, punctuation and prototype-looking strings stay bound to their exact HMAC', async () => {
+  const secret = 'public-webhook-fixture-32-characters';
+  const now = 1_800_000_000_000, timestamp = new Date(now).toISOString(), body = '{"message":"fixture"}';
+  const padded = Buffer.alloc(32, 0xfb).toString('base64').replaceAll('+', '-').replaceAll('/', '_');
+  assert.equal(padded.length, 44); assert.ok(padded.endsWith('='));
+  for (const id of [padded, '__proto__', 'constructor', 'toString', 'opaque:./+= @[]', 'x'.repeat(200)]) {
+    const headers = {
+      'twitch-eventsub-message-id': id, 'twitch-eventsub-message-timestamp': timestamp,
+      'twitch-eventsub-message-type': 'notification',
+      'twitch-eventsub-message-signature': `sha256=${createHmac('sha256', secret).update(id + timestamp + body).digest('hex')}`,
+    };
+    const make = (overrides: Record<string, string> = {}) => new Request(`${origin}/api/twitch/eventsub`,
+      { method: 'POST', body, headers: { ...headers, ...overrides } });
+    assert.equal((await verifyWebhook(make(), body, secret, now))?.id, id);
+    assert.equal(await verifyWebhook(make({ 'twitch-eventsub-message-signature': 'sha256=' + '0'.repeat(64) }), body, secret, now), null);
+    assert.equal(await verifyWebhook(make({ 'twitch-eventsub-message-id': id.slice(0, -1) }), body, secret, now), null,
+      'Changing the opaque ID without signing again must fail authentication.');
+    assert.equal(await verifyWebhook(make(), `${body} `, secret, now), null);
+    assert.equal(await verifyWebhook(make(), body, secret, now + 600_001), null);
+  }
+});
+
+test('webhook IDs remain bounded and control characters are rejected even with a matching HMAC', async () => {
+  const secret = 'public-webhook-fixture-32-characters';
+  const now = 1_800_000_000_000, timestamp = new Date(now).toISOString(), body = '{}';
+  for (const id of ['', 'x'.repeat(201), 'bad\u0000id', 'bad\tid', 'bad\rid', 'bad\nid', 'bad\u007fid', 'bad\u0085id']) {
+    // A normal Headers implementation rejects some controls before verification.
+    // Supply the exact received values directly to exercise the verifier's own bound.
+    const headers = new Map(Object.entries({
+      'Twitch-Eventsub-Message-Id': id, 'Twitch-Eventsub-Message-Timestamp': timestamp,
+      'Twitch-Eventsub-Message-Type': 'notification',
+      'Twitch-Eventsub-Message-Signature': `sha256=${createHmac('sha256', secret).update(id + timestamp + body).digest('hex')}`,
+    }));
+    const request = { headers: { get: (name: string) => headers.get(name) ?? null } } as Request;
+    assert.equal(await verifyWebhook(request, body, secret, now), null, JSON.stringify(id));
+  }
+});

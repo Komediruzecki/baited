@@ -70,3 +70,25 @@ test('only authentic bounded Twitch webhooks bypass shared-IP quotas and retain 
   const huge = await pilotIngress(new Request(origin + '/api/twitch/eventsub', { method: 'POST', headers, body: 'x'.repeat(65_537) }), env);
   assert('response' in huge && huge.response.status === 413);
 });
+
+test('authenticated padded Twitch delivery IDs bypass ingress without weakening signature checks', async () => {
+  const secret = 'public-fixture-webhook-secret-not-a-credential';
+  const id = Buffer.alloc(32, 0xfb).toString('base64').replaceAll('+', '-').replaceAll('/', '_');
+  const body = '{"fixture":"opaque delivery id"}', timestamp = new Date().toISOString();
+  const headers = { 'twitch-eventsub-message-id': id, 'twitch-eventsub-message-timestamp': timestamp,
+    'twitch-eventsub-message-type': 'notification',
+    'twitch-eventsub-message-signature': 'sha256=' + createHmac('sha256', secret).update(id + timestamp + body).digest('hex') };
+  const { env, general } = config(limiter(0), limiter(0)); env.TWITCH_EVENTSUB_SECRET = secret;
+  const accepted = await pilotIngress(new Request(origin + '/api/twitch/eventsub', { method: 'POST', headers, body }), env);
+  assert('request' in accepted);
+  if ('request' in accepted) {
+    assert.equal(accepted.request.headers.get('twitch-eventsub-message-id'), id);
+    assert.equal(await accepted.request.text(), body);
+  }
+  assert.equal(general.keys.length, 0);
+  for (const forged of [{ ...headers, 'twitch-eventsub-message-signature': 'sha256=' + '0'.repeat(64) },
+    { ...headers, 'twitch-eventsub-message-id': id.replace(/=+$/, '') }]) {
+    const rejected = await pilotIngress(new Request(origin + '/api/twitch/eventsub', { method: 'POST', headers: forged, body }), env);
+    assert('response' in rejected && rejected.response.status === 403);
+  }
+});

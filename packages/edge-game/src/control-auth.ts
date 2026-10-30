@@ -99,7 +99,10 @@ export async function verifyWebhook(request: Request, body: string, secret: stri
   const type = request.headers.get('Twitch-Eventsub-Message-Type') ?? '';
   const signature = request.headers.get('Twitch-Eventsub-Message-Signature') ?? '';
   const at = Date.parse(timestamp);
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || !Number.isFinite(at) || now - at > CONTROL_LIMITS.webhookMs || at - now > 60_000 ||
+  // Twitch documents this delivery ID as opaque, not a token encoding. Keep its
+  // exact value for the HMAC and replay key; bound it to the Room ingress limit.
+  if (!id.length || id.length > 200 || /[\u0000-\u001f\u007f-\u009f]/.test(id) ||
+    !Number.isFinite(at) || now - at > CONTROL_LIMITS.webhookMs || at - now > 60_000 ||
     !['notification', 'webhook_callback_verification', 'revocation'].includes(type) || !/^sha256=[a-f0-9]{64}$/.test(signature)) return null;
   const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const computed = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(id + timestamp + body)));

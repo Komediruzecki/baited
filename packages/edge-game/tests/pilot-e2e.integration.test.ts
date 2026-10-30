@@ -122,11 +122,11 @@ function viewerToken(channelId: string) {
     .map((part) => Buffer.from(JSON.stringify(part)).toString('base64url')).join('.');
   return `${parts}.${createHmac('sha256', Buffer.from(EXTENSION_SECRET, 'base64')).update(parts).digest('base64url')}`;
 }
-function signedChat(channelId: string, id: string) {
+function signedChat(channelId: string, id: string, text = 'Think of something you might notice on holiday.', badges: string[] = []) {
   const body = JSON.stringify({ subscription: { id: `sub-${channelId}-channel.chat.message`,
     type: 'channel.chat.message', version: '1', condition: { broadcaster_user_id: channelId, user_id: channelId } },
   event: { broadcaster_user_id: channelId, chatter_user_id: '555', chatter_user_name: 'viewer',
-    message_id: id, message: { text: 'Think of something you might notice on holiday.' }, badges: [] } });
+    message_id: id, message: { text }, badges: badges.map((set_id) => ({ set_id, id: '1', info: '' })) } });
   const timestamp = new Date().toISOString();
   return { method: 'POST', body, headers: { 'content-type': 'application/json',
     'twitch-eventsub-message-id': id, 'twitch-eventsub-message-type': 'notification',
@@ -134,7 +134,13 @@ function signedChat(channelId: string, id: string) {
     'twitch-eventsub-message-signature': `sha256=${createHmac('sha256', WEBHOOK_SECRET).update(id + timestamp + body).digest('hex')}` } };
 }
 
-for (const count of [1, 3]) test(`combined pilot: ${count} channel(s), real OAuth, room, webhook, outbox and shared bot budget`, { timeout: 30_000 }, async () => {
+for (const {count, commands, commandId} of [
+  {count:1,commands:false,commandId:''}, {count:3,commands:false,commandId:''},
+  {count:1,commands:true,commandId:Buffer.alloc(32, 0xfb).toString('base64').replaceAll('+', '-').replaceAll('/', '_')},
+  {count:1,commands:true,commandId:'__proto__'},
+]) test(
+  commands ? `combined pilot: opaque ${commandId.endsWith('=')?'padded':'prototype-looking'} ID authenticates a viewer command through Helix without granting moderator control` :
+    `combined pilot: ${count} channel(s), real OAuth, room, webhook, outbox and shared bot budget`, { timeout: 30_000 }, async () => {
   const options = createLocalOptions({ port: 0, statePath: false, script, bindings: {
     EDGE_POC_ENABLED: 'false', EDGE_PILOT_ENABLED: 'true', EDGE_LOCAL_FIXTURE_AUTH: 'false',
     EDGE_PUBLIC_ORIGIN: ORIGIN, EDGE_ALLOWED_HOSTS: 'pilot.test', EDGE_ALLOWED_ORIGINS: ORIGIN,
@@ -222,12 +228,50 @@ for (const count of [1, 3]) test(`combined pilot: ${count} channel(s), real OAut
     const leases = studios.map(() => randomUUID());
     await Promise.all(studios.map(async (studio, index) => {
       assert.equal(studio.current!.room!.connection.status, 'connected', 'Only actual Control subscription can connect a room.');
-      await studio.command({ type: 'settings', settings: { ...studio.current!.room!.settings, chatBot: true } });
+      await studio.command({ type: 'settings', settings: { ...studio.current!.room!.settings, chatBot: true, modCommands: commands } });
       await studio.command({ type: 'microphone', armed: true, leaseId: leases[index]!, renew: false });
+      if (commands) {
+        assert.equal((await request('/api/twitch/eventsub', signedChat(bootstraps[index]!.channelId,
+          'nonmod-start', '!bait start'))).status, 204);
+        assert.equal((await studio.refresh()).room!.phase, 'idle', 'A signed ordinary viewer cannot start the streamer round.');
+      }
       await studio.command({ type: 'start' });
     }));
     await until(() => viewers.every((c) => c.current?.room?.phase === 'active'), 'Viewers did not receive their channel round.');
     const words = viewers.map((viewer) => viewer.current!.room!.round!.target!);
+    if (commands) {
+      await rooms[0].pumpFixture(); await control.pumpFixture();
+      assert.equal((await control.inspectFixture()).sent.length, 1, 'The real start announcement reaches mock Helix first.');
+      await sleep(1150); // Respect the real per-channel spacing and unchanged two-message budget.
+      assert.equal((await request('/api/twitch/eventsub', signedChat(bootstraps[0]!.channelId,
+        'nonmod-pause', '!bait pause'))).status, 204);
+      assert.equal((await studios[0]!.refresh()).room!.phase, 'active', 'A signed ordinary viewer cannot pause the streamer round.');
+      const who = signedChat(bootstraps[0]!.channelId, commandId, '!bait who');
+      const forged = { ...who, headers: { ...who.headers, 'twitch-eventsub-message-signature': 'sha256=' + '0'.repeat(64) } };
+      assert.equal((await request('/api/twitch/eventsub', forged)).status, 403,
+        'An opaque-looking ID never authenticates a message without its valid signature.');
+      assert.equal((await control.inspectFixture()).events.filter((event: any) => event.event.type === 'chat-command').length, 0);
+      assert.equal((await request('/api/twitch/eventsub', who)).status, 204);
+      assert.equal((await request('/api/twitch/eventsub', who)).status, 204);
+      await rooms[0].pumpFixture();
+      const announced = await control.inspectFixture();
+      const command = announced.events.find((event: any) => event.event.type === 'chat-command');
+      assert.ok(command, 'The signed Twitch command must survive Room processing and its durable outbox.');
+      assert.equal(command.event.command, 'who');
+      assert.equal(command.event.userId, '555');
+      await control.pumpFixture();
+      const replied = await control.inspectFixture();
+      assert.equal(replied.sent.length, 2, 'The ordinary viewer gets a reply through the actual Control → Helix sender.');
+      assert.equal(replied.sentAt.length, 2, 'The reply spends the original shared send budget.');
+      assert.ok(replied.sent.every((sent: any) => sent.broadcaster_id === '123' && sent.sender_id === '999'));
+      assert.match(replied.sent[1].message, /baity|baeittrice/i);
+      assert.ok(words.every((word) => !replied.sent[1].message.toLowerCase().includes(word.toLowerCase())),
+        'A command reply must not disclose the active secret.');
+      assert.equal(replied.events.filter((event: any) => event.event.type === 'chat-command').length, 1,
+        'Replaying the same signed Twitch delivery must not queue a second reply.');
+      assert.equal((await rooms[0].inspectFixture()).outbox, 0);
+      return;
+    }
     for (let i = 0; i < count; i++) {
       assert.equal(typeof words[i], 'string');
       for (const hidden of [studios[i]!.current!, overlays[i]!.current!]) {
