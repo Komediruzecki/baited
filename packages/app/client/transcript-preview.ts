@@ -2,7 +2,9 @@ import type { MoonshineLine } from './moonshine';
 import type { GameView } from '../shared/types';
 
 export function canPreviewTranscript(hostname: string, mode: GameView['mode']) {
-  return mode === 'demo' || ['localhost', '127.0.0.1', '[::1]', '::1'].includes(hostname);
+  // The invited cloud pilot keeps the same opt-in display as local testing.
+  // This does not grant access to the hidden card or change speech transport.
+  return mode === 'demo' || ['localhost', '127.0.0.1', '[::1]', '::1', 'pilot-baited.maff.app'].includes(hostname);
 }
 
 export const TRANSCRIPT_PREVIEW_LIMIT = 12;

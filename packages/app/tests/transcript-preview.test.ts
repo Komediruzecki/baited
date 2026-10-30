@@ -13,6 +13,15 @@ test('local speech diagnostics remain available separately from target reveal', 
   assert.equal(canPreviewTranscript('preview.example.com', 'demo'), true);
 });
 
+test('hosted transcript preview is available on the exact pilot host only', () => {
+  assert.equal(canPreviewTranscript('pilot-baited.maff.app', 'twitch'), true);
+  for (const host of [
+    'baited.maff.app', 'dev.baited.maff.app', 'play-baited.maff.app',
+    'dev-play-baited.maff.app', 'pilot-baited.maff.app.example.com',
+    'other-pilot-baited.maff.app',
+  ]) assert.equal(canPreviewTranscript(host, 'twitch'), false);
+});
+
 test('transcript preview ignores speech until opted in and hiding erases its buffer', () => {
   const preview = new TranscriptPreviewBuffer();
   assert.equal(preview.receive(line('1', 'not collected'), 'round:1'), null);

@@ -4,14 +4,14 @@ Verified 30 October 2026 (Europe/Zagreb), after the owner authorized both invite
 
 **Studio: [https://pilot-baited.maff.app/studio](https://pilot-baited.maff.app/studio)**
 
-The cloud endpoint is active. The PC server and tunnel remain stopped. The repository stays private, the Extension remains in Hosted Test, and no review submission or production tag was made. The first real round on this deployment is still pending.
+The cloud endpoint is active. The PC server and tunnel remain stopped. The repository stays private, the Extension remains in Hosted Test, and no review submission or production tag was made. The owner has confirmed a successful fresh Twitch sign-in. Full gameplay and device acceptance are tracked separately.
 
 ## Deployment receipt
 
 | Item | Verified state |
 | --- | --- |
 | Worker | `baited-edge-pilot` |
-| Provider version | `fdb8c95a-1d4c-485f-99c7-24cee8b9776c` (OAuth compatibility repair) |
+| Provider version | `4658ebdf-534d-4e6b-a97d-5c4106832986` (pilot transcript display) |
 | Public endpoint | Exact custom domain `pilot-baited.maff.app` |
 | Alternate addresses | workers.dev and preview URLs disabled |
 | Enabled mode | Real allowlisted pilot; POC, local fixture and synthetic staging auth disabled |
@@ -28,9 +28,9 @@ The initial activation used runtime source `a102da0`. The current deployment add
 
 The owner's first real sign-in returned a generic 503. Production Twitch requests used `redirect: 'error'`, which workerd rejects before any network request. The older OAuth fixtures replaced this method and missed the runtime difference. The repair uses `manual`, explicitly rejects all 3xx responses without forwarding credentials, and retains the five-second abort.
 
-A new offline native-workerd fixture failed all seven checks before the repair and passed afterward: successful POST/form/auth headers, 301/302/303/307/308 rejection after one original request, and timeout. Existing Control/OAuth tests and safe diagnostic tests also passed. Callback failures now expose only fixed phase/reason categories and bounded provider status; no callback queries, provider bodies, cookies or tokens are logged. Historical observability remains disabled. A fresh owner OAuth retry is still required; do not reload or share a previously consumed callback URL.
+A new offline native-workerd fixture failed all seven checks before the repair and passed afterward: successful POST/form/auth headers, 301/302/303/307/308 rejection after one original request, and timeout. Existing Control/OAuth tests and safe diagnostic tests also passed. Callback failures now expose only fixed phase/reason categories and bounded provider status; no callback queries, provider bodies, cookies or tokens are logged. Historical observability remains disabled. The owner confirmed that a fresh OAuth retry returned to Studio successfully. Do not reload or share a previously consumed callback URL.
 
-The requested new irch Opus pass could not start because its previously verified isolated profile is logged out (`account_unavailable`). No alternative account was used. Independent source review and native regression proof completed; this is not an Opus approval or a successful live OAuth grant.
+The requested new irch Opus pass could not start because its previously verified isolated profile is logged out (`account_unavailable`). No alternative account was used. Independent source review and native regression proof completed; this is not a new Opus approval. The owner separately confirmed the live OAuth retry.
 
 Repair evidence: registered run `baited/2026-10-30/95282fecd33c472c93d11146c8d7600f`.
 
@@ -47,7 +47,7 @@ Repair evidence: registered run `baited/2026-10-30/95282fecd33c472c93d11146c8d76
 | Card Maker and Card Lab | 404 |
 | Existing EventSub subscriptions | Zero application subscriptions; complete read-only inspection, with no old PC callback conflict |
 
-The Twitch inspection used an ephemeral app token that was revoked afterward. No subscriptions or user grants were created or deleted. A real owner OAuth grant, chat connection, microphone round, Paolo session, bot announcement and native OBS playback have not yet been tested on this cloud deployment. No synthetic load or cost measurement ran.
+At the initial activation checkpoint, the read-only Twitch inspection used an ephemeral app token that was revoked afterward; no subscriptions or user grants were created or deleted by that inspection. The owner subsequently confirmed Twitch sign-in. A complete recorded Moonshine/chat round, Paolo session, bot announcement and native OBS/device acceptance remain separate checks. No synthetic load or cost measurement ran.
 
 Sanitized provider/HTTP receipts and the Studio screenshot are in registered run:
 `/run/media/maff/Game_Shared/agent-out-live/baited/2026-10-30/587efe961f254b15b20a29a5b8659ab5/evidence/`.
@@ -66,6 +66,16 @@ Twitch settings/upload proof is in registered run:
 7. Optional Baity announcements require separate bot authorization. Only `komediruzecki7` can initiate that operator flow, using the configured bot account. Then enable announcements in game settings.
 
 Complete the interruption, renewal and device checks in [PILOT.md](./PILOT.md) before increasing admission or inviting more streamer channels.
+
+## See what Moonshine heard
+
+The exact pilot host now offers the existing opt-in transcript view. Other hosted production/dev origins keep it hidden; local/demo behavior is unchanged. This display does not reveal the card or change the speech transport.
+
+Between rounds, reload Studio, enable the microphone and click **Show transcript** in the Microphone card. Start a round, say a short phrase and pause. Finalized phrases appear under **What your mic heard**; partial guesses are not shown. The view retains the last 12 phrases (at most 2,000 characters each) in this tab only. **Clear** empties the view; hiding, disconnecting or reloading erases it. Keep the panel out of stream capture.
+
+Verification: the new exact-host assertion failed before the change, then all 15 transcript/local-speech tests passed. App typecheck and pilot asset build passed. Independent review found no hidden-card, transport or persistence change. The deployed Show/Hide control and empty state were checked in the signed-in Chrome Studio; real microphone phrases remain for the owner's test. No Extension ZIP, secrets or Twitch settings changed.
+
+Transcript update evidence: registered run `baited/2026-10-30/094e2872a4754b77ba787aa2738c1e1a`.
 
 ## End or stop the test
 

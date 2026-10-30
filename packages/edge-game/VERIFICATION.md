@@ -4,7 +4,7 @@
 
 ## Active provider checks, 30 October 2026
 
-The owner authorized `komediruzecki7` and `lakeeko`, with a two-channel ceiling and 100 participants/100 viewer sockets per channel. The initial Cloudflare version was `f35137d9-9393-44b6-8124-16b1bc94370e`; the OAuth compatibility repair is deployed as `fdb8c95a-1d4c-485f-99c7-24cee8b9776c` on the same exact custom domain `pilot-baited.maff.app`. workers.dev, preview URLs and synthetic authentication remain disabled. All six secrets are retained.
+The owner authorized `komediruzecki7` and `lakeeko`, with a two-channel ceiling and 100 participants/100 viewer sockets per channel. The initial Cloudflare version was `f35137d9-9393-44b6-8124-16b1bc94370e`; the OAuth compatibility repair is deployed as `4658ebdf-534d-4e6b-a97d-5c4106832986` on the same exact custom domain `pilot-baited.maff.app`. workers.dev, preview URLs and synthetic authentication remain disabled. All six secrets are retained.
 
 HTTPS checks passed: health reports an enabled allowlisted pilot; Studio returns 200 and renders Connect Twitch in the in-app browser; signed-out session metadata returns 200; protected session and room state return 401; an unsigned webhook returns JSON 403; Card Maker and Card Lab return 404. Read-only Twitch inspection found zero existing app EventSub subscriptions. The previously uploaded 0.0.3 edge ZIP is confirmed in Hosted Test with matching MD5 `e0c01f07740576980001c31635e5164b`. No review was submitted.
 
@@ -54,3 +54,11 @@ PR #26 is ready for review and remains unmerged. All four packages passed at run
 The [inactive deployment receipt](./INACTIVE-DEPLOYMENT.md) is historical; the current active two-channel configuration is recorded above. No actual user OAuth grant, EventSub/bot flow, hosted microphone test, Paolo round, OBS native run, provider billing measurement, load generator, existing-game data migration or production release ran on this cloud pilot. No R2 bucket, D1 database or Container was activated. Local limits and passing fixtures do not establish 1,000-player or 100,000-viewer capacity.
 
 See [PILOT.md](./PILOT.md) for the first-live-round sequence. Code-review confirmation is complete. The current PR checks record exact-head CI; the real account/device/game acceptance remains separate from the passing public deployment checks.
+
+## Pilot transcript display — 30 October 2026
+
+- The owner confirmed the OAuth repair returns to Studio; both push/PR CI runs passed all four packages at `108cc63`.
+- Exact pilot hostname gating reuses the existing opt-in final-phrase view. Other hosted origins remain excluded. It adds no new transcript persistence and does not alter hidden-card access or speech transport.
+- New host assertion failed on baseline. Transcript and local-speech tests then passed 15/15; app typecheck and pilot assets build passed. Independent review found no blocker.
+- The deployed signed-in Chrome Studio shows the button; opening it exposes the final-phrase empty state and disabled Clear button. This did not enable a microphone or start a round.
+- New deployment and public/provider receipts are in registered run `baited/2026-10-30/094e2872a4754b77ba787aa2738c1e1a`. The owner's real phrase test remains pending.
