@@ -67,6 +67,8 @@ Twitch settings/upload proof is in registered run:
 
 Complete the interruption, renewal and device checks in [PILOT.md](./PILOT.md) before increasing admission or inviting more streamer channels.
 
+For a one-screen setup, keep Twitch chat on a phone/tablet beside the PC. [Chat setup](./CHAT-SETUP.md) covers the installed Chatterino app, its floating desktop overlay and the separate public-chat widget plan for OBS.
+
 ### Viewer setup in the Twitch iOS app
 
 1. Sign into the Twitch app with the account added to the **Testing Account Allowlist**, then open the testing streamer's live channel.
