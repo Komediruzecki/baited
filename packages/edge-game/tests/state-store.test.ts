@@ -138,6 +138,36 @@ test('SQLite wake preserves pending catch, private award review and result/histo
   assert.equal(game.score.wins, 0);
 });
 
+test('SQLite recovery and rollback retain the original automatic catch deadline without double scoring', (t) => {
+  const h = storage(); t.after(() => h.db.close());
+  const f = fixture(); f.game.begin(); f.game.transcript(f.transcript(), 'confirm');
+  save(h, new RoomStore(h.sql), f.game, 1);
+  const confirmAt = f.clock() + 15_000;
+  const candidate = restored(new RoomStore(h.sql), f);
+  assert.equal(candidate.result?.confirmAt, confirmAt);
+  assert.equal(candidate.nextDeadline(), confirmAt);
+  f.add(15_000);
+  candidate.advanceTo(f.clock());
+  assert.equal(candidate.result?.outcome, 'caught');
+
+  h.inject((query) => query.startsWith('INSERT INTO state_part'));
+  assert.throws(() => save(h, new RoomStore(h.sql), candidate, 2), /injected SQL failure/);
+  h.inject();
+  const retry = restored(new RoomStore(h.sql), f);
+  assert.equal(retry.pendingCatch, true);
+  assert.equal(retry.result?.confirmAt, confirmAt);
+  assert.equal(retry.data.history.length, 0);
+  retry.advanceTo(f.clock());
+  save(h, new RoomStore(h.sql), retry, 2);
+  const confirmed = restored(new RoomStore(h.sql), f);
+  confirmed.advanceTo(f.clock());
+  assert.equal(confirmed.result?.outcome, 'caught');
+  assert.equal(confirmed.result?.at, confirmAt);
+  assert.equal(Object.hasOwn(confirmed.result!, 'confirmAt'), false);
+  assert.equal(confirmed.data.history.length, 1);
+  assert.equal(confirmed.score.wins, 1);
+});
+
 test('new round removes old hot records while preserving the previous round award board across wake', (t) => {
   const h = storage(); t.after(() => h.db.close());
   const store = new RoomStore(h.sql); const f = fixture();

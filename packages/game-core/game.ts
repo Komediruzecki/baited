@@ -62,6 +62,8 @@ export type GameEvent =
   | { type: 'skip-vote' }
   | { type: 'mission-timeout' };
 export const SPEECH_SETTLE_MS = 1500;
+/** Keep a detected catch reversible before the server confirms it automatically. */
+export const CATCH_CONFIRM_MS = 15_000;
 export const tokens = (s: string): string[] =>
   s
     .normalize('NFKC')
@@ -232,10 +234,12 @@ const difficulty = z.enum(['easy', 'medium', 'hard']);
 const resultSchema = z.object({
   id: z.string(), number: count, word: z.string(), artId: z.string().optional(),
   outcome: z.enum(['caught', 'escaped', 'skipped', 'ended', 'overturned', 'review']),
-  elapsed: count, participants: count, at: timestamp,
+  elapsed: count, participants: count, at: timestamp, confirmAt: timestamp.optional(),
   award: z.object({ name: z.string(), at: timestamp.optional() }).strict().optional(),
   reason: z.enum(['guess', 'timer']).optional(), milestone: count.optional(), newBadge: z.boolean().optional(),
-}).strict();
+}).strict().refine((result) => result.confirmAt === undefined ||
+  (result.outcome === 'review' && result.confirmAt > result.at && result.confirmAt === result.at + CATCH_CONFIRM_MS),
+  'Only a pending catch can have its bounded confirmation deadline.');
 const hintSchema = z.object({
   id: z.string(), userId: z.string(), messageId: z.string(), name: z.string().max(40),
   text: z.string().max(500), eligible: z.boolean(), reason: z.string().nullable(), at: timestamp,
@@ -308,7 +312,7 @@ const checkpointSchema = z.object({
   if (phase !== 'cooldown' && state.nextAt !== null) fail('Only cooldown can have a next deadline.');
   if (result && result.id !== round?.id) fail('Result does not match the current round.');
   if (phase === 'cooldown' && !result) fail('Cooldown requires a result.');
-  if (result?.outcome === 'review' && state.nextAt !== null) fail('Pending catch cannot advance automatically.');
+  if (result?.outcome === 'review' && state.nextAt !== null) fail('Pending catch cannot start the next round.');
   const linked = data.history.find((entry) => entry.id === state.resultHistoryId);
   if (state.resultHistoryId !== null) {
     if (!result || !linked || JSON.stringify(linked) !== JSON.stringify(result)) fail('Result history link is invalid.');
@@ -413,6 +417,9 @@ export class Game {
     // The result and history intentionally alias: reverse/award edit both in the live engine.
     game.result = state.resultHistoryId === null ? state.result
       : state.data.history.find((entry) => entry.id === state.resultHistoryId)!;
+    // Older checkpoints predate automatic confirmation. Derive from detection,
+    // never from restore time, so a restart cannot prolong the review window.
+    if (game.result?.outcome === 'review') game.result.confirmAt ??= game.result.at + CATCH_CONFIRM_MS;
     game.nextAt = state.nextAt;
     game.mic = state.mic;
     game.connection = state.connection;
@@ -431,6 +438,7 @@ export class Game {
     const deadlines: number[] = [];
     if (this.review) deadlines.push(this.review.expiresAt);
     if (this.pendingCatch) {
+      deadlines.push(this.result!.confirmAt ?? this.result!.at + CATCH_CONFIRM_MS);
       if (this.round?.hints.length) deadlines.push(this.result!.at + 600000);
     } else if (this.phase === 'settling' && this.round) {
       deadlines.push(this.round.settleUntil!);
@@ -607,6 +615,7 @@ export class Game {
       elapsed: Math.round((r.duration - r.remaining) / 1000),
       participants: r.participants.size,
       at: now,
+      confirmAt: now + CATCH_CONFIRM_MS,
     };
     // Stop first, then reveal. Pending catches never enter score/history or awards.
     this.phase = 'cooldown';
@@ -616,6 +625,9 @@ export class Game {
     this.emit({ type: 'review' });
   }
   decideCatch(roundId: string, decision: 'confirm' | 'reject') {
+    // The shared Node adapter also enforces the deadline if its periodic tick
+    // has not run yet; a late rejection must use the settled result's undo.
+    this.tick();
     if (!this.pendingCatch || !this.round || this.result?.id !== roundId)
       throw new Error('Only the current pending catch can be confirmed or rejected.');
     this.finish(decision === 'confirm' ? 'caught' : 'overturned');
@@ -756,6 +768,7 @@ export class Game {
         this.round.hints = [];
         this.changed();
       }
+      if (now >= (this.result!.confirmAt ?? this.result!.at + CATCH_CONFIRM_MS)) this.finish('caught');
       return;
     }
     if (this.phase === 'settling' && this.round) {

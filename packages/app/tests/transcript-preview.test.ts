@@ -1,25 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { canPreviewTranscript, TranscriptPreviewBuffer, TRANSCRIPT_PREVIEW_LIMIT, TRANSCRIPT_PREVIEW_TEXT_LIMIT } from '../client/transcript-preview';
+import { TranscriptPreview } from '../client/TranscriptPreview';
 import type { MoonshineLine } from '../client/moonshine';
 
 const line = (id: string, text: string, isComplete = true) => ({ id, text, isComplete } as MoonshineLine);
 
-test('local speech diagnostics remain available separately from target reveal', () => {
-  for (const host of ['localhost', '127.0.0.1', '[::1]', '::1'])
-    assert.equal(canPreviewTranscript(host, 'twitch'), true);
-  for (const host of ['bait.maff.app', 'localhost.example.com', '192.168.1.10'])
-    assert.equal(canPreviewTranscript(host, 'twitch'), false);
-  assert.equal(canPreviewTranscript('preview.example.com', 'demo'), true);
+test('authenticated Twitch Studio offers the transcript independently of hostname', () => {
+  assert.equal(canPreviewTranscript('twitch', true), true);
+  assert.equal(canPreviewTranscript('twitch', false), false);
 });
 
-test('hosted transcript preview is available on the exact pilot host only', () => {
-  assert.equal(canPreviewTranscript('pilot-baited.maff.app', 'twitch'), true);
-  for (const host of [
-    'baited.maff.app', 'dev.baited.maff.app', 'play-baited.maff.app',
-    'dev-play-baited.maff.app', 'pilot-baited.maff.app.example.com',
-    'other-pilot-baited.maff.app',
-  ]) assert.equal(canPreviewTranscript(host, 'twitch'), false);
+test('the local demo can still show its own opt-in microphone text', () => {
+  assert.equal(canPreviewTranscript('demo', false), true);
+  assert.equal(canPreviewTranscript('demo', true), true);
+});
+
+test('transcript controls explain local retention and escape recognized text', () => {
+  const hidden = renderToStaticMarkup(React.createElement(TranscriptPreview, {
+    enabled: false, lines: [], listening: false, onToggle() {}, onClear() {},
+  }));
+  assert.match(hidden, /Show transcript/);
+  assert.match(hidden, /aria-expanded="false"/);
+  assert.doesNotMatch(hidden, /Final transcribed phrases/);
+  const visible = renderToStaticMarkup(React.createElement(TranscriptPreview, {
+    enabled: true, lines: [{ id: 'one', text: '<script>speech</script>', receivedAt: 1000, truncated: false }],
+    listening: true, onToggle() {}, onClear() {},
+  }));
+  assert.match(visible, /Hide transcript/);
+  assert.match(visible, /kept only in this tab/);
+  assert.match(visible, /&lt;script&gt;speech&lt;\/script&gt;/);
+  assert.doesNotMatch(visible, /<script>/);
 });
 
 test('transcript preview ignores speech until opted in and hiding erases its buffer', () => {

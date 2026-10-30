@@ -28,6 +28,8 @@ export interface Result {
   elapsed: number;
   participants: number;
   at: number;
+  /** Server deadline for a pending speech catch; omitted after it is decided. */
+  confirmAt?: number;
   /** The streamer's "You baited me" pick; `at` (when it was chosen) cues the OBS sting. */
   award?: { name: string; at?: number };
   reason?: 'guess' | 'timer';

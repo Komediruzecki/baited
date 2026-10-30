@@ -61,6 +61,12 @@ Broadcaster role protection stops accidental peeking with the broadcaster’s kn
 
 ## Build and review for later updates
 
+### Prepared update: catch confirmation and microphone transcript
+
+The next build confirms a detected Moonshine catch automatically after 15 seconds, using a server-owned deadline that survives a restart. Studio can reject a misheard catch during that window, confirm it sooner, or reverse a confirmed win afterward. The pending announcement expires with the review window. Studio also offers an opt-in transcript on any authenticated hosted origin; it remains bounded and local to the current tab. The native Extension update adjusts result wording and separates streak markers from their numbers.
+
+These changes are prepared locally, not part of the recorded active deployment. A game Worker deployment updates Studio/backend behavior; a separately uploaded Twitch ZIP updates native Extension copy and spacing. Neither happens on a PR push. See [the chat-delivery investigation](./CHAT-DELIVERY-REPAIR-2026-10-30.md) for the incoming-command repair, current evidence and retest procedure. Do not interrupt an active test to apply the update without coordinating it.
+
 1. Review the completed irch Opus staff review and repair confirmation, plus the final regression/CI results. Keep the PR draft if a blocking issue remains. See [REVIEW-DISPOSITION.md](./REVIEW-DISPOSITION.md).
 2. Let the existing PR checks validate the application, Extension, landing, review-host and edge package. The new edge checks also build the selected static pilot assets.
 3. Build the pilot frontend with `pnpm --filter @baited/edge-game build:pilot-assets`.

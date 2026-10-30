@@ -1,10 +1,10 @@
 import type { MoonshineLine } from './moonshine';
 import type { GameView } from '../shared/types';
 
-export function canPreviewTranscript(hostname: string, mode: GameView['mode']) {
-  // The invited cloud pilot keeps the same opt-in display as local testing.
-  // This does not grant access to the hidden card or change speech transport.
-  return mode === 'demo' || ['localhost', '127.0.0.1', '[::1]', '::1', 'pilot-baited.maff.app'].includes(hostname);
+export function canPreviewTranscript(mode: GameView['mode'], authenticated: boolean) {
+  // Speech text is an ordinary opt-in Studio feature, independent of its hostname.
+  // The buffer receives only this tab's microphone results; it is never a viewer API.
+  return mode === 'demo' || (mode === 'twitch' && authenticated);
 }
 
 export const TRANSCRIPT_PREVIEW_LIMIT = 12;

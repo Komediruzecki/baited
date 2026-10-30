@@ -246,9 +246,10 @@ body[data-surface='overlay'] {
 .face-row li {
   display: grid;
   justify-items: center;
-  gap: 0.8cqh;
+  /* Leave room below the current coin's 3.5px ring before its number. */
+  gap: max(6px, 1.667cqh);
   color: #8d8596;
-  font: 650 max(9px, 3.6cqw) / 1 var(--b-ui);
+  font: 650 max(9px, 3.6cqw) / 1.25 var(--b-ui);
   font-variant-numeric: tabular-nums;
 }
 .face-row li > span:first-child {

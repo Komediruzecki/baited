@@ -77,7 +77,7 @@ test('local catches stop before reveal and leave score, history and awards uncha
   assert.throws(() => f.game.award(id, 'hint'));
   assert.throws(() => f.game.decideCatch('another-round', 'confirm'));
   assert.throws(() => f.game.start());
-  f.advance(90000);
+  f.advance(14999);
   f.game.tick();
   assert.equal(f.game.result?.outcome, 'review');
   f.game.decideCatch(id, 'confirm');
@@ -138,7 +138,7 @@ test('a confirmed catch can still be reversed with its hint award removed exactl
   assert.throws(() => f.game.reverse());
 });
 
-test('auto and mission clocks wait for confirmation, then continue from the frozen time', () => {
+test('auto and mission clocks wait for automatic confirmation, then continue from the frozen time', () => {
   const f = fixture();
   f.game.update({ ...f.game.data.settings, auto: true, mission: 'three', missionDuration: 60 });
   f.game.begin();
@@ -147,14 +147,15 @@ test('auto and mission clocks wait for confirmation, then continue from the froz
   f.game.transcript(f.transcript(), 'confirm');
   assert.equal(f.game.view('studio').mission?.remaining, 50000);
   assert.equal(f.game.view('studio').mission?.endsAt, null);
-  f.advance(180000);
+  f.advance(14999);
   f.game.tick();
   assert.equal(f.game.round!.id, id);
   assert.equal(f.game.nextAt, null);
   assert.equal(f.game.mission?.status, 'active');
   assert.equal(f.game.mission?.completed, 0);
   assert.equal(f.game.view('studio').mission?.remaining, 50000);
-  f.game.decideCatch(id, 'confirm');
+  f.advance(1);
+  f.game.tick();
   assert.equal(f.game.mission?.completed, 1);
   assert.equal(f.game.view('studio').mission?.remaining, 50000);
   f.advance(10000);
@@ -173,29 +174,31 @@ test('Deepgram automatic scoring still awards immediately', () => {
   assert.equal(f.game.pendingCatch, false);
 });
 
-test('pending catches expire raw hints ten minutes after stopping without deciding or scoring', () => {
+test('automatic confirmation keeps the original ten-minute raw hint retention', () => {
   const f = fixture();
   f.game.begin();
   f.game.chat('hint', 'viewer', 'Viewer', 'a subtle hint', f.now());
   f.game.transcript(f.transcript(), 'confirm');
-  const id = f.game.round!.id;
-  f.advance(599999);
+  f.advance(15000);
   f.game.tick();
-  assert.equal(f.game.round!.hints.length, 1);
+  assert.equal(f.game.result?.outcome, 'caught');
+  assert.equal(f.game.round!.hints.length, 0);
+  assert.equal(f.game.awardBoard?.candidates.length, 1);
+  f.advance(584999);
+  f.game.tick();
+  assert.equal(f.game.awardBoard?.candidates.length, 1);
   f.advance(1);
   f.game.tick();
   assert.equal(f.game.round!.hints.length, 0);
-  assert.equal(f.game.pendingCatch, true);
+  assert.equal(f.game.pendingCatch, false);
   assert.equal(f.game.nextAt, null);
-  assert.equal(f.game.score.played, 0);
-  assert.equal(f.game.score.wins, 0);
-  f.game.decideCatch(id, 'confirm');
+  assert.equal(f.game.score.played, 1);
   assert.equal(f.game.score.wins, 1);
   assert.equal(f.game.awardBoard, null);
 });
 
-test('confirmation preserves the original hint deadline, including when no expiry tick ran', () => {
-  for (const delay of [300000, 600000]) {
+test('manual and automatic confirmation preserve the original hint deadline, including a late wake', () => {
+  for (const delay of [14000, 300000, 600000]) {
     const f = fixture();
     f.game.begin();
     f.game.chat('hint', 'viewer', 'Viewer', 'a subtle hint', f.now());
@@ -203,7 +206,8 @@ test('confirmation preserves the original hint deadline, including when no expir
     const stoppedAt = f.now(),
       id = f.game.round!.id;
     f.advance(delay);
-    f.game.decideCatch(id, 'confirm');
+    if (delay < 15000) f.game.decideCatch(id, 'confirm');
+    else f.game.tick();
     assert.equal(f.game.round!.hints.length, 0);
     assert.equal(f.game.score.wins, 1);
     if (delay < 600000) {

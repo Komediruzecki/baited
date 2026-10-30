@@ -114,6 +114,8 @@
 .studio-shell .studio-result__word[data-word-size='long'] { font-size: 30px; }
 .studio-shell .studio-result__word[data-word-size='extended'] { font-size: 26px; }
 .studio-shell .catch-actions { margin-top: 20px; }
+.studio-shell .catch-countdown { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--b-line); border-radius: 10px; color: var(--b-copy); font: 400 13px/1.5 var(--b-ui); }
+.studio-shell .catch-countdown strong { color: var(--b-lilac); font: 600 20px/1.2 var(--b-ui); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .studio-shell .catch-actions > .button { flex: 1 1 130px; width: auto; }
 .studio-shell .undo-button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 0; margin-top: 8px; min-height: 44px; border: 0; background: transparent; color: var(--b-lilac); font: 500 12px/1.5 var(--b-ui); text-decoration: underline; text-underline-offset: 4px; }
 .studio-shell .studio-result__decision > .text-button { min-height: 44px; color: var(--b-lilac); font: 500 12px/1.5 var(--b-ui); }

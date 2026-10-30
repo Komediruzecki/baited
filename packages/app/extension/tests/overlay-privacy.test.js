@@ -119,6 +119,14 @@ test('overlay shows the face to viewers, only the back to the broadcaster, and c
     assert.equal(elements.get('front-word').style.color, '');
     assert.equal(elements.get('front-art').attributes.has('src'), false);
     assert.equal(elements.get('table').dataset.visible, 'false');
+
+    authorize(auth('viewer-timed-review'));
+    await respond(5, state(true, 'VOLCANO', 'cooldown', { id: 'timed-review', word: 'VOLCANO', outcome: 'review', confirmAt: 25000 }));
+    assert.equal(elements.get('front-chip').textContent, 'Catch pending');
+    assert.equal(elements.get('front-note').textContent, 'Waiting for the confirmed result');
+    authorize(auth('viewer-legacy-review'));
+    await respond(6, state(true, 'VOLCANO', 'cooldown', { id: 'legacy-review', word: 'VOLCANO', outcome: 'review' }));
+    assert.equal(elements.get('front-note').textContent, 'The streamer is checking');
   } finally {
     windowMock.dispatchEvent(new Event('pagehide'));
     await flush();

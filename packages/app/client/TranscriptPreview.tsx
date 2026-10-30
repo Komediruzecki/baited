@@ -17,8 +17,8 @@ export function TranscriptPreview({
 }) {
   const id = useId();
   return (
-    <section className="transcript-preview" aria-label="Local speech test">
-      <span className="small-label">Speech test</span>
+    <section className="transcript-preview" aria-label="Microphone transcript">
+      <span className="small-label">Microphone transcript</span>
       <Button
         type="button"
         className="secondary"
@@ -42,8 +42,7 @@ export function TranscriptPreview({
             </button>
           </div>
           <p>
-            Completed phrases appear after a pause. This view shows final text, not guesses while
-            you speak.
+            Completed phrases appear after a pause. Check them if a catch sounds wrong.
           </p>
           {lines.length ? (
             <ol className="transcript-lines" aria-label="Final transcribed phrases">
@@ -60,7 +59,7 @@ export function TranscriptPreview({
                     </time>
                   </div>
                   <p>{line.text}</p>
-                  {line.truncated && <small>Long phrase shortened in this preview.</small>}
+                  {line.truncated && <small>Long phrase shortened in this view.</small>}
                 </li>
               ))}
             </ol>

@@ -782,6 +782,55 @@ test('five settling tail frames preserve a crossing final and score only words e
   }
 });
 
+test('the durable alarm confirms native speech catches after 15 seconds exactly once without a browser decision', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const target=(await state(mf,'viewer')).room.round!.target!;
+    const active=await advanceAudio(mf,stub,1000);
+    const detectedAt=active.round!.segmentAt+1100;
+    await stub.ownerMessageAtFixture(detectedAt,{type:'speech-final',leaseId:active.lease!.id,
+      roundId:active.round!.id,epoch:active.round!.epoch,sequence:1,line:{id:randomUUID(),
+        text:target,isComplete:true,startTime:0,duration:1,
+        words:[{text:target,start:0.2,end:0.8,confidence:1}]}});
+    const pending=await state(mf);
+    assert.equal(pending.room.result?.outcome,'review');
+    const confirmAt=detectedAt+15_000;
+    assert.equal(pending.room.result?.confirmAt,confirmAt);
+    assert.equal(pending.room.score.wins,0);
+    assert.equal((await state(mf,'overlay')).room.result?.word,undefined);
+    const alarm=(await stub.inspectFixture()).alarm;
+    assert.notEqual(alarm,null,'The pending catch must have a durable wake.');
+    assert.ok(alarm!<=confirmAt,'A pending catch must wake no later than its confirmation deadline.');
+
+    // Exercise the real alarm handler, including losing microphone liveness
+    // while waiting. Confirmation does not depend on a Studio tab or its timer.
+    const before=await stub.flushOutboxAtFixture(confirmAt-1);
+    assert.equal(before.history,0);
+    assert.equal((await state(mf)).room.result?.outcome,'review');
+    const confirmed=await stub.flushOutboxAtFixture(confirmAt);
+    assert.equal(confirmed.history,1);
+    const caught=await state(mf);
+    assert.equal(caught.room.result?.outcome,'caught');
+    assert.equal(caught.room.result?.at,confirmAt);
+    assert.equal(Object.hasOwn(caught.room.result!,'confirmAt'),false);
+    assert.equal(caught.room.score.wins,1);
+    assert.equal(caught.room.score.streak,1);
+    assert.equal((await state(mf,'overlay')).room.result?.word,target);
+    const repeated=await stub.flushOutboxAtFixture(confirmAt+1);
+    assert.equal(repeated.history,1,'A repeated alarm must not insert or score the catch twice.');
+
+    const latest=await state(mf);
+    const undone=await send(mf,{type:'reverse',roundId:active.round!.id},latest.revision);
+    assert.equal(undone.ok,true);
+    const reversed=await state(mf);
+    assert.equal(reversed.room.result?.outcome,'overturned');
+    assert.equal(reversed.room.score.wins,0);
+    assert.equal(reversed.room.score.streak,0);
+    assert.equal(Object.hasOwn(reversed.room.result!,'confirmAt'),false);
+  } finally {await mf.dispose();}
+});
+
 test('queued audio anchors on its arrival time rather than the delayed first processing time', {timeout:15_000}, async () => {
   const {mf,stub}=await runtime();
   try {

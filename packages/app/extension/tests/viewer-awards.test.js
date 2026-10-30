@@ -78,7 +78,7 @@ test('the panel shows the streamer’s pick and the top three MVPs between round
     await show(room({ result: { id: 'round-badge', word: 'VOLCANO', outcome: 'caught', milestone: 3, newBadge: true },
       score: { streak: 3, best: 3 } }));
     const detail = elements.get('card-detail');
-    assert.equal(detail.textContent, 'The streamer confirmed it. Chat got the word.  New streak badge: Heating up, 3 in a row.');
+    assert.equal(detail.textContent, 'The catch is confirmed. Chat got the word.  New streak badge: Heating up, 3 in a row.');
     const flame = detail.children.find((child) => typeof child !== 'string');
     assert.equal(flame.attributes.get('src'), './assets/streak-flame.svg');
     assert.equal(flame.attributes.get('alt'), '');

@@ -180,3 +180,28 @@ test('catch confirmation names the word as text without relying on its animated 
   assert.match(markup, /Yes, chat wins/);
   assert.doesNotMatch(markup, /result-card|volcano\.png/);
 });
+
+test('automatic catch review uses the server deadline and retains reject and confirm controls', () => {
+  const markup = renderToStaticMarkup(React.createElement(CatchDecision, {
+    result: { ...result, confirmAt: 16000 }, now: 1000,
+    disabled: false, hasAward: false, onDecide() {}, onReverse() {},
+  }));
+  assert.match(markup, /Catch heard\./);
+  assert.match(markup, /15s/);
+  assert.match(markup, /role="timer" aria-live="off"/);
+  assert.match(markup, /Reject it if Moonshine misheard/);
+  assert.match(markup, /No, I didn&#x27;t/);
+  assert.match(markup, /Confirm now/);
+  assert.doesNotMatch(markup, /Yes gives chat the win|result-card|volcano\.png/);
+});
+
+test('reopened catch review does not restart its countdown or claim a local win', () => {
+  const render = (now: number) => renderToStaticMarkup(React.createElement(CatchDecision, {
+    result: { ...result, confirmAt: 16000 }, now,
+    disabled: false, hasAward: false, onDecide() {}, onReverse() {},
+  }));
+  assert.match(render(12001), /4s/);
+  const due = render(17000);
+  assert.match(due, /Waiting for the confirmed result/);
+  assert.doesNotMatch(due, /Chat got you\.|Reverse win|>0s</);
+});

@@ -370,7 +370,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           if (
             capture.current !== owner ||
             !current ||
-            !canPreviewTranscript(window.location.hostname, current.room.mode)
+            !canPreviewTranscript(current.room.mode, session.authenticated)
           )
             return;
           const lines = transcriptBuffer.current.receive(line, segment);
@@ -700,6 +700,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         <CatchDecision
                           key={g.result.id}
                           result={g.result}
+                          now={Math.max(now + offset.current, g.serverTime)}
                           disabled={busy || offline}
                           hasAward={!!studio.awardBoard}
                           onDecide={(decision) => void decideCatch(decision)}
@@ -881,7 +882,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   {modelLoading && modelProgress && <div className="model-progress"><progress aria-label="Speech model download" max={100} value={Math.min(100, Number(modelProgress[1]))} /><span>{modelProgress[1]}%</span></div>}
                   {studio.speechProvider === 'moonshine' && (
                     <p className="mic-review-note">
-                      <strong>You make the call.</strong> Confirm each catch before chat gets a win.
+                      <strong>Catches confirm automatically.</strong> You have 15 seconds to reject a misheard word. You can also reverse a win afterward.
                     </p>
                   )}
                   <Button
@@ -920,7 +921,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       />
                     )}
                   {studio.speechProvider === 'moonshine' &&
-                    canPreviewTranscript(window.location.hostname, g.mode) && (
+                    canPreviewTranscript(g.mode, session.authenticated) && (
                       <TranscriptPreview
                         enabled={transcriptEnabled}
                         lines={transcriptLines}
@@ -1082,7 +1083,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               </p>
               <p className="muted">
                 {studio.speechProvider === 'moonshine'
-                  ? 'Confirm catches: this model can mistake similar words. baited stops the round and asks you before awarding a win. The first model download is about 84 MB and is cached in your browser.'
+                  ? 'Moonshine can mistake similar words. A detected catch confirms after 15 seconds unless you reject it. You can reverse a mistaken win afterward. The first model download is about 84 MB and is cached in your browser.'
                   : 'baited does not record or store audio or transcripts. Deepgram processes the audio under its own terms.'}{' '}
                 Use headphones to reduce sound from your stream reaching the mic. You can stop at
                 any time.
@@ -1649,7 +1650,7 @@ function Setup({
               </div>
               <p className="muted">
                 {studio.speechProvider === 'moonshine'
-                  ? 'Moonshine checks speech on this computer. You confirm each catch before chat gets a win.'
+                  ? 'Moonshine checks speech on this computer. A catch confirms after 15 seconds unless you reject it. You can reverse a mistaken win afterward.'
                   : 'The studio sends microphone audio to Deepgram during active rounds.'}{' '}
                 Keep this browser tab open while you play.
               </p>
@@ -1901,7 +1902,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     : won ? 'The streamer said it.'
     : finished ? 'A new word is next.' : 'The word is coming.';
   const detail = stale ? 'Waiting for a fresh game update.'
-    : pendingCatch ? 'The streamer is checking what they heard.'
+    : pendingCatch ? 'A catch was heard. Waiting for the confirmed result.'
     : settling ? 'Only words spoken before the buzzer count.'
     : paused ? 'The clock and listening are stopped.'
     : active ? 'Don’t type it.'
@@ -1993,7 +1994,7 @@ function Privacy() {
         <h1>Pilot privacy</h1>
         <p>Baited is testing a small game for invited Twitch channels. Contact <a href="mailto:hello@irchiinnuss.com">hello@irchiinnuss.com</a> with a privacy question or deletion request.</p>
         <h2>Your microphone</h2>
-        <p>Microphone access is optional. Moonshine recognizes speech in your browser. Audio stays on your device. Final text, word timing and timing counters reach the game server so it can check a possible catch. The streamer confirms each catch.</p>
+        <p>Microphone access is optional. Moonshine recognizes speech in your browser. Audio stays on your device. Final text, word timing and timing counters reach the game server so it can check a possible catch. A detected catch confirms after 15 seconds unless the streamer rejects it. A mistaken win can be reversed.</p>
         <h2>Your game and chat</h2>
         <p>The server stores round state, settings, scores and participation. A limited set of recent chat clues is kept for award review and expires after that review window. Twitch delivers channel chat to the game after the streamer connects their account.</p>
         <h2>Who sees the card</h2>

@@ -197,9 +197,11 @@ test('late mission expiry and private review retention happen at logical deadlin
   const pending = fixture(); pending.game.begin(); pending.chat('hint', 'a');
   pending.game.transcript(pending.transcript(), 'confirm'); pending.recover();
   pending.set(700100); pending.game.advanceTo(pending.clock());
-  assert.equal(pending.game.pendingCatch, true); assert.deepEqual(pending.game.round!.hints, []);
-  pending.game.decideCatch(pending.game.round!.id, 'confirm');
-  assert.equal(pending.game.awardBoard, null, 'late confirmation does not renew raw hint retention');
+  assert.equal(pending.game.pendingCatch, false); assert.deepEqual(pending.game.round!.hints, []);
+  assert.equal(pending.game.result?.outcome, 'caught');
+  assert.equal(pending.game.result?.at, 115000, 'late wake confirms at the original logical deadline');
+  assert.equal(pending.game.score.wins, 1);
+  assert.equal(pending.game.awardBoard, null, 'automatic confirmation does not renew raw hint retention');
 });
 
 test('checkpoint is detached and restore rejects unknown versions, missing state, duplicates and broken result links', () => {

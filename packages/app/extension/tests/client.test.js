@@ -46,6 +46,24 @@ test('uploaded artwork is validated and redacted without an active target or con
   }
 });
 
+test('pending catch deadline is validated without client-side score confirmation', () => {
+  const value = state();
+  value.room.result = { id: 'review-one', word: 'Pineapple', outcome: 'review', confirmAt: 25000 };
+  assert.equal(readState(value).room.result.confirmAt, 25000);
+  assert.equal(readState(value).room.result.outcome, 'review');
+  delete value.room.result.confirmAt;
+  assert.equal('confirmAt' in readState(value).room.result, false, 'older manual review stays compatible');
+  for (const confirmAt of [null, '25000', 0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+    value.room.result.confirmAt = confirmAt;
+    assert.throws(() => readState(value), /Invalid catch deadline/);
+  }
+  value.room.result.confirmAt = 25000;
+  for (const outcome of ['caught', 'escaped', 'ended', 'skipped', 'overturned']) {
+    value.room.result.outcome = outcome;
+    assert.equal('confirmAt' in readState(value).room.result, false, 'decided results have no running deadline');
+  }
+});
+
 test('native image resolution ignores untrusted destination URLs and accepts the configured backend only', () => {
   const previous = globalThis.window;
   globalThis.window = { BAITED_EXTENSION_CONFIG: config };

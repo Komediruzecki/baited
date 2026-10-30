@@ -350,7 +350,7 @@ function showResult(room) {
     skipped: ['Skipped', 'New bait next'],
     ended: ['Round ended', 'New bait next'],
     overturned: ['Catch rejected', 'That catch does not count'],
-    review: ['Catch pending', 'The streamer is checking'],
+    review: ['Catch pending', Number.isFinite(result.confirmAt) ? 'Waiting for the confirmed result' : 'The streamer is checking'],
   }[result.outcome];
   const card = byId('card');
   setVisible(true);
