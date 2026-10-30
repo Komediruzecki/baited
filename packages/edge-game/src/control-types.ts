@@ -5,6 +5,10 @@ import type { GameEvent } from '../../app/server/game.js';
 export interface ControlEnv {
   ROOMS: DurableObjectNamespace;
   EDGE_PILOT_ENABLED?: string;
+  EDGE_OPERATOR_KEY?: string;
+  EDGE_OPERATOR_INITIAL_ENABLED?: string;
+  EDGE_MAX_PARTICIPANTS?: string;
+  EDGE_MAX_VIEWER_SOCKETS?: string;
   EDGE_PUBLIC_ORIGIN?: string;
   EDGE_CHANNEL_LOGIN_ALLOWLIST?: string;
   EDGE_MAX_CHANNELS?: string;
@@ -97,6 +101,7 @@ export interface BotReceipt {
 export interface InboxEntry { event: TwitchChatEvent; expiresAt: number; nextAt: number; attempts: number }
 export interface ControlState {
   version: 1;
+  operator?: { enabled: boolean; target: boolean; revision: number; updatedAt: number; reason: string; pendingRooms: string[]; retryAt?: number; attempts?: number };
   pending: Record<string, PendingOAuth>;
   sessions: Record<string, ControlSession>;
   channels: Record<string, RegisteredChannel>;

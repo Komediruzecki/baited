@@ -30,10 +30,12 @@ interface Inspection {
   sockets: {role:string;sessionId?:string;expiresAt:number;generation:number;readyState:number}[];
 }
 interface FixtureStub {
+  operatorFixture(enabled:boolean,revision:number,fail?:boolean):Promise<{status:number;body:unknown}>;
   bootstrapFixture(): Promise<number>;
   inspectFixture(): Promise<Inspection>;
   reconcileAtFixture(at: number): Promise<Inspection>;
   chatFixture(event: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }>;
+  recoverChatFixture(event:Record<string,unknown>):Promise<{status:number}>;
   disconnectFixture(): Promise<number>;
   disconnectBatchFixture(payload:Record<string,unknown>): Promise<number>;
   disconnectWithStorageFailureFixture(payload:Record<string,unknown>): Promise<number>;
@@ -43,10 +45,11 @@ interface FixtureStub {
   ownerMessageAtFixture(at: number, message: Record<string,unknown>): Promise<Inspection>;
   queuedOwnerMessageFixture(receivedAt: number, processedAt: number, message: Record<string,unknown>): Promise<Inspection>;
   closeOwnerAtFixture(at: number, code?: number): Promise<Inspection>;
-  enqueueOutboxFixture(at: number, expiresAt: number): Promise<Inspection>;
+  enqueueOutboxFixture(at: number, expiresAt: number, delay?:number): Promise<Inspection>;
   flushOutboxAtFixture(at: number): Promise<Inspection>;
   receiptStatsFixture(): Promise<{count:number;indexedCount:number;indexedRowsRead:number}>;
   recoverFixture(): Promise<Inspection>;
+  recoverAlarmAtFixture(at:number,initialStop?:boolean):Promise<Inspection>;
   failOwnerMessageAtFixture(at:number,message:Record<string,unknown>): Promise<Inspection>;
   failAlarmOwnerMessageAtFixture(at:number,message:Record<string,unknown>): Promise<Inspection>;
   interleaveOwnerAudioFixture(at:number,message:Record<string,unknown>): Promise<Inspection>;
@@ -105,8 +108,8 @@ before(async () => {
             return super.schedule(...args);
           }
           async bootstrapFixture() {
-            this.ctx.storage.sql.exec('CREATE TABLE fixture_lease_writes(id INTEGER PRIMARY KEY,n INTEGER NOT NULL); INSERT INTO fixture_lease_writes VALUES(1,0)');
-            this.ctx.storage.sql.exec("CREATE TRIGGER fixture_count_lease_writes AFTER UPDATE ON pilot_state WHEN json_extract(OLD.body,'$.lease.expiresAt') < json_extract(NEW.body,'$.lease.expiresAt') BEGIN UPDATE fixture_lease_writes SET n=n+1 WHERE id=1; END");
+            this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS fixture_lease_writes(id INTEGER PRIMARY KEY,n INTEGER NOT NULL); INSERT OR IGNORE INTO fixture_lease_writes VALUES(1,0)');
+            this.ctx.storage.sql.exec("CREATE TRIGGER IF NOT EXISTS fixture_count_lease_writes AFTER UPDATE ON pilot_state WHEN json_extract(OLD.body,'$.lease.expiresAt') < json_extract(NEW.body,'$.lease.expiresAt') BEGIN UPDATE fixture_lease_writes SET n=n+1 WHERE id=1; END");
             return (await this.fetch(new Request('https://room.internal/internal/control', {
               method:'POST', body:JSON.stringify({channelId:'123', login:'komediruzecki7', type:'connection', status:'connected',connectionRevision:1})
             }))).status;
@@ -164,6 +167,7 @@ before(async () => {
             release();await blocked;await work;
             return this.inspectFixture();
           }
+          async recoverAlarmAtFixture(at,initialStop=false) { Date.now=()=>at;if(initialStop){const state=JSON.parse(this.ctx.storage.sql.exec('SELECT body FROM pilot_state WHERE id=1').one().body);delete state.operator;this.ctx.storage.sql.exec('UPDATE pilot_state SET body=? WHERE id=1',JSON.stringify(state));}const recovered=new ChannelRoom(this.ctx,initialStop?{...this.env,EDGE_OPERATOR_INITIAL_ENABLED:'false'}:this.env);await recovered.alarm();return recovered.inspectFixture(); }
           async recoverFixture() {
             // Reconstruct from the real SQLite checkpoint and hibernation
             // attachments without replacing the production event handlers.
@@ -216,10 +220,10 @@ before(async () => {
             await this.webSocketClose(owner,code);
             return this.inspectFixture();
           }
-          async enqueueOutboxFixture(at,expiresAt) {
+          async enqueueOutboxFixture(at,expiresAt,delay=0) {
             Date.now = () => at;
             this.ctx.storage.sql.exec('INSERT INTO pilot_outbox(id,body,retry_at,expires_at) VALUES(?,?,?,?)',
-              crypto.randomUUID(),JSON.stringify({channelId:'123',event:{type:'round-start'}}),at,expiresAt);
+              crypto.randomUUID(),JSON.stringify({channelId:'123',event:{type:'round-start'}}),at+delay,expiresAt);
             await this.schedule();
             return this.inspectFixture();
           }
@@ -236,11 +240,19 @@ before(async () => {
             const indexedCount=cursor.one().n;
             return {count,indexedCount,indexedRowsRead:cursor.rowsRead};
           }
+          async recoverChatFixture(event) { return new ChannelRoom(this.ctx,this.env).chatFixture(event); }
           async chatFixture(event) {
             const response = await this.fetch(new Request('https://room.internal/internal/twitch-chat', {
               method:'POST', body:JSON.stringify(event)
             }));
             return {status:response.status, body:await response.json()};
+          }
+          async operatorFixture(enabled,revision,fail=false) {
+            if(fail)this.ctx.storage.sql.exec("CREATE TRIGGER fixture_fail_operator BEFORE INSERT ON meta BEGIN SELECT RAISE(ABORT,'fixture_operator_failure'); END; CREATE TRIGGER fixture_fail_operator_state BEFORE INSERT ON pilot_state BEGIN SELECT RAISE(ABORT,'fixture_operator_failure'); END");
+            try {
+              const response=await this.fetch(new Request('https://room.internal/internal/operator',{method:'POST',body:JSON.stringify({channelId:'123',enabled,revision})}));
+              return {status:response.status,body:await response.json()};
+            } finally {if(fail)this.ctx.storage.sql.exec('DROP TRIGGER fixture_fail_operator; DROP TRIGGER fixture_fail_operator_state');}
           }
           async disconnectFixture() {
             return (await this.fetch(new Request('https://room.internal/internal/control', {
@@ -275,7 +287,7 @@ before(async () => {
   script = fixture.outputFiles[0]!.text;
 });
 
-async function runtime(bindings: Record<string, string> = {}) {
+async function runtime(bindings: Record<string, string> = {}, bootstrap=true) {
   const options = createLocalOptions({ port: 0, statePath: false, script, bindings: {
     EDGE_POC_ENABLED: 'false', EDGE_PILOT_ENABLED: 'true', EDGE_LOCAL_FIXTURE_AUTH: 'false',
     EDGE_PILOT_SECRET_B64: PILOT_SECRET, TWITCH_EXTENSION_SECRET_B64: EXTENSION_SECRET,
@@ -293,7 +305,7 @@ async function runtime(bindings: Record<string, string> = {}) {
     await mf.setOptions(options);
     const namespace = await mf.getDurableObjectNamespace('ROOMS');
     const stub = namespace.get(namespace.idFromName('channel:123')) as unknown as FixtureStub;
-    assert.equal(await stub.bootstrapFixture(), 200);
+    if(bootstrap)assert.equal(await stub.bootstrapFixture(), 200);
     fixtureClocks.set(mf,stub);
     return { mf, stub };
   } catch (error) { await mf.dispose(); throw error; }
@@ -1529,5 +1541,96 @@ test('chat-command cooldowns preserve outbox capacity for a round event', {timeo
     const paused=await stub.inspectFixture();
     assert.equal(paused.phase,'paused');
     assert.equal(paused.outbox,quiet.outbox+1,'The real round event still has an outbox slot.');
+  } finally {await mf.dispose();}
+});
+
+
+test('operator room stop clears capture and prevents old socket or chat activity after recovery',async()=>{
+  const {mf,stub}=await runtime();
+  try {
+    const initial=await state(mf);
+    await send(mf,{type:'settings',settings:{...initial.room.settings,chatBot:false,duration:180}},initial.revision);
+    assert.equal((await stub.operatorFixture(false,1)).status,200);
+    const stopped=await stub.inspectFixture();assert.equal(stopped.phase,'idle');assert.equal(stopped.lease,null);assert.equal(stopped.outbox,0);
+    assert.equal((await stub.chatFixture({eventId:'stopped',channelId:'123',at:Date.now(),kind:'message',userId:'555',text:'clue'})).status,503);
+    await stub.recoverFixture();
+    assert.equal((await stub.chatFixture({eventId:'stopped2',channelId:'123',at:Date.now(),kind:'message',userId:'555',text:'clue'})).status,503);
+    assert.equal((await stub.operatorFixture(true,2)).status,200);
+    const enabled=await stub.inspectFixture();assert.equal(enabled.phase,'idle');assert.equal(enabled.lease,null);assert.equal(enabled.chatConnected,false);
+    // A delayed old stop must not reverse the later operator decision.
+    assert.equal((await stub.operatorFixture(false,1)).status,200);
+    assert.equal((await stub.chatFixture({eventId:'after-enable',channelId:'123',at:Date.now(),kind:'message',userId:'555',text:'clue'})).status,200);
+    const resumed=await state(mf);assert.equal(resumed.room.settings.chatBot,false);assert.equal(resumed.room.settings.duration,180);
+  } finally {await mf.dispose();}
+});
+
+
+test('operator room stop rolls back its outbox and can retry the same revision after storage failure',async()=>{
+  const {mf,stub}=await runtime();
+  try {
+    const now=await stub.clockFixture();await stub.enqueueOutboxFixture(now,now+60000,30000);
+    assert.equal((await stub.operatorFixture(false,1,true)).status,503);
+    assert.equal((await stub.inspectFixture()).outbox,1);
+    assert.equal((await stub.operatorFixture(false,1)).status,200);
+    const stopped=await stub.inspectFixture();assert.equal(stopped.outbox,0);assert.equal(stopped.alarm,null);assert.equal(stopped.phase,'idle');
+  } finally {await mf.dispose();}
+});
+
+
+test('operator failed checkpoint blocks pending catch settlement through alarms and reconstruction',async()=>{
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const target=(await state(mf,'viewer')).room.round!.target!;
+    const active=await advanceAudio(mf,stub,1000);
+    const detectedAt=active.round!.segmentAt+1100;
+    await stub.ownerMessageAtFixture(detectedAt,{type:'speech-final',leaseId:active.lease!.id,
+      roundId:active.round!.id,epoch:active.round!.epoch,sequence:1,line:{id:randomUUID(),
+        text:target,isComplete:true,startTime:0,duration:1,
+        words:[{text:target,start:0.2,end:0.8,confidence:1}]}});
+    assert.equal((await state(mf)).room.result?.outcome,'review');
+    assert.equal((await stub.operatorFixture(false,1,true)).status,503);
+    const afterAlarm=await stub.flushOutboxAtFixture(detectedAt+16000);
+    assert.equal(afterAlarm.history,0,'A failed stop cannot award the pending catch.');assert.equal(afterAlarm.alarm,null);
+    const recovered=await stub.recoverAlarmAtFixture(detectedAt+17000);
+    assert.equal(recovered.history,0,'The pending stop barrier survives Room reconstruction.');assert.equal(recovered.alarm,null);
+    assert.equal((await stub.chatFixture({eventId:'stop-failed',channelId:'123',at:detectedAt+17000,kind:'message',userId:'555',text:'clue'})).status,503);
+    assert.equal((await stub.operatorFixture(false,1)).status,200);
+    const stopped=await stub.inspectFixture();assert.equal(stopped.history,0);assert.equal(stopped.phase,'idle');assert.equal(stopped.outbox,0);
+  } finally {await mf.dispose();}
+});
+
+
+test('operator initial stop blocks existing Room alarms before Control first synchronizes',async()=>{
+  const {mf,stub}=await runtime();
+  try {
+    await start(mf);
+    const active=await stub.inspectFixture();
+    const recovered=await stub.recoverAlarmAtFixture(active.round!.endsAt!+1000,true);
+    assert.equal(recovered.history,0);assert.equal(recovered.alarm,null);
+  } finally {await mf.dispose();}
+});
+
+
+test('operator initial migration guard permits newly admitted rooms and later reconstruction',async()=>{
+  const {mf,stub}=await runtime({EDGE_OPERATOR_INITIAL_ENABLED:'false'});
+  try {
+    const studio=await connectedStudio(mf);
+    assert.ok(studio);
+    await stub.recoverFixture();
+    assert.equal((await stub.recoverChatFixture({eventId:'new-room',channelId:'123',at:Date.now(),kind:'message',userId:'555',text:'clue'})).status,200);
+  } finally {await mf.dispose();}
+});
+
+test('operator uninitialized room rejects a stale enable after a higher failed stop',async()=>{
+  const {mf,stub}=await runtime({},false);
+  try {
+    assert.equal((await stub.operatorFixture(false,3,true)).status,503);
+    assert.equal((await stub.operatorFixture(true,2)).status,200);
+    assert.equal(await stub.bootstrapFixture(),503);
+    assert.equal((await stub.recoverChatFixture({eventId:'uninitialized',channelId:'123',at:Date.now(),kind:'message',userId:'555',text:'clue'})).status,503);
+    assert.equal((await stub.operatorFixture(false,3)).status,200);
+    assert.equal((await stub.operatorFixture(true,4)).status,200);
+    assert.equal(await stub.bootstrapFixture(),200);
   } finally {await mf.dispose();}
 });

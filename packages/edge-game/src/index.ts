@@ -1,3 +1,4 @@
+import { operatorAuthorized } from './operator-auth.js';
 import { authenticateRequest } from "./auth.js";
 import { json, readBounded } from "./protocol.js";
 import { pilotLimits, pilotLogins } from "./pilot-policy.js";
@@ -48,8 +49,21 @@ export default {
   async fetch(request:Request,env:Env):Promise<Response> {
     const url=new URL(request.url);
     const pilot=env.EDGE_PILOT_ENABLED==="true";
-    if(url.pathname==="/health" && request.method==="GET") return json({service:pilot?"baited-edge-pilot":"baited-edge-poc",enabled:pilot||env.EDGE_POC_ENABLED==="true",mode:pilot?"allowlisted-pilot":"synthetic-proof"});
+    if(url.pathname==="/health" && request.method==="GET") {
+      let enabled=pilot||env.EDGE_POC_ENABLED==="true";
+      if(pilot && env.CONTROL) {
+        try {const response=await internalFetch(control(env),'https://control.internal/internal/operator-health');
+          enabled=response.ok && (await response.json() as {enabled?:boolean}).enabled===true;}
+        catch {return json({service:'baited-edge-pilot',enabled:false,mode:'unavailable'},503);}
+      }
+      return json({service:pilot?"baited-edge-pilot":"baited-edge-poc",enabled,mode:pilot?enabled?'allowlisted-pilot':'stopped':"synthetic-proof"});
+    }
     try {
+      if(url.pathname==='/api/operator/status' || url.pathname==='/api/operator/pilot') {
+        if(!destination(request,env)) return json({error:'Access denied.'},403);
+        if(!operatorAuthorized(request,env)) return json({error:'Operator access denied.',code:'operator_auth'},401);
+        return control(env).fetch(request);
+      }
       if(pilot) {
         pilotLimits(env);pilotLogins(env);
         if(!destination(request,env)) return json({error:"Access denied."},403);

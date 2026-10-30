@@ -56,6 +56,7 @@ import { StreakBadge, StreakBadges, StreakCelebration, StreakCount, StreakRow } 
 import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease, microphoneLeaseMessage } from './safety';
 import { MicrophoneFeedback } from './microphone-feedback';
+import { StudioQuickControls, type QuickSetting } from './StudioQuickControls';
 import { useSmoothScroll } from './smooth-scroll';
 import 'lenis/dist/lenis.css';
 import './style.css';
@@ -345,6 +346,18 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       setBusy(false);
     }
   };
+  const saveQuickSetting = async (key: QuickSetting, enabled: boolean) => {
+    const current = currentStudio.current;
+    if (!current || busy || offline || current.room.phase === 'settling') return;
+    setBusy(true);
+    try {
+      receive(await request<Studio>('/api/studio/settings', {
+        ...current.room.settings, [key]: enabled,
+      }, session.csrf));
+    } finally {
+      setBusy(false);
+    }
+  };
   const stopMic = () => {
     setMicIssue('');
     setMicRecovering(false);
@@ -602,7 +615,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                   ? 'Ready'
                                   : 'Setup needed'}
                     </Tag>
-                    <button className="desk-settings" aria-label="Game settings" disabled={settling || offline} onClick={() => setModal('settings')}><Settings2 size={16} /><span>Game settings</span></button>
+                    <div className="desk-control-tools">
+                      <StudioQuickControls settings={g.settings} bot={studio.chatBot}
+                        disabled={busy || settling || offline} onChange={saveQuickSetting} />
+                      <button className="desk-settings" aria-label="Game settings" disabled={busy || settling || offline} onClick={() => setModal('settings')}><Settings2 size={16} /><span>Game settings</span></button>
+                    </div>
                   </div>
                   <div className="round-console">
                     <div className="timer-block">

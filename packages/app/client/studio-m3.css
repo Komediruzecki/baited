@@ -50,6 +50,65 @@
 .studio-shell .studio-card-slot {
   border-radius: 20px;
 }
+
+/* Round shortcuts share saved settings with the dialog. Small pixel switches
+   carry the card palette while the whole labelled control remains a touch target. */
+.studio-shell .desk-control-tools {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-left: auto;
+  max-width: 100%;
+}
+.studio-shell .desk-quick-controls { min-width: 0; }
+.studio-shell .desk-quick-switches { display: flex; gap: 6px; }
+.studio-shell .desk-quick-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 7px 10px;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: 8px;
+  background: var(--m3-surface-low);
+  color: var(--m3-on-surface);
+  font: 600 12px/1.2 var(--b-ui);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--m3-card-lip);
+  transition: background-color 160ms ease-out, border-color 160ms ease-out;
+}
+.studio-shell .desk-quick-copy { display: grid; gap: 3px; }
+.studio-shell .desk-quick-copy small { color: var(--m3-on-surface-variant); font-size: 10px; font-weight: 500; }
+.studio-shell .desk-quick-switch[aria-checked="true"] { border-color: #9146ff; background: #342047; }
+.studio-shell .desk-quick-switch[aria-checked="true"] small { color: #e0ccff; }
+.studio-shell .desk-quick-switch:hover:not(:disabled) { background-color: var(--m3-secondary-container); }
+.studio-shell .desk-quick-switch:focus-visible { outline: 2px solid #fffc79; outline-offset: 3px; }
+.studio-shell .desk-quick-switch:disabled { opacity: .65; cursor: default; }
+.studio-shell .desk-pixel-switch {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 16px;
+  padding: 3px;
+  border: 1px solid var(--m3-outline);
+  background: #19151f;
+  box-sizing: border-box;
+}
+.studio-shell .desk-pixel-switch > span { display: block; width: 8px; height: 8px; background: #b4a8c3; transition: transform 160ms steps(3, end); }
+.studio-shell [aria-checked="true"] .desk-pixel-switch { border-color: #c1a0ff; background: #6e23ba; }
+.studio-shell [aria-checked="true"] .desk-pixel-switch > span { transform: translateX(12px); background: #fffc79; }
+.studio-shell .desk-control-tools .desk-settings { min-width: 44px; min-height: 48px; margin: 0; padding: 10px; }
+.studio-shell .desk-quick-error { display: block; max-width: 28ch; margin-top: 8px; color: #ffb4ab; font: 400 12px/1.4 var(--b-ui); }
+@media (max-width: 600px) {
+  .studio-shell .desk-control-tools { flex-basis: 100%; align-items: flex-start; }
+  .studio-shell .desk-quick-controls { flex: 1; }
+  .studio-shell .desk-quick-switch { flex: 1; gap: 8px; padding-inline: 8px; }
+  .studio-shell .desk-control-tools .desk-settings span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-shell .desk-pixel-switch > span { transition: none; }
+}
 .studio-shell .studio-sound-section {
   padding: 22px 24px;
 }

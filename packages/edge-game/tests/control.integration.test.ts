@@ -38,6 +38,7 @@ export class FixtureControl extends TwitchControl {
       this.overlayStream.enqueue(new TextEncoder().encode(this.overlayBody.slice(1)));this.overlayStream.close();this.overlayStream=null;
       return Response.json({status:(await this.overlayTask).status});
     }
+    if (url.pathname==='/__fixture/alarm') return Response.json({alarm:await this.ctx.storage.getAlarm()});
     if (url.pathname==='/__fixture/state') return Response.json(this.committed);
     if (url.pathname==='/__fixture/durable-state') return Response.json(this.loadCheckpoint());
     if (url.pathname==='/__fixture/provider-hold') {
@@ -102,7 +103,7 @@ export class FixtureControl extends TwitchControl {
   }
   async externalFetch(input,init={}) {
     const url=new URL(input); const headers=new Headers(init.headers);
-    const kind=url.pathname==='/oauth2/token' && new URLSearchParams(init.body).get('grant_type')==='client_credentials'?'token':url.pathname==='/helix/chat/messages'?'send':url.pathname==='/helix/eventsub/subscriptions'?init.method==='DELETE'?'delete':init.method==='POST'?'subscribe':'list':'';
+    const kind=url.pathname==='/oauth2/token' && new URLSearchParams(init.body).get('grant_type')==='client_credentials'?'token':url.pathname==='/oauth2/token' && new URLSearchParams(init.body).get('grant_type')==='authorization_code'?'oauth':url.pathname==='/helix/chat/messages'?'send':url.pathname==='/helix/eventsub/subscriptions'?init.method==='DELETE'?'delete':init.method==='POST'?'subscribe':'list':'';
     if(kind && this.holdProvider===kind){this.holdProvider='';this.heldProvider=kind;await new Promise(resolve=>{this.releaseProvider=resolve});this.releaseProvider=null;this.heldProvider='';}
     const users={komediruzecki7:['123','komediruzecki7'],lakeeko:['456','lakeeko'],yahwehwastaken:['789','yahwehwastaken'],outsider:['987','outsider'],bot:['999','baity_bot'],wrongclient:['123','komediruzecki7'],missingscope:['123','komediruzecki7']};
     if(url.origin==='https://id.twitch.tv' && url.pathname==='/oauth2/token') {
@@ -159,6 +160,9 @@ export default {fetch(request,env) {
   if(url.pathname.startsWith('/__fixture/room/')) return env.ROOMS.get(env.ROOMS.idFromName('channel:'+url.pathname.split('/').pop())).fetch('https://room.internal/__fixture/calls');
   if(url.pathname==='/__fixture/authorize') return env.CONTROL.get(env.CONTROL.idFromName('control-v1')).fetch('https://control.internal/internal/authorize',{method:'POST',body:request.body});
   if(url.pathname==='/__fixture/event') return env.CONTROL.get(env.CONTROL.idFromName('control-v1')).fetch('https://control.internal/internal/room-event',{method:'POST',body:request.body});
+  // dispatchFetch uses the local transport Host. Reconstruct the real custom-domain
+  // Host in this offline gateway fixture; production never rewrites caller Host.
+  if(url.pathname.startsWith('/api/operator/')) {const headers=new Headers(request.headers);headers.set('host',url.host);request=new Request(request,{headers});}
   return env.CONTROL.get(env.CONTROL.idFromName('control-v1')).fetch(request);
 }};`;
 
@@ -709,4 +713,117 @@ test('Control checkpoint migrates, rolls back atomically and partitions large bo
     assert.equal(Object.keys(recovered.channels).length, 100); assert.equal(Object.keys(recovered.dedupe).length, 1600);
     passed = true;
   } finally { await f.mf.dispose(); if (passed || !process.env.BAITED_EDGE_TEST_OUTPUT) await rm(persistence, { recursive: true }); }
+});
+
+
+const OPERATOR_KEY='public-fixture-operator-key-00000000000000000000';
+const operatorHeaders={authorization:`Bearer ${OPERATOR_KEY}`,host:'pilot.test'};
+const operatorPost=(enabled:boolean,expectedRevision:number)=>({method:'POST',headers:{...operatorHeaders,'content-type':'application/json'},body:JSON.stringify({enabled,expectedRevision,reason:'Fixture operator test'})});
+
+test('operator stop denies admission, drains bot work, retries cleanup and requires an explicit fresh enable', async()=>{
+  const f=await fixture({EDGE_OPERATOR_KEY:OPERATOR_KEY});
+  try {
+    const {cookie}=await login(f);
+    await f.request('/__fixture/flush');
+    await f.request('/__fixture/fail-delete?value=true');
+    const get=()=>f.request('/api/operator/status',{headers:operatorHeaders}).then(r=>r.json()) as Promise<any>;
+    assert.equal((await get()).status,'running');
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(false,0))).status,200);
+    let state=await get();assert.equal(state.enabled,false);assert.equal(state.status,'stopping');assert.equal(state.stats.activeSessions,0);
+    assert.ok(state.stats.pendingSubscriptions>0);assert.equal(state.stats.queuedAnnouncements,0);
+    assert.equal((await f.request('/api/edge/session',{headers:{cookie}})).status,503);
+    assert.equal((await f.request('/auth/twitch')).status,503);
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(true,0))).status,409);
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(true,1))).status,409);
+    await f.request('/__fixture/flush');assert.equal((await get()).status,'stopping');
+    await f.request('/__fixture/fail-delete?value=false');await f.request('/__fixture/flush');
+    state=await get();assert.equal(state.status,'stopped');assert.equal(state.stats.pendingSubscriptions,0);
+    const enabled=await f.request('/api/operator/pilot',operatorPost(true,1));assert.equal(enabled.status,200);
+    state=await enabled.json();assert.equal(state.status,'running');assert.equal(state.stats.connectedChats,0);assert.equal(state.stats.activeSessions,0);
+    const body=JSON.stringify(state);assert.doesNotMatch(body,/ciphertext|csrf|refreshToken|accessToken|overlayKey|sessionId|secret/i);
+    assert.equal((await login(f)).callback.status,302);
+    const reopened=await f.request('/__fixture/state').then(r=>r.json()) as any;assert.equal(reopened.channels['123'].chatWanted,false);
+  } finally {await f.mf.dispose();}
+});
+
+test('operator API rejects browser requests, missing keys, stale revisions and malformed commands',async()=>{
+  const f=await fixture({EDGE_OPERATOR_KEY:OPERATOR_KEY});
+  try {
+    assert.equal((await f.request('/api/operator/status')).status,401);
+    assert.equal((await f.request('/api/operator/status',{headers:{...operatorHeaders,origin:ORIGIN}})).status,401);
+    assert.equal((await f.request('/api/operator/status',{headers:{...operatorHeaders,cookie:'x=y'}})).status,401);
+    assert.equal((await f.request('/api/operator/status?ignored=1',{headers:operatorHeaders})).status,401);
+    assert.equal((await f.request('/api/operator/pilot',{...operatorPost(false,0),body:JSON.stringify({enabled:false,expectedRevision:0,reason:'test',extra:true})})).status,400);
+    assert.equal((await f.request('/api/operator/pilot',{...operatorPost(false,0),body:'{'})).status,400);
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(false,0))).status,200);
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(true,0))).status,409);
+  } finally {await f.mf.dispose();}
+});
+
+test('operator initial stop is durable and the master configuration cannot be overridden',async()=>{
+  const f=await fixture({EDGE_OPERATOR_KEY:OPERATOR_KEY,EDGE_OPERATOR_INITIAL_ENABLED:'false',EDGE_PILOT_ENABLED:'false'});
+  try {
+    const status=await f.request('/api/operator/status',{headers:operatorHeaders}).then(r=>r.json()) as any;
+    assert.equal(status.enabled,false);assert.equal(status.configured,false);assert.equal(status.revision,1);
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(true,1))).status,409);
+    const stored=await f.request('/__fixture/durable-state').then(r=>r.json()) as any;assert.equal(stored.operator.enabled,false);
+  } finally {await f.mf.dispose();}
+});
+
+
+test('operator safe seed checkpoints existing channels and retains stop across restart',async()=>{
+  const root=process.env.BAITED_EDGE_TEST_OUTPUT??tmpdir();await mkdir(root,{recursive:true});
+  const persistence=await mkdtemp(join(root,'baited-operator-seed-'));
+  let f=await fixture({EDGE_OPERATOR_KEY:OPERATOR_KEY},persistence);let passed=false;
+  try {
+    await login(f);await f.request('/__fixture/flush');await f.mf.dispose();
+    f=await fixture({EDGE_OPERATOR_KEY:OPERATOR_KEY,EDGE_OPERATOR_INITIAL_ENABLED:'false'},persistence);
+    const seeded=await f.request('/__fixture/durable-state').then(r=>r.json()) as any;
+    assert.equal(seeded.operator.enabled,false);assert.deepEqual(seeded.operator.pendingRooms,['123']);
+    assert.equal(seeded.channels['123'].chatWanted,false);assert.deepEqual(seeded.sessions,{});
+    assert.ok((await f.request('/__fixture/alarm').then(r=>r.json()) as any).alarm);
+    await f.mf.dispose();f=await fixture({EDGE_OPERATOR_KEY:OPERATOR_KEY},persistence);
+    const recovered=await f.request('/api/operator/status',{headers:operatorHeaders}).then(r=>r.json()) as any;
+    assert.equal(recovered.enabled,false);assert.equal((await f.request('/auth/twitch')).status,503);
+    passed=true;
+  } finally {await f.mf.dispose();if(passed||!process.env.BAITED_EDGE_TEST_OUTPUT)await rm(persistence,{recursive:true});}
+});
+
+
+test('operator stop and enable cannot revive an OAuth exchange prepared before the stop',async()=>{
+  const f=await fixture({EDGE_OPERATOR_KEY:OPERATOR_KEY});let callback:Promise<Response>|undefined;
+  try {
+    const start=await f.request('/auth/twitch');assert.equal(start.status,302);
+    const location=new URL(start.headers.get('location')!);
+    await f.request('/__fixture/provider-hold?kind=oauth');
+    callback=f.request(`/auth/twitch/callback?state=${location.searchParams.get('state')}&code=komediruzecki7`,{headers:{cookie:cookies(start)}});
+    await heldProvider(f,'oauth');
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(false,0))).status,200);
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(true,1))).status,200);
+    await f.request('/__fixture/provider-release');
+    assert.equal((await callback).status,403);
+    const data=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(Object.keys(data.sessions).length,0);assert.equal(Object.keys(data.channels).length,0);
+    assert.equal((await login(f)).callback.status,302,'A new OAuth flow after explicit enable is permitted.');
+  } finally {await f.request('/__fixture/provider-release').catch(()=>{});await callback?.catch(()=>{});await f.mf.dispose();}
+});
+
+
+test('operator newer stop wins while a room enable acknowledgement is delayed',async()=>{
+  const f=await fixture({EDGE_OPERATOR_KEY:OPERATOR_KEY});let enabling:Promise<Response>|undefined;
+  try {
+    await login(f);
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(false,0))).status,200);
+    await f.request('/__fixture/flush');
+    await f.request('/__fixture/room-config/123?hold=/internal/operator');
+    enabling=f.request('/api/operator/pilot',operatorPost(true,1));
+    let prepared=false;
+    for(let i=0;i<30&&!prepared;i++) {const state=await f.request('/__fixture/state').then(r=>r.json()) as any;prepared=state.operator.revision===2&&state.operator.target===true;}
+    assert(prepared,'The enable intent is durable before its room acknowledgement.');
+    assert.equal((await f.request('/api/operator/pilot',operatorPost(false,2))).status,200);
+    await f.request('/__fixture/room-release/123');await enabling;
+    const result=await f.request('/api/operator/status',{headers:operatorHeaders}).then(r=>r.json()) as any;
+    assert.equal(result.enabled,false);assert.equal(result.revision,3);assert.equal(result.status,'stopped');
+    assert.equal((await f.request('/auth/twitch')).status,503);
+  } finally {await f.request('/__fixture/room-release/123').catch(()=>{});await enabling?.catch(()=>{});await f.mf.dispose();}
 });

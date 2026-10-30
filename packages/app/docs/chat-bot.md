@@ -1,6 +1,8 @@
 # Baity, the chat bot
 
-Baity announces the game in Twitch chat. It is optional and off for every room until the streamer turns on **Announce rounds in chat** in Game settings.
+Baity announces the game in Twitch chat. Announcements are on for new channels once the bot is connected and allowed to post. Existing saved choices are preserved, including channels that turned announcements off. Older saved settings without a bot choice remain off.
+
+Use **Baity** at the top right of the Studio round controls to change announcements immediately, or use **Announce rounds in chat** in Game settings. The nearby **Auto rounds** shortcut controls the same automatic-round setting shown in Game settings. Both shortcuts show the saved state and disable while saving. A failed save keeps the previous choice. Automatic rounds and moderator commands remain off until the streamer enables them.
 
 ## The rule it follows
 
@@ -65,7 +67,7 @@ Twitch lets a bot that is not a moderator send 20 messages per 30 seconds across
 The bot posts with an app access token, which is what earns Twitch's **Chat Bot** badge. That needs two consents: the bot account's own (`user:write:chat`, `user:bot`) and each streamer's (`channel:bot`).
 
 1. **Operator, once.** Create a separate Twitch account for Baity and find its numeric user ID. baited only knows the ID, so the login is free to choose. On 2026-10-27 `BaityBot` and `Baity` were taken; `Baity_Bot` and `Baeittrice` had no channel page, which suggests they are free, but only Twitch's sign-up can confirm it. Set `TWITCH_BOT_USER_ID` to the ID (it is not a secret) and restart baited. In a private window, open `${PUBLIC_URL}/auth/twitch/bot` and sign in as the bot account. baited stores the grant only if the account matches `TWITCH_BOT_USER_ID`; any other account's grant is revoked. The existing callback URL is reused, so no new redirect URI is needed. The bot account cannot use the streamer sign-in: baited revokes that grant, stores nothing, creates no room and shows a notice asking for the streamer's account. A streamer who runs the bot on their own account sets `TWITCH_BOT_IS_STREAMER=1` to allow it.
-2. **Each streamer.** In **Stream setup → Add Baity, the chat bot**, choose **Allow the bot in your chat**. Twitch asks for `channel:bot` once; later reconnects keep it. Then turn on **Announce rounds in chat** (and optionally **Moderator commands**) in Game settings.
+2. **Each streamer.** In **Stream setup → Add Baity, the chat bot**, choose **Allow the bot in your chat**. Twitch asks for `channel:bot` once; later reconnects keep it. Check that **Baity** is on in Studio, or enable **Announce rounds in chat** in Game settings. **Moderator commands** is a separate optional choice.
 
 Baity shouts once chat starts losing. A channel that runs a caps filter in another moderation bot may delete those posts or time Baity out: exempt Baity in that filter, or make Baity a VIP or moderator if the filter already exempts them.
 
@@ -73,6 +75,6 @@ The bot's grant is validated at startup and hourly. If it is revoked, the studio
 
 ## Try it locally
 
-The local demo needs no bot account. Turn on the setting, start a round, and open **Demo controls**: Baity's posts appear under **Baity preview** with the same pacing. Tick **Send as a moderator** to try `!bait start` and `!bait pause` from simulated chat.
+The local demo needs no bot account. With **Baity** on, start a round and open **Demo controls**: Baity's posts appear under **Baity preview** with the same pacing. Tick **Send as a moderator** to try `!bait start` and `!bait pause` from simulated chat.
 
 Real delivery to Twitch chat, the Chat Bot badge and a moderator command arriving through EventSub are covered by fixture tests only. Verify them on a test channel before relying on them live.

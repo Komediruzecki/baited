@@ -46,7 +46,8 @@ export const defaults: Settings = {
   mission: 'single',
   missionDuration: 180,
   callBait: false,
-  chatBot: false,
+  // Fresh channels announce by default. The schema keeps legacy missing values off.
+  chatBot: true,
   modCommands: false,
 };
 /** Moments the chat bot may announce. Listeners read public state from the overlay projection. */

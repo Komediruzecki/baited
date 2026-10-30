@@ -1,4 +1,12 @@
-# Active Cloudflare pilot
+# Cloudflare pilot status
+
+## Owner-requested stop, 31 October 2026
+
+The owner ended testing and requested a shutdown. The deployed `EDGE_PILOT_ENABLED` flag was set to `false` without changing the game source or removing credentials. Public `/health` confirmed `enabled: false`. A complete Twitch EventSub inspection found zero subscriptions with this pilot's exact callback; other callbacks were left untouched. The temporary inspection token was revoked.
+
+A durable operator stop/enable control and a local companyReportViewer panel are being prepared. This newer status supersedes the historical activation receipt below. Enabling later must be an explicit operator action; saved completed scores and encrypted grants are retained.
+
+## Historical activation receipt
 
 Verified 30 October 2026 (Europe/Zagreb), after the owner authorized both invited streamer channels.
 
@@ -95,6 +103,8 @@ Transcript update evidence: registered run `baited/2026-10-30/094e2872a4754b77ba
 
 For an ordinary test, pause/end the round, disable the microphone, disconnect chat and confirm subscription removal, then sign out and remove the pilot OBS source. Disconnecting does not erase stored scores, sessions or encrypted grants.
 
-For a full shutdown, first disconnect both registered channels while the control service is reachable. Confirm Twitch subscription removal and drain/drop pending bot announcements. Then set `EDGE_PILOT_ENABLED=false`, remove the custom-domain route and redeploy; keep workers.dev and previews disabled. Do not disable the flag before subscription cleanup, because Control alarms also stop. Failed provider deletion needs verification and retry before declaring ingestion stopped. Removing a public route does not erase storage or instantly terminate existing sockets. Data deletion requires a separate exact retention decision.
+For a full pilot stop after the operator update is deployed, use the local companyReportViewer Baited page: **Read status → Stop**, give a reason, type the confirmation and apply. Wait for **Stopped** with zero pending subscriptions and disconnected rooms. The durable stop denies new sessions and gameplay immediately; room shutdown and Twitch deletion retry until complete. An unfinished round is abandoned without awarding a result. Completed scores and encrypted grants remain stored.
+
+**Enable** reopens admission only after cleanup finishes. It does not restart a round, microphone or Twitch chat connection. Streamers sign in again and reconnect those explicitly. The manual `EDGE_PILOT_ENABLED=false` provider setting remains an emergency master switch, but it also stops cleanup alarms; use the runtime control for normal stops. Removing a public route does not erase storage. Data deletion requires a separate exact retention decision.
 
 The existing Workers paid account bills normal usage. Admission and ingress limits reduce abuse; they are not a hard invoice ceiling. See [the architecture and cost notes](./ARCHITECTURE-AND-COSTS.md) before changing capacity.

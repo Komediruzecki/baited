@@ -5,6 +5,8 @@ import { allowedLogins, cookieValue, decryptValue, encryptValue, maximumChannels
   randomToken, sameOrigin, sameText, secretBytes, sessionCookie, SESSION_COOKIE, sha256, signPilotCapability, studioIdleMilliseconds, verifyWebhook } from './control-auth.js';
 import { CONTROL_LIMITS, type ControlEnv, type ControlSession, type ControlState, type Credentials, type RegisteredChannel,
   type RoomAnnouncement, type TwitchChatEvent, type TwitchUser } from './control-types.js';
+import { pilotLimits } from './pilot-policy.js';
+import { operatorAuthorized } from './operator-auth.js';
 import { internalFetch } from './internal-fetch.js';
 import { oauthDiagnostic, OAuthProviderError, type OAuthPhase } from './oauth-diagnostics.js';
 
@@ -66,8 +68,14 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       const legacy = this.checkpointRows.size ? undefined : await ctx.storage.get<ControlState>('control-v1');
       const saved = this.checkpointRows.size ? this.loadCheckpoint() : legacy;
       this.legacyCheckpoint = !!legacy;
+      const seedOperatorStop = !saved?.operator && env.EDGE_OPERATOR_INITIAL_ENABLED === 'false';
       this.webhookSecretHash = await sha256(env.TWITCH_EVENTSUB_SECRET ?? '');
       if (saved) { if (saved.version !== 1) throw new Error('Unsupported control state.'); this.data = saved; }
+      if (seedOperatorStop) {
+        this.data.operator = { enabled: false, target: false, revision: 1, updatedAt: Date.now(), reason: 'Initial operator stop', pendingRooms: Object.keys(this.data.channels) };
+        for (const c of Object.values(this.data.channels)) this.markChatStopped(c);
+        this.data.pending = {}; this.data.sessions = {}; this.data.queue = [];
+      }
       this.committed = structuredClone(this.data);
       ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS twitch_inbox (
         id TEXT PRIMARY KEY, expires_at INTEGER NOT NULL, next_at INTEGER NOT NULL,
@@ -85,6 +93,10 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         UPDATE inbox_counts SET total=total-1,pending=pending-(OLD.delivered=0) WHERE id=1; END`);
       ctx.storage.sql.exec(`CREATE TRIGGER IF NOT EXISTS inbox_delivery AFTER UPDATE OF delivered ON twitch_inbox BEGIN
         UPDATE inbox_counts SET pending=pending+(NEW.delivered=0)-(OLD.delivered=0) WHERE id=1; END`);
+      if (seedOperatorStop) {
+        this.inboxQuery('DELETE FROM twitch_inbox WHERE delivered=0');
+        await this.persist();
+      }
     });
   }
   private async serial<T>(run: () => Promise<T>): Promise<T> {
@@ -114,8 +126,9 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     const task = operation(); this.providerTasks.set(key, task);
     try { return await task; } finally { if (this.providerTasks.get(key) === task) this.providerTasks.delete(key); }
   }
+  private running(state = this.committed): boolean { return this.env.EDGE_PILOT_ENABLED === 'true' && state.operator?.enabled !== false; }
   private allowed(channel?: RegisteredChannel): channel is RegisteredChannel {
-    return !!channel && channel.active && allowedLogins(this.env).has(channel.login);
+    return this.running() && !!channel && channel.active && allowedLogins(this.env).has(channel.login);
   }
   private configured(): boolean {
     try {
@@ -191,6 +204,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   }
   private async schedule(): Promise<void> {
     const now = Date.now(); const deadlines: number[] = [];
+    if (this.data.operator?.pendingRooms.length) deadlines.push(this.data.operator.retryAt ?? now + 1000);
     const inbox = this.inboxQuery<{ next_at: number }>('SELECT next_at FROM twitch_inbox WHERE delivered=0 ORDER BY next_at LIMIT 1')[0]?.next_at;
     if (inbox) deadlines.push(inbox);
     if (this.data.queue.length) {
@@ -208,7 +222,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     }
     const expiry = Object.values(this.data.pending).map((s) => s.expiresAt).concat(Object.values(this.data.sessions).map((s) => s.expiresAt));
     if (expiry.length) deadlines.push(Math.min(...expiry));
-    if (Object.values(this.data.channels).some((c) => this.allowed(c)) || this.data.bot) deadlines.push(this.data.nextValidationAt || now + CONTROL_LIMITS.validationMs);
+    if (this.running() && (Object.values(this.data.channels).some((c) => this.allowed(c)) || this.data.bot)) deadlines.push(this.data.nextValidationAt || now + CONTROL_LIMITS.validationMs);
     if (deadlines.length) await this.ctx.storage.setAlarm(Math.max(now + 1000, Math.min(...deadlines)));
     else await this.ctx.storage.deleteAlarm();
   }
@@ -227,9 +241,98 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       channelAllowed: channel.scopes.includes('channel:bot'), name: this.data.bot?.user.name ?? null,
       canAuthorize: ID.test(this.env.EDGE_BOT_USER_ID ?? '') && channel.login === (this.env.EDGE_BOT_OWNER_LOGIN ?? 'komediruzecki7') };
   }
+  private async operatorStatus(): Promise<Response> {
+    await this.ready;
+    const state = structuredClone(this.committed), op = state.operator;
+    const limits = pilotLimits(this.env);
+    const channels = await Promise.all(Object.values(state.channels).map(async c => {
+      let room: Record<string, unknown> = {available:false};
+      try {
+        const response = await internalFetch(this.roomStub(c.id),new Request('https://room.internal/internal/operator-status',{
+          method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({channelId:c.id})}));
+        if (response.ok) {
+          const value=object(await response.json());
+          const counts=['viewerSockets','studioSockets','overlaySockets','participants'] as const;
+          if(value?.available===true && typeof value.phase==='string' && value.phase.length<=32 && counts.every(key=>Number.isSafeInteger(value[key]) && value[key]>=0))
+            room={available:true,phase:value.phase,viewerSockets:value.viewerSockets,studioSockets:value.studioSockets,overlaySockets:value.overlaySockets,participants:value.participants};
+        }
+      } catch { /* Failed rooms remain visible as unavailable. */ }
+      return {login:c.login,chatConnected:this.running(state) && c.chatWanted!==false && c.subscriptionStatus==='enabled',
+        subscriptionStatus:c.subscriptionStatus,pendingDeletion:c.pendingDeletion?.length??0,room};
+    }));
+    const pendingSubscriptions=channels.reduce((sum,c)=>sum+c.pendingDeletion,0);
+    const stopping=!!op?.pendingRooms.length || (!this.running(state) && (pendingSubscriptions>0 || this.providerTasks.size>0));
+    return json({service:'baited-edge-pilot',enabled:this.running(state),configured:this.configured(),revision:op?.revision??0,
+      status:stopping?'stopping':this.running(state)?'running':'stopped',updatedAt:op?.updatedAt??null,channels,
+      stats:{registeredChannels:channels.length,connectedChats:channels.filter(c=>c.chatConnected).length,pendingSubscriptions,
+        queuedAnnouncements:state.queue.length,activeSessions:Object.values(state.sessions).filter(s=>s.expiresAt>Date.now()).length},
+      limits:{streamers:limits.channels,participantsPerChannel:limits.participants,viewerSocketsPerChannel:limits.viewerSockets}});
+  }
+  private async operator(request: Request): Promise<Response> {
+    if (!operatorAuthorized(request,this.env)) return json({error:'Operator access denied.',code:'operator_auth'},401);
+    const path=new URL(request.url).pathname;
+    if(path==='/api/operator/status') return request.method==='GET'?this.operatorStatus():json({error:'Method not allowed.'},405);
+    if(request.method!=='POST') return json({error:'Method not allowed.'},405);
+    if(request.headers.get('content-type')?.split(';')[0]!=='application/json') return json({error:'Use JSON.',code:'invalid_request'},415);
+    const input=object(JSON.parse(await boundedControlBody(request)));
+    if(!input || Object.keys(input).some(k=>!['enabled','expectedRevision','reason'].includes(k)) || typeof input.enabled!=='boolean' ||
+      !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision<0 || typeof input.reason!=='string' ||
+      !input.reason.trim() || input.reason.length>200 || /[\x00-\x1f\x7f]/.test(input.reason)) return json({error:'Invalid operator request.',code:'invalid_request'},400);
+    const result=await this.serial(async()=>{
+      const prior=this.data.operator;
+      if((prior?.revision??0)!==input.expectedRevision) return json({error:'Status changed. Refresh before trying again.',code:'stale_revision'},409);
+      if(input.enabled && !this.configured()) return json({error:'The pilot configuration is disabled.',code:'pilot_not_configured'},409);
+      if(input.enabled && (prior?.pendingRooms.length || Object.values(this.data.channels).some(c=>c.pendingDeletion?.length) || this.providerTasks.size))
+        return json({error:'Stop cleanup is still running. Refresh before enabling.',code:'cleanup_pending'},409);
+      if(input.enabled===this.running() && (!prior || prior.target===input.enabled) && !prior?.pendingRooms.length) return null;
+      this.data.operator={enabled:false,target:input.enabled,revision:(prior?.revision??0)+1,updatedAt:Date.now(),reason:input.reason.trim(),pendingRooms:Object.keys(this.data.channels)};
+      if(!input.enabled) {
+        for(const channel of Object.values(this.data.channels)) this.markChatStopped(channel);
+        this.data.sessions={};this.data.pending={};this.data.queue=[];
+      }
+      await this.persist();
+      // The durable stop is authoritative before cleanup of queued deliveries.
+      if(!input.enabled) this.inboxQuery('DELETE FROM twitch_inbox WHERE delivered=0');
+      return null;
+    });
+    if(result) return result;
+    await this.syncOperatorRooms(true);
+    return this.operatorStatus();
+  }
+  private async syncOperatorRooms(force=false): Promise<void> {
+    const op=this.committed.operator;
+    if(!op || (!force && (op.retryAt??0)>Date.now())) return;
+    for(const channelId of [...op.pendingRooms]) {
+      try {
+        const response=await internalFetch(this.roomStub(channelId),new Request('https://room.internal/internal/operator',{
+          method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({channelId,enabled:op.target,revision:op.revision})}));
+        if(!response.ok) continue;
+        await this.serial(async()=>{
+          if(this.data.operator?.revision!==op.revision) return;
+          this.data.operator.pendingRooms=this.data.operator.pendingRooms.filter(id=>id!==channelId);
+          await this.persist();
+        });
+      } catch { /* Durable pendingRooms is retried by the cleanup alarm. */ }
+    }
+    await this.serial(async()=>{
+      const current=this.data.operator;
+      if(!current || current.revision!==op.revision) return;
+      if(current.pendingRooms.length) {
+        current.attempts=Math.min(6,(current.attempts??0)+1);current.retryAt=Date.now()+Math.min(60_000,1000*2**current.attempts);
+        await this.persist();return;
+      }
+      if(current.enabled===current.target) return;
+      if(current.target && (!this.configured() || Object.values(this.data.channels).some(c=>c.pendingDeletion?.length) || this.providerTasks.size)) return;
+      current.enabled=current.target;await this.persist();
+    });
+  }
   async fetch(request: Request): Promise<Response> {
     try {
       const url = new URL(request.url);
+      if(request.url==='https://control.internal/internal/operator-health' && request.method==='GET') {await this.ready;return json({enabled:this.running()});}
+      if (url.pathname === '/api/operator/status' || url.pathname === '/api/operator/pilot') return await this.operator(request);
+      await this.ready;
+      if (!this.running() && url.origin !== 'https://control.internal' && url.pathname !== WEBHOOK) return json({error:'The pilot is stopped. Try again when the test reopens.',code:'pilot_stopped'},503);
       if (url.pathname === CALLBACK && request.method === 'GET') return await this.callback(request, url);
       if (url.pathname === '/api/edge/chat' && request.method === 'POST') return await this.chatConnection(request);
       if (url.pathname === '/api/edge/overlay' && request.method === 'POST') {
@@ -264,6 +367,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         const body = await boundedControlBody(request);
         const signature = await verifyWebhook(request, body, this.env.TWITCH_EVENTSUB_SECRET);
         if (!signature) return denied();
+        if (!this.running()) return new Response(null,{status:204});
         const result = await this.serial(() => { this.prune(); return this.webhook(body, signature); });
         if (result instanceof Response) return result;
         // The inbox is already durable. Waiting for a Room must not occupy the
@@ -288,6 +392,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   }
   private async handle(request: Request): Promise<Response> {
     if (!this.configured()) return json({ error: 'The hosted pilot is not configured.' }, 503);
+    if (!this.running()) return json({error:'The pilot is stopped.',code:'pilot_stopped'},503);
     const url = new URL(request.url); this.prune();
     if (url.origin === 'https://control.internal' && request.method === 'POST') return this.internal(url.pathname, request);
     if (url.origin !== publicOrigin(this.env) || url.username || url.password || url.hash) return denied();
@@ -317,7 +422,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   }
   private async chatConnection(request: Request): Promise<Response> {
     const prepared = await this.serial(async (): Promise<Response | string> => {
-      if (!this.configured() || new URL(request.url).origin !== publicOrigin(this.env)) return denied();
+      if (!this.running() || !this.configured() || new URL(request.url).origin !== publicOrigin(this.env)) return denied();
       const session = await this.session(request); if (!session) return json({ error: 'Connect your Twitch account first.' }, 401);
       if (!this.csrf(request, session) || !request.headers.get('content-type')?.startsWith('application/json')) return denied();
       const body = object(JSON.parse(await boundedControlBody(request)));
@@ -366,7 +471,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
   private async completeCallback(request: Request, url: URL, phase: (next: OAuthPhase) => void): Promise<Response> {
     const clear = { 'set-cookie': oauthCookie('', 0) };
     const prepared = await this.serial(async () => {
-      if (!this.configured() || url.origin !== publicOrigin(this.env) || url.username || url.password || url.hash) return denied();
+      if (!this.running() || !this.configured() || url.origin !== publicOrigin(this.env) || url.username || url.password || url.hash) return denied();
     const state = url.searchParams.get('state') ?? ''; const cookie = cookieValue(request, OAUTH_COOKIE);
     if (!/^[A-Za-z0-9_-]{43}$/.test(state) || !cookie) return json({ error: 'Sign-in expired. Connect your Twitch account again.' }, 400, clear);
     const stateKey = await sha256(state); const pending = this.data.pending[stateKey];
@@ -376,13 +481,14 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     const code = url.searchParams.get('code');
     if (!code || code.length > 2048 || url.searchParams.has('error')) return json({ error: 'Twitch sign-in was not completed.' }, 400, clear);
     if (pending.kind === 'bot' && (!pending.initiatingSession || !this.data.sessions[pending.initiatingSession])) return denied();
-    return { code, pending };
+    return { code, pending, operatorRevision:this.data.operator?.revision??0 };
     });
     if (prepared instanceof Response) return prepared;
-    const { code, pending } = prepared;
+    const { code, pending, operatorRevision } = prepared;
     const c = await this.exchange(code, pending.kind, phase);
     phase('session-storage');
     return this.serial(async () => {
+    if (!this.running() || (this.data.operator?.revision??0)!==operatorRevision) return denied();
     if (pending.kind === 'bot' && (!pending.initiatingSession || !this.data.sessions[pending.initiatingSession] ||
       !this.allowed(this.data.channels[this.data.sessions[pending.initiatingSession]!.channelId]))) return denied();
     if (pending.kind === 'bot') {
@@ -512,7 +618,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     return this.allowed(channel) && channel.chatWanted !== false && !channel.pendingDeletion?.length && (['pending', 'failed'].includes(channel.subscriptionStatus) ||
       channel.subscriptionStatus === 'enabled' && (channel.subscriptionSecretHash !== this.webhookSecretHash || MODERATION_TYPES.some((type) => !channel.moderationSubscriptions?.[type])));
   }
-  private async stopChat(channel: RegisteredChannel, detail: string): Promise<void> {
+  private markChatStopped(channel: RegisteredChannel): void {
     channel.generation = (channel.generation ?? 0) + 1;
     channel.chatWanted = false;
     channel.resubscribeAfterDeletion = false;
@@ -520,6 +626,10 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     channel.subscriptionStatus = channel.pendingDeletion.length ? 'stopping' : 'offline';
     channel.deleteRetryAt = Date.now() + 1000; channel.deleteAttempts = 0;
     this.data.queue = this.data.queue.filter((q) => q.channelId !== channel.id);
+
+  }
+  private async stopChat(channel: RegisteredChannel, detail: string): Promise<void> {
+    this.markChatStopped(channel);
     this.inboxQuery("DELETE FROM twitch_inbox WHERE delivered = 0 AND json_extract(payload, '$.channelId') = ?", channel.id);
     // Store the stop intent before any external DELETE. In-flight notifications are
     // acknowledged without entering the room while provider removal is retried.
@@ -927,7 +1037,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       const pending = this.inboxQuery<{ id: string }>('SELECT id FROM twitch_inbox WHERE delivered = 0 AND next_at <= ? ORDER BY next_at LIMIT 8', Date.now()).map((row) => row.id);
       const channel = Object.values(this.data.channels).find((c) => this.needsSubscription(c) && (c.subscriptionRetryAt ?? 0) <= Date.now());
       const validate: (string | null)[] = [];
-      if (this.data.nextValidationAt && this.data.nextValidationAt <= Date.now()) {
+      if (this.running() && this.data.nextValidationAt && this.data.nextValidationAt <= Date.now()) {
         this.data.nextValidationAt = Date.now() + CONTROL_LIMITS.validationMs;
         validate.push(...Object.values(this.data.channels).filter((c) => this.allowed(c)).map((c) => c.id));
         if (this.data.bot) validate.push(null);
@@ -937,6 +1047,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     if (!work) return;
     // Twitch waits stay outside the shared mutation queue. Each operation captures
     // a durable intent and applies results only to that still-current generation.
+    await this.syncOperatorRooms();
     if (work.stopping) await this.deleteSubscriptions(work.stopping);
     if (work.subscribe) await this.subscribe(work.subscribe);
     await this.sendOne();

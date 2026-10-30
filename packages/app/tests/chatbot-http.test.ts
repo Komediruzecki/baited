@@ -71,7 +71,7 @@ test('demo studio previews bot posts and accepts moderator commands from simulat
   const cookie = start.headers.get('set-cookie')!.split(';')[0];
   const csrf = (await start.json()).csrf;
   let studio = (await (await json('/api/studio', undefined, undefined, cookie)).json()) as Studio;
-  assert.equal(studio.room.settings.chatBot, false);
+  assert.equal(studio.room.settings.chatBot, true);
   assert.equal(studio.room.settings.modCommands, false);
   assert.deepEqual(studio.chatBot, {
     mode: 'demo',

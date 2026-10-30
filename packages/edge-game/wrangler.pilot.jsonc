@@ -24,6 +24,7 @@
   "vars": {
     "EDGE_POC_ENABLED": "false",
     "EDGE_PILOT_ENABLED": "true",
+    "EDGE_OPERATOR_INITIAL_ENABLED": "false",
     "EDGE_LOCAL_FIXTURE_AUTH": "false",
     "EDGE_STAGING_AUTH": "false",
     "EDGE_PUBLIC_ORIGIN": "https://pilot-baited.maff.app",

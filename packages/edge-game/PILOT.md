@@ -1,14 +1,14 @@
 # Baited: first Cloudflare pilot
 
-Prepared on 29 October 2026; activated under the owner’s authorization on 30 October 2026. **[Studio is live](https://pilot-baited.maff.app/studio) for `komediruzecki7` and `lakeeko`.** The Worker, static assets, two SQLite Durable Object namespaces and six secrets are configured. Signed-out HTTP checks and browser rendering pass; a real OAuth, microphone, chat and OBS round on this deployment remains pending. The PC server and tunnel stay stopped. See [the active deployment receipt and owner steps](./ACTIVE-PILOT.md). The [inactive receipt](./INACTIVE-DEPLOYMENT.md) preserves the earlier checkpoint.
+Prepared on 29 October 2026 and activated under the owner’s authorization on 30 October. **The pilot is stopped at the owner’s request as of 31 October.** The live master flag is disabled and the exact pilot Twitch callback subscriptions were removed; the PC server and tunnel remain stopped. The two approved streamer channels remain `komediruzecki7` and `lakeeko`. The Worker, static assets, SQLite Durable Objects and stored history remain provisioned. See [the latest deployment receipt](./ACTIVE-PILOT.md) for the verified live version and [operator control](./OPERATOR-CONTROL.md) for the reviewed Stop/Enable design. Source code or an open PR is not proof that its new operator API has been deployed.
 
 ## The smallest useful test
 
-Start with one of the two invited streamers. Sign into Studio, connect chat, enable local Moonshine and start a round. A different Twitch account sees the secret card in the native Extension and sends clues through normal Twitch chat. Studio sees those clues and confirms a detected catch. OBS shows the public result. Run this acceptance sequence before expanding the pilot further.
+After the owner explicitly enables another test, start with one of the two invited streamers. Sign into Studio, connect chat, enable local Moonshine and start a round. A different Twitch account sees the secret card in the native Extension and sends clues through normal Twitch chat. Studio sees those clues and confirms a detected catch. OBS shows the public result. Run this acceptance sequence before expanding the pilot further.
 
 Use the existing built-in deck only. Card Maker, uploads, custom decks, scanning, R2, D1 and Containers are out of scope. Assets are static; the room and control state live in SQLite Durable Objects.
 
-The active hostname is `pilot-baited.maff.app`. Existing `dev-play-baited.maff.app`, `play-baited.maff.app` and landing domains were not moved by this activation. Choosing a different pilot hostname means updating the public origin, exact host/origin allowlists, Extension build values and OAuth callback together.
+The configured hostname is `pilot-baited.maff.app`. Existing `dev-play-baited.maff.app`, `play-baited.maff.app` and landing domains were not moved by this activation. Choosing a different pilot hostname means updating the public origin, exact host/origin allowlists, Extension build values and OAuth callback together.
 
 ## Limits that can be changed together
 
@@ -24,7 +24,8 @@ See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Admission settings fail cl
 | `EDGE_BOT_MESSAGES_PER_30_SECONDS` | `15` | Global shared bot budget, configurable from 1 to 18. Not per channel. |
 | `EDGE_STUDIO_IDLE_MINUTES` | `15` default | Stop Twitch subscriptions after Studio stops refreshing its authenticated session. Supports 5–60 minutes. Explicit reconnection is required afterward. |
 | `EDGE_BOT_OWNER_LOGIN` | `komediruzecki7` | Only this signed-in operator may initiate the Baity account authorization flow. |
-| `EDGE_PILOT_ENABLED` | `true` | Real pilot admission is enabled for the two invited channels. Synthetic authentication remains disabled. |
+| `EDGE_PILOT_ENABLED` | Live `false`; source prepared `true` | Master admission/configuration gate. The operator switch cannot override false. A persisted operator stop also blocks gameplay when this flag is true. |
+| `EDGE_OPERATOR_INITIAL_ENABLED` | `false` | Seed a durable stop on first operator rollout. Does not overwrite an existing operator decision. |
 | `limits.cpu_ms` | `1000` | Per-invocation CPU guard, also applicable to the Durable Objects; not a monthly spending cap. |
 
 Room controls and explicit state refreshes each have a 120/minute budget per role and identity. Viewer joins allow 12/minute per identity; Studio/OBS joins allow 120/minute. Viewer traffic cannot consume the Studio's buckets. Viewer sockets are capped at four per identity. Studio and OBS share eight reserved connection slots. The pilot requires viewers to sign into Twitch; identity sharing is not required. Brief tab visibility changes keep the socket; five minutes hidden releases it.
@@ -52,6 +53,7 @@ These limits bound admitted work, not the number of requests strangers can send 
 | `TWITCH_EVENTSUB_SECRET` | Separate high-entropy secret for verifying Twitch webhook signatures. |
 | `EDGE_TOKEN_ENCRYPTION_KEY_B64` | Dedicated 32-byte random key, standard base64, for stored OAuth credentials. |
 | `EDGE_PILOT_SECRET_B64` | Independent 32-byte random key, standard base64, for short-lived Studio/OBS credentials. |
+| `EDGE_OPERATOR_KEY` | Dedicated server-to-server Stop/Enable/status credential; stored through Proton. Never sent to the browser or the Extension. |
 
 The streamer grant requests `user:read:chat`, `user:bot` and `channel:bot` for the app-token chat subscription and bot permission path. The bot account grants `user:write:chat` and `user:bot`. Granting `channel:bot` is not granting moderator status. Viewers use Twitch’s Extension authorization; they do not need the streamer’s OAuth grant.
 
@@ -82,10 +84,10 @@ No workflow deploys this game Worker. A later merge can still trigger the existi
 
 1. Complete: the existing paid Workers account contains the active Worker, its two SQLite Durable Object namespaces and static assets. No R2 bucket, D1 database or Container was needed for this deck-only pilot.
 2. Already complete: the three dedicated keys are stored in Proton and all six secret bindings are present on the Worker. Keep these keys stable; do not regenerate them for an ordinary deployment.
-3. Complete: `pilot-baited.maff.app` is the exact Worker custom domain and the pilot flag is true. Fixture and synthetic staging flags, workers.dev and preview URLs remain disabled.
+3. The exact Worker custom domain is `pilot-baited.maff.app`. The pilot is currently stopped. Fixture and synthetic staging flags, workers.dev and preview URLs remain disabled. Reopen only on the owner’s next instruction using the latest deployment receipt.
 4. Complete: the OAuth callback `https://pilot-baited.maff.app/auth/twitch/callback` and exact HTTPS/WSS pilot connections were saved in Twitch. The Worker permits the actual Twitch-hosted Extension origin. No wildcard origins were added.
 5. Complete: the edge pilot ZIP is uploaded to Twitch version 0.0.3, returned to Hosted Test, and its MD5 matches `e0c01f07740576980001c31635e5164b`. The version was not submitted for review. Each test streamer still needs to install/activate that version on their own channel and select the panel or video-overlay placement.
-6. EventSub inspection found zero existing application subscriptions before activation, so no old PC callback conflict was present. No subscriptions were created or deleted. Recheck if another environment reconnects. Then visit Studio over HTTPS. Sign in as `komediruzecki7` or `lakeeko`, approve the listed scopes, connect Twitch chat and verify the connection status. Only `komediruzecki7` can initiate the optional Baity authorization flow, using the configured bot account.
+6. The 31 October shutdown removed the exact pilot callback subscriptions and left other callbacks untouched. After an authorized re-enable, recheck if another environment reconnects. Then visit Studio over HTTPS. Sign in as `komediruzecki7` or `lakeeko`, approve the listed scopes, connect Twitch chat and verify the connection status. Only `komediruzecki7` can initiate the optional Baity authorization flow, using the configured bot account.
 7. Replace the OBS source URL with the URL copied from this pilot Studio. Do not reuse the former PC server’s capability URL.
 8. Enable the microphone and wait for Moonshine readiness. A different account on Twitch's **Testing Account Allowlist**, such as Paolo, opens Baited on the testing streamer's channel. In the Twitch iOS app, open **Extensions → Baited → Accept test extension**, then keep the Extension view open. The general channel-Extension notice alone is not enough. Follow the [mobile viewer steps](./ACTIVE-PILOT.md#viewer-setup-in-the-twitch-ios-app), which the owner confirmed on iOS on 30 October 2026. Begin one round and run the checks below before expanding the pilot.
 
@@ -116,7 +118,11 @@ This pilot does not expose Card Maker or account deletion UI. Data deletion is a
 
 To end an ordinary test: finish/pause the round, disable the microphone, choose Disconnect chat, confirm subscription removal, sign out and remove the pilot OBS source. Failed Twitch DELETE requests remain in a durable retry queue; the UI must not claim removal before confirmation.
 
-For a full pilot shutdown, disconnect each registered channel while the control service is still reachable and verify upstream subscription removal, verify the shared bot queue is drained/dropped, then set `EDGE_PILOT_ENABLED=false`, remove public routing and allow existing short-lived socket credentials to expire. Do not flip the flag before subscription cleanup: it also stops Control alarms and would stall pending deletion retries. A disabled gateway flag alone does not erase namespaces or instantly terminate every existing socket. If OAuth was revoked upstream or Twitch deletion fails, verify removal through the Twitch API before declaring ingestion stopped. Delete cloud data/resources only with an exact, approved retention decision. Do not wipe Control state while keeping Room state: connection revisions belong to the same deployment history and must be restored consistently.
+Once the operator update is deployed, use the authenticated Report Viewer Stop control. It persists a global stop, revokes sessions and pending OAuth, closes Room sockets, releases microphone leases, abandons unfinished rounds without awarding them, drops queued bot work and retries Twitch subscription removal. A completed stop has no gameplay alarms; saved history and preferences remain. Enable requires cleanup to finish and does not restart chat, microphone capture or a round. See the exact contract, failure behavior and safe two-phase first installation in [OPERATOR-CONTROL.md](./OPERATOR-CONTROL.md).
+
+Before that update is deployed, or for emergency containment, the master flag is still available. `EDGE_PILOT_ENABLED=false` blocks gateway admission but also stops Control cleanup alarms; it alone does not erase namespaces or instantly terminate existing sockets. Remove the exact Twitch subscriptions separately and verify removal. During the new operator rollout, keep the master flag false until Room stop acknowledgements are verified, then let cleanup run with the master true and the durable operator switch still off. Never treat a source flag as live-state proof.
+
+Delete cloud data/resources only with an exact, approved retention decision. Do not wipe Control state while keeping Room state: connection revisions belong to the same deployment history and must be restored consistently.
 
 Stop the test immediately if a live secret appears in a Studio/OBS/broadcaster frame, another channel’s state becomes visible, microphone pauses repeat on a stable connection, webhooks repeatedly return 503, a pilot subscription cannot be removed, or usage rises unexpectedly. Before first connection, verify account-level logging does not capture authorization headers and configure billing notifications; neither a notification nor the pilot limits is a hard spending cap.
 

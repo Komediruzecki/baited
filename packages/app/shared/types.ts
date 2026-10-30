@@ -13,7 +13,7 @@ export interface Settings {
   mission: 'single' | 'three';
   missionDuration: number;
   callBait: boolean;
-  /** The bot announces rounds in Twitch chat. Off until the streamer opts in. */
+  /** Round announcements. New channels default on; posting still requires bot authorization. */
   chatBot: boolean;
   /** Moderators can type !bait start, !bait pause and !bait resume. */
   modCommands: boolean;
