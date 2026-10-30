@@ -4,7 +4,31 @@
 
 The owner ended testing and requested a shutdown. The deployed `EDGE_PILOT_ENABLED` flag was set to `false` without changing the game source or removing credentials. Public `/health` confirmed `enabled: false`. A complete Twitch EventSub inspection found zero subscriptions with this pilot's exact callback; other callbacks were left untouched. The temporary inspection token was revoked.
 
-A durable operator stop/enable control and a local companyReportViewer panel are being prepared. This newer status supersedes the historical activation receipt below. Enabling later must be an explicit operator action; saved completed scores and encrypted grants are retained.
+The operator controls are now deployed, with the pilot durably **Stopped** at revision **2**. Enabling later must be an explicit operator action; saved completed scores and encrypted grants are retained. This status supersedes the historical activation notes below.
+
+### Verified stopped deployment
+
+| Item | Verified state |
+| --- | --- |
+| Runtime source | `f2c546fdd68ecf10f1975bcd6aa425a6554863a4` |
+| Provider version | `500c0ba1-a9c8-4bbe-ad68-e50cc427eace`, deployed 30 October 23:51 UTC / 31 October 00:51 Zagreb |
+| Master configuration | Enabled for operator management; durable gameplay switch **off** |
+| Public health | 200, `enabled:false`, `mode:stopped` |
+| Sign-in while stopped | 503, `pilot_stopped` |
+| Unauthenticated operator status | 401 |
+| Both registered rooms | Available, idle; zero viewer, Studio and OBS sockets or participants |
+| Control activity | Zero connected chats, pending subscription removals, queued announcements or active sessions |
+| Secrets | Six existing bindings retained; separate operator key added from Proton |
+| Studio assets | Served JavaScript/CSS hashes match the verified local build |
+| CI | All eight push/PR checks passed for `f2c546f` |
+
+Deployment used the master-off phase first, then persisted and verified both Room stops before restoring the master configuration. The runtime remained stopped throughout. No Enable request, Twitch upload, landing release, production tag or new paid resource was created.
+
+Studio now has Auto rounds and Baity shortcuts beside Game settings. New channels default announcements on; existing saved preferences remain unchanged. Automatic rounds and moderator commands remain off by default. This runtime also includes the preceding bot-ingress, 15-second catch confirmation, transcript and microphone-recovery repairs. The prepared native Extension copy/spacing ZIP has **not** been uploaded.
+
+The local companyReportViewer integration is on `.dotfiles` branch `feat/baited-operator-console` (`4fdb7711`). Its real **Read status** click verified the stopped state above. It is a loopback-only console, separate from public Studio. Read a fresh status, enter a reason and type `enable` only when another test is wanted; then sign into Studio and connect chat/microphone again. Stop/Enable details are in [OPERATOR-CONTROL.md](./OPERATOR-CONTROL.md).
+
+Sanitized provider, runtime and asset receipts: registered run `baited/2026-10-31/d3c22a37a66e41ef8959089dd63a4821/evidence/`. Console live proof: `baited/2026-10-31/7e657b04237a47fa91a80a3b24e98709/evidence/baited-console-stopped-live.png`.
 
 ## Historical activation receipt
 
@@ -103,7 +127,7 @@ Transcript update evidence: registered run `baited/2026-10-30/094e2872a4754b77ba
 
 For an ordinary test, pause/end the round, disable the microphone, disconnect chat and confirm subscription removal, then sign out and remove the pilot OBS source. Disconnecting does not erase stored scores, sessions or encrypted grants.
 
-For a full pilot stop after the operator update is deployed, use the local companyReportViewer Baited page: **Read status → Stop**, give a reason, type the confirmation and apply. Wait for **Stopped** with zero pending subscriptions and disconnected rooms. The durable stop denies new sessions and gameplay immediately; room shutdown and Twitch deletion retry until complete. An unfinished round is abandoned without awarding a result. Completed scores and encrypted grants remain stored.
+For a full pilot stop, use the local companyReportViewer Baited page: **Read status → Stop**, give a reason, type the confirmation and apply. Wait for **Stopped** with zero pending subscriptions and disconnected rooms. The durable stop denies new sessions and gameplay immediately; room shutdown and Twitch deletion retry until complete. An unfinished round is abandoned without awarding a result. Completed scores and encrypted grants remain stored.
 
 **Enable** reopens admission only after cleanup finishes. It does not restart a round, microphone or Twitch chat connection. Streamers sign in again and reconnect those explicitly. The manual `EDGE_PILOT_ENABLED=false` provider setting remains an emergency master switch, but it also stops cleanup alarms; use the runtime control for normal stops. Removing a public route does not erase storage. Data deletion requires a separate exact retention decision.
 

@@ -1,10 +1,10 @@
 # Baited: first Cloudflare pilot
 
-Prepared on 29 October 2026 and activated under the owner’s authorization on 30 October. **The pilot is stopped at the owner’s request as of 31 October.** The live master flag is disabled and the exact pilot Twitch callback subscriptions were removed; the PC server and tunnel remain stopped. The two approved streamer channels remain `komediruzecki7` and `lakeeko`. The Worker, static assets, SQLite Durable Objects and stored history remain provisioned. See [the latest deployment receipt](./ACTIVE-PILOT.md) for the verified live version and [operator control](./OPERATOR-CONTROL.md) for the reviewed Stop/Enable design. Source code or an open PR is not proof that its new operator API has been deployed.
+Prepared on 29 October 2026 and activated under the owner’s authorization on 30 October. **The pilot is stopped at the owner’s request as of 31 October.** The deployed operator switch is off; the master configuration remains available for explicit operator management. Both rooms are idle with zero sockets, sessions, connected chats, queued announcements or pending subscription removals. The PC server and tunnel remain stopped. The approved streamer channels remain `komediruzecki7` and `lakeeko`. The Worker, static assets, SQLite Durable Objects and stored history remain provisioned. See [the verified deployment receipt](./ACTIVE-PILOT.md) and [operator control](./OPERATOR-CONTROL.md).
 
 ## The smallest useful test
 
-After the owner explicitly enables another test, start with one of the two invited streamers. Sign into Studio, connect chat, enable local Moonshine and start a round. A different Twitch account sees the secret card in the native Extension and sends clues through normal Twitch chat. Studio sees those clues and confirms a detected catch. OBS shows the public result. Run this acceptance sequence before expanding the pilot further.
+After the owner explicitly enables another test, start with one of the two invited streamers. Sign into Studio, connect chat, enable local Moonshine and start a round. A different Twitch account sees the secret card in the native Extension and sends clues through normal Twitch chat. Studio shows those clues and the detected catch for a 15-second review window before automatic confirmation. OBS shows the public result. Run this acceptance sequence before expanding the pilot further.
 
 Use the existing built-in deck only. Card Maker, uploads, custom decks, scanning, R2, D1 and Containers are out of scope. Assets are static; the room and control state live in SQLite Durable Objects.
 
@@ -24,7 +24,7 @@ See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Admission settings fail cl
 | `EDGE_BOT_MESSAGES_PER_30_SECONDS` | `15` | Global shared bot budget, configurable from 1 to 18. Not per channel. |
 | `EDGE_STUDIO_IDLE_MINUTES` | `15` default | Stop Twitch subscriptions after Studio stops refreshing its authenticated session. Supports 5–60 minutes. Explicit reconnection is required afterward. |
 | `EDGE_BOT_OWNER_LOGIN` | `komediruzecki7` | Only this signed-in operator may initiate the Baity account authorization flow. |
-| `EDGE_PILOT_ENABLED` | Live `false`; source prepared `true` | Master admission/configuration gate. The operator switch cannot override false. A persisted operator stop also blocks gameplay when this flag is true. |
+| `EDGE_PILOT_ENABLED` | `true`, with durable operator switch off | Master configuration gate. The operator switch cannot override false. A persisted operator stop blocks gameplay while this flag is true. |
 | `EDGE_OPERATOR_INITIAL_ENABLED` | `false` | Seed a durable stop on first operator rollout. Does not overwrite an existing operator decision. |
 | `limits.cpu_ms` | `1000` | Per-invocation CPU guard, also applicable to the Durable Objects; not a monthly spending cap. |
 
@@ -63,13 +63,13 @@ Broadcaster role protection stops accidental peeking with the broadcaster’s kn
 
 ## Build and review for later updates
 
-### Prepared update: catch confirmation and microphone transcript
+### Deployed runtime: catch confirmation and microphone transcript
 
-The next build confirms a detected Moonshine catch automatically after 15 seconds, using a server-owned deadline that survives a restart. Studio can reject a misheard catch during that window, confirm it sooner, or reverse a confirmed win afterward. The pending announcement expires with the review window. Studio also offers an opt-in transcript on any authenticated hosted origin; it remains bounded and local to the current tab. The native Extension update adjusts result wording and separates streak markers from their numbers.
+The deployed runtime confirms a detected Moonshine catch automatically after 15 seconds, using a server-owned deadline that survives a restart. Studio can reject a misheard catch during that window, confirm it sooner, or reverse a confirmed win afterward. The pending announcement expires with the review window. Studio also offers an opt-in transcript on any authenticated hosted origin; it remains bounded and local to the current tab. The separately prepared native Extension update adjusts result wording and separates streak markers from their numbers.
 
-These changes are prepared locally, not part of the recorded active deployment. A game Worker deployment updates Studio/backend behavior; a separately uploaded Twitch ZIP updates native Extension copy and spacing. Neither happens on a PR push. See [the chat-delivery investigation](./CHAT-DELIVERY-REPAIR-2026-10-30.md) for the incoming-command repair, current evidence and retest procedure. Do not interrupt an active test to apply the update without coordinating it.
+The runtime was deployed while stopped on 31 October; the new native ZIP has not been uploaded. A game Worker deployment updates Studio/backend behavior, while a separately uploaded Twitch ZIP updates native Extension copy and spacing. Neither happens on a PR push. See [the chat-delivery investigation](./CHAT-DELIVERY-REPAIR-2026-10-30.md) for the incoming-command repair and retest procedure. Do not interrupt an active test to apply a later update without coordinating it.
 
-The same prepared update adds [microphone recovery](../app/docs/microphone-recovery.md): bounded checks, visible interruption messages, explicit retry after a lost capture, and current-owner audio lease refresh when background timers slow down. The audio-gap pause and exact session/tab/round ownership checks remain enforced. No microphone code can keep a sleeping PC recording.
+The same deployed update adds [microphone recovery](../app/docs/microphone-recovery.md): bounded checks, visible interruption messages, explicit retry after a lost capture, and current-owner audio lease refresh when background timers slow down. The audio-gap pause and exact session/tab/round ownership checks remain enforced. No microphone code can keep a sleeping PC recording. The next owner test still needs Firefox/Windows hardware acceptance.
 
 1. Review the completed irch Opus staff review and repair confirmation, plus the final regression/CI results. Keep the PR draft if a blocking issue remains. See [REVIEW-DISPOSITION.md](./REVIEW-DISPOSITION.md).
 2. Let the existing PR checks validate the application, Extension, landing, review-host and edge package. The new edge checks also build the selected static pilot assets.
@@ -83,7 +83,7 @@ No workflow deploys this game Worker. A later merge can still trigger the existi
 ## Completed activation and next owner steps
 
 1. Complete: the existing paid Workers account contains the active Worker, its two SQLite Durable Object namespaces and static assets. No R2 bucket, D1 database or Container was needed for this deck-only pilot.
-2. Already complete: the three dedicated keys are stored in Proton and all six secret bindings are present on the Worker. Keep these keys stable; do not regenerate them for an ordinary deployment.
+2. Complete: the original six secret bindings remain on the Worker, with a seventh dedicated operator key added through Proton. Keep these keys stable; do not regenerate them for an ordinary deployment.
 3. The exact Worker custom domain is `pilot-baited.maff.app`. The pilot is currently stopped. Fixture and synthetic staging flags, workers.dev and preview URLs remain disabled. Reopen only on the owner’s next instruction using the latest deployment receipt.
 4. Complete: the OAuth callback `https://pilot-baited.maff.app/auth/twitch/callback` and exact HTTPS/WSS pilot connections were saved in Twitch. The Worker permits the actual Twitch-hosted Extension origin. No wildcard origins were added.
 5. Complete: the edge pilot ZIP is uploaded to Twitch version 0.0.3, returned to Hosted Test, and its MD5 matches `e0c01f07740576980001c31635e5164b`. The version was not submitted for review. Each test streamer still needs to install/activate that version on their own channel and select the panel or video-overlay placement.
@@ -100,8 +100,8 @@ No submission for Twitch review, production tag or public launch is part of this
 | OAuth | Correct account signs in; non-allowlisted channel is denied; wrong/replayed OAuth state fails. |
 | Secret separation | Viewer sees word and clues; broadcaster Extension, Studio and OBS do not see them during the round. |
 | Real clues | A second account’s Twitch chat clue arrives once in Studio. Deleting a clue or timing out its author removes the hint. |
-| Real Moonshine | Speech stays in the browser; spoken target produces a catch for streamer confirmation. Speak across the buzzer, try a sentence longer than ten seconds, then keep Studio hidden for six minutes while playing. |
-| Result | Confirmation updates Studio, viewer and OBS consistently. |
+| Real Moonshine | Recognition runs in the browser; spoken target produces a 15-second catch review. Speak across the buzzer, try a sentence longer than ten seconds, then keep Studio hidden for six minutes while playing. |
+| Result | Automatic/early confirmation, rejection and reversal update Studio, viewer and OBS consistently. |
 | Interruption | Closing/disconnecting the microphone pauses the round; no false escaped win is awarded. Reload Studio mid-round: remaining time is preserved and the mic needs manual re-enabling. Try one short network interruption. |
 | Reconnect | Refresh viewer/OBS and restore the current state; expired credentials cannot retain access. Leave OBS running unattended for at least 30 minutes across credential renewals. |
 | Baity | Enabled announcements arrive without duplicate floods; off means no new queued announcements. |
@@ -118,9 +118,9 @@ This pilot does not expose Card Maker or account deletion UI. Data deletion is a
 
 To end an ordinary test: finish/pause the round, disable the microphone, choose Disconnect chat, confirm subscription removal, sign out and remove the pilot OBS source. Failed Twitch DELETE requests remain in a durable retry queue; the UI must not claim removal before confirmation.
 
-Once the operator update is deployed, use the authenticated Report Viewer Stop control. It persists a global stop, revokes sessions and pending OAuth, closes Room sockets, releases microphone leases, abandons unfinished rounds without awarding them, drops queued bot work and retries Twitch subscription removal. A completed stop has no gameplay alarms; saved history and preferences remain. Enable requires cleanup to finish and does not restart chat, microphone capture or a round. See the exact contract, failure behavior and safe two-phase first installation in [OPERATOR-CONTROL.md](./OPERATOR-CONTROL.md).
+Use the local Report Viewer Stop control. It persists a global stop, revokes sessions and pending OAuth, closes Room sockets, releases microphone leases, abandons unfinished rounds without awarding them, drops queued bot work and retries Twitch subscription removal. A completed stop has no gameplay alarms; saved history and preferences remain. Enable requires cleanup to finish and does not restart chat, microphone capture or a round. See the exact contract, failure behavior and safe two-phase first installation in [OPERATOR-CONTROL.md](./OPERATOR-CONTROL.md).
 
-Before that update is deployed, or for emergency containment, the master flag is still available. `EDGE_PILOT_ENABLED=false` blocks gateway admission but also stops Control cleanup alarms; it alone does not erase namespaces or instantly terminate existing sockets. Remove the exact Twitch subscriptions separately and verify removal. During the new operator rollout, keep the master flag false until Room stop acknowledgements are verified, then let cleanup run with the master true and the durable operator switch still off. Never treat a source flag as live-state proof.
+For emergency containment, the master flag is still available. `EDGE_PILOT_ENABLED=false` blocks gateway admission but also stops Control cleanup alarms; it alone does not erase namespaces or instantly terminate existing sockets. Remove the exact Twitch subscriptions separately and verify removal. The completed operator rollout kept the master flag false until Room stop acknowledgements were verified, then restored the master configuration with the durable operator switch still off. Never treat a source flag as live-state proof.
 
 Delete cloud data/resources only with an exact, approved retention decision. Do not wipe Control state while keeping Room state: connection revisions belong to the same deployment history and must be restored consistently.
 
