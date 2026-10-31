@@ -1,10 +1,10 @@
 # Baited: first Cloudflare pilot
 
-Prepared on 29 October 2026 and activated under the owner’s authorization on 30 October. **The pilot is stopped at the owner’s request as of 31 October.** The deployed operator switch is off; the master configuration remains available for explicit operator management. Both rooms are idle with zero sockets, sessions, connected chats, queued announcements or pending subscription removals. The PC server and tunnel remain stopped. The approved streamer channels remain `komediruzecki7` and `lakeeko`. The Worker, static assets, SQLite Durable Objects and stored history remain provisioned. See [the verified deployment receipt](./ACTIVE-PILOT.md) and [operator control](./OPERATOR-CONTROL.md).
+Prepared on 29 October 2026 and activated under the owner’s authorization on 30 October. **The owner reopened the pilot for checks on 31 October at 04:13 Zagreb.** The operator switch is enabled at revision 3. Both rooms were idle with zero sockets, sessions, connected chats, queued announcements or pending subscription removals at that checkpoint; sign in and reconnect chat/microphone to play. The PC server and tunnel remain stopped. The approved streamer channels remain `komediruzecki7` and `lakeeko`. See [the verified deployment receipt](./ACTIVE-PILOT.md) and [operator control](./OPERATOR-CONTROL.md).
 
 ## The smallest useful test
 
-After the owner explicitly enables another test, start with one of the two invited streamers. Sign into Studio, connect chat, enable local Moonshine and start a round. A different Twitch account sees the secret card in the native Extension and sends clues through normal Twitch chat. Studio shows those clues and the detected catch for a 15-second review window before automatic confirmation. OBS shows the public result. Run this acceptance sequence before expanding the pilot further.
+The owner has enabled the current test. Start with one of the two invited streamers: sign into Studio, connect chat, enable local Moonshine and start a round. A different Twitch account sees the secret card in the native Extension and sends clues through normal Twitch chat. Studio shows those clues and the detected catch for a 15-second review window before automatic confirmation. OBS shows the public result. Run this acceptance sequence before expanding the pilot further.
 
 Use the existing built-in deck only. Card Maker, uploads, custom decks, scanning, R2, D1 and Containers are out of scope. Assets are static; the room and control state live in SQLite Durable Objects.
 
@@ -24,7 +24,7 @@ See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Admission settings fail cl
 | `EDGE_BOT_MESSAGES_PER_30_SECONDS` | `15` | Global shared bot budget, configurable from 1 to 18. Not per channel. |
 | `EDGE_STUDIO_IDLE_MINUTES` | `15` default | Stop Twitch subscriptions after Studio stops refreshing its authenticated session. Supports 5–60 minutes. Explicit reconnection is required afterward. |
 | `EDGE_BOT_OWNER_LOGIN` | `komediruzecki7` | Only this signed-in operator may initiate the Baity account authorization flow. |
-| `EDGE_PILOT_ENABLED` | `true`, with durable operator switch off | Master configuration gate. The operator switch cannot override false. A persisted operator stop blocks gameplay while this flag is true. |
+| `EDGE_PILOT_ENABLED` | `true`, with durable operator switch enabled | Master configuration gate. The operator switch cannot override false. A later persisted operator stop blocks gameplay while this flag is true. |
 | `EDGE_OPERATOR_INITIAL_ENABLED` | `false` | Seed a durable stop on first operator rollout. Does not overwrite an existing operator decision. |
 | `limits.cpu_ms` | `1000` | Per-invocation CPU guard, also applicable to the Durable Objects; not a monthly spending cap. |
 
@@ -84,7 +84,7 @@ No workflow deploys this game Worker. A later merge can still trigger the existi
 
 1. Complete: the existing paid Workers account contains the active Worker, its two SQLite Durable Object namespaces and static assets. No R2 bucket, D1 database or Container was needed for this deck-only pilot.
 2. Complete: the original six secret bindings remain on the Worker, with a seventh dedicated operator key added through Proton. Keep these keys stable; do not regenerate them for an ordinary deployment.
-3. The exact Worker custom domain is `pilot-baited.maff.app`. The pilot is currently stopped. Fixture and synthetic staging flags, workers.dev and preview URLs remain disabled. Reopen only on the owner’s next instruction using the latest deployment receipt.
+3. The exact Worker custom domain is `pilot-baited.maff.app`. The pilot is reopened for the owner's checks. Fixture and synthetic staging flags, workers.dev and preview URLs remain disabled. Use the latest deployment receipt when checking its state.
 4. Complete: the OAuth callback `https://pilot-baited.maff.app/auth/twitch/callback` and exact HTTPS/WSS pilot connections were saved in Twitch. The Worker permits the actual Twitch-hosted Extension origin. No wildcard origins were added.
 5. Complete: the edge pilot ZIP is uploaded to Twitch version 0.0.3, returned to Hosted Test, and its MD5 matches `e0c01f07740576980001c31635e5164b`. The version was not submitted for review. Each test streamer still needs to install/activate that version on their own channel and select the panel or video-overlay placement.
 6. The 31 October shutdown removed the exact pilot callback subscriptions and left other callbacks untouched. After an authorized re-enable, recheck if another environment reconnects. Then visit Studio over HTTPS. Sign in as `komediruzecki7` or `lakeeko`, approve the listed scopes, connect Twitch chat and verify the connection status. Only `komediruzecki7` can initiate the optional Baity authorization flow, using the configured bot account.

@@ -1,5 +1,15 @@
 # Cloudflare pilot status
 
+## Reopened for owner checks, 31 October 2026 at 04:13 Zagreb
+
+The owner requested the updated pilot for testing. The authenticated operator control reopened it at **revision 3**, with `enabled:true`, `status:running` and the unchanged two-channel allowlist (`komediruzecki7`, `lakeeko`). Both rooms were available and idle, with no sockets, active sessions, connected chats, pending removals or queued announcements at the verification checkpoint. Enabling did not start a round or capture audio.
+
+**Studio: [https://pilot-baited.maff.app/studio](https://pilot-baited.maff.app/studio)**. Sign in again, connect chat and enable the microphone. The Auto rounds and Baity shortcuts are beside Game settings; Show transcript is in the Microphone card.
+
+The latest runtime was already deployed, so no redundant upload was needed. Provider version remains `500c0ba1-a9c8-4bbe-ad68-e50cc427eace`, runtime source `f2c546f`. All eight checks also passed for documentation head `5b8104b`. Public health returns 200 with `enabled:true` and `mode:allowlisted-pilot`; Studio returns 200; a signed-out session remains unauthenticated. The repository is private. No Twitch setting, ZIP or production tag changed.
+
+This is the current state; the shutdown receipt below is historical. Sanitized activation proof: registered run `baited/2026-10-31/5515cac10f414f81b4e49383b80a0c46/evidence/reopened.json`.
+
 ## Owner-requested stop, 31 October 2026
 
 The owner ended testing and requested a shutdown. The deployed `EDGE_PILOT_ENABLED` flag was set to `false` without changing the game source or removing credentials. Public `/health` confirmed `enabled: false`. A complete Twitch EventSub inspection found zero subscriptions with this pilot's exact callback; other callbacks were left untouched. The temporary inspection token was revoked.
