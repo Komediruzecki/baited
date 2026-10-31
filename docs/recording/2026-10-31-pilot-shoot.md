@@ -83,6 +83,8 @@ If the installed OBS audio source supports application capture, select the game 
 
 Track checkboxes cannot separate sounds already mixed by the game. Its music, dialogue and effects normally arrive in one output source. Disable music in the game's settings to keep effects and dialogue without that soundtrack. The same limitation applies to a voice call mixed into Desktop Audio; give the call its own source/track only if the routing already supports it.
 
+For lakeeko's PS5 setup, a PC recording of his Twitch playback receives the console's existing mix. Putting that playback on several OBS tracks does not recover separate voice and game audio. For editable voice, record his microphone independently at the source, and check that the game capture does not already include the same voice. A separate local mic recording can help, but removing it later from an existing console mix is not guaranteed. Use the shared take marker to synchronize files.
+
 In **Baited Studio**, select the actual microphone input, not a desktop-monitor or loopback device. OBS track choices do not control what Moonshine hears. Headphones keep game audio out of the physical mic. Leave OBS audio monitoring off unless you have a tested reason to enable it.
 
 Make a 30-second recording: speak, pause, trigger a game sound, then speak over it. In the editor, solo track 2 and then track 3. Track 2 should have only your voice; track 3 should have no mic or unrelated app audio. Check for echo and clipping. If you prefer a voice-only stream, remove game/music from track 1; you can still keep game audio isolated on track 3 for the later edit.
