@@ -547,8 +547,10 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           }
           voiceSession.current.setContext(context);
           const result = voiceSession.current.receive(line);
-          if (!result.consumed) return false;
           setVoicePending(voiceSession.current.snapshot());
+          // Unrecognized speech can clear a stale draft or a split-command
+          // prefix while still passing through ordinary word detection.
+          if (!result.consumed) return false;
           setVoiceMessage(result.uncertain ? 'That command was unclear. Please repeat it or type your guess.'
             : result.confirmSeparately ? 'Check the word, pause, then say “lock in” once more.' : '');
           if (result.prepared) void shareVoiceDraft(result.prepared);
