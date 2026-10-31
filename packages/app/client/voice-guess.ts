@@ -63,6 +63,9 @@ export class VoiceGuessSession {
     let rest = text;
     const addressed = wake.exec(rest);
     if (addressed) rest = rest.slice(addressed[0].length);
+    // The streamer can explicitly call the bait without naming Baity first.
+    // This still requires an enabled, eligible voice session and a final line.
+    const calling = call.test(rest);
     let handled = false;
     let submit: VoiceGuessDraft | undefined;
     let prepared: VoiceGuessDraft | undefined;
@@ -73,7 +76,7 @@ export class VoiceGuessSession {
       this.clear(); handled = true;
     } else if (this.draft && lock.test(rest)) {
       submit = this.take(now) ?? undefined; handled = true;
-    } else if (addressed || this.awaitingWord || this.draft) {
+    } else if (addressed || calling || this.awaitingWord || this.draft) {
       let afterCall = rest.replace(call, '');
       if (!addressed && (
         this.pendingGuessPrefix === 'the' && /^bait(?:\s|$)/.test(rest) ||
@@ -92,15 +95,13 @@ export class VoiceGuessSession {
         // Moonshine can finalize between any words of "the bait is". Continue
         // only these exact prefixes; intermediate pieces do not extend the TTL.
         this.draft = null; this.awaitingWord = true; this.pendingGuessPrefix = afterCall;
-        if (addressed || !this.expiresAt) this.expiresAt = now + VOICE_GUESS_TTL_MS;
+        if (addressed || calling || !this.expiresAt) this.expiresAt = now + VOICE_GUESS_TTL_MS;
         handled = true;
-      } else if (addressed && (!rest || call.test(rest) && !afterCall)) {
+      } else if ((addressed && !rest) || (calling && !afterCall)) {
         this.draft = null; this.awaitingWord = true; this.pendingGuessPrefix = '';
         this.expiresAt = now + VOICE_GUESS_TTL_MS; handled = true;
-      } else if (this.awaitingWord && call.test(rest) && !afterCall) {
-        handled = true;
-      } else if (call.test(rest) || guessIntent.test(afterCall)) {
-        // An addressed command with extra/missing wording is still a command,
+      } else if (calling || guessIntent.test(afterCall)) {
+        // An explicit command with extra/missing wording is still a command,
         // never catch evidence. Ask for a clean repeat without submitting it.
         this.clear(); handled = true; uncertain = true;
       }

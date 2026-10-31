@@ -211,8 +211,14 @@ test('split and conversational voice guesses stay out of scoring while unrelated
   env.workers[0].line(line('bought-lock', 'Locked in'));
   env.workers[0].line(line('short-wake', 'Hey Baity, the bait is ghost'));
   env.workers[0].line(line('short-lock', 'Locked in'));
+  env.workers[0].line(line('call-no-wake', 'I am calling the BAIT', false));
+  assert.equal(voice.snapshot().awaitingWord, false, 'Partial call does not arm a command.');
+  env.workers[0].line(line('call-no-wake', 'I am calling the BAIT'));
+  assert.equal(voice.snapshot().awaitingWord, true);
+  env.workers[0].line(line('call-no-wake-word', 'The bait is banana'));
+  env.workers[0].line(line('call-no-wake-lock', 'Lock in'));
   env.workers[0].line(line('malformed', 'Baity bot, the bait is banana and I saw a ghost'));
-  assert.deepEqual(submitted, ['marshmallow', 'ghost', 'banana', 'marshmallow', 'ghost']);
+  assert.deepEqual(submitted, ['marshmallow', 'ghost', 'banana', 'marshmallow', 'ghost', 'banana']);
   assert.deepEqual(env.sockets[0].sent, [], 'No command word is sent as catch evidence.');
   env.workers[0].line(line('prefix-2', 'Baity bot, the bait is'));
   env.workers[0].line(line('ordinary', 'You will never bait me'));

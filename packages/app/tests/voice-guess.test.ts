@@ -74,12 +74,34 @@ test('bought alias keeps ordinary speech scoring and does not relax confidence o
 test('literal bait remains normal scoring speech outside exact command grammar', () => {
   const voice = session();
   for (const text of [
-    'You will never bait me', 'I am calling the bait, the bait is banana', 'the bait is banana',
+    'You will never bait me', 'the bait is banana',
     'I told Baity bot the bait is banana', 'Baity bot is helpful',
     'Baity bot I saw a ghost', 'I am locking the door',
   ]) assert.equal(voice.receive(final(text), 100).consumed, false, text);
   assert.equal(voice.receive(final('Baity bot, the bait is bait.'), 101).prepared?.word, 'bait');
   assert.equal(voice.receive(final('You will never bait me.'), 102).consumed, false);
+});
+
+test('explicit calling-the-bait intent opens a bounded guess without the wake phrase', () => {
+  for (const prefix of ['I am calling the bait', "I'm calling the bait", 'I call the bait', 'Call the bait']) {
+    const voice = session();
+    assert.equal(voice.receive(final(prefix, { isComplete: false }), 100).consumed, false);
+    assert.equal(voice.snapshot(101).awaitingWord, false, 'Partials do not arm commands.');
+    assert.equal(voice.receive(final(prefix), 200).consumed, true, prefix);
+    assert.equal(voice.snapshot(201).awaitingWord, true, prefix);
+    assert.equal(voice.receive(final('The bait is banana'), 300).prepared?.word, 'banana', prefix);
+    assert.equal(voice.receive(final('Lock in'), 400).submit?.word, 'banana', prefix);
+    const full = voice.receive(final(`${prefix}, the bait is ghost`), 500);
+    assert.equal(full.prepared?.word, 'ghost', prefix);
+    assert.equal(full.submit, undefined, prefix);
+  }
+  const expired = session();
+  expired.receive(final('I am calling the bait'), 100);
+  assert.equal(expired.receive(final('The bait is ghost'), 100 + VOICE_GUESS_TTL_MS).consumed, false);
+  assert.equal(new VoiceGuessSession().receive(final('I am calling the bait'), 100).consumed, false);
+  for (const text of ['Yesterday I was calling the bait', 'You are calling the bait', 'I am calling my friend', 'You will never bait me']) {
+    assert.equal(session().receive(final(text), 100).consumed, false, text);
+  }
 });
 
 test('finite conversational lead-ins and trailing I think preserve separate lock-in', () => {
