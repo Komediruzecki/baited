@@ -57,6 +57,7 @@ import { SoundControls } from './SoundControls';
 import { microphoneReady, MicrophoneLease, microphoneLeaseMessage } from './safety';
 import { MicrophoneFeedback } from './microphone-feedback';
 import { StudioQuickControls, type QuickSetting } from './StudioQuickControls';
+import { StudioLogo } from './StudioLogo';
 import { useSmoothScroll } from './smooth-scroll';
 import 'lenis/dist/lenis.css';
 import './style.css';
@@ -463,9 +464,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   return (
     <div className="app-shell studio-app studio-shell">
       <aside className="sidebar">
-        <a href="https://baited.maff.app" className="brand" aria-label="Baited website">
-          {brand}
-        </a>
+        <StudioLogo />
         <nav aria-label="Studio sections">
           {[
             ['studio', 'Studio', LayoutDashboard],

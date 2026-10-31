@@ -58,6 +58,25 @@ body:has(.viewer-room) {
 .signin-brand .product-brand > .baited-glyph {
   width: 74px;
 }
+/* Same pixel fill and column wave as the landing navigation. The hit area stays still. */
+.studio-logo .product-brand { position: relative; overflow: hidden; }
+.studio-logo .baited-glyph { position: relative; z-index: 1; color: #7721e5; }
+.studio-logo.has-ink .baited-glyph { visibility: hidden; }
+.studio-logo__ink { position: absolute; z-index: 1; top: 50%; left: 50%; translate: -50% -50%; pointer-events: none; }
+.studio-logo__pixels { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); }
+.studio-logo__pixels i { background: #dccdf6; box-shadow: 0 0 0 1px #dccdf6; opacity: 0; transition: opacity 100ms ease-in var(--d, 0s); }
+.studio-logo:focus-visible .studio-logo__pixels i { opacity: 1; transition: opacity 0s var(--d, 0s); }
+@media (hover: hover) {
+  .studio-logo:hover .studio-logo__pixels i { opacity: 1; transition: opacity 0s var(--d, 0s); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-logo .studio-logo__pixels i { transition: none; }
+}
+@media (forced-colors: active) {
+  .studio-logo__pixels { display: none; }
+  .studio-logo .baited-glyph { color: CanvasText; }
+  .studio-logo .baited-glyph::after { font-size: 15px; }
+}
 .studio-shell .sidebar nav {
   justify-self: start;
   align-items: center;
