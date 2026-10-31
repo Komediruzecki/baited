@@ -22,17 +22,17 @@ test('new channel announcements default on while stored opt-out and legacy missi
 
 test('shortcuts expose the actual saved state with distinct switch names', () => {
   const html = render({ auto: false, chatBot: true });
-  assert.match(html, /role="switch" aria-label="Automatic rounds" aria-checked="false"/);
+  assert.match(html, /role="switch" aria-label="Auto rounds" aria-checked="false"/);
   assert.match(html, /role="switch" aria-label="Baity announcements" aria-checked="true"/);
   assert.match(html, />Auto rounds</);
   assert.match(html, />Baity</);
-  assert.doesNotMatch(html, /Needs setup/);
+  assert.doesNotMatch(html, /needs setup/i);
 });
 
 test('enabled announcements distinguish an unavailable bot and disabled controls', () => {
   const html = render({ chatBot: true }, { mode: 'unauthorized', channelAllowed: false }, true);
-  assert.match(html, /Needs setup/);
+  assert.match(html, /Baity needs setup. Finish connecting it in Stream setup/);
   assert.match(html, /Finish connecting Baity in Stream setup/);
   assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
-  assert.doesNotMatch(render({ chatBot: false }, { mode: 'unauthorized' }), /Needs setup/);
+  assert.doesNotMatch(render({ chatBot: false }, { mode: 'unauthorized' }), /needs setup/i);
 });

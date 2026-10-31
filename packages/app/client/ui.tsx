@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Check, Copy, Eye, MessageSquare, Mic, ShieldCheck, X } from './icons';
-import type { Phase } from '../shared/types';
+import type { Phase, SpeechProvider } from '../shared/types';
 import { authorizeEdgeBot, canAuthorizeEdgeBot, isEdgeRuntime } from './api';
 
 export const productBrand = (
@@ -102,12 +102,18 @@ export function CopyButton({ value, label = 'Copy link' }: { value: string; labe
   return (
     <button
       className="copy-button"
+      data-state={copied ? 'copied' : error ? 'error' : undefined}
       aria-label={label}
       title={error ? 'Select the link and copy it manually.' : label}
       onClick={() => {
+        if (!navigator.clipboard?.writeText) {
+          setError(true);
+          return;
+        }
         void navigator.clipboard
           .writeText(value)
           .then(() => {
+            setError(false);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           })
@@ -164,7 +170,7 @@ export function Modal({
     </dialog>
   );
 }
-export function HowTo() {
+export function HowTo({ speechProvider }: { speechProvider: SpeechProvider }) {
   return (
     <div className="how-to">
       <p className="rules-goal">Make the streamer say the secret word.</p>
@@ -184,7 +190,9 @@ export function HowTo() {
         [
           '03',
           'You say it. Chat wins.',
-          'Enable your mic. Local speech proposes a catch when it hears the whole word; confirm it to give chat the win. Outlast the clock to escape.',
+          speechProvider === 'moonshine'
+            ? 'Enable your microphone. When speech recognition hears the whole word, the clock stops. Reject a misheard catch within 15 seconds, or chat wins. Outlast the clock to escape.'
+            : 'Enable your microphone. Chat wins when speech recognition hears the whole word. Outlast the clock to escape.',
           Mic,
         ],
       ].map(([n, title, description, Icon]) => {
@@ -224,7 +232,7 @@ export function HowTo() {
       </details>
       <div className="notice">
         <ShieldCheck size={20} />
-        <p>Play along: no peeking, no spoilers. Wrong detection? Reverse the win in your studio.</p>
+        <p>Play along: no peeking, no spoilers. Wrong detection? Reverse the win in Studio before the next round starts.</p>
       </div>
     </div>
   );

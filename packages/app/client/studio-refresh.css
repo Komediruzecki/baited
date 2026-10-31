@@ -88,10 +88,12 @@
 .studio-shell .round-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; width: auto; flex: 1; padding: 8px 10px; margin: 0; border: 1px solid var(--b-edge); border-radius: var(--b-r-control); color: var(--b-muted); background: var(--b-face-2); font: 500 12px/1.4 var(--b-ui); }
 .studio-shell .round-secondary:hover { background: #352e40; color: var(--b-paper); border-color: var(--b-lilac); }
 .studio-shell .start-reason { margin: 10px 0 0; color: var(--b-muted); font: 400 12px/1.5 var(--b-ui); }
-.studio-shell .round-readiness { grid-column: 2; grid-row: 4; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 24px; padding: 0; color: var(--b-muted); font: 400 11px/1.5 var(--b-ui); }
-.studio-shell .round-readiness > span { display: inline-flex; align-items: center; gap: 6px; }
+.studio-shell .round-readiness { grid-column: 2; grid-row: 4; display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; margin: 0 0 24px; color: var(--b-muted); font: 500 13px/1.4 var(--b-ui); }
+.studio-shell .round-readiness__status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; min-width: 0; }
+.studio-shell .round-readiness__status > span { display: inline-flex; align-items: center; gap: 6px; }
+.studio-shell .round-readiness__status svg { flex: none; }
 .studio-shell .round-readiness .ready-check { color: var(--b-lilac); }
-.studio-shell .round-readiness button { min-height: 44px; padding: 6px 8px; background: transparent; border: 1px solid var(--b-edge); border-radius: 4px; color: var(--b-lilac); font: 600 12px/1.4 var(--b-ui); }
+.studio-shell .round-readiness__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 8px; }
 .studio-shell .round-progress { grid-column: 1 / -1; position: relative; inset: auto; height: 4px; margin: 0 -24px; background: #3b3447; }
 .studio-shell .round-progress > div { height: 100%; background: var(--b-violet); max-width: 100%; transition: width 150ms linear; }
 .studio-shell .is-urgent .round-progress > div { background: var(--b-urgent); }
@@ -160,7 +162,7 @@
 .studio-shell .link-field { display: flex; align-items: stretch; min-width: 0; height: auto; border: 1px solid var(--b-edge); border-radius: 5px; overflow: visible; background: var(--b-night); }
 .studio-shell .link-field input { width: 0; flex: 1; min-width: 0; padding: 12px; border: 0; border-radius: 5px 0 0 5px; color: var(--b-copy); background: transparent; font: 400 12px/1.5 var(--b-ui); }
 .studio-shell .copy-button { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-height: 44px; min-width: 44px; padding: 10px 12px; border: 0; border-left: 1px solid var(--b-edge); border-radius: 0 5px 5px 0; background: var(--b-face-2); color: var(--b-copy); font: 600 12px/1.4 var(--b-ui); }
-.studio-shell .share-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; margin: 12px 0 0; color: var(--b-muted); font: 400 11px/1.5 var(--b-ui); }
+.studio-shell .share-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; margin: 12px 0 0; color: var(--b-muted); font: 400 12px/1.5 var(--b-ui); }
 .studio-shell .share-footer > span { display: inline-flex; align-items: center; gap: 5px; }
 .studio-shell :is(.share-footer a, .inline-link) { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; color: var(--b-lilac); font: 500 12px/1.4 var(--b-ui); }
 .studio-shell .result-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 58px; padding: 10px 0; border-bottom: 1px solid var(--b-line); }
@@ -318,7 +320,9 @@
   .studio-shell .timer { font-size: 48px; margin-bottom: 18px; }
   .studio-shell .round-actions > .button { width: 100%; }
   .studio-shell .round-secondary { min-height: 44px; font-size: 12px; }
-  .studio-shell .round-readiness { grid-column: 1 / -1; grid-row: 4; margin-bottom: 16px; font-size: 10px; }
+  .studio-shell .round-readiness { grid-column: 1 / -1; grid-row: 4; margin-bottom: 20px; font-size: 12px; }
+  .studio-shell .round-readiness__actions { flex: 1 1 100%; }
+  .studio-shell .round-readiness__actions .button { flex: 1 1 auto; }
   .studio-shell .round-progress { margin-inline: -16px; }
   .studio-shell .mission-footer { padding-block: 12px; font-size: 10px; }
   .studio-shell .round-totals { gap: 5px; }

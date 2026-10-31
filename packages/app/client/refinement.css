@@ -91,23 +91,6 @@
 .mission-center h2 { font-size: clamp(23px, 2.2vw, 30px); }
 .mission-center > p { font-size: 13px; line-height: 1.6; }
 .secret-capsule { border: 0; background: transparent; font-size: 11px; padding: 0; margin-top: 12px; color: #cdbbdd; }
-.round-readiness {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  padding: 12px 21px;
-  font-size: 12px;
-  line-height: 1.45;
-  background: #17111e;
-  border-top: 1px solid #473454;
-  color: #d5bfdc;
-}
-.round-readiness > span, .round-readiness button { display: inline-flex; align-items: center; gap: 6px; }
-.round-readiness > svg, .round-readiness span > svg { flex: none; }
-.round-readiness .ready-check { color: #91e2c4; }
-.round-readiness button { background: transparent; color: #e2c5ff; border: 0; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; min-height: 32px; font: inherit; }
-.round-readiness button:disabled { opacity: .6; cursor: default; }
 .sound-toggle {
   display: inline-flex;
   align-items: center;
@@ -177,8 +160,6 @@
   .round-console { flex-wrap: wrap; padding: 16px; gap: 18px; }
   .round-actions { flex-wrap: wrap; }
   .round-actions > .button { min-height: 48px; font-size: 13px; }
-  .round-readiness { padding: 12px 16px; gap: 8px 14px; }
-  .round-readiness button { min-height: 44px; }
   .sound-toggle { min-height: 44px; padding-inline: 8px; font-size: 11px; }
   .topbar-right { gap: 8px; }
   .topbar-right .connection-pill { font-size: 9px; }

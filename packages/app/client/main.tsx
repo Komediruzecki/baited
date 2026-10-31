@@ -803,18 +803,17 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     </div>
                   </div>
                   {!demo && (
-                    <div className="round-readiness" role="status">
-                      {
-                        <>
-                          <span className={connected ? 'ready-check' : ''}>
-                            {connected ? <Check size={15} /> : <Wifi size={15} />} Chat{' '}
-                            {connected ? 'connected' : 'disconnected'}
-                          </span>
-                          <span className={consent ? 'ready-check' : ''}>
-                            {consent ? <Mic size={15} /> : <MicOff size={15} />}
-                            {modelLoading
-                              ? micStatus
-                              : settling
+                    <div className="round-readiness">
+                      <div className="round-readiness__status" role="status">
+                        <span className={connected ? 'ready-check' : ''}>
+                          {connected ? <Check size={15} /> : <Wifi size={15} />} Chat{' '}
+                          {connected ? 'connected' : 'disconnected'}
+                        </span>
+                        <span className={consent ? 'ready-check' : ''}>
+                          {consent ? <Mic size={15} /> : <MicOff size={15} />}
+                          {modelLoading
+                            ? micStatus
+                            : settling
                               ? 'Finishing speech check'
                               : micStatus === 'listening'
                                 ? 'Speech live'
@@ -823,20 +822,24 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                   : !studio.speechReady
                                     ? 'Speech setup needed'
                                     : 'Microphone off'}
-                          </span>
-                          {!connected && <button type="button" disabled={offline || busy} onClick={() => void action('connect')}>Reconnect chat</button>}
+                        </span>
+                      </div>
+                      {(!connected || (!consent && !modelLoading)) && (
+                        <div className="round-readiness__actions">
+                          {!connected && <Button type="button" className="secondary" disabled={offline || busy} onClick={() => void action('connect')}>Reconnect chat</Button>}
                           {!consent && !modelLoading && (
-                            <button
+                            <Button
                               type="button"
+                              className="secondary"
                               disabled={offline || settling}
                               onClick={() => void enableMic()}
                             >
-                              <Mic size={14} />
+                              <Mic size={16} />
                               {studio.speechReady ? 'Enable microphone' : 'Set up speech'}
-                            </button>
+                            </Button>
                           )}
-                        </>
-                      }
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="round-progress">
@@ -1111,7 +1114,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               onSave={save}
             />
           ) : modal === 'how' ? (
-            <HowTo />
+            <HowTo speechProvider={studio.speechProvider} />
           ) : modal === 'guess' ? (
             <GuessForm
               key={g.round?.id}
