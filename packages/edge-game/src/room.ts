@@ -1,4 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
+import { MOD_COMMANDS, parseCommand } from '../../app/server/chat-copy.js';
+import { isBotReplyCommand, type BotReplyCommand } from './chat-commands.js';
 import { Game, defaults, type GameEvent } from '@baited/game-core';
 import { authenticateRequest, identityIsCurrent, type AuthIdentity, type AuthEnv } from './auth.js';
 import { serveApprovedArt, type ApprovedArt } from './art.js';
@@ -13,7 +15,7 @@ import { voiceDraftCurrent, voiceDraftWord, VOICE_DRAFT_TTL, type VoiceDraftStat
 
 export interface Env extends AuthEnv, ControlEnv { ROOMS: DurableObjectNamespace; ART: R2Bucket; CONTROL?: DurableObjectNamespace; ASSETS?: Fetcher }
 interface Speech { leaseId: string; roundId: string; epoch: number; samples: number; firstAudioAt: number; lastAudioAt: number; lastSequence: number }
-type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:'help'|'score'|'top'|'who';userId:string}|({type:'voice-guess-draft';word:string}&VoiceDraftRef);
+type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:BotReplyCommand;userId:string}|({type:'voice-guess-draft';word:string}&VoiceDraftRef);
 interface Attachment { identity: AuthIdentity; lastInputAt: number; lastAuthRefreshAt?:number; sentViewRevision?:number; socketId?: string; microphoneLeases?:string[]; speech?: Speech; inputs?: {at:number;n:number}; audioInputs?:{at:number;tokens:number} }
 interface Lease { id:string; sessionId:string; socketId:string; expiresAt:number; lastAudioAt?:number; roundId?:string; epoch?:number }
 interface PilotState { operator?:{enabled:boolean;revision:number}; lease:Lease|null; microphoneStopRevision?:number; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; connectionRevision?:number; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>}; voiceDraft?:VoiceDraftState; voiceDraftLease?:string }
@@ -790,9 +792,9 @@ export class ChannelRoom extends DurableObject<Env> {
     if(!this.game) return json({ok:true,ignored:true});
     if(event.kind==='message' && this.game.data.settings.recordingMode && this.game.data.recordingTake &&
       event.at <= (this.game.data.recordingTake.startedAt??0)) return json({ok:true,ignored:true,reason:'previous_take'});
-    const command=(event.text??'').trim().toLowerCase();
-    const botCommand=event.kind==='message' && /^!bait (help|score|top|who)$/.test(command);
-    const modCommand=event.kind==='message' && /^!bait (start|pause|resume)$/.test(command) && this.game.data.settings.modCommands &&
+    const command=event.kind==='message' ? parseCommand(event.text??'') : null;
+    const botCommand=isBotReplyCommand(command);
+    const modCommand=command!==null && MOD_COMMANDS.has(command) && this.game.data.settings.modCommands &&
       (event.userId===this.channel || (event.badges??[]).some(b=>['moderator','broadcaster'].includes(b)));
     // Ordinary chat outside a running round has no gameplay effect and needs
     // neither a room checkpoint nor a receipt. Control deduplicates delivery.
@@ -811,12 +813,12 @@ export class ChannelRoom extends DurableObject<Env> {
       }
       const badges=event.badges??[];
       const isMod=event.userId===this.channel || badges.some(b=>['moderator','broadcaster'].includes(b));
-      if(candidate.data.settings.modCommands && isMod && /^!bait (start|pause|resume)$/.test(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
+      if(candidate.data.settings.modCommands && isMod && command!==null && MOD_COMMANDS.has(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
         try {
-          if(command==='!bait pause') candidate.pause();
-          else if(pilot.chatConnected && this.leaseValid()) {if(command==='!bait start')candidate.begin();else candidate.resume();}
+          if(command==='pause') candidate.pause();
+          else if(pilot.chatConnected && this.leaseValid()) {if(command==='start')candidate.begin();else candidate.resume();}
         } catch { /* A stale moderator command cannot override the current phase. */ }
-      } else if(/^!bait (help|score|top|who)$/.test(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
+      } else if(isBotReplyCommand(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
         // Cooldowns belong before the durable outbox. A user cannot fill the
         // shared bot queue with replies that will be discarded later anyway.
         const replies=pilot.botReplies??{channelAt:0,users:{}};
@@ -824,7 +826,7 @@ export class ChannelRoom extends DurableObject<Env> {
         if(candidate.data.settings.chatBot && this.now-replies.channelAt>=20_000 &&
           (!replies.users[event.userId] || this.now-replies.users[event.userId]!>=30_000)) {
           replies.channelAt=this.now;replies.users[event.userId]=this.now;pilot.botReplies=replies;
-          this.events.get(candidate)!.push({event:{type:'chat-command',command:command.slice(6) as 'help'|'score'|'top'|'who',userId:event.userId},safeView:candidate.view('overlay')});
+          this.events.get(candidate)!.push({event:{type:'chat-command',command,userId:event.userId},safeView:candidate.view('overlay')});
         }
       } else candidate.chat(event.messageId??event.eventId,event.userId,event.name??event.userId,event.text??'',event.at);
     } else if(event.kind==='delete') candidate.dropMessage(event.messageId??'',event.userId);

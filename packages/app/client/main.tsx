@@ -95,6 +95,7 @@ import './solo-target.css';
 import { TranscriptPreview } from './TranscriptPreview';
 import { VoiceGuessControl } from './VoiceGuessControl';
 import { VoiceGuessSession, type VoiceGuessContext, type VoiceGuessDraft, type VoiceGuessSnapshot } from './voice-guess';
+import { readVoiceGuessPreference, saveVoiceGuessPreference } from './voice-guess-preference';
 import {
   canPreviewTranscript,
   TranscriptPreviewBuffer,
@@ -197,12 +198,13 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [micIssue, setMicIssue] = useState(''),
     [micRecovering, setMicRecovering] = useState(false);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const voicePreferenceOwner = session.user ? `${session.user.mode}:${session.user.name}` : '';
+  const [voiceEnabled, setVoiceEnabled] = useState(() => readVoiceGuessPreference(voicePreferenceOwner));
   const [voicePending, setVoicePending] = useState<VoiceGuessSnapshot>({ draft: null, awaitingWord: false, expiresAt: 0 });
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceMessage, setVoiceMessage] = useState('');
   const [voiceAnnouncement, setVoiceAnnouncement] = useState('');
-  const voiceEnabledRef = useRef(false);
+  const voiceEnabledRef = useRef(voiceEnabled);
   const voiceOffline = useRef(false);
   const voiceRecovering = useRef(false);
   const voiceInFlight = useRef(false);
@@ -1133,7 +1135,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           voiceEnabledRef.current = enabled;
                           setVoiceEnabled(enabled);
                           voiceSession.current.setContext(null);
-                          clearVoice();
+                          const saved = saveVoiceGuessPreference(voicePreferenceOwner, enabled);
+                          clearVoice(saved ? '' : 'This browser could not remember the setting. Check Voice guesses after reloading.');
                         }}
                         onLock={() => {
                           const draft = voiceSession.current.take();

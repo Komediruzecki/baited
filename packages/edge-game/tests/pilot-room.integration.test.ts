@@ -97,7 +97,7 @@ before(async () => {
               if(this.heldRole===body.role) {this.authorizeWaiting++;await this.authorizeGate;this.authorizeWaiting--;}
               return Response.json({allowed: this.allowed && body.channelId === '123', login: 'komediruzecki7'}, {status:this.admissionStatus});
             }
-            if (path === '/internal/room-event') { this.deliveries++; const body=await request.json(); this.deliveredEvents.push({type:body.event?.type,status:this.deliveryStatus}); return Response.json({ok: this.deliveryStatus === 200}, {status:this.deliveryStatus}); }
+            if (path === '/internal/room-event') { this.deliveries++; const body=await request.json(); this.deliveredEvents.push({type:body.event?.type,status:this.deliveryStatus,...(body.event?.type==='chat-command'?{command:body.event.command}:{})}); return Response.json({ok: this.deliveryStatus === 200}, {status:this.deliveryStatus}); }
             return new Response('No external provider in this fixture.', {status: 503});
           }
         }
@@ -1524,6 +1524,33 @@ test('anonymous Extension viewers cannot fill pilot socket seats', {timeout:15_0
     await connectedStudio(mf,'viewer');
     assert.equal((await stub.inspectFixture()).sockets.filter(s=>s.role==='viewer'&&s.readyState===1).length,1);
   } finally {await mf.dispose();}
+});
+
+test('pilot canonicalizes public bot commands and aliases without losing replies while idle', {timeout:20_000}, async () => {
+  const cases = [
+    ['!bait help', 'help'], ['!bait score', 'score'], ['!bait top', 'top'], ['!bait who', 'who'],
+    ['!bait streak', 'streak'], ['!bait rules', 'help'], ['!bait baity', 'who'], ['  !BAIT  \t SCORE  ', 'score'],
+  ] as const;
+  for (const [text, command] of cases) {
+    const {mf,stub}=await runtime();
+    try {
+      const now=Date.now()+30_000;
+      await stub.freezeAtFixture(now);
+      const initial=await state(mf);
+      await send(mf,{type:'settings',settings:{...initial.room.settings,chatBot:true}},initial.revision);
+      const response=await stub.chatFixture({eventId:randomUUID(),channelId:'123',at:now,kind:'message',
+        messageId:randomUUID(),userId:'555',name:'viewer',text});
+      assert.equal(response.status,200,text);
+      assert.equal(response.body.ignored,undefined,text);
+      await stub.flushOutboxAtFixture(now);
+      const namespace=await mf.getDurableObjectNamespace('CONTROL');
+      const control=namespace.get(namespace.idFromName('control-v1')) as unknown as {
+        deliveredEventsFixture():Promise<{type:string;status:number;command?:string}[]>;
+      };
+      assert.equal((await control.deliveredEventsFixture()).find(event=>event.type==='chat-command')?.command,command,text);
+      assert.equal((await stub.inspectFixture()).phase,'idle','A public command cannot start gameplay.');
+    } finally {await mf.dispose();}
+  }
 });
 
 test('chat-command cooldowns preserve outbox capacity for a round event', {timeout:15_000}, async () => {

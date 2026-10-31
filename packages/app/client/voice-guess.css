@@ -36,3 +36,4 @@
 .voice-guess__actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .voice-guess__actions .button { flex: 1; min-width: 5rem; }
 .voice-guess__status { font-size: .8rem; color: var(--muted, #c3b8cf); }
+.voice-guess__off { margin: .35rem 0 0; font-size: .8rem; line-height: 1.5; color: var(--muted, #c3b8cf); }

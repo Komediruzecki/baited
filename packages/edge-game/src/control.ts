@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
-import { eventAnnouncement, helpText, scoreText, topText, whoText } from '../../app/server/chat-copy.js';
+import { eventAnnouncement } from '../../app/server/chat-copy.js';
+import { botReplyText } from './chat-commands.js';
 import type { GameView } from '../../app/shared/types.js';
 import { allowedLogins, cookieValue, decryptValue, encryptValue, maximumChannels, oauthCookie, OAUTH_COOKIE, publicOrigin,
   randomToken, sameOrigin, sameText, secretBytes, sessionCookie, SESSION_COOKIE, sha256, signPilotCapability, studioIdleMilliseconds, verifyWebhook } from './control-auth.js';
@@ -913,7 +914,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       announcement={key:'voice-guess-draft',ttl:event.expiresAt-Date.now(),text:voiceDraftText(channelSettings.login,word)};
     }
     else if (input.event.type === 'chat-command') {
-      const commands = { help: helpText, score: scoreText, top: topText, who: whoText };
+      const commands = botReplyText;
       const command = input.event.command;
       const channelKey = `channel:${input.channelId}`; const userKey = `user:${input.channelId}:${input.event.userId}`;
       if (Object.hasOwn(commands, command) && ID.test(input.event.userId) && !this.data.commandCooldowns[channelKey] && !this.data.commandCooldowns[userKey] &&

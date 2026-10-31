@@ -14,11 +14,12 @@ export function VoiceGuessControl({ enabled, ready, pending, seconds, busy, mess
       <span>Voice guesses</span>
       <span className="desk-pixel-switch" aria-hidden="true"><span /></span>
     </button>
+    {!enabled && <p className="voice-guess__off">Voice guesses are off. Type your guess, or switch this on before saying it. Saying the word can still give chat a win.</p>}
     {enabled && <div className="voice-guess__body">
       <p>Say <q>Baity bot, the bait is banana.</q> Pause, check the word, then say <q>lock in.</q></p>
       <small>With Baity connected and announcements on, your draft can appear in chat. Voice guesses still work without the bot. Your stream hears your voice.</small>
       {!ready && !busy && <p className="voice-guess__status" role="status">Ready during a live round with your microphone on and Call the bait available.</p>}
-      {pending.awaitingWord && <p className="voice-guess__status" role="status">Listening for <q>the bait is…</q> · {seconds}s</p>}
+      {pending.awaitingWord && <p className="voice-guess__status" role="status">Listening for your guess · {seconds}s</p>}
       {pending.draft && <div className="voice-guess__draft">
         <div className="voice-guess__word" role="status"><span>Your guess</span><strong>{pending.draft.word}</strong></div>
         <small>Say <q>lock in</q> within {seconds}s. To change it, say <q>Baity bot, the bait is…</q> again.</small>
@@ -30,7 +31,7 @@ export function VoiceGuessControl({ enabled, ready, pending, seconds, busy, mess
         <small>Cancel stops lock-in, not a chat post already requested.</small>
       </div>}
       {busy && <p className="voice-guess__status" role="status">Checking your guess…</p>}
-      {message && <p className="voice-guess__status" role="status">{message}</p>}
     </div>}
+    {message && <p className="voice-guess__status" role="status">{message}</p>}
   </section>;
 }

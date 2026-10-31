@@ -7,6 +7,7 @@ import test from 'node:test';
 import { build } from 'esbuild';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { Game, defaults } from '@baited/game-core';
+import { helpText, scoreText, streakText, topText, whoText } from '../../app/server/chat-copy.js';
 
 const ORIGIN = 'https://pilot.test';
 const WEBHOOK_SECRET = 'public-fixture-webhook-secret-not-a-credential';
@@ -356,6 +357,28 @@ test('bot authorization is owner/CSRF gated and global send reservations are dur
     await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: 'disabled', safeView: { ...safeView, settings: { ...safeView.settings, chatBot: false } }, event: { type: 'bot-settings' } }));
     assert.equal((await f.request('/__fixture/state').then((r) => r.json()) as any).queue.length, 0);
   } finally { await f.mf.dispose(); }
+});
+
+test('pilot queues a reply for every advertised public bot command', {timeout:20_000}, async () => {
+  for (const [command, text] of Object.entries({help:helpText,score:scoreText,streak:streakText,top:topText,who:whoText})) {
+    const f=await fixture();
+    try {
+      const {cookie}=await login(f);
+      const bootstrap=await f.request('/api/edge/session',{headers:{cookie}}).then(r=>r.json()) as any;
+      const botStart=await f.request('/api/bot/authorize',jsonPost({},{cookie,'x-csrf-token':bootstrap.csrf}));
+      const botUrl=new URL((await botStart.json() as any).url);
+      assert.equal((await f.request(`/auth/twitch/callback?state=${botUrl.searchParams.get('state')}&code=bot`,{headers:{cookie:cookies(botStart)}})).status,302);
+      const game=new Game({id:'fixture-room',owner:'123',channel:'komediruzecki7',mode:'demo',overlayKey:'unused',
+        settings:{...defaults,chatBot:true},history:[],priorWins:0,priorPlayed:0,priorBest:0,leaders:{}});
+      const safeView=game.view('overlay');
+      const response=await f.request('/__fixture/event',jsonPost({channelId:'123',eventId:`reply-${command}`,safeView,
+        event:{type:'chat-command',command,userId:'555'}}));
+      assert.equal(response.status,200,command);
+      const state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+      assert.equal(state.queue.find((q:any)=>q.key==='command')?.text,text(safeView),command);
+      assert.equal(Object.keys(state.commandCooldowns).length,2,'Channel and user cooldowns still apply.');
+    } finally {await f.mf.dispose();}
+  }
 });
 
 test('credentials, sessions, webhook retry and replay receipts survive control eviction', async () => {

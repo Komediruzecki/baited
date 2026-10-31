@@ -176,6 +176,52 @@ test('Moonshine commands never reach scoring and do not leave gaps in final sequ
   assert.deepEqual(errors, []);
 });
 
+test('split and conversational voice guesses stay out of scoring while unrelated speech is sent', async (t) => {
+  const env = browser(t), voice = new VoiceGuessSession(), submitted: string[] = [];
+  voice.setContext({ roundId: 'round', epoch: 1, leaseId: 'capture', takeId: '' });
+  const { microphone, errors } = env.create('moonshine', undefined, (line) => {
+    const result = voice.receive(line);
+    if (result.submit) submitted.push(result.submit.word);
+    return result.consumed;
+  });
+  const enabling = microphone.enable(); env.requests[0].resolve(env.stream().value);
+  assert.equal(await enabling, true);
+  microphone.connect('round', 1, 'csrf', 'capture');
+  await env.sockets[0].status('listening');
+  const line = (id: string, text: string, isComplete = true): MoonshineLine => ({
+    id, text, isComplete, startTime: 1, duration: 1,
+    words: text.split(/\s+/).map(text => ({ text, start: 1.2, end: 1.8, confidence: .95 })),
+    isUpdated: true, isNew: true, hasTextChanged: true, haveSpeakersChanged: false,
+    lastTranscriptionLatencyMs: 0, speakerSpans: [],
+  });
+  const prefix = line('prefix', 'Okay, Baity bot, the bait is');
+  env.workers[0].line(prefix);
+  env.workers[0].line(prefix);
+  env.workers[0].line(line('word', 'Marshmallow', false));
+  env.workers[0].line(line('word', 'Marshmallow'));
+  env.workers[0].line(line('lock', 'Locked in'));
+  env.workers[0].line(line('natural', 'Hey Baity bot, the bait is ghost, I think'));
+  env.workers[0].line(line('lock-2', 'Lock in'));
+  env.workers[0].line(line('earlier-prefix', 'Baity bot the'));
+  env.workers[0].line(line('earlier-middle', 'bait'));
+  env.workers[0].line(line('earlier-word', 'is banana'));
+  env.workers[0].line(line('lock-3', 'Lock in'));
+  env.workers[0].line(line('malformed', 'Baity bot, the bait is banana and I saw a ghost'));
+  assert.deepEqual(submitted, ['marshmallow', 'ghost', 'banana']);
+  assert.deepEqual(env.sockets[0].sent, [], 'No command word is sent as catch evidence.');
+  env.workers[0].line(line('prefix-2', 'Baity bot, the bait is'));
+  env.workers[0].line(line('ordinary', 'You will never bait me'));
+  env.workers[0].line(line('bare-after-ordinary', 'Ghost'));
+  assert.deepEqual(env.sockets[0].sent.map((entry) => {
+    const final = JSON.parse(entry);
+    return { sequence: final.sequence, text: final.line.text };
+  }), [
+    { sequence: 1, text: 'You will never bait me' },
+    { sequence: 2, text: 'Ghost' },
+  ]);
+  assert.deepEqual(errors, []);
+});
+
 test('enable unlocks audio in the click and is singleflight while Moonshine is loading', async (t) => {
   const env = browser(t, { holdModel: true });
   const { microphone } = env.create('moonshine');
