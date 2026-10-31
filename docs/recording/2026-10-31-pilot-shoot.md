@@ -75,7 +75,7 @@ In **Settings → Output**, choose Advanced mode. Set Streaming to audio track *
 | Game output | Yes, at a lower level | No | Yes | No |
 | Optional music source | Only if cleared for the stream | No | No | Yes |
 
-Ordinary players usually play one audio track at a time, so track 1 should be a useful full mix. The editor can use tracks 2 and 3 to adjust speech and game independently. **File → Remux Recordings** converts the container to MP4 when needed; it does not mix the separate tracks together. [OBS audio tracks](https://obsproject.com/kb/multiple-audio-track-recording-guide), [OBS recording guide](https://obsproject.com/kb/standard-recording-output-guide).
+Ordinary players usually play one audio track at a time, so track 1 should be a useful full mix. The editor can use tracks 2 and 3 to adjust speech and game independently. When editing those isolated tracks, mute track 1 so its full mix does not double the sound. **File → Remux Recordings** converts the container to MP4 when needed; it does not mix the separate tracks together. [OBS audio tracks](https://obsproject.com/kb/multiple-audio-track-recording-guide), [OBS recording guide](https://obsproject.com/kb/standard-recording-output-guide).
 
 On this Arch setup, use one mic input and one game/output capture path. If the mic is already captured as the global Mic/Aux device, do not add the same device again as a scene source. Likewise, do not capture the same output through both Desktop Audio and another output-capture source. Duplicate paths create doubled sound or echo.
 
