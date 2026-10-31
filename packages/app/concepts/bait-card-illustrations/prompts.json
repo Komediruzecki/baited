@@ -1,0 +1,29 @@
+{
+  "provider": "built-in ChatGPT image_gen",
+  "status": "candidates, not selected",
+  "prompts": [
+    {
+      "key": "bait-lure",
+      "refs": [
+        "/home/maff/foss/worktrees/baited/cloudflare-edge-poc/packages/app/public/cards/proofs/banana.png"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: isolated pixel-art collectible for the BAIT word card in Baited, a Twitch word game. Reference image is STYLE ONLY: preserve its deliberately chunky pixel clusters, dark warm outline, readable toy-like volume, limited highlighted palette. New subject: a mischievous violet fishing worm curled around a large polished silver J fishing hook, with a small lemon-yellow bobber, forming one compact striking bait silhouette. No fish and no additional objects. Light from upper left. Twitch purple #9146FF with deep plum shading, yellow #FFFC79 highlights, restrained warm gold. Looks like an expertly hand-pixelled 64-96px game inventory sprite enlarged with crisp square pixels, not a smooth vector or 3D render. Center the full assembly with at least 16% transparent margin on all sides for a card illustration window. Real transparent alpha background, no checkerboard drawn, no ground, no outer card/frame, no caption, no text or watermark. Chunky pixelated edges are intentional."
+    },
+    {
+      "key": "bait-bomb",
+      "refs": [
+        "/home/maff/foss/worktrees/baited/cloudflare-edge-poc/packages/app/public/cards/proofs/banana.png",
+        "/home/maff/foss/worktrees/baited/cloudflare-edge-poc/packages/app/public/brand/bait-bomb.png"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: Baited word-card illustration candidate. References: image1 is pixel technique/style, image2 is a starting bomb-bobber character silhouette, not text to copy. Make ONE expressive arcade bomb-bobber collectible: round saturated purple body with violet highlights, pale yellow upper band and bright golden warm edge, a silver fishing hook emerging from the top like a fuse, two small mischievous angular eyes, a short pixel spark at the hook tip. No mouth lettering, no swear-symbol strip, no text. The bomb is playful, compact, chunky and iconic, matching the clean hand-pixelled banana inventory sprite, with strong readable silhouette at 140px. Pixel-art square clusters, dark plum outline, controlled dithering only in one shadow. Full object centered, 16% transparent padding; no clipping, ground, frame, card or backdrop. Genuine transparent alpha. Colors purple #9146FF and yellow #FFFC79 with gold accents, no realistic explosives or smooth gradients."
+    },
+    {
+      "key": "baited-logo-loot",
+      "refs": [
+        "/home/maff/foss/worktrees/baited/cloudflare-edge-poc/packages/landing/site/assets/brand/baited-original.jpg",
+        "/home/maff/foss/worktrees/baited/cloudflare-edge-poc/packages/app/public/cards/proofs/banana.png"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: special BAIT card art, an isolated Baited logo treasure collectible. Reference1 is the EXACT BAITED letterform design: chunky tall irregular black block letters with angled cut corners; preserve the six letters and unmistakable silhouette. Reference2 supplies pixel illustration technique only. Render the BAITED wordmark as one chunky yellow pixel-art collectible pin with purple thickness and dark plum pixel outline. A small round purple cartoon bomb-bobber with a curved silver fishing hook is attached below the center as a dangling charm, clearly a single assembled emblem. Keep BAITED entirely legible, letters B A I T E D in that order, no other words. It should look like a handcrafted 16-bit inventory prize with bold pixel clusters and minimal highlight accents, not generic 3D glossy text, not smooth vector. Centered compact assembly, 16% clear padding all around, fully intact silhouette. Genuine transparent alpha background. No cards, no frame, no ground, no sparkles scattered outside silhouette, no watermark. Main colors #FFFC79 and #9146FF. This is a card-art exploration, not a replacement main logo."
+    }
+  ]
+}

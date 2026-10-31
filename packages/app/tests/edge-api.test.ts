@@ -5,10 +5,10 @@ import { authorizeEdgeBot, canAuthorizeEdgeBot, isEdgeRuntime, request } from '.
 test('edge chat controls use the session CSRF endpoint and bot sign-in verifies its destination', async () => {
   const previous = { fetch: globalThis.fetch, location: Object.getOwnPropertyDescriptor(globalThis, 'location'), socket: globalThis.WebSocket };
   const calls: { path: string; body?: unknown; csrf: string | null }[] = [];
-  let revision = 1, canAuthorize = true, redirect = 'https://id.twitch.tv/oauth2/authorize?client_id=fixture';
+  let revision = 1, canAuthorize = true, botAuthorized=false, redirect = 'https://id.twitch.tv/oauth2/authorize?client_id=fixture';
   const frames: unknown[] = [];
   const state = () => ({ type: 'snapshot', protocol: 1, revision, generation: 1,
-    room: { serverTime: Date.now(), phase: 'idle', score: {}, settings: {}, connection: { status: 'connected' } } });
+    room: { serverTime: Date.now(), phase: 'idle', score: {}, settings: {chatBot:true}, connection: { status: 'connected' } } });
   class Socket {
     readyState = 1; bufferedAmount = 0;
     onmessage: ((event: { data: string }) => void) | null = null;
@@ -28,7 +28,7 @@ test('edge chat controls use the session CSRF endpoint and bot sign-in verifies 
     calls.push({ path, body: init?.body ? JSON.parse(String(init.body)) : undefined, csrf: new Headers(init?.headers).get('x-csrf-token') });
     if (path === '/api/session') return Response.json({ runtime: 'edge', authenticated: true });
     if (path === '/api/edge/session') return Response.json({ channelId: '123', token: 'signed.fixture.token',
-      tokenExpiresAt: Date.now() + 300000, csrf: 'fixture-csrf', bot: { configured: true, authorized: false, channelAllowed: true, canAuthorize } });
+      tokenExpiresAt: Date.now() + 300000, csrf: 'fixture-csrf', bot: { configured: true, authorized: botAuthorized, channelAllowed: true, canAuthorize } });
     if (path === '/api/edge/chat') { revision++; return Response.json({ ok: true }); }
     if (path === '/v1/rooms/123/state') return Response.json({ error: 'Same-origin GET has no Origin.' }, { status: 403 });
     if (path === '/api/bot/authorize') return Response.json({ url: redirect });
@@ -53,14 +53,21 @@ test('edge chat controls use the session CSRF endpoint and bot sign-in verifies 
     assert.deepEqual((resetCall.body as {action:unknown}).action, {type:'restart-take', takeId});
     assert.equal((resetCall.body as {expectedRevision:number}).expectedRevision, 3);
     assert.equal(calls.some(call => call.path === '/api/recording/restart'), false);
+    const draft={roundId:crypto.randomUUID(),epoch:1,word:'banana',draftId:crypto.randomUUID(),expiresAt:Date.now()+15000};
+    assert.equal((await request<{status:string}>('/api/studio/voice-guess-draft',draft)).status,'unavailable');
+    assert.equal(calls.filter(call=>call.path.endsWith('/commands')).length,1,'Unavailable bot does not submit anything.');
     assert.equal(canAuthorizeEdgeBot(), true);
     assert.match(await authorizeEdgeBot(), /^https:\/\/id\.twitch\.tv\/oauth2\/authorize/);
     assert.equal(calls.at(-1)?.csrf, 'fixture-csrf');
     redirect = 'https://untrusted.test/authorize';
     await assert.rejects(authorizeEdgeBot(), /could not be verified/);
     await request('/api/logout', {});
+    botAuthorized=true;
     canAuthorize = false;
     await request('/api/studio');
+    assert.deepEqual(await request('/api/studio/voice-guess-draft',draft),{status:'requested'});
+    const draftCall=[...calls].reverse().find(call=>call.path.endsWith('/commands'))!;
+    assert.deepEqual((draftCall.body as {action:unknown}).action,{type:'voice-guess-draft',roundId:draft.roundId,epoch:1,text:'banana',draftId:draft.draftId,expiresAt:draft.expiresAt});
     assert.equal(canAuthorizeEdgeBot(), false);
     await assert.rejects(authorizeEdgeBot(), /operator connects/);
   } finally {

@@ -20,6 +20,7 @@ const input = z.discriminatedUnion('type', [
   z.object({ type: z.literal('reverse'), roundId: z.string().uuid() }).strict(),
   z.object({ type: z.literal('award'), roundId: z.string().uuid(), hintId: z.string().uuid() }).strict(),
   z.object({ type: z.literal('guess'), ...round, text: z.string().min(1).max(100) }).strict(),
+  z.object({ type: z.literal('voice-guess-draft'), ...round, text: z.string().min(1).max(80), draftId: z.string().uuid(), expiresAt:z.number().int().positive() }).strict(),
   z.object({ type: z.literal('settings'), settings: settingsSchema }).strict(),
   // Only signed synthetic POC capabilities can inject these events. This is not the live speech adapter.
   z.object({ type: z.literal('fixture-transcript'), ...round, text: z.string().min(1).max(500) }).strict(),

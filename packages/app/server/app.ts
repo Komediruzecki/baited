@@ -835,6 +835,14 @@ export async function createBait(
     game.update(req.body);
     res.json(studio(game));
   });
+  app.post('/api/studio/voice-guess-draft', protect, (req, res) => {
+    const body=z.object({roundId:z.string().uuid(),epoch:z.number().int().positive(),word:z.string().min(1).max(80),draftId:z.string().uuid(),expiresAt:z.number().int().positive()}).strict().parse(req.body);
+    const game=gameFor(res),session=res.locals.session as Session,lease=microphoneLeases.get(game.data.id);
+    if(!lease || lease.session.id!==session.id || !microphoneReady(game)) {
+      res.status(409).json({error:'Enable the microphone in this Studio before sharing a voice guess.'});return;
+    }
+    res.json(bot.voiceGuessDraft(game,body.roundId,body.epoch,body.word,body.draftId,body.expiresAt));
+  });
   app.post('/api/studio/guess', protect, (req, res) => {
     const body = z
       .object({

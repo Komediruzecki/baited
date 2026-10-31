@@ -1,0 +1,57 @@
+{
+  "status": "candidates; no runtime artwork selected",
+  "provider": "built-in ChatGPT image_gen",
+  "date": "2026-10-31",
+  "images": [
+    {
+      "key": "bait-lure",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "bytes": 738915,
+      "sha256": "b93ae8abb5f785f3b21b391623aadb6f1992f46d3d2d5dad722e17f9987beb1d",
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "repo_file": "bait-lure.png"
+    },
+    {
+      "key": "bait-bomb",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "bytes": 654652,
+      "sha256": "c182935a8447008c38ed77099baab2242450fe242d31f5476a5a534237b4b3e6",
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "repo_file": "bait-bomb.png"
+    },
+    {
+      "key": "baited-logo-loot",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "bytes": 1260521,
+      "sha256": "ded0c9d4fa478163dd314145290a9f9406d335bfd7241dee1686a04a1960371e",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "repo_file": "baited-logo-loot.png"
+    }
+  ],
+  "notes": [
+    "Lure and bomb use transparent backgrounds and have opaque foreground pixels.",
+    "Logo candidate retains a soft violet glow and partially translucent highlights; inspect on the final card background before use.",
+    "Main Baited wordmark and existing card catalogue remain unchanged."
+  ]
+}

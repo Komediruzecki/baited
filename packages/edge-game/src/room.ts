@@ -9,13 +9,14 @@ import { localTranscript, progressSchema } from '../../app/shared/local-speech.j
 import { z } from 'zod';
 import type { ControlEnv } from './control-types.js';
 import { internalFetch } from './internal-fetch.js';
+import { voiceDraftCurrent, voiceDraftWord, VOICE_DRAFT_TTL, type VoiceDraftState, type VoiceDraftRef } from '../../app/server/voice-draft.js';
 
 export interface Env extends AuthEnv, ControlEnv { ROOMS: DurableObjectNamespace; ART: R2Bucket; CONTROL?: DurableObjectNamespace; ASSETS?: Fetcher }
 interface Speech { leaseId: string; roundId: string; epoch: number; samples: number; firstAudioAt: number; lastAudioAt: number; lastSequence: number }
-type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:'help'|'score'|'top'|'who';userId:string};
+type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:'help'|'score'|'top'|'who';userId:string}|({type:'voice-guess-draft';word:string}&VoiceDraftRef);
 interface Attachment { identity: AuthIdentity; lastInputAt: number; lastAuthRefreshAt?:number; sentViewRevision?:number; socketId?: string; microphoneLeases?:string[]; speech?: Speech; inputs?: {at:number;n:number}; audioInputs?:{at:number;tokens:number} }
 interface Lease { id:string; sessionId:string; socketId:string; expiresAt:number; lastAudioAt?:number; roundId?:string; epoch?:number }
-interface PilotState { operator?:{enabled:boolean;revision:number}; lease:Lease|null; microphoneStopRevision?:number; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; connectionRevision?:number; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>} }
+interface PilotState { operator?:{enabled:boolean;revision:number}; lease:Lease|null; microphoneStopRevision?:number; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; connectionRevision?:number; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>}; voiceDraft?:VoiceDraftState; voiceDraftLease?:string }
 const AUDIO_LEASE_REFRESH_MS=10_000;
 const eventSchema = z.object({eventId:z.string().min(1).max(200),channelId:z.string().regex(/^[1-9][0-9]{0,24}$/),
   at:z.number().finite(),kind:z.enum(['message','delete','clear-user']),messageId:z.string().min(1).max(200).optional(),
@@ -216,6 +217,13 @@ export class ChannelRoom extends DurableObject<Env> {
         this.ctx.storage.sql.exec('DELETE FROM pilot_chat_receipt WHERE expires<=?',this.now);
         if (chatId) this.ctx.storage.sql.exec('INSERT OR IGNORE INTO pilot_chat_receipt(id,expires) VALUES(?,?)',chatId,this.now+600_000);
         const pending=this.events.get(candidate)??[];
+        // Retain only bounded IDs for retry suppression, never draft text in game history.
+        // Any phase/epoch/guess change retires a queued public draft immediately.
+        if((this.pilotState.voiceDraft?.latest.expiresAt??0)>this.now) for (const row of this.ctx.storage.sql.exec<{id:string;body:string}>("SELECT id,body FROM pilot_outbox WHERE json_extract(body,'$.event.type')='voice-guess-draft'")) {
+          const event=JSON.parse(row.body).event as VoiceDraftRef;
+          if(!voiceDraftCurrent(candidate,pilotState.voiceDraft,event,this.now) || !candidate.data.settings.chatBot || !pilotState.chatConnected)
+            this.ctx.storage.sql.exec('DELETE FROM pilot_outbox WHERE id=?',row.id);
+        }
         if(pending.some(item=>item.event.type==='recording-reset')) this.ctx.storage.sql.exec('DELETE FROM pilot_outbox');
         if (pending.length && (candidate.data.settings.chatBot || pending.some(item=>item.event.type==='bot-settings' || item.event.type==='recording-reset'))) {
           const count=this.ctx.storage.sql.exec<{n:number}>('SELECT count(*) AS n FROM pilot_outbox').one().n;
@@ -223,7 +231,7 @@ export class ChannelRoom extends DurableObject<Env> {
           for (const [i,item] of pending.entries()) if (count+i<32) {
             const eventId=`${candidate.data.owner}:${nextRevision}:${i}`;
             this.ctx.storage.sql.exec('INSERT OR IGNORE INTO pilot_outbox(id,body,retry_at,expires_at) VALUES(?,?,?,?)',eventId,
-              JSON.stringify({channelId:candidate.data.owner,eventId,...item}),this.now,this.now+60_000);
+              JSON.stringify({channelId:candidate.data.owner,eventId,...item}),this.now,item.event.type==='voice-guess-draft'?item.event.expiresAt:this.now+60_000);
           }
         }
       }
@@ -373,6 +381,21 @@ export class ChannelRoom extends DurableObject<Env> {
       case 'reverse': game.reverse(); break;
       case 'award': game.award(a.roundId, a.hintId); break;
       case 'guess': game.guess(a.roundId, a.epoch, a.text); break;
+      case 'voice-guess-draft': {
+        if(!this.pilot() || identity.authKind!=='pilot-session' || !this.leaseValid() || pilot.lease?.sessionId!==identity.sessionId ||
+          game.phase!=='active' || !game.round?.guessEnabled || game.round.guessUsed || !game.data.settings.chatBot || !pilot.chatConnected)
+          throw new Error('voice_draft_unavailable');
+        if(a.expiresAt<=this.now || a.expiresAt>this.now+VOICE_DRAFT_TTL) throw new Error('voice_draft_expired');
+        const word=voiceDraftWord(a.text);
+        if(pilot.voiceDraft?.roundId!==a.roundId) pilot.voiceDraft=undefined;
+        if(pilot.voiceDraft?.ids.includes(a.draftId)) break;
+        if((pilot.voiceDraft?.ids.length??0)>=3 || !this.takeRate(pilot,this.actorRate(identity,'voice-draft'),6)) throw new Error('voice_draft_limit');
+        const ref={roundId:a.roundId,epoch:a.epoch,draftId:a.draftId,expiresAt:a.expiresAt};
+        pilot.voiceDraft={roundId:a.roundId,ids:[...(pilot.voiceDraft?.ids??[]),a.draftId],latest:ref};
+        pilot.voiceDraftLease=pilot.lease!.id;
+        this.events.get(game)!.push({event:{type:'voice-guess-draft',word,...ref},safeView:game.view('overlay')});
+        break;
+      }
       case 'settings':
         if (!this.pilot() && (a.settings.auto || a.settings.chatBot || a.settings.modCommands)) throw new Error('poc_feature_disabled');
         game.update(a.settings);if(this.pilot())this.events.get(game)!.push({event:{type:'bot-settings'},safeView:game.view('overlay')}); break;
@@ -725,6 +748,11 @@ export class ChannelRoom extends DurableObject<Env> {
       disconnectedSessions=new Set(ids as string[]);
     }
     await this.reconcile();
+    if(path==='/internal/voice-draft-current') {
+      const ref=data.ref as VoiceDraftRef|undefined;
+      return json({current:!!ref && voiceDraftCurrent(this.game,this.pilotState.voiceDraft,ref,this.now) &&
+        !!this.game?.data.settings.chatBot && this.pilotState.chatConnected && this.leaseValid() && this.pilotState.voiceDraftLease===this.pilotState.lease?.id});
+    }
     if(path==='/internal/control') {
       const channel=data.channelId;
       if(!this.game && (typeof data.login!=='string' || !/^[a-z0-9_]{1,25}$/.test(data.login))) return json({error:'Not connected.'},409);

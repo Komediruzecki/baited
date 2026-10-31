@@ -9,6 +9,7 @@ import { pilotLimits } from './pilot-policy.js';
 import { operatorAuthorized } from './operator-auth.js';
 import { internalFetch } from './internal-fetch.js';
 import { oauthDiagnostic, OAuthProviderError, type OAuthPhase } from './oauth-diagnostics.js';
+import { voiceDraftText, voiceDraftWord, VOICE_DRAFT_TTL, type VoiceDraftRef } from '../../app/server/voice-draft.js';
 
 const ID = /^[1-9][0-9]{0,24}$/;
 const CALLBACK = '/auth/twitch/callback';
@@ -881,6 +882,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     view.history = view.history.map(({ word: _word, ...rest }) => rest);
     if (view.result && !['caught', 'escaped'].includes(view.result.outcome)) delete view.result.word;
     let announcement = null;
+    let voiceDraft:VoiceDraftRef|undefined;
     const channelSettings = this.data.channels[input.channelId]!;
     if (input.event.type === 'recording-reset') {
       // The outbox can retry after Control committed but its reply was lost.
@@ -897,6 +899,18 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       this.data.queue = this.data.queue.filter((q) => q.channelId !== input.channelId);
       if (previous !== this.data.queue.length) await this.persist();
       return json({ ok: true });
+    }
+    else if (input.event.type === 'voice-guess-draft') {
+      const event=input.event;
+      const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if(!uuid.test(event.draftId) || !uuid.test(event.roundId) || !Number.isSafeInteger(event.epoch) || event.epoch<1 ||
+        !Number.isFinite(event.expiresAt) || event.expiresAt<=Date.now() || event.expiresAt>Date.now()+VOICE_DRAFT_TTL ||
+        view.phase!=='active' || view.round?.id!==event.roundId || view.round.epoch!==event.epoch || !view.round.guessEnabled || view.round.guessUsed ||
+        typeof event.word!=='string' || event.word.length>40) return json({error:'Invalid voice draft.'},400);
+      let word:string;
+      try {word=voiceDraftWord(event.word);} catch {return json({error:'Invalid voice draft.'},400);}
+      voiceDraft={roundId:event.roundId,epoch:event.epoch,draftId:event.draftId,expiresAt:event.expiresAt};
+      announcement={key:'voice-guess-draft',ttl:event.expiresAt-Date.now(),text:voiceDraftText(channelSettings.login,word)};
     }
     else if (input.event.type === 'chat-command') {
       const commands = { help: helpText, score: scoreText, top: topText, who: whoText };
@@ -919,11 +933,13 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       if (text && text.length <= 500) {
         this.data.queue = this.data.queue.filter((q) => !(q.channelId === input.channelId && q.key === announcement.key));
         if (this.data.queue.filter((q) => q.channelId === input.channelId).length >= 8) {
-          const replace = this.data.queue.findIndex((q) => q.channelId === input.channelId && (q.key === 'command' || !isCommand));
+          const replace = this.data.queue.findIndex((q) => q.channelId === input.channelId &&
+            (voiceDraft?q.key==='voice-guess-draft':q.key === 'command' || q.key==='voice-guess-draft' || !isCommand));
           if (replace >= 0) this.data.queue.splice(replace, 1);
+          else if(voiceDraft) {await this.persist();return json({ok:true});}
         }
         if (this.data.queue.length < CONTROL_LIMITS.queue) this.data.queue.push({ id: key, channelId: input.channelId, key: announcement.key,
-          text, expiresAt: Date.now() + Math.min(60_000, announcement.ttl) });
+          text, expiresAt: voiceDraft?.expiresAt??Date.now() + Math.min(60_000, announcement.ttl),...(voiceDraft?{voiceDraft}:{}) });
       }
     }
     await this.persist(); return json({ ok: true });
@@ -938,7 +954,8 @@ export class TwitchControl extends DurableObject<ControlEnv> {
         const now = Date.now(); this.prune(now);
         const bot = this.data.bot;
         if (!bot || bot.user.id !== this.env.EDGE_BOT_USER_ID || this.data.pausedUntil > now || this.data.sentAt.length >= this.botBudget()) return null;
-        this.data.queue.sort((a, b) => Number(a.key === 'command') - Number(b.key === 'command'));
+        const priority=(key:string)=>key==='voice-guess-draft'?2:key==='command'?1:0;
+        this.data.queue.sort((a, b) => priority(a.key) - priority(b.key));
         this.data.channelSentWindow ??= {};
         for (const [channel, times] of Object.entries(this.data.channelSentWindow)) this.data.channelSentWindow[channel] = times.filter((at) => at > now - 30_000);
         const index = this.data.queue.findIndex((q) => now - (this.data.channelSentAt[q.channelId] ?? 0) >= 1100 &&
@@ -959,9 +976,18 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       let pause = 0; let clearToken = false;
       try {
         const access = await this.appToken();
+        // The Room owns the round and latest draft. A token refresh, newer draft,
+        // lock-in, pause, reset, expiry or disconnect must not publish an old guess.
+        let currentDraft=true;
+        if(item.voiceDraft) {
+          const response=await internalFetch(this.env.ROOMS.get(this.env.ROOMS.idFromName(`channel:${item.channelId}`)),
+            new Request('https://room.internal/internal/voice-draft-current',{method:'POST',headers:{'content-type':'application/json'},
+              body:JSON.stringify({channelId:item.channelId,ref:item.voiceDraft})}));
+          currentDraft=response.ok && object(await response.json())?.current===true;
+        }
         const canSend = await this.serial(async () => {
           const channel = this.data.channels[item.channelId];
-          return this.allowed(channel) && channel.chatWanted !== false && channel.scopes.includes('channel:bot') &&
+          return currentDraft && this.allowed(channel) && channel.chatWanted !== false && channel.scopes.includes('channel:bot') &&
             (channel.generation ?? 0) === reserved.generation && (channel.botGeneration ?? 0) === reserved.botGeneration &&
             this.data.bot?.credentials.ciphertext === reserved.credentials && item.expiresAt > Date.now();
         });

@@ -70,6 +70,40 @@ const message = (text: string, patch: Partial<ChatMessage> = {}): ChatMessage =>
   at: Date.now(),
   ...patch,
 });
+
+test('voice drafts are explicit public guesses, bounded and retired on lock or phase changes', async (t) => {
+  const store=await tempStore(t);let now=100000;
+  const bot=new ChatBot({config:{clientId:'',clientSecret:'',botUserId:'',botReady:false},store,ready:()=>null,clock:()=>now,
+    fetcher:async()=>{throw new Error('Voice draft fixture must not reach a provider');}});
+  const game=new Game(saved({mode:'demo',settings:{...defaults,chatBot:true,callBait:true}}),()=>now);
+  game.begin();const round=game.round!;
+  const id=crypto.randomUUID();
+  assert.deepEqual(bot.voiceGuessDraft(game,round.id,round.epoch,round.word,id,now+15000),{status:'requested'});
+  assert.match(bot.status(game).recent[0]!.text,/unconfirmed guess:/);
+  assert.ok(bot.status(game).recent[0]!.text.includes(round.word));
+  assert.equal(game.round!.guessUsed,false,'Sharing a draft never locks it.');
+  assert.deepEqual(bot.voiceGuessDraft(game,round.id,round.epoch,'different',id,now+15000),{status:'requested'});
+  assert.equal(bot.status(game).recent.length,1,'Replayed UUID cannot post different text.');
+  bot.voiceGuessDraft(game,round.id,round.epoch,'zucchini',crypto.randomUUID(),now+15000);
+  game.guess(round.id,round.epoch,'nottherealword');now+=2000;bot.tick(game);
+  assert.equal(bot.status(game).recent.length,1,'A queued draft is discarded after any lock-in.');
+  assert.throws(()=>bot.voiceGuessDraft(game,round.id,round.epoch,'banana',crypto.randomUUID(),now+15000),/no longer accepts/);
+  assert.equal(game.data.history.length,0,'A draft never writes round history.');
+});
+
+test('voice draft availability never submits a guess and only accepts one short word', async (t) => {
+  const store=await tempStore(t);let now=100000;
+  const bot=new ChatBot({config:{clientId:'',clientSecret:'',botUserId:'',botReady:false},store,ready:()=>null,clock:()=>now});
+  const game=new Game(saved({mode:'demo',settings:{...defaults,chatBot:false,callBait:true}}),()=>now);game.begin();const r=game.round!;
+  assert.equal(bot.voiceGuessDraft(game,r.id,r.epoch,'banana',crypto.randomUUID(),now+15000).status,'unavailable');
+  assert.equal(r.guessUsed,false);
+  game.data.settings.chatBot=true;
+  for(const value of ['two words','x'.repeat(41),'!!!']) assert.throws(()=>bot.voiceGuessDraft(game,r.id,r.epoch,value,crypto.randomUUID(),now+15000),/one word/);
+  for(const value of ['banana','fish','ghost']) assert.equal(bot.voiceGuessDraft(game,r.id,r.epoch,value,crypto.randomUUID(),now+15000).status,'requested');
+  assert.equal(bot.voiceGuessDraft(game,r.id,r.epoch,'fourth',crypto.randomUUID(),now+15000).status,'unavailable');
+  now+=15001;bot.tick(game);
+  assert.equal(bot.status(game).recent.length,1,'Expired drafts are never delivered.');
+});
 async function tempStore(t: { after: (fn: () => Promise<void>) => void }) {
   const dir = await mkdtemp(join(tmpdir(), 'bait-bot-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
@@ -880,4 +914,30 @@ test('a moderator command sent before a recording reset cannot start the next ta
   bot.chat(f.game,message('!bait start',{at:f.now(),badges:['moderator']}));
   assert.equal(f.game.phase,'active');
   assert.equal(f.game.round!.word,'banana');
+});
+
+
+test('voice draft provider failures never retry and token waits cannot outlive a reset', async(t)=>{
+  const store=await tempStore(t);
+  await store.setCredentials('123',credentials());
+  await store.setCredentials(botKey('999'),credentials({userId:'999',login:'baity_bot',name:'Baity',scope:['user:write:chat','user:bot']}));
+  const config=loadConfig({TWITCH_CLIENT_ID:'client-test',TWITCH_CLIENT_SECRET:'secret-test',TOKEN_ENCRYPTION_KEY:key,TWITCH_BOT_USER_ID:'999'});
+  for(const failure of ['ambiguous','401','429','reset'] as const) {
+    let now=100000,sends=0,release!:()=>void;
+    const bot=new ChatBot({config,store,ready:()=>null,clock:()=>now,fetcher:async(input)=>{
+      if(String(input).endsWith('/oauth2/token')) {
+        if(failure==='reset') await new Promise<void>(resolve=>{release=resolve;});
+        return Response.json({access_token:'synthetic-test-token',expires_in:3600});
+      }
+      sends++;
+      if(failure==='ambiguous') throw new Error('synthetic timeout');
+      return new Response(null,{status:failure==='401'?401:429});
+    }});
+    const game=new Game(saved({settings:{...defaults,chatBot:true,callBait:true,recordingMode:true}}),()=>now);
+    game.connection={status:'connected',detail:'fixture'};game.start();const r=game.round!;
+    bot.voiceGuessDraft(game,r.id,r.epoch,'banana',crypto.randomUUID(),now+15000);
+    if(failure==='reset') {await flush();game.restartTake(game.data.recordingTake!.id);release();}
+    await flush();now+=2000;bot.tick(game);await flush();
+    assert.equal(sends,failure==='reset'?0:1,`${failure} cannot replay a public guess`);
+  }
 });

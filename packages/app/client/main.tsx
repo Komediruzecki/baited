@@ -93,6 +93,8 @@ import './refinement.css';
 import { canRevealSoloTarget, SoloTarget } from './SoloTarget';
 import './solo-target.css';
 import { TranscriptPreview } from './TranscriptPreview';
+import { VoiceGuessControl } from './VoiceGuessControl';
+import { VoiceGuessSession, type VoiceGuessContext, type VoiceGuessDraft, type VoiceGuessSnapshot } from './voice-guess';
 import {
   canPreviewTranscript,
   TranscriptPreviewBuffer,
@@ -195,6 +197,18 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [micIssue, setMicIssue] = useState(''),
     [micRecovering, setMicRecovering] = useState(false);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voicePending, setVoicePending] = useState<VoiceGuessSnapshot>({ draft: null, awaitingWord: false, expiresAt: 0 });
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceMessage, setVoiceMessage] = useState('');
+  const [voiceAnnouncement, setVoiceAnnouncement] = useState('');
+  const voiceEnabledRef = useRef(false);
+  const voiceOffline = useRef(false);
+  const voiceRecovering = useRef(false);
+  const voiceInFlight = useRef(false);
+  const voiceManualGuess = useRef(false);
+  voiceManualGuess.current = modal === 'guess';
+  const voiceSession = useRef(new VoiceGuessSession());
   const [restartTakeId, setRestartTakeId] = useState<string | null>(null);
   const [cardsDirty, setCardsDirty] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
@@ -213,15 +227,82 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     currentStudio = useRef<Studio | null>(null),
     offset = useRef(0);
   const now = useNow();
+  const clearVoice = useCallback((message = '') => {
+    voiceSession.current.clear();
+    setVoicePending(voiceSession.current.snapshot());
+    setVoiceMessage(message);
+    setVoiceAnnouncement('');
+  }, []);
+  const voiceContext = useCallback((s: Studio | null): VoiceGuessContext | null => {
+    const owner = capture.current, round = s?.room.round;
+    if (!voiceEnabledRef.current || voiceOffline.current || voiceRecovering.current || voiceManualGuess.current ||
+      !owner?.lease.active || !owner.microphone.enabled ||
+      !s || s.room.phase !== 'active' || !round?.guessEnabled || round.guessUsed) return null;
+    return { roundId: round.id, epoch: round.epoch, leaseId: owner.lease.id, takeId: s.room.recording?.takeId ?? '' };
+  }, []);
   const receive = useCallback((s: Studio) => {
     offset.current = s.room.serverTime - Date.now();
     currentStudio.current = s;
+    voiceSession.current.setContext(voiceContext(s));
+    setVoicePending(voiceSession.current.snapshot());
     setStudio(s);
-  }, []);
+  }, [voiceContext]);
+  const shareVoiceDraft = useCallback(async (draft: VoiceGuessDraft) => {
+    setVoiceAnnouncement('Asking Baity to share this guess…');
+    try {
+      const reply = await request<{ status: 'requested' | 'unavailable' }>(
+        '/api/studio/voice-guess-draft',
+        { roundId: draft.context.roundId, epoch: draft.context.epoch, word: draft.word, draftId: crypto.randomUUID(),
+          expiresAt: draft.expiresAt + offset.current },
+        session.csrf,
+      );
+      if (voiceSession.current.snapshot().draft !== draft) return;
+      setVoiceAnnouncement(reply.status === 'requested' ? 'Asked Baity to share this guess.'
+        : 'Baity is unavailable. Your voice guess is still ready.');
+    } catch {
+      if (voiceSession.current.snapshot().draft === draft)
+        setVoiceAnnouncement('Could not confirm Baity received the draft. You can still lock in.');
+    }
+  }, [session.csrf]);
+  const submitVoice = useCallback(async (draft: VoiceGuessDraft) => {
+    const context = voiceContext(currentStudio.current);
+    if (voiceInFlight.current || !context || JSON.stringify(context) !== JSON.stringify(draft.context) || Date.now() >= draft.expiresAt) {
+      clearVoice('That guess expired. Say it again during the current round.');
+      return;
+    }
+    voiceInFlight.current = true;
+    setVoiceBusy(true);
+    setVoiceMessage('');
+    const sameRound = () => {
+      const current = currentStudio.current;
+      return current?.room.round?.id === draft.context.roundId && current.room.round.epoch === draft.context.epoch &&
+        (current.room.recording?.takeId ?? '') === draft.context.takeId && capture.current?.lease.id === draft.context.leaseId;
+    };
+    try {
+      const reply = await request<{ correct: boolean; bonus: number; studio: Studio }>(
+        '/api/studio/guess',
+        { roundId: draft.context.roundId, epoch: draft.context.epoch, word: draft.word },
+        session.csrf,
+      );
+      // A late scoring response must not repaint a newer round or recording take.
+      if (!sameRound()) return;
+      if (reply.studio.room.serverTime >= (currentStudio.current?.room.serverTime ?? 0)) receive(reply.studio);
+      setVoiceMessage(reply.correct ? 'Bait called. You escaped.' : `Not the word. Chat gets ${reply.bonus} extra seconds.`);
+    } catch (error) {
+      // Never retry a scoring action automatically: the server may have accepted it.
+      if (sameRound()) setVoiceMessage((error as Error).message || 'Could not check the guess. Check the round before trying again.');
+    } finally {
+      voiceInFlight.current = false;
+      setVoiceBusy(false);
+    }
+  }, [clearVoice, receive, session.csrf, voiceContext]);
   const pauseForMicrophone = useCallback(
     async (owner: Capture, message?: string, refresh = true) => {
       owner.microphone.stop();
       if (capture.current === owner) {
+        voiceRecovering.current = false;
+        voiceSession.current.setContext(null);
+        clearVoice();
         setConsent(false);
         setMicRecovering(false);
         if (message) { setMicIssue(message); setError(message); }
@@ -241,12 +322,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
         }
       }
     },
-    [receive],
+    [receive, clearVoice],
   );
   const connectionError = useCallback(
     (lost: boolean) => {
       setOffline(lost);
+      voiceOffline.current = lost;
       if (lost) {
+        voiceSession.current.setContext(null);
+        clearVoice();
         setTranscriptLines(transcriptBuffer.current.setEnabled(false));
         setTranscriptEnabled(false);
         if (capture.current?.lease.active) void pauseForMicrophone(capture.current,
@@ -259,18 +343,22 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           .catch(() => {});
       }
     },
-    [reload, pauseForMicrophone],
+    [reload, pauseForMicrophone, clearVoice],
   );
   useLive('/api/studio/events', receive, connectionError);
   const refreshDeck = useCallback(() => {
     void request<Studio>('/api/studio').then(receive).catch((e) => setError(e.message));
   }, [receive]);
   useEffect(() => {
+    if (!voicePending.draft) setVoiceAnnouncement('');
+  }, [voicePending.draft]);
+  useEffect(() => {
     void request<Studio>('/api/studio')
       .then(receive)
       .catch((e) => setError(e.message));
     return () => {
       transcriptBuffer.current.setEnabled(false);
+      voiceSession.current.setContext(null);
       const owner = capture.current;
       capture.current = null;
       owner?.microphone.stop();
@@ -278,6 +366,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     };
   }, [receive]);
   const g = studio?.room;
+  useEffect(() => {
+    if (!voicePending.expiresAt) return;
+    const timeout = setTimeout(() => {
+      voiceSession.current.expire(Date.now());
+      setVoicePending(voiceSession.current.snapshot());
+      setVoiceMessage('Voice guess expired. Say it again when you are ready.');
+    }, Math.max(0, voicePending.expiresAt - Date.now()));
+    return () => clearTimeout(timeout);
+  }, [voicePending.expiresAt]);
   useEffect(() => {
     const owner = capture.current;
     if (!consent || !g || !session.csrf || !owner?.lease.active) return;
@@ -339,6 +436,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   };
   const restartTake = async () => {
     if (!restartTakeId || busy || offline) return;
+    clearVoice();
     setBusy(true);
     setError('');
     try {
@@ -378,6 +476,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const stopMic = () => {
     setMicIssue('');
     setMicRecovering(false);
+    voiceRecovering.current = false;
     if (capture.current) void pauseForMicrophone(capture.current);
   };
   const enableMic = async () => {
@@ -392,8 +491,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     setError('');
     setMicIssue('');
     setMicRecovering(false);
+    voiceRecovering.current = false;
     setConsent(false);
     setTranscriptLines(transcriptBuffer.current.clear());
+    voiceSession.current.setContext(null);
+    clearVoice();
     const previous = capture.current;
     const previousCancelled = previous
       ? previous.lease.cancel().catch(() => {})
@@ -401,13 +503,20 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     previous?.microphone.stop();
     const lease = new MicrophoneLease(crypto.randomUUID(), (body, signal) =>
       request('/api/studio/microphone', body, session.csrf, signal),
-      { onRecovery: (recovering) => { if (capture.current?.lease === lease) setMicRecovering(recovering); } },
+      { onRecovery: (recovering) => { if (capture.current?.lease === lease) {
+        setMicRecovering(recovering);
+        voiceRecovering.current = recovering;
+        if (recovering) { voiceSession.current.setContext(null); clearVoice(); }
+      } } },
     );
     const owner: Capture = {
       lease,
       microphone: new Microphone(
         (status) => {
-          if (capture.current === owner) setMicStatus(status);
+          if (capture.current === owner) {
+            setMicStatus(status);
+            if (status !== 'listening') { voiceSession.current.setContext(null); clearVoice(); }
+          }
         },
         (value) => {
           if (capture.current === owner) setLevel(value);
@@ -426,6 +535,23 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             return;
           const lines = transcriptBuffer.current.receive(line, segment);
           if (lines) setTranscriptLines(lines);
+        },
+        (line, segment) => {
+          if (capture.current !== owner) return false;
+          const context = voiceContext(currentStudio.current);
+          if (!context || segment !== `${context.roundId}:${context.epoch}`) {
+            voiceSession.current.setContext(null);
+            return false;
+          }
+          voiceSession.current.setContext(context);
+          const result = voiceSession.current.receive(line);
+          if (!result.consumed) return false;
+          setVoicePending(voiceSession.current.snapshot());
+          setVoiceMessage(result.uncertain ? 'That command was unclear. Please repeat it or type your guess.'
+            : result.confirmSeparately ? 'Check the word, pause, then say “lock in” once more.' : '');
+          if (result.prepared) void shareVoiceDraft(result.prepared);
+          if (result.submit) void submitVoice(result.submit);
+          return true;
         },
       ),
     };
@@ -812,7 +938,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                 <Button
                                   className="secondary"
                                   disabled={!active || busy || offline}
-                                  onClick={() => setModal('guess')}
+                                  onClick={() => { voiceManualGuess.current = true; clearVoice(); setModal('guess'); }}
                                 >
                                   <Target size={16} />
                                   Call the bait
@@ -994,6 +1120,31 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     )}
                   {studio.speechProvider === 'moonshine' &&
                     canPreviewTranscript(g.mode, session.authenticated) && (
+                      <VoiceGuessControl
+                        enabled={voiceEnabled}
+                        ready={!!voiceContext(studio)}
+                        pending={voicePending}
+                        seconds={Math.max(0, Math.ceil((voicePending.expiresAt - now) / 1000))}
+                        busy={voiceBusy}
+                        message={voiceMessage}
+                        announcement={voiceAnnouncement}
+                        onToggle={() => {
+                          const enabled = !voiceEnabledRef.current;
+                          voiceEnabledRef.current = enabled;
+                          setVoiceEnabled(enabled);
+                          voiceSession.current.setContext(null);
+                          clearVoice();
+                        }}
+                        onLock={() => {
+                          const draft = voiceSession.current.take();
+                          setVoicePending(voiceSession.current.snapshot());
+                          if (draft) void submitVoice(draft);
+                        }}
+                        onCancel={() => clearVoice('Guess canceled.')}
+                      />
+                    )}
+                  {studio.speechProvider === 'moonshine' &&
+                    canPreviewTranscript(g.mode, session.authenticated) && (
                       <TranscriptPreview
                         enabled={transcriptEnabled}
                         lines={transcriptLines}
@@ -1152,6 +1303,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               game={g}
               csrf={session.csrf!}
               offline={offline}
+              voicePaused={voiceEnabled}
               onReceive={receive}
               onClose={() => setModal('')}
             />
@@ -2150,15 +2302,24 @@ function Privacy() {
           account run by this server’s operator posts as Baity: round starts, timer reminders,
           results, scores and the streamer’s award pick in Twitch chat. It names chatters only in that award,
           in the top-baiters list the room already shows, and when replying to their own command.
-          It never posts a word while its round is live, and it
-          does not store what it posts beyond the last few messages shown in the streamer’s
-          studio, which are kept in memory only.
+          It does not reveal the secret target during a live round. If you opt into Voice guesses,
+          it can share your unconfirmed spoken guess, which may happen to be the target.
         </p>
         <h2>Private guesses</h2>
         <p>
           Call the bait sends a typed guess to this server. The guess text is not retained or
           broadcast. A correct guess ends the word and reveals its target. An incorrect guess shares
           only the fifteen-second time bonus.
+        </p>
+        <h2>Voice guesses</h2>
+        <p>
+          Voice guesses are off until you enable them in Studio. Moonshine recognizes a small set
+          of commands locally and holds a draft for up to 15 seconds. You must say “lock in” or
+          press the button to submit it. When Baity is available, a separate request asks it to
+          share the unconfirmed draft in Twitch chat. Draft text can stay in a delivery queue for
+          up to 15 seconds, and is not added to lifetime game history. A message posted to Twitch
+          remains subject to Twitch’s chat and retention controls. Your stream may also broadcast
+          the spoken command through its microphone.
         </p>
         <h2>Session cookies and access</h2>
         <p>
@@ -2179,7 +2340,7 @@ function Privacy() {
           streamer who opens it. OBS links provide read-only game information. Keep studio sessions
           and server credentials private.
         </p>
-        <p className="muted">Updated October 27, 2026.</p>
+        <p className="muted">Updated October 31, 2026.</p>
       </main>
     </div>
   );

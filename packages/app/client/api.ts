@@ -99,6 +99,11 @@ export async function request<T>(path: string, body?: unknown, csrf?: string, si
     let snapshot = await transport.state(signal);
     if (body !== undefined) {
       const value = body as Record<string, unknown>;
+      if(path==='/api/studio/voice-guess-draft') {
+        const bot=transport.bootstrap?.bot;
+        if(!snapshot.room?.settings.chatBot || snapshot.room.connection.status!=='connected' || !bot?.configured || !bot.authorized || !bot.channelAllowed)
+          return {status:'unavailable',reason:'Baity is unavailable. Your voice guess is still ready.'} as T;
+      }
       if (path === '/api/studio/action' && ['connect', 'disconnect'].includes(String(value.action))) {
         await direct('/api/edge/chat', { connected: value.action === 'connect' }, transport.bootstrap?.csrf);
         snapshot = await transport.refresh();
@@ -113,11 +118,13 @@ export async function request<T>(path: string, body?: unknown, csrf?: string, si
       } else if (path === '/api/studio/settings') action = { type: 'settings', settings: body };
       else if (path === '/api/recording/restart') action = { type: 'restart-take', takeId: value.takeId };
       else if (path === '/api/studio/guess') action = { type: 'guess', roundId: value.roundId, epoch: value.epoch, text: value.word };
+      else if (path === '/api/studio/voice-guess-draft') action = { type:'voice-guess-draft',roundId:value.roundId,epoch:value.epoch,text:value.word,draftId:value.draftId,expiresAt:value.expiresAt };
       else if (path === '/api/studio/catch') action = { type: 'catch', ...value };
       else if (path === '/api/studio/award') action = { type: 'award', ...value };
       else if (path === '/api/studio/microphone') action = { type: 'microphone', ...value, renew: value.renew === true };
       else throw new Error('The pilot uses the Baited deck. Card making is available in the local app.');
       snapshot = await transport.command(action, signal);
+      if(path==='/api/studio/voice-guess-draft') return {status:'requested'} as T;
       if (path === '/api/studio/microphone') return { armed: value.armed === true } as T;
       if (path === '/api/studio/guess') return { correct: snapshot.room?.result?.reason === 'guess',
         bonus: snapshot.room?.round?.wrongGuessBonus ?? 0, studio: edgeStudio(snapshot, transport.bootstrap!) } as T;

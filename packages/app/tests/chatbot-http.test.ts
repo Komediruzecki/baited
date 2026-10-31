@@ -204,3 +204,25 @@ test('a revoked streamer authorization forgets the bot feed and anything queued 
   await new Promise((resolve) => setTimeout(resolve, 1500));
   assert.equal(posts.length, 1, 'nothing queued before the revocation goes out');
 });
+
+
+test('voice draft HTTP route requires the owner CSRF session and its microphone lease', async(t)=>{
+  const {bait,base,config}=await serve(t);
+  const post=(path:string,body:unknown,cookie='',csrf='')=>fetch(base+path,{method:'POST',headers:{origin:config.origin,'content-type':'application/json',cookie,'x-csrf-token':csrf},body:JSON.stringify(body)});
+  const response=await post('/api/demo/start',{}),cookie=response.headers.get('set-cookie')!.split(';')[0],session=await response.json();
+  let studio=await fetch(base+'/api/studio',{headers:{cookie}}).then(r=>r.json()) as Studio;
+  await post('/api/studio/settings',{...studio.room.settings,callBait:true},cookie,session.csrf);
+  await post('/api/studio/action',{action:'start'},cookie,session.csrf);
+  studio=await fetch(base+'/api/studio',{headers:{cookie}}).then(r=>r.json()) as Studio;
+  const body={roundId:studio.room.round!.id,epoch:studio.room.round!.epoch,word:'banana',draftId:crypto.randomUUID(),expiresAt:Date.now()+15000};
+  assert.equal((await post('/api/studio/voice-guess-draft',body)).status,401);
+  assert.equal((await post('/api/studio/voice-guess-draft',body,cookie,'wrong')).status,403);
+  assert.equal((await post('/api/studio/voice-guess-draft',body,cookie,session.csrf)).status,409);
+  const controller=new AbortController();
+  const events=await fetch(base+'/api/studio/events',{headers:{cookie},signal:controller.signal});
+  await events.body!.getReader().read();t.after(()=>controller.abort());
+  assert.equal((await post('/api/studio/microphone',{armed:true,leaseId:crypto.randomUUID()},cookie,session.csrf)).status,200);
+  const accepted=await post('/api/studio/voice-guess-draft',body,cookie,session.csrf);
+  assert.equal(accepted.status,200,await accepted.clone().text());assert.deepEqual(await accepted.json(),{status:'requested'});
+  assert.equal(bait.rooms.get(studio.room.id)!.round!.guessUsed,false);
+});

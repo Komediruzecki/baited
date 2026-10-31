@@ -6,6 +6,7 @@ import { spoils, type Game, type GameEvent } from './game.js';
 import { targetForms } from '../shared/card-library.js';
 import type { ChatBotPost, ChatBotStatus } from '../shared/types.js';
 import { botKey, CHANNEL_BOT_SCOPE, type ChatMessage } from './twitch.js';
+import { voiceDraftCurrent, voiceDraftText, voiceDraftWord, VOICE_DRAFT_TTL, type VoiceDraftRef, type VoiceDraftState } from './voice-draft.js';
 import {
   badgeAnnouncement,
   eventAnnouncement,
@@ -56,6 +57,7 @@ interface Outgoing extends Announcement {
   id: string;
   expiresAt: number;
   replyTo?: string;
+  voiceDraft?: VoiceDraftRef;
 }
 interface RoomState {
   generation: number;
@@ -75,6 +77,8 @@ interface RoomState {
   nudges: { roundId: string; half: boolean; struggle: boolean; final: boolean };
   commandAt: Map<ChatCommand, number>;
   chatterAt: Map<string, number>;
+  voiceDraft?: VoiceDraftState;
+  voiceDraftAt?: number[];
 }
 const tokenSchema = z.object({ access_token: z.string().min(1), expires_in: z.number() });
 const sendSchema = z.object({
@@ -124,6 +128,31 @@ export class ChatBot {
       problem: room?.problem ?? null,
       recent: room?.recent ?? [],
     };
+  }
+
+  /** Only the authenticated Studio route calls this. It never submits a guess. */
+  voiceGuessDraft(game: Game, roundId: string, epoch: number, text: string, draftId: string, expiresAt: number): {status:'requested'|'unavailable';reason?:string} {
+    const word=voiceDraftWord(text),now=this.clock(),room=this.room(game.data.id);
+    if(!Number.isSafeInteger(expiresAt) || expiresAt<=now || expiresAt>now+VOICE_DRAFT_TTL) throw new Error('That voice guess expired. Say it again.');
+    if(game.phase!=='active' || game.round?.id!==roundId || game.round.epoch!==epoch || !game.round.guessEnabled || game.round.guessUsed)
+      throw new Error('That round no longer accepts a voice guess.');
+    if(!this.wants(game) || game.data.mode!=='demo' && game.connection.status!=='connected')
+      return {status:'unavailable',reason:'Baity is unavailable. Your voice guess is still ready.'};
+    if(room.voiceDraft?.roundId!==roundId) room.voiceDraft=undefined;
+    if(room.voiceDraft?.ids.includes(draftId)) return {status:'requested'};
+    room.voiceDraftAt=(room.voiceDraftAt??[]).filter(at=>at>now-60_000);
+    if((room.voiceDraft?.ids.length??0)>=3 || room.voiceDraftAt.length>=6)
+      return {status:'unavailable',reason:'Baity has shared enough guesses for now. You can still lock in.'};
+    if(room.replies.filter(item=>!item.voiceDraft).length>=LIMITS.replyQueue)
+      return {status:'unavailable',reason:'Baity is busy. Your voice guess is still ready.'};
+    const ref={roundId,epoch,draftId,expiresAt};
+    room.voiceDraft={roundId,ids:[...(room.voiceDraft?.ids??[]),draftId],latest:ref};room.voiceDraftAt.push(now);
+    room.live=game.data.mode!=='demo';
+    room.replies=room.replies.filter(item=>!item.voiceDraft);
+    room.replies.push({key:'voice-guess-draft',text:voiceDraftText(game.data.channel,word),ttl:VOICE_DRAFT_TTL,
+      generation:room.generation,id:randomUUID(),expiresAt:ref.expiresAt,voiceDraft:ref});
+    this.drain(game);
+    return {status:'requested'};
   }
 
   /** Game events become announcements only when the streamer opted in and the bot may post. */
@@ -341,8 +370,9 @@ export class ChatBot {
     }
     // A custom target can be an ordinary word in Baity's copy. Recheck at
     // delivery, including posts queued before a different card was dealt.
-    room.queue = room.queue.filter((item) => item.expiresAt > now && !this.revealsTarget(game, item.text));
-    room.replies = room.replies.filter((item) => item.expiresAt > now && !this.revealsTarget(game, item.text));
+    room.queue = room.queue.filter((item) => this.currentMessage(game,item));
+    room.replies = room.replies.filter((item) => this.currentMessage(game,item));
+    room.replies.sort((a,b)=>Number(!!a.voiceDraft)-Number(!!b.voiceDraft));
     if (!(room.queue.length || room.replies.length) || room.sending || now < room.pausedUntil) return;
     if (now - room.lastAt < LIMITS.channelGap) return;
     room.sent = room.sent.filter((at) => now - at < LIMITS.channelWindow);
@@ -413,7 +443,7 @@ export class ChatBot {
         const wait = reset > 0 ? reset * 1000 - this.clock() : LIMITS.globalWindow;
         this.globalPausedUntil = this.clock() + Math.max(1000, Math.min(60000, wait));
         // Twitch did not take it. Try again later if it is still current.
-        (item.key.startsWith('command:') ? room.replies : room.queue).unshift(item);
+        if(!item.voiceDraft) (item.key.startsWith('command:') ? room.replies : room.queue).unshift(item);
         room.problem = 'Twitch is rate limiting the bot. Messages resume shortly.';
         this.options.onUpdate?.(game);
         return;
@@ -459,10 +489,18 @@ export class ChatBot {
       targetForms(round.word, round.acceptedSpellings).some((word) => spoils(text, word));
   }
 
+  private currentMessage(game:Game,item:Outgoing) {
+    if(item.expiresAt<=this.clock()) return false;
+    // A spoken, explicitly shared guess is allowed to equal the target. Nothing
+    // else bypasses the normal no-spoilers filter, and we do not compare it here.
+    return item.voiceDraft ? voiceDraftCurrent(game,this.room(game.data.id).voiceDraft,item.voiceDraft,this.clock()) &&
+      (game.data.mode==='demo' || game.connection.status==='connected' && this.options.ready(game)===null) : !this.revealsTarget(game,item.text);
+  }
+
   private async post(game: Game, item: Outgoing, retried = false): Promise<Response | null> {
     const token = await this.token(retried);
     // Token refresh may outlast a round or a permission change.
-    if (item.generation !== this.room(game.data.id).generation || !this.wants(game) || this.revealsTarget(game, item.text)) return null;
+    if (item.generation !== this.room(game.data.id).generation || !this.wants(game) || !this.currentMessage(game,item)) return null;
     const response = await this.fetcher('https://api.twitch.tv/helix/chat/messages', {
       method: 'POST',
       headers: {
@@ -478,7 +516,7 @@ export class ChatBot {
       }),
       signal: AbortSignal.timeout(10000),
     });
-    if (response.status === 401 && !retried) return this.post(game, item, true);
+    if (response.status === 401 && !retried && !item.voiceDraft) return this.post(game, item, true);
     return response;
   }
 

@@ -136,16 +136,17 @@ export class FixtureControl extends TwitchControl {
   }
 }
 export class FixtureRoom extends DurableObject {
-  failControl=false;holdPath='';releaseRoom=null;
+  failControl=false;holdPath='';releaseRoom=null;draftCurrent=true;
   async fetch(request) {
     const url=new URL(request.url);const calls=await this.ctx.storage.get('calls')||[];
     if(url.pathname==='/__fixture/calls') return Response.json(calls);
-    if(url.pathname==='/__fixture/config') {this.failControl=url.searchParams.get('fail')==='true';this.holdPath=url.searchParams.get('hold')||'';return Response.json({ok:true});}
+    if(url.pathname==='/__fixture/config') {this.failControl=url.searchParams.get('fail')==='true';this.holdPath=url.searchParams.get('hold')||'';this.draftCurrent=url.searchParams.get('draft')!=='stale';return Response.json({ok:true});}
     if(url.pathname==='/__fixture/release') {this.releaseRoom?.();this.releaseRoom=null;return Response.json({ok:true});}
     if(url.pathname==='/__fixture/connection') return Response.json({connected:await this.ctx.storage.get('connected')||false});
     const body=await request.json();calls.push({path:url.pathname,body});await this.ctx.storage.put('calls',calls);
     if(this.holdPath===url.pathname){this.holdPath='';await new Promise(resolve=>{this.releaseRoom=resolve});}
     if(url.pathname==='/internal/control' && this.failControl)return new Response(null,{status:503});
+    if(url.pathname==='/internal/voice-draft-current') return Response.json({current:this.draftCurrent});
     if(body.type==='connection' && body.connectionRevision>(await this.ctx.storage.get('connectionRevision')||0))
       await this.ctx.storage.put({connected:body.status==='connected',connectionRevision:body.connectionRevision});
     if(body.text==='fixture-retry' && calls.filter(c=>c.body.eventId===body.eventId).length===1) return new Response(null,{status:503});
@@ -837,4 +838,45 @@ test('operator newer stop wins while a room enable acknowledgement is delayed',a
     assert.equal(result.enabled,false);assert.equal(result.revision,3);assert.equal(result.status,'stopped');
     assert.equal((await f.request('/auth/twitch')).status,503);
   } finally {await f.request('/__fixture/room-release/123').catch(()=>{});await enabling?.catch(()=>{});await f.mf.dispose();}
+});
+
+
+test('voice draft delivery preserves the explicit guess, retires stale work and never retries a send', async () => {
+  const f=await fixture({EDGE_BOT_MESSAGES_PER_30_SECONDS:'15'});
+  try {
+    const {cookie}=await login(f);const bootstrap=await f.request('/api/edge/session',{headers:{cookie}}).then(r=>r.json()) as any;
+    const botStart=await f.request('/api/bot/authorize',jsonPost({},{cookie,'x-csrf-token':bootstrap.csrf}));
+    const botUrl=new URL((await botStart.json() as any).url);
+    assert.equal((await f.request(`/auth/twitch/callback?state=${botUrl.searchParams.get('state')}&code=bot`,{headers:{cookie:cookies(botStart)}})).status,302);
+    const game=new Game({id:'fixture',owner:'123',channel:'komediruzecki7',mode:'demo',overlayKey:'unused',settings:{...defaults,chatBot:true,callBait:true},history:[],priorWins:0,priorPlayed:0,priorBest:0,leaders:{}});
+    game.start();const safeView=game.view('viewer'),r=safeView.round!;
+    const draft=(word:string)=>({type:'voice-guess-draft',word,roundId:r.id,epoch:r.epoch,draftId:crypto.randomUUID(),expiresAt:Date.now()+15000});
+    const post=async(id:string,event:unknown)=>f.request('/__fixture/event',jsonPost({channelId:'123',eventId:id,safeView,event}));
+    const exact=draft(r.target!);
+    assert.equal((await post('exact',exact)).status,200);
+    await post('exact',exact);
+    let state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(state.queue.length,1);
+    assert.equal(state.queue[0].text,`komediruzecki7's unconfirmed guess: ${r.target!.toLowerCase()}. Waiting for lock in.`);
+    assert.equal(state.queue[0].expiresAt,exact.expiresAt);
+    await f.request('/__fixture/flush');
+    state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(state.receipts.filter((r:any)=>r.status==='sent').length,1);
+    assert.equal(game.round!.guessUsed,false);
+    assert.equal((await post('invalid',draft('two words'))).status,400);
+    assert.equal((await post('expired',{...draft('banana'),expiresAt:Date.now()-1})).status,400);
+    assert.equal((await post('stale',draft('fish'))).status,200);
+    await f.request('/__fixture/room-config/123?draft=stale');
+    await f.request('/__fixture/flush');
+    state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(state.receipts.filter((r:any)=>r.status==='sent').length,1,'A retired Room draft never reaches Twitch.');
+    assert.equal(state.receipts.filter((r:any)=>r.status==='dropped').length,1);
+    await f.request('/__fixture/room-config/123');
+    await f.request('/__fixture/drop');
+    await post('dropped',draft('ghost'));await f.request('/__fixture/flush');
+    state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(state.queue.length,0,'A provider failure cannot put a spoken draft back in the queue.');
+    const receipts=state.receipts.length;await f.request('/__fixture/flush');
+    assert.equal((await f.request('/__fixture/state').then(r=>r.json()) as any).receipts.length,receipts);
+  } finally {await f.mf.dispose();}
 });

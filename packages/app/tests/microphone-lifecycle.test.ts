@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
 import { Microphone } from '../client/microphone';
+import type { MoonshineLine } from '../client/moonshine';
+import { VoiceGuessSession } from '../client/voice-guess';
+import { localTranscript } from '../server/local-speech';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -16,6 +19,7 @@ function browser(t: TestContext, options: { holdModel?: boolean; resumeError?: E
   const workers: FakeWorker[] = [];
   const requests: ReturnType<typeof deferred<MediaStream>>[] = [];
   const microphones: Microphone[] = [];
+  const sockets: FakeSocket[] = [];
   class FakeTrack extends EventTarget {
     readyState = 'live';
     muted = false;
@@ -62,14 +66,29 @@ function browser(t: TestContext, options: { holdModel?: boolean; resumeError?: E
     onerror: (() => void) | null = null;
     terminated = false;
     loadId = 0;
+    generation = 0;
     constructor() { workers.push(this); }
-    postMessage(message: { type: string; id?: number }) {
+    postMessage(message: { type: string; id?: number; generation?: number }) {
+      if (message.generation !== undefined) this.generation = message.generation;
       if (!message.id) return;
       if (message.type === 'load' && options.holdModel) { this.loadId = message.id; return; }
       queueMicrotask(() => this.onmessage?.({ data: { type: 'reply', id: message.id } }));
     }
     finishLoad() { this.onmessage?.({ data: { type: 'reply', id: this.loadId } }); }
+    line(line: MoonshineLine) { this.onmessage?.({ data: { type: 'line', generation: this.generation, line } }); }
     terminate() { this.terminated = true; }
+  }
+  class FakeSocket {
+    static OPEN = 1;
+    readyState = 1; bufferedAmount = 0;
+    sent: string[] = [];
+    onmessage: ((event: { data: string }) => void | Promise<void>) | null = null;
+    onerror: (() => void) | null = null;
+    onclose: (() => void) | null = null;
+    constructor() { sockets.push(this); }
+    send(value: string) { this.sent.push(value); }
+    close() { this.readyState = 3; }
+    async status(status: string) { await this.onmessage?.({ data: JSON.stringify({ type: 'status', status }) }); }
   }
   const originals = new Map<string, PropertyDescriptor | undefined>();
   const replace = (name: string, value: unknown) => {
@@ -83,7 +102,8 @@ function browser(t: TestContext, options: { holdModel?: boolean; resumeError?: E
   replace('AudioWorkletNode', FakeWorklet);
   replace('Worker', FakeWorker);
   replace('crossOriginIsolated', true);
-  replace('WebSocket', class { static OPEN = 1; });
+  replace('WebSocket', FakeSocket);
+  replace('location', { href: 'http://localhost:3317', protocol: 'http:', hostname: 'localhost' });
   t.after(() => {
     for (const microphone of microphones) microphone.stop();
     for (const [name, original] of originals) {
@@ -91,12 +111,14 @@ function browser(t: TestContext, options: { holdModel?: boolean; resumeError?: E
       else Reflect.deleteProperty(globalThis, name);
     }
   });
-  const create = (provider: 'deepgram' | 'moonshine' = 'deepgram') => {
+  const create = (provider: 'deepgram' | 'moonshine' = 'deepgram',
+    onTranscript?: (line: MoonshineLine, segment: string) => void,
+    consumeFinal?: (line: MoonshineLine, segment: string) => boolean) => {
     const statuses: string[] = [];
     const levels: number[] = [];
     const errors: string[] = [];
     const microphone = new Microphone((value) => statuses.push(value), (value) => levels.push(value),
-      (value) => errors.push(value), provider);
+      (value) => errors.push(value), provider, onTranscript, consumeFinal);
     microphones.push(microphone);
     return { microphone, statuses, levels, errors };
   };
@@ -108,8 +130,51 @@ function browser(t: TestContext, options: { holdModel?: boolean; resumeError?: E
     assert.equal(await pending, true);
     return { ...result, ...media };
   };
-  return { contexts, worklets, workers, requests, stream, create, ready };
+  return { contexts, worklets, workers, requests, sockets, stream, create, ready };
 }
+
+test('Moonshine commands never reach scoring and do not leave gaps in final sequence', async (t) => {
+  const env = browser(t), voice = new VoiceGuessSession(), previews: string[] = [], submitted: string[] = [];
+  voice.setContext({ roundId: 'round', epoch: 1, leaseId: 'capture', takeId: '' });
+  const { microphone, errors } = env.create('moonshine', (line) => previews.push(line.text), (line, segment) => {
+    assert.equal(segment, 'round:1');
+    const result = voice.receive(line);
+    if (result.submit) submitted.push(result.submit.word);
+    return result.consumed;
+  });
+  const enabling = microphone.enable(); env.requests[0].resolve(env.stream().value);
+  assert.equal(await enabling, true);
+  microphone.connect('round', 1, 'csrf', 'capture');
+  await env.sockets[0].status('listening');
+  const line = (id: string, text: string, isComplete = true): MoonshineLine => ({
+    id, text, isComplete, startTime: 1, duration: 1,
+    words: text.split(/\s+/).map(text => ({ text, start: 1.2, end: 1.8, confidence: .95 })),
+    isUpdated: true, isNew: true, hasTextChanged: true, haveSpeakersChanged: false,
+    lastTranscriptionLatencyMs: 0, speakerSpans: [],
+  });
+  const command = line('wake', 'Baity bot, the bait is banana');
+  env.workers[0].line({ ...command, isComplete: false });
+  env.workers[0].line(command);
+  env.workers[0].line(command);
+  env.workers[0].line(line('lock', 'Locked in'));
+  env.workers[0].line(line('lock', 'Locked in'));
+  assert.deepEqual(env.sockets[0].sent, []);
+  assert.deepEqual(submitted, ['banana']);
+  // A used guess or disabled switch removes command eligibility. Replaying an
+  // already consumed provider ID must not turn its wake phrase into a catch.
+  voice.setContext(null);
+  env.workers[0].line(command);
+  assert.deepEqual(env.sockets[0].sent, []);
+  env.workers[0].line(line('ordinary', 'You will never bait me'));
+  const first = JSON.parse(env.sockets[0].sent[0]);
+  assert.equal(first.sequence, 1);
+  assert.equal(first.line.text, 'You will never bait me');
+  assert.ok(localTranscript(first, { roundId: 'round', epoch: 1, firstAudioAt: 100000, audioSeconds: 3, lastSequence: 0 }, 103000));
+  env.workers[0].line(line('ordinary-2', 'Just keep talking'));
+  assert.equal(JSON.parse(env.sockets[0].sent[1]).sequence, 2);
+  assert.ok(previews.includes(command.text), 'commands remain visible in the local transcript');
+  assert.deepEqual(errors, []);
+});
 
 test('enable unlocks audio in the click and is singleflight while Moonshine is loading', async (t) => {
   const env = browser(t, { holdModel: true });

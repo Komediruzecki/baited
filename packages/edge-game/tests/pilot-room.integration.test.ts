@@ -30,6 +30,7 @@ interface Inspection {
   sockets: {role:string;sessionId?:string;expiresAt:number;generation:number;readyState:number}[];
 }
 interface FixtureStub {
+  voiceDraftCurrentFixture(ref:Record<string,unknown>):Promise<boolean>;
   operatorFixture(enabled:boolean,revision:number,fail?:boolean):Promise<{status:number;body:unknown}>;
   bootstrapFixture(): Promise<number>;
   inspectFixture(): Promise<Inspection>;
@@ -101,6 +102,11 @@ before(async () => {
           }
         }
         export class ChannelRoom extends BaseRoom {
+          async voiceDraftCurrentFixture(ref) {
+            const response=await this.fetch(new Request('https://room.internal/internal/voice-draft-current',{method:'POST',headers:{'content-type':'application/json'},
+              body:JSON.stringify({channelId:'123',ref:{...this.pilotState.voiceDraft?.latest,...ref}})}));
+            return response.ok && (await response.json()).current===true;
+          }
           failNextSchedule=false;
           interleaveNextSchedule=undefined;
           async schedule(...args) {
@@ -1750,5 +1756,47 @@ test('a deferred recording reset is an outbox barrier without blocking gameplay 
     ]);
     assert.equal(drained.outbox,0);
     assert.equal(drained.phase,'paused');
+  } finally {await mf.dispose();}
+});
+
+
+test('voice drafts require the owner microphone and stay fenced to the latest live round', async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const ws=await connectedStudio(mf);let snap=await state(mf);
+    await send(mf,{type:'settings',settings:{...snap.room.settings,callBait:true}},snap.revision);
+    snap=await state(mf);await send(mf,{type:'microphone',armed:true,leaseId:randomUUID()},snap.revision);
+    snap=await state(mf);await send(mf,{type:'start'},snap.revision);snap=await state(mf);
+    const r=snap.room.round!,draftId=randomUUID();
+    const action:Command['action']={type:'voice-guess-draft',roundId:r.id,epoch:r.epoch,text:'banana',draftId,expiresAt:await stub.clockFixture()+15000};
+    const attempt=async(action:Command['action'],role:Parameters<typeof token>[0]='studio')=>mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',
+      headers:{origin:ORIGIN,authorization:`Bearer ${await fixtureToken(mf,role)}`,'content-type':'application/json'},
+      body:JSON.stringify({id:randomUUID(),generation:1,expectedRevision:(await state(mf)).revision,action})});
+    assert.equal((await attempt(action,'viewer')).status,403);
+    assert.equal((await attempt({...action,epoch:r.epoch+1})).status,409);
+    assert.equal((await attempt({...action,text:'two words'})).status,409);
+    assert.equal((await attempt({...action,expiresAt:await stub.clockFixture()-1})).status,409);
+    assert.equal((await attempt({...action,expiresAt:await stub.clockFixture()+60000})).status,409);
+    assert.equal((await attempt(action)).status,200);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),true);
+    const queued=(await stub.inspectFixture()).outbox;
+    assert.equal((await attempt({...action,text:'different'})).status,200);
+    assert.equal((await stub.inspectFixture()).outbox,queued,'Same draft UUID cannot enqueue again.');
+    const newer=randomUUID();assert.equal((await attempt({...action,draftId:newer,text:'fish'})).status,200);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),false);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId:newer}),true);
+    await send(mf,{type:'pause',roundId:r.id,epoch:r.epoch},(await state(mf)).revision);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId:newer}),false);
+    assert.equal((await attempt({...action,draftId:randomUUID()})).status,409);
+    let paused=await state(mf);
+    await send(mf,{type:'resume',roundId:r.id,epoch:paused.room.round!.epoch},paused.revision);
+    paused=await state(mf);
+    const third={...action,epoch:paused.room.round!.epoch,draftId:randomUUID()};
+    assert.equal((await attempt(third)).status,200);
+    assert.equal((await attempt({...third,draftId:randomUUID()})).status,409,'Three draft limit survives an epoch change.');
+    await send(mf,{type:'guess',roundId:r.id,epoch:third.epoch,text:'nottherealword'},(await state(mf)).revision);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId:third.draftId}),false,'Lock-in retires an unpublished draft.');
+    assert.equal((await state(mf)).room.history.some(row=>JSON.stringify(row).includes('banana')),false);
+    ws.close();
   } finally {await mf.dispose();}
 });
