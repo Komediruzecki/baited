@@ -41,6 +41,36 @@ test('the exact Bait bot alias works without fuzzy matching ordinary speech', ()
   assert.equal(voice.receive(final('The bait bot is helpful'), 102).consumed, false);
 });
 
+test('observed Baity bought transcription and short hey Baity wake support full and split commands', () => {
+  for (const wake of ['Baity bought', 'Hey Baity bought', 'Hey Baity bot', 'Hey Baity', 'Baitybought']) {
+    const voice = session();
+    const result = voice.receive(final(`${wake}, the bait is marshmallow`), 100);
+    assert.equal(result.consumed, true, wake);
+    assert.equal(result.prepared?.word, 'marshmallow', wake);
+    assert.equal(result.submit, undefined, wake);
+    assert.equal(voice.receive(final('Lock in'), 200).submit?.word, 'marshmallow', wake);
+
+    assert.equal(voice.receive(final(wake), 300).consumed, true, wake);
+    assert.equal(voice.receive(final('The bait is ghost'), 400).prepared?.word, 'ghost', wake);
+    assert.equal(voice.receive(final('Lock in'), 500).submit?.word, 'ghost', wake);
+    assert.equal(voice.receive(final('Lock in'), 501).submit, undefined, wake);
+  }
+});
+
+test('bought alias keeps ordinary speech scoring and does not relax confidence or expiry', () => {
+  for (const text of [
+    'Baity bought a banana', 'Hey Baity bought a ghost costume', 'I bought bait',
+    'I heard Baity bought the bait is ghost', 'You will never bait me',
+  ]) assert.equal(session().receive(final(text), 100).consumed, false, text);
+  const voice = session();
+  assert.deepEqual(voice.receive(final('Hey Baity bought the bait is ghost', {
+    words: [{ text: 'bought', start: 0, end: 1, confidence: .3 }],
+  }), 100), { consumed: true, uncertain: true });
+  assert.equal(voice.receive(final('Lock in'), 200).submit, undefined);
+  voice.receive(final('Hey Baity bought'), 300);
+  assert.equal(voice.receive(final('The bait is ghost'), 300 + VOICE_GUESS_TTL_MS).consumed, false);
+});
+
 test('literal bait remains normal scoring speech outside exact command grammar', () => {
   const voice = session();
   for (const text of [

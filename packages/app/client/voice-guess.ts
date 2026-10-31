@@ -10,7 +10,9 @@ const key = (context: VoiceGuessContext) => JSON.stringify(context);
 const words = (text: string) => text.normalize('NFKC').toLocaleLowerCase('en-US')
   .match(/[\p{L}\p{N}]+(?:['’][\p{L}]+)?/gu) ?? [];
 const phrase = (text: string) => words(text).join(' ').replace(/i['’]m/g, 'i am');
-const wake = /^(?:(?:okay|ok|hey|alright)\s+)?(?:baity bot|bait bot|baitybot|baity)\b\s*/;
+// Moonshine has transcribed "Baity bot" as "Baity bought" in live play.
+// Keep aliases anchored and finite: this is not a general bot/bought replacement.
+const wake = /^(?:(?:okay|ok|hey|alright)\s+)?(?:baity\s?(?:bot|bought)|bait bot|baity)\b\s*/;
 const call = /^(?:i am calling the bait|i call the bait|call the bait)(?:\s+|$)/;
 const guess = /^the bait is ([\p{L}\p{N}]+(?:['’][\p{L}]+)?)$/u;
 const unfinishedGuess = /^(?:the|the bait|the bait is)$/;
