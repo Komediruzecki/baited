@@ -87,12 +87,14 @@ Moonshine is the default (`SPEECH_PROVIDER=moonshine`). It needs no speech-provi
 
 1. Open the studio and choose **Enable microphone**. Read the consent message, allow microphone access, and use headphones.
 2. Wait for the model and microphone to be ready. Start a round and have a separate viewer give hints through chat.
-3. If Moonshine detects the target, the round stops and reveals the word for review. Confirm only if you actually said it. Rejecting the catch ends that revealed word without awarding chat a win.
+3. If Moonshine detects the target, the round stops and reveals the word for a 15-second review. The catch confirms automatically when that window ends. Reject it if you did not say the word, or confirm sooner if it was correct. A confirmed win can also be reversed afterward.
 4. Rehearse your normal speaking voice and your real OBS scene before relying on it. The [speech bench](/speech-lab) can compare the same local WAV with OBS idle and recording; it does not send the file to a speech service.
 
-The installed Moonshine SDK supplies a constant `1.0` in its word-confidence field. It is not a probability and cannot filter misrecognition. This is why Moonshine requires confirmation. Fresh capture times, whole-word matching, round epochs and session ownership are still checked. Active rounds get up to 1.5 seconds after the buzzer to deliver a final result for speech completed before the deadline; long unfinished utterances can miss that window.
+The installed Moonshine SDK supplies a constant `1.0` in its word-confidence field. It is not a probability and cannot filter misrecognition. This is why Moonshine catches have a rejection window and reversible wins. Fresh capture times, whole-word matching, round epochs and session ownership are still checked. Active rounds get up to 1.5 seconds after the buzzer to deliver a final result for speech completed before the deadline; long unfinished utterances can miss that window.
 
 Raw Moonshine microphone audio stays in the browser. Final transcript text travels to the Baited server for matching and is not persisted by Baited. The studio never receives the active target until the round has ended. A provider failure pauses an active round.
+
+The Microphone card shows device, permission and connection interruptions beside its retry control. Healthy background capture can keep its existing lease alive through validated audio; PC sleep or a lost capture still requires explicit re-enable. See [microphone recovery and the proposed floating Studio](docs/microphone-recovery.md) for behavior, evidence limits and Firefox/Windows checks. These source changes are prepared for the next pilot update; they do not establish a live deployment.
 
 Deepgram remains an optional legacy adapter, selected with `SPEECH_PROVIDER=deepgram` and a Proton Pass-injected `DEEPGRAM_API_KEY`. That mode sends microphone audio through the server to Deepgram and scores qualifying final results automatically. Its [older provider setup guide](docs/twitch-deepgram-obs-setup.md) is only for that choice. Leave `SPEECH_PROVIDER=moonshine` for the default local recognition path. ElevenLabs has no adapter in this build. Neither the static landing nor Moonshine requires a cloud speech account.
 

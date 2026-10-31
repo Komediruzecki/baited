@@ -8,12 +8,14 @@ import { streakMilestone, wordSize } from '../extension/presentation.js';
 
 export function CatchDecision({
   result,
+  now = Date.now(),
   disabled,
   hasAward,
   onDecide,
   onReverse,
 }: {
   result: ResultView;
+  now?: number;
   disabled: boolean;
   hasAward: boolean;
   onDecide: (decision: 'confirm' | 'reject') => void;
@@ -22,6 +24,8 @@ export function CatchDecision({
   const decision = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const pending = result.outcome === 'review';
+  const autoConfirm = pending && Number.isFinite(result.confirmAt);
+  const seconds = autoConfirm ? Math.max(0, Math.ceil((result.confirmAt! - now) / 1000)) : null;
   const tier = result.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
   useEffect(() => {
     if (!pending) return;
@@ -43,7 +47,7 @@ export function CatchDecision({
       <div className="studio-result__message" role="status" aria-live="polite" aria-atomic="true">
         <h2 ref={heading} tabIndex={-1}>
           {pending
-            ? 'Did you say it?'
+            ? autoConfirm ? 'Catch heard.' : 'Did you say it?'
             : result.outcome === 'caught'
               ? 'Chat got you.'
               : result.outcome === 'escaped'
@@ -57,7 +61,9 @@ export function CatchDecision({
         </p>
         <p>
           {pending
-            ? 'Yes gives chat the win. No ends this round, and the next round gets a new word.'
+            ? autoConfirm
+              ? 'Chat gets the win automatically. Reject it if Moonshine misheard; the next round gets a new word.'
+              : 'Yes gives chat the win. No ends this round, and the next round gets a new word.'
             : result.outcome === 'caught'
               ? `You said it after ${result.elapsed} ${result.elapsed === 1 ? 'second' : 'seconds'}.`
               : result.outcome === 'overturned'
@@ -73,13 +79,19 @@ export function CatchDecision({
           </p>
         )}
       </div>
+      {autoConfirm && (
+        <div className="catch-countdown" role="timer" aria-live="off">
+          <span>{seconds! > 0 ? 'Automatic confirmation in' : 'Waiting for the confirmed result'}</span>
+          {seconds! > 0 && <strong>{seconds}s</strong>}
+        </div>
+      )}
       {pending && (
         <div className="round-actions catch-actions" aria-label="Confirm speech result">
           <Button className="secondary" disabled={disabled} onClick={() => onDecide('reject')}>
             No, I didn't
           </Button>
           <Button className="primary" disabled={disabled} onClick={() => onDecide('confirm')}>
-            Yes, chat wins
+            {autoConfirm ? 'Confirm now' : 'Yes, chat wins'}
           </Button>
         </div>
       )}

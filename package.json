@@ -16,9 +16,11 @@
     "extension:local": "pnpm --filter @baited/app extension:local",
     "rehearsal:local": "pnpm --filter @baited/app rehearsal:local",
     "check": "pnpm -r check",
-    "test": "pnpm --filter @baited/app test && pnpm --filter @baited/landing test:run && pnpm --filter @irchiinnuss/review-host test:run",
+    "test": "pnpm --filter @baited/app test && pnpm --filter @baited/landing test:run && pnpm --filter @irchiinnuss/review-host test:run && pnpm --filter @baited/edge-game test",
     "build": "pnpm --filter @baited/app build && pnpm --filter @baited/landing deploy:dry-run",
     "build:extension": "pnpm --filter @baited/app build:extension",
-    "check:landing": "pnpm --filter @baited/landing check && pnpm --filter @baited/landing test:run && pnpm --filter @baited/landing deploy:dry-run && pnpm --filter @baited/landing deploy:dry-run:prod"
+    "check:landing": "pnpm --filter @baited/landing check && pnpm --filter @baited/landing test:run && pnpm --filter @baited/landing deploy:dry-run && pnpm --filter @baited/landing deploy:dry-run:prod",
+    "dev:edge:local": "pnpm --filter @baited/edge-game dev:local",
+    "build:edge": "pnpm --filter @baited/edge-game build"
   }
 }

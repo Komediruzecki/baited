@@ -3,8 +3,10 @@ WORKDIR /workspace
 RUN npm install --global pnpm@10.34.3
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/app/package.json packages/app/package.json
+COPY packages/game-core/package.json packages/game-core/package.json
 RUN pnpm install --frozen-lockfile --filter @baited/app...
 COPY packages/app packages/app
+COPY packages/game-core packages/game-core
 # The app's catalogue check verifies card inks against this shared design source.
 # Only this CSS file is needed at build time; the runtime remains app-only.
 COPY packages/landing/site/styles.css packages/landing/site/styles.css

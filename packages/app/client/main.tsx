@@ -41,7 +41,8 @@ import type {
   ChatBotPost,
   ChatBotStatus,
 } from '../shared/types';
-import { request } from './api';
+import { request, isEdgeRuntime, subscribeEdge } from './api';
+import { createRuntimeSessionLoader } from './runtime-session';
 import { Microphone } from './microphone';
 import { SpeechLab } from './SpeechLab';
 import { CardArt } from './CardArt';
@@ -53,7 +54,10 @@ import { nextStreakTier, streakMilestone } from '../extension/presentation.js';
 import { CutCard } from './CutCard';
 import { StreakBadge, StreakBadges, StreakCelebration, StreakCount, StreakRow } from './streak';
 import { SoundControls } from './SoundControls';
-import { microphoneReady, MicrophoneLease } from './safety';
+import { microphoneReady, MicrophoneLease, microphoneLeaseMessage } from './safety';
+import { MicrophoneFeedback } from './microphone-feedback';
+import { StudioQuickControls, type QuickSetting } from './StudioQuickControls';
+import { StudioLogo } from './StudioLogo';
 import { useSmoothScroll } from './smooth-scroll';
 import 'lenis/dist/lenis.css';
 import './style.css';
@@ -64,6 +68,7 @@ import {
   botNotices,
   AllowBotButton,
   BotSignInLink,
+  EdgeBotSignInButton,
   Button,
   Tag,
   CopyButton,
@@ -155,6 +160,7 @@ function useLive<T>(url: string, onState: (s: T) => void, onError: (s: boolean) 
   stateRef.current = onState;
   errorRef.current = onError;
   useEffect(() => {
+    if (isEdgeRuntime()) return subscribeEdge<T>(url, (state) => stateRef.current(state), (lost) => errorRef.current(lost));
     const source = new EventSource(url);
     source.addEventListener('state', (e) => {
       stateRef.current(JSON.parse((e as MessageEvent).data));
@@ -173,7 +179,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [modal, setModal] = useState(''),
-    [tab, setTab] = useState<string>(() => studioTabFromPath(location.pathname)),
+    [tab, setTab] = useState<string>(() => isEdgeRuntime() ? 'studio' : studioTabFromPath(location.pathname)),
     // The operator may finish the bot account sign-in while signed in here as a streamer.
     [notice, setNotice] = useState(() => {
       const code = new URLSearchParams(location.search).get('notice') ?? '';
@@ -185,7 +191,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     });
   const [micStatus, setMicStatus] = useState('off'),
     [level, setLevel] = useState(0),
-    [consent, setConsent] = useState(false);
+    [consent, setConsent] = useState(false),
+    [micIssue, setMicIssue] = useState(''),
+    [micRecovering, setMicRecovering] = useState(false);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
   const [cardsDirty, setCardsDirty] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
@@ -214,7 +222,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       owner.microphone.stop();
       if (capture.current === owner) {
         setConsent(false);
-        if (message) setError(message);
+        setMicRecovering(false);
+        if (message) { setMicIssue(message); setError(message); }
       }
       try {
         await owner.lease.cancel();
@@ -223,10 +232,12 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           if (capture.current === owner) receive(fresh);
         }
       } catch {
-        if (capture.current === owner)
+        if (capture.current === owner) {
+          setMicIssue((current) => current || 'Microphone stopped. Check the connection and pause the round before continuing.');
           setError(
             'Microphone stopped. Check the connection and pause the round before continuing.',
           );
+        }
       }
     },
     [receive],
@@ -237,7 +248,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       if (lost) {
         setTranscriptLines(transcriptBuffer.current.setEnabled(false));
         setTranscriptEnabled(false);
-        if (capture.current) void pauseForMicrophone(capture.current, undefined, false);
+        if (capture.current?.lease.active) void pauseForMicrophone(capture.current,
+          'Studio lost its connection. Wait for it to reconnect, then enable your microphone again.', false);
         else setConsent(false);
         void request<SessionInfo>('/api/session')
           .then((s) => {
@@ -277,15 +289,24 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     const owner = capture.current;
     if (!consent || offline || !owner?.lease.active) return;
     const renew = () =>
-      void owner.lease.renew().catch(() => {
+      void owner.lease.renew().catch((error: unknown) => {
         if (capture.current === owner && owner.lease.active)
           void pauseForMicrophone(
             owner,
-            'Microphone readiness could not be confirmed. Reconnect, then enable it again.',
+            microphoneLeaseMessage(error),
           );
       });
     const interval = setInterval(renew, 10000);
-    return () => clearInterval(interval);
+    const returned = () => { if (document.visibilityState === 'visible') renew(); };
+    document.addEventListener('visibilitychange', returned);
+    window.addEventListener('pageshow', returned);
+    window.addEventListener('online', returned);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', returned);
+      window.removeEventListener('pageshow', returned);
+      window.removeEventListener('online', returned);
+    };
   }, [consent, offline, g?.mode, pauseForMicrophone]);
   const action = async (action: string) => {
     if (currentStudio.current?.room.phase === 'settling') return;
@@ -326,7 +347,21 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       setBusy(false);
     }
   };
+  const saveQuickSetting = async (key: QuickSetting, enabled: boolean) => {
+    const current = currentStudio.current;
+    if (!current || busy || offline || current.room.phase === 'settling') return;
+    setBusy(true);
+    try {
+      receive(await request<Studio>('/api/studio/settings', {
+        ...current.room.settings, [key]: enabled,
+      }, session.csrf));
+    } finally {
+      setBusy(false);
+    }
+  };
   const stopMic = () => {
+    setMicIssue('');
+    setMicRecovering(false);
     if (capture.current) void pauseForMicrophone(capture.current);
   };
   const enableMic = async () => {
@@ -339,6 +374,8 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const acceptMic = async () => {
     setModal('');
     setError('');
+    setMicIssue('');
+    setMicRecovering(false);
     setConsent(false);
     setTranscriptLines(transcriptBuffer.current.clear());
     const previous = capture.current;
@@ -346,8 +383,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       ? previous.lease.cancel().catch(() => {})
       : Promise.resolve();
     previous?.microphone.stop();
-    const lease = new MicrophoneLease(crypto.randomUUID(), (body) =>
-      request('/api/studio/microphone', body, session.csrf),
+    const lease = new MicrophoneLease(crypto.randomUUID(), (body, signal) =>
+      request('/api/studio/microphone', body, session.csrf, signal),
+      { onRecovery: (recovering) => { if (capture.current?.lease === lease) setMicRecovering(recovering); } },
     );
     const owner: Capture = {
       lease,
@@ -367,7 +405,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           if (
             capture.current !== owner ||
             !current ||
-            !canPreviewTranscript(window.location.hostname, current.room.mode)
+            !canPreviewTranscript(current.room.mode, session.authenticated)
           )
             return;
           const lines = transcriptBuffer.current.receive(line, segment);
@@ -380,13 +418,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     await previousCancelled;
     if (!enabled || capture.current !== owner || !lease.active) return;
     try {
-      if ((await lease.arm()) && capture.current === owner && owner.microphone.enabled)
+      if ((await lease.arm()) && capture.current === owner && owner.microphone.enabled) {
+        setMicIssue('');
         setConsent(true);
-    } catch {
+      }
+    } catch (error: unknown) {
       if (capture.current === owner && lease.active)
         void pauseForMicrophone(
           owner,
-          'Microphone readiness could not be confirmed. Reconnect, then enable it again.',
+          microphoneLeaseMessage(error),
         );
     }
   };
@@ -424,16 +464,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   return (
     <div className="app-shell studio-app studio-shell">
       <aside className="sidebar">
-        <a href="https://baited.maff.app" className="brand" aria-label="Baited website">
-          {brand}
-        </a>
+        <StudioLogo />
         <nav aria-label="Studio sections">
           {[
             ['studio', 'Studio', LayoutDashboard],
             ['community', 'Community', Users],
             ['cards', 'Cards', Card],
             ['setup', 'Stream setup', Monitor],
-          ].map(([id, label, Icon]) => {
+          ].filter(([id]) => !isEdgeRuntime() || id !== 'cards').map(([id, label, Icon]) => {
             const I = Icon as typeof Monitor;
             return (
               <button
@@ -576,7 +614,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                   ? 'Ready'
                                   : 'Setup needed'}
                     </Tag>
-                    <button className="desk-settings" aria-label="Game settings" disabled={settling || offline} onClick={() => setModal('settings')}><Settings2 size={16} /><span>Game settings</span></button>
+                    <div className="desk-control-tools">
+                      <StudioQuickControls settings={g.settings} bot={studio.chatBot}
+                        disabled={busy || settling || offline} onChange={saveQuickSetting} />
+                      <button className="desk-settings" aria-label="Game settings" disabled={busy || settling || offline} onClick={() => setModal('settings')}><Settings2 size={16} /><span>Game settings</span></button>
+                    </div>
                   </div>
                   <div className="round-console">
                     <div className="timer-block">
@@ -697,6 +739,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         <CatchDecision
                           key={g.result.id}
                           result={g.result}
+                          now={Math.max(now + offset.current, g.serverTime)}
                           disabled={busy || offline}
                           hasAward={!!studio.awardBoard}
                           onDecide={(decision) => void decideCatch(decision)}
@@ -759,18 +802,17 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     </div>
                   </div>
                   {!demo && (
-                    <div className="round-readiness" role="status">
-                      {
-                        <>
-                          <span className={connected ? 'ready-check' : ''}>
-                            {connected ? <Check size={15} /> : <Wifi size={15} />} Chat{' '}
-                            {connected ? 'connected' : 'disconnected'}
-                          </span>
-                          <span className={consent ? 'ready-check' : ''}>
-                            {consent ? <Mic size={15} /> : <MicOff size={15} />}
-                            {modelLoading
-                              ? micStatus
-                              : settling
+                    <div className="round-readiness">
+                      <div className="round-readiness__status" role="status">
+                        <span className={connected ? 'ready-check' : ''}>
+                          {connected ? <Check size={15} /> : <Wifi size={15} />} Chat{' '}
+                          {connected ? 'connected' : 'disconnected'}
+                        </span>
+                        <span className={consent ? 'ready-check' : ''}>
+                          {consent ? <Mic size={15} /> : <MicOff size={15} />}
+                          {modelLoading
+                            ? micStatus
+                            : settling
                               ? 'Finishing speech check'
                               : micStatus === 'listening'
                                 ? 'Speech live'
@@ -779,20 +821,24 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                   : !studio.speechReady
                                     ? 'Speech setup needed'
                                     : 'Microphone off'}
-                          </span>
-                          {!connected && <button type="button" disabled={offline || busy} onClick={() => void action('connect')}>Reconnect chat</button>}
+                        </span>
+                      </div>
+                      {(!connected || (!consent && !modelLoading)) && (
+                        <div className="round-readiness__actions">
+                          {!connected && <Button type="button" className="secondary" disabled={offline || busy} onClick={() => void action('connect')}>Reconnect chat</Button>}
                           {!consent && !modelLoading && (
-                            <button
+                            <Button
                               type="button"
+                              className="secondary"
                               disabled={offline || settling}
                               onClick={() => void enableMic()}
                             >
-                              <Mic size={14} />
+                              <Mic size={16} />
                               {studio.speechReady ? 'Enable microphone' : 'Set up speech'}
-                            </button>
+                            </Button>
                           )}
-                        </>
-                      }
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="round-progress">
@@ -846,7 +892,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     </div>
                   </div>
                   <h3>
-                    {settling
+                    {micIssue
+                      ? 'Microphone stopped'
+                      : micRecovering
+                        ? 'Checking connection'
+                      : settling
                       ? 'Checking final words'
                       : micStatus.startsWith('Loading Moonshine')
                         ? 'Loading the speech model'
@@ -861,7 +911,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                               : 'Microphone off'}
                   </h3>
                   <p>
-                    {modelLoading
+                    {micIssue
+                      ? 'Speech detection is off until you enable the microphone again.'
+                      : modelLoading
                       ? 'The model is cached in this browser after it downloads.'
                       : settling
                       ? 'Listening has stopped. Waiting for the final word check.'
@@ -876,9 +928,10 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                             : 'Enable your microphone to listen for the secret word.'}
                   </p>
                   {modelLoading && modelProgress && <div className="model-progress"><progress aria-label="Speech model download" max={100} value={Math.min(100, Number(modelProgress[1]))} /><span>{modelProgress[1]}%</span></div>}
+                  <MicrophoneFeedback issue={micIssue} recovering={micRecovering} />
                   {studio.speechProvider === 'moonshine' && (
                     <p className="mic-review-note">
-                      <strong>You make the call.</strong> Confirm each catch before chat gets a win.
+                      <strong>Catches confirm automatically.</strong> You have 15 seconds to reject a misheard word. You can also reverse a win afterward.
                     </p>
                   )}
                   <Button
@@ -895,7 +948,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       ? 'Cancel model loading'
                       : consent
                         ? 'Disable microphone'
-                        : 'Enable microphone'}
+                        : micIssue ? 'Try microphone again' : 'Enable microphone'}
                   </Button>
                   <div className="mic-footnote">
                     <ShieldCheck size={12} />
@@ -917,7 +970,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       />
                     )}
                   {studio.speechProvider === 'moonshine' &&
-                    canPreviewTranscript(window.location.hostname, g.mode) && (
+                    canPreviewTranscript(g.mode, session.authenticated) && (
                       <TranscriptPreview
                         enabled={transcriptEnabled}
                         lines={transcriptLines}
@@ -935,21 +988,21 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   <section className="panel viewer-share">
                     <div className="section-heading">
                       <div>
-                        <h3>Viewer link</h3>
+                        <h3>{isEdgeRuntime() ? 'Your Twitch channel' : 'Viewer link'}</h3>
                       </div>
                       <Link2 size={21} />
                     </div>
-                    <p>Viewers see the secret word here.</p>
+                    <p>{isEdgeRuntime() ? 'Viewers see the secret word in the Baited Extension.' : 'Viewers see the secret word here.'}</p>
                     <div className="link-field">
-                      <input aria-label="Viewer room link" readOnly value={studio.viewerUrl} />
+                      <input aria-label={isEdgeRuntime() ? 'Twitch channel link' : 'Viewer room link'} readOnly value={studio.viewerUrl} />
                       <CopyButton value={studio.viewerUrl} />
                     </div>
                     <div className="share-footer">
                       <span>
-                        <Users size={13} /> No viewer account needed
+                        <Users size={13} /> {isEdgeRuntime() ? 'Open the Extension on Twitch' : 'No viewer account needed'}
                       </span>
                       <a href={studio.viewerUrl} target="_blank" rel="noreferrer">
-                        Open viewer room <ArrowUpRight size={14} />
+                        {isEdgeRuntime() ? 'Open channel' : 'Open viewer room'} <ArrowUpRight size={14} />
                       </a>
                     </div>
                   </section>
@@ -988,7 +1041,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </>
           )}
           {tab === 'community' && <Community game={g} />}
-          {tab === 'cards' && <React.Suspense fallback={<section className="panel" role="status">Opening your card library…</section>}><CardLibrary csrf={session.csrf!} difficulty={g.settings.difficulty}
+          {tab === 'cards' && !isEdgeRuntime() && <React.Suspense fallback={<section className="panel" role="status">Opening your card library…</section>}><CardLibrary csrf={session.csrf!} difficulty={g.settings.difficulty}
             offline={offline} pronunciationDisabled={consent || micStatus !== 'off' || active || paused || settling || !!pendingCatch}
             onDirtyChange={setCardsDirty} onBusyChange={setCardsBusy} onDeckChange={refreshDeck} /></React.Suspense>}
           {tab === 'setup' && (
@@ -1009,9 +1062,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           >
             <h2 id="studio-sound-title">Round sounds</h2>
             <SoundControls roomId={g.id} game={g} offline={offline} />
-            <a href="/card-design-lab">
+            {!isEdgeRuntime() && <a href="/card-design-lab">
               Browse card editions <ArrowUpRight size={14} />
-            </a>
+            </a>}
           </section>
           <footer className="studio-footer">
             <span className="footer-brand">
@@ -1060,7 +1113,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               onSave={save}
             />
           ) : modal === 'how' ? (
-            <HowTo />
+            <HowTo speechProvider={studio.speechProvider} />
           ) : modal === 'guess' ? (
             <GuessForm
               key={g.round?.id}
@@ -1074,12 +1127,12 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <>
               <p>
                 {studio.speechProvider === 'moonshine'
-                  ? 'baited will load Moonshine Tiny on this computer, then ask for your microphone. Recognition runs here during active rounds. Only final words and timing go to the game server.'
+                  ? 'Baited will ask for microphone access and load Moonshine Tiny at the same time. Speech recognition runs on this computer during active rounds. Final phrases and timing go to the game server; audio stays here.'
                   : 'baited will request your microphone and stream it through this server to Deepgram during active rounds only.'}
               </p>
               <p className="muted">
                 {studio.speechProvider === 'moonshine'
-                  ? 'Confirm catches: this model can mistake similar words. baited stops the round and asks you before awarding a win. The first model download is about 84 MB and is cached in your browser.'
+                  ? 'Moonshine can mistake similar words. A detected catch confirms after 15 seconds unless you reject it. You can reverse a mistaken win afterward. The first model download is about 84 MB and is cached in your browser.'
                   : 'baited does not record or store audio or transcripts. Deepgram processes the audio under its own terms.'}{' '}
                 Use headphones to reduce sound from your stream reaching the mic. You can stop at
                 any time.
@@ -1194,7 +1247,9 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
 }
 function chatBotHint(bot: ChatBotStatus) {
   const what =
-    'Baity posts round starts, halfway, the last 10 seconds and results, and gets louder every round chat loses. Never the word while a round is live.';
+    isEdgeRuntime()
+      ? 'Baity posts round starts, results and game events. Never the word while a round is live.'
+      : 'Baity posts round starts, halfway, the last 10 seconds and results, and gets louder every round chat loses. Never the word while a round is live.';
   if (bot.mode === 'demo') return `${what} In this demo, posts appear under Demo controls.`;
   if (bot.mode === 'unconfigured') return `${what} This server has no bot account yet, so nothing is posted.`;
   if (bot.mode === 'unauthorized')
@@ -1644,7 +1699,7 @@ function Setup({
               </div>
               <p className="muted">
                 {studio.speechProvider === 'moonshine'
-                  ? 'Moonshine checks speech on this computer. You confirm each catch before chat gets a win.'
+                  ? 'Moonshine checks speech on this computer. A catch confirms after 15 seconds unless you reject it. You can reverse a mistaken win afterward.'
                   : 'The studio sends microphone audio to Deepgram during active rounds.'}{' '}
                 Keep this browser tab open while you play.
               </p>
@@ -1687,19 +1742,20 @@ function Setup({
                 <h2>Bring chat into the game</h2>
               </div>
               <p className="muted">
-                Share this standalone viewer-room link in Twitch chat or a channel panel. Viewers
-                keep it beside the stream to see their secret word.
+                {isEdgeRuntime()
+                  ? 'Viewers open the Baited Extension on your Twitch channel to see the secret card. The broadcaster gets the hidden side.'
+                  : 'Share this standalone viewer-room link in Twitch chat or a channel panel. Viewers keep it beside the stream to see their secret word.'}
               </p>
               <div className="link-field">
-                <input aria-label="Viewer room URL" value={studio.viewerUrl} readOnly />
+                <input aria-label={isEdgeRuntime() ? 'Twitch channel URL' : 'Viewer room URL'} value={studio.viewerUrl} readOnly />
                 <CopyButton value={studio.viewerUrl} />
               </div>
               <a className="inline-link" href={studio.viewerUrl} target="_blank" rel="noreferrer">
-                Open the viewer room <ArrowUpRight size={15} />
+                {isEdgeRuntime() ? 'Open your Twitch channel' : 'Open the viewer room'} <ArrowUpRight size={15} />
               </a>
               <div className="notice">
                 <Eye size={18} />
-                <p>This link reveals the word. Keep it closed while you play.</p>
+                <p>{isEdgeRuntime() ? 'Twitch identifies each viewer. Your broadcaster account keeps the secret card hidden.' : 'This link reveals the word. Keep it closed while you play.'}</p>
               </div>
             </div>
           </section>
@@ -1713,14 +1769,14 @@ function Setup({
         <div>
           <h3>Your game data</h3>
           <p className="muted">
-            baited stores settings, scores, participation and award counts. Recent chat hints stay
-            in memory for award review, then clear ten minutes after the round. Chat text, audio and
-            transcripts are never written to disk.
+            {isEdgeRuntime()
+              ? 'Audio stays in your browser. Round state, scores and selected chat clues are stored on the server. Award clues expire after the review window. Contact hello@irchiinnuss.com to remove your pilot data.'
+              : 'baited stores settings, scores, participation and award counts. Recent chat hints stay in memory for award review, then clear ten minutes after the round. Chat text, audio and transcripts are never written to disk.'}
           </p>
         </div>
-        <Button className="danger-outline" onClick={onDelete}>
+        {!isEdgeRuntime() && <Button className="danger-outline" onClick={onDelete}>
           <Trash2 size={16} /> Delete my data
-        </Button>
+        </Button>}
       </section>
     </div>
   );
@@ -1793,6 +1849,7 @@ function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
         {game.mode === 'twitch' && bot.mode === 'twitch' && !bot.channelAllowed && (
           <AllowBotButton phase={game.phase} />
         )}
+        {isEdgeRuntime() && bot.mode === 'unauthorized' && <EdgeBotSignInButton phase={game.phase} />}
         <p className="setup-commands">
           Chat can type <code>!bait help</code>, <code>!bait score</code>, <code>!bait top</code> and{' '}
           <code>!bait who</code>.
@@ -1894,7 +1951,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     : won ? 'The streamer said it.'
     : finished ? 'A new word is next.' : 'The word is coming.';
   const detail = stale ? 'Waiting for a fresh game update.'
-    : pendingCatch ? 'The streamer is checking what they heard.'
+    : pendingCatch ? 'A catch was heard. Waiting for the confirmed result.'
     : settling ? 'Only words spoken before the buzzer count.'
     : paused ? 'The clock and listening are stopped.'
     : active ? 'Don’t type it.'
@@ -1979,6 +2036,23 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
 }
 
 function Privacy() {
+  if (isEdgeRuntime()) return (
+    <div className="viewer-page">
+      <header className="viewer-header"><a className="brand" href="/">{brand}</a><a className="text-button" href="/">Back to baited <ArrowUpRight size={16} /></a></header>
+      <main className="privacy-copy">
+        <h1>Pilot privacy</h1>
+        <p>Baited is testing a small game for invited Twitch channels. Contact <a href="mailto:hello@irchiinnuss.com">hello@irchiinnuss.com</a> with a privacy question or deletion request.</p>
+        <h2>Your microphone</h2>
+        <p>Microphone access is optional. Moonshine recognizes speech in your browser. Audio stays on your device. Final text, word timing and timing counters reach the game server so it can check a possible catch. A detected catch confirms after 15 seconds unless the streamer rejects it. A mistaken win can be reversed.</p>
+        <h2>Your game and chat</h2>
+        <p>The server stores round state, settings, scores and participation. A limited set of recent chat clues is kept for award review and expires after that review window. Twitch delivers channel chat to the game after the streamer connects their account.</p>
+        <h2>Who sees the card</h2>
+        <p>Twitch identifies Extension viewers. The broadcaster and OBS receive a hidden card during the round; viewers receive the secret word. OBS links are private, read-only capabilities. Do not share one outside your streaming setup.</p>
+        <h2>Sign-in and removal</h2>
+        <p>Studio uses an essential session cookie. Twitch authorization is encrypted on the server. Baited adds no advertising cookies. You can sign out, revoke Baited in Twitch settings, or contact the address above to remove your pilot data.</p>
+      </main>
+    </div>
+  );
   return (
     <div className="viewer-page">
       <header className="viewer-header">
@@ -2071,28 +2145,35 @@ function Privacy() {
 }
 function App() {
   const [session, setSession] = useState<SessionInfo | null>(null),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [retrying, setRetrying] = useState(false);
+  const sessionLoader = useRef<ReturnType<typeof createRuntimeSessionLoader<SessionInfo>> | null>(null);
   const path = location.pathname.split('/').filter(Boolean),
-    reload = useCallback(() => {
-      void request<SessionInfo>('/api/session')
-        .then((s) => {
-          setSession(s);
-          setError('');
-        })
-        .catch((e) => setError(e.message));
-    }, []);
+    reload = useCallback(() => { sessionLoader.current?.reload(); }, []);
   useEffect(() => {
-    if (!['play', 'overlay', 'privacy', 'speech-lab'].includes(path[0])) reload();
+    if (path[0] === 'speech-lab') return;
+    const loader = createRuntimeSessionLoader<SessionInfo>({
+      load: (signal) => request<SessionInfo>('/api/session', undefined, undefined, signal),
+      automatic: ['overlay', 'play'].includes(path[0]),
+      onSession: (value) => { setSession(value); setError(''); setRetrying(false); },
+      onError: (failure, scheduled) => { setError(failure.message); setRetrying(scheduled); },
+    });
+    sessionLoader.current = loader;
+    loader.reload();
+    return () => { loader.destroy(); if (sessionLoader.current === loader) sessionLoader.current = null; };
   }, [reload]);
-  if (path[0] === 'privacy') return <Privacy />;
+  if (path[0] === 'privacy' && session) return <Privacy />;
   if (path[0] === 'speech-lab') return <SpeechLab />;
   if (path[0] === 'about' && session) return <Landing session={session} reload={reload} />;
-  if (['play', 'overlay'].includes(path[0]) && path[1])
+  if (session && isEdgeRuntime() && path[0] === 'play')
+    return <main className="public-error"><h1>Join the game on Twitch.</h1><p>Open the Baited panel or player Extension on the streamer’s channel to see your card.</p><p>The pilot keeps secret cards inside Twitch, where the streamer and viewers have separate views.</p><a href="https://www.twitch.tv">Open Twitch</a></main>;
+  if (session && ['play', 'overlay'].includes(path[0]) && path[1])
     return <PublicRoom id={path[1]} overlay={path[0] === 'overlay'} />;
   if (error)
     return (
       <div className="loading">
         <p role="alert">{error}</p>
+        {retrying && <p role="status">Reconnecting automatically…</p>}
         <Button onClick={reload}>Try again</Button>
       </div>
     );

@@ -18,6 +18,8 @@ On 27 October 2026 the owner asked for one project: the landing's selected card 
 
 Inter carries labels, inputs, navigation and explanatory text. The plain original BAITED artwork is the wordmark source; Russo One is reserved for round headings, revealed words and the timer. Buttons use consistent 44px minimum targets, visible focus, clear disabled states and a modest 160ms state transition. Settings use a native dialog and return keyboard focus to the opener when closed. No idle decorative animation or sound autoplay.
 
+Studio's masthead links to the landing and shares its pixel wordmark, violet ink and lavender pixel fill. Hover or keyboard focus plays the landing's finite column wave; leaving reverses it. The grid and timing come from `packages/landing/site/logo-motion.js` and `pixel-logo.js`, without importing landing navigation or scrolling. The link stays fixed, touch navigates in one tap, and reduced motion, forced colors or unavailable Canvas 2D retain a static wordmark. Frames stop when the page is hidden; cleanup cancels frames and disconnects observers.
+
 ## State and privacy rules
 
 - Preserve disconnected, model-loading, microphone-off, armed, listening, paused, settling, review, win and escape states.

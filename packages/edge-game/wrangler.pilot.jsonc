@@ -1,0 +1,50 @@
+// Owner-authorized pilot for two invited streamer channels.
+// Keep synthetic auth, workers.dev and preview URLs disabled.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "baited-edge-pilot",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-07",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "pilot-baited.maff.app", "custom_domain": true }],
+  "observability": { "enabled": false },
+  "limits": { "cpu_ms": 1000 },
+  // Approximate per-location thresholds; these are not a global spending cap.
+  // Keep namespace IDs distinct from other Workers in this account at activation.
+  "ratelimits": [
+    { "name": "PILOT_INGRESS_LIMITER", "namespace_id": "2026102901", "simple": { "limit": 600, "period": 60 } },
+    { "name": "PILOT_OAUTH_LIMITER", "namespace_id": "2026102902", "simple": { "limit": 10, "period": 60 } }
+  ],
+  "assets": {
+    "directory": "./dist/pilot-assets",
+    "binding": "ASSETS",
+    "run_worker_first": ["/", "/index.html", "/health", "/api/*", "/auth/*", "/v1/*", "/internal/*", "/studio", "/studio/*", "/overlay/*", "/play/*", "/privacy", "/creator", "/creator/*", "/card-lab", "/moonshine-worker.js", "/moonshine/runtime-0.1.5-csp1/moonshine.mjs"]
+  },
+  "vars": {
+    "EDGE_POC_ENABLED": "false",
+    "EDGE_PILOT_ENABLED": "true",
+    "EDGE_OPERATOR_INITIAL_ENABLED": "false",
+    "EDGE_LOCAL_FIXTURE_AUTH": "false",
+    "EDGE_STAGING_AUTH": "false",
+    "EDGE_PUBLIC_ORIGIN": "https://pilot-baited.maff.app",
+    "EDGE_ALLOWED_HOSTS": "pilot-baited.maff.app",
+    "EDGE_ALLOWED_ORIGINS": "https://pilot-baited.maff.app,https://54ysfu9jbragbdbvown2n8zrrli0g0.ext-twitch.tv",
+    "EDGE_CHANNEL_LOGIN_ALLOWLIST": "komediruzecki7,lakeeko",
+    "EDGE_MAX_CHANNELS": "2",
+    "EDGE_STUDIO_IDLE_MINUTES": "15",
+    "EDGE_MAX_PARTICIPANTS": "100",
+    "EDGE_MAX_VIEWER_SOCKETS": "100",
+    "EDGE_CHAT_EVENTS_PER_MINUTE": "600",
+    "EDGE_BOT_MESSAGES_PER_30_SECONDS": "15",
+    "EDGE_BOT_OWNER_LOGIN": "komediruzecki7",
+    "EDGE_BOT_USER_ID": "1596216112"
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOMS", "class_name": "ChannelRoom" },
+      { "name": "CONTROL", "class_name": "TwitchControl" }
+    ]
+  },
+  "migrations": [{ "tag": "pilot-v1", "new_sqlite_classes": ["ChannelRoom", "TwitchControl"] }]
+}

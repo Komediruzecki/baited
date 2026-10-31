@@ -16,6 +16,19 @@ body[data-surface='overlay'] {
   overflow: hidden;
   background: transparent;
 }
+.connection-notice {
+  position: fixed;
+  right: 12px;
+  bottom: 56px;
+  width: min(280px, calc(100vw - 24px));
+  padding: 12px;
+  border: 1px solid var(--b-edge-lit);
+  border-radius: 8px;
+  background: #1a1522;
+  color: var(--b-paper);
+  font-size: 13px;
+}
+.connection-notice button { display: block; margin-top: 8px; }
 .table {
   position: fixed;
   inset: 0;
@@ -233,9 +246,10 @@ body[data-surface='overlay'] {
 .face-row li {
   display: grid;
   justify-items: center;
-  gap: 0.8cqh;
+  /* Leave room below the current coin's 3.5px ring before its number. */
+  gap: max(6px, 1.667cqh);
   color: #8d8596;
-  font: 650 max(9px, 3.6cqw) / 1 var(--b-ui);
+  font: 650 max(9px, 3.6cqw) / 1.25 var(--b-ui);
   font-variant-numeric: tabular-nums;
 }
 .face-row li > span:first-child {

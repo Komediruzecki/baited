@@ -1,5 +1,7 @@
 # Demo recording plan
 
+**Historical shotlist:** the current Arch/Hyprland recording setup, 1440p target, separate lakeeko session and real-round prompts are in the [recording guide](../../edge-game/recording/README.md) and [three-clip runbook](../../edge-game/recording/THREE-CLIPS.md). The dialogue below is illustrative, not evidence of a recorded catch. Use the current Baited name and Cloudflare pilot architecture when preparing the final narration.
+
 Target length: **2 minutes 45 seconds**. This is a shotlist, not a completed video. Record the core round on a real Twitch channel after the credentialed acceptance checks. Obtain permission for people and third-party material in the recording.
 
 | Time | Capture | Suggested narration |

@@ -7,6 +7,8 @@
 
 import { PIXEL_LOGO_COLS, PIXEL_LOGO_ROWS, pixelLogoCells } from './pixel-logo.js'
 import { scrollPageTo } from './smooth-scroll.js'
+import { INK_COLOR, LOGO_COLUMNS, logoPixelDelays, WAVE_TOTAL, waveLift } from './logo-motion.js'
+export { INK_COLOR, LOGO_COLUMNS, LOGO_ROWS, WAVE_STEP, WAVE_HOP, waveLift } from './logo-motion.js'
 
 export const FLOAT_AT = 80 // px scrolled before the bar becomes a pill
 export const FOLD_AT = 320 // px scrolled before scrolling down folds it
@@ -46,15 +48,13 @@ export function initAnchorNavigation() {
 }
 
 // The logo's hover fill: square pixels that each light up at their own random moment.
-export const LOGO_COLUMNS = 10
-export const LOGO_ROWS = 4
 function logoPixels(nav) {
   const grid = nav.querySelector('.nav-logo__pixels')
   if (!grid || grid.childElementCount) return
   grid.style.setProperty('--logo-cols', LOGO_COLUMNS)
-  for (let i = 0; i < LOGO_COLUMNS * LOGO_ROWS; i++) {
+  for (const delay of logoPixelDelays()) {
     const pixel = document.createElement('i')
-    pixel.style.setProperty('--d', `${(0.03 + Math.random() * 0.35).toFixed(3)}s`)
+    pixel.style.setProperty('--d', delay)
     grid.append(pixel)
   }
 }
@@ -212,17 +212,6 @@ function linkMorphs(nav) {
 // through it: one column after another hops up a pixel and lands, left to right on the way in and
 // right to left on the way out, while the cell fills with lavender pixels behind it (styles.css).
 // The letters keep their violet. At rest it holds still.
-export const INK_COLOR = '#7721e5'
-export const WAVE_STEP = 12 // ms from one column's hop to the next…
-export const WAVE_HOP = 150 // …and how long each column stays up
-
-// How far up (in logo pixels) column `x` is, `t` ms into a wave that runs `forward` or back.
-export function waveLift(x, t, forward = true) {
-  const start = (forward ? x : PIXEL_LOGO_COLS - 1 - x) * WAVE_STEP
-  return t >= start && t < start + WAVE_HOP ? 1 : 0
-}
-const WAVE_TOTAL = (PIXEL_LOGO_COLS - 1) * WAVE_STEP + WAVE_HOP
-
 function logoInk(nav) {
   const link = nav.querySelector('.nav-logo')
   const img = link?.querySelector('img')

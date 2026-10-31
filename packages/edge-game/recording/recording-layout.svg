@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="620" viewBox="0 0 1440 620" role="img" aria-labelledby="title desc">
+  <title id="title">Baited desktop and recording layout</title>
+  <desc id="desc">The desktop has Waybar and a floating Chatterino window. The OBS composition separately captures the game, public Baited HUD and public chat. The viewer's secret card is captured by another person and added only in the edit.</desc>
+  <rect width="1440" height="620" fill="#100d19"/>
+  <g font-family="DejaVu Sans, sans-serif" fill="#f4f0fb">
+    <text x="32" y="45" font-size="25" font-weight="700">One screen to play. A separate composition to record.</text>
+    <text x="32" y="80" font-size="17" fill="#c2b8d2">Proposed layout at 2560 × 1440. Move panels to leave each game's controls visible.</text>
+    <text x="32" y="120" font-size="19" font-weight="700">YOUR DESKTOP</text>
+    <text x="744" y="120" font-size="19" font-weight="700">OBS RECORDING</text>
+    <rect x="32" y="138" width="664" height="374" rx="10" fill="#24202e" stroke="#70637f" stroke-width="2"/>
+    <rect x="33" y="139" width="662" height="22" rx="9" fill="#58436f"/>
+    <text x="49" y="155" font-size="12">Waybar stays available</text>
+    <rect x="44" y="173" width="640" height="327" rx="5" fill="#312343"/>
+    <text x="80" y="304" font-size="28" font-weight="700">GAME</text>
+    <text x="80" y="338" font-size="17" fill="#c2b8d2">Maximized with Super+Ctrl+F</text>
+    <rect x="510" y="187" width="160" height="205" rx="10" fill="#19151f" stroke="#b58afa" stroke-width="2"/>
+    <text x="524" y="219" font-size="17" font-weight="700">Chatterino</text>
+    <text x="524" y="245" font-size="14" fill="#c2b8d2">You read chat here</text>
+    <path d="M524 269h125M524 294h107M524 319h125M524 344h92" stroke="#9e8eb3" stroke-width="6" stroke-linecap="round" opacity=".7"/>
+    <text x="46" y="479" font-size="15" fill="#c2b8d2">Studio and OBS controls stay in another window.</text>
+    <rect x="744" y="138" width="664" height="374" rx="10" fill="#312343" stroke="#70637f" stroke-width="2"/>
+    <text x="792" y="353" font-size="28" font-weight="700">GAME CAPTURE</text>
+    <text x="792" y="386" font-size="17" fill="#c2b8d2">Window source, fitted without stretching</text>
+    <rect x="761" y="155" width="174" height="76" rx="9" fill="#19151f" stroke="#b58afa" stroke-width="2"/>
+    <text x="777" y="184" font-size="17" font-weight="700">Baited public HUD</text>
+    <text x="777" y="208" font-size="14" fill="#fffc79">Round · timer · result</text>
+    <rect x="1232" y="155" width="160" height="205" rx="10" fill="#19151f" stroke="#b58afa" stroke-width="2"/>
+    <text x="1246" y="187" font-size="17" font-weight="700">Public chat</text>
+    <text x="1246" y="213" font-size="14" fill="#c2b8d2">Separate source</text>
+    <path d="M1246 237h125M1246 262h107M1246 287h125M1246 312h92" stroke="#9e8eb3" stroke-width="6" stroke-linecap="round" opacity=".7"/>
+    <text x="761" y="479" font-size="15" fill="#c2b8d2">Waybar and private desktop windows stay outside.</text>
+    <text x="32" y="550" font-size="17" font-weight="700">Super+Space makes the focused chat window float.</text>
+    <text x="32" y="579" font-size="15" fill="#c2b8d2">Confirmed on this PC. Test game focus and the saved OBS clip before a full take.</text>
+    <text x="744" y="550" font-size="17" font-weight="700">The secret card comes from the viewer's recording.</text>
+    <text x="744" y="579" font-size="15" fill="#c2b8d2">Sync the real round, then add a labelled “Chat sees” inset in the edit.</text>
+  </g>
+</svg>

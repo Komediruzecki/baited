@@ -205,7 +205,7 @@ function render({ configured, room }) {
     dealtInk = visible ? { id: room.round.id, ink: room.round.ink ?? '' } : { id: '', ink: '' };
     byId('card-detail').hidden = visible;
     byId('card-detail').textContent = !visible
-      ? 'Run the round and confirm catches in your studio.'
+      ? 'Run the round and check catches in your studio.'
       : room.phase === 'active'
         ? "Make them say it. Don't type it."
         : room.phase === 'paused'
@@ -249,17 +249,19 @@ function render({ configured, room }) {
   if (room.result) {
     const result = room.result;
     const copy = {
-      caught: ['Baited.', 'The streamer confirmed it. Chat got the word.'],
+      caught: ['Baited.', 'The catch is confirmed. Chat got the word.'],
       escaped: ['Got away.', 'Time ran out. Another word, another chance.'],
       skipped: ['New bait next.', 'Chat skipped this word.'],
       ended: ['Round ended.', 'The streamer ended this round.'],
       overturned: ['Catch rejected.', 'That catch does not count. New word next.'],
-      review: ['Catch pending.', 'The streamer is checking what they heard.'],
+      review: ['Catch pending.', Number.isFinite(result.confirmAt)
+        ? 'A catch was heard. Waiting for the confirmed result.'
+        : 'The streamer is checking what they heard.'],
     }[result.outcome];
     byId('card').dataset.state = result.outcome === 'review' ? 'review' : 'result';
     byId('card-kicker').textContent = copy[0];
     byId('phase-label').textContent =
-      result.outcome === 'review' ? 'Streamer’s call' : 'Complete';
+      result.outcome === 'review' ? (Number.isFinite(result.confirmAt) ? 'Checking the catch' : 'Streamer’s call') : 'Complete';
     setTitle(result.word, true, dealtInk.id === result.id ? dealtInk.ink : '');
     setArt(result.word, ['caught', 'escaped'].includes(result.outcome) ? result.artUrl : undefined);
     setDifficulty(null);
@@ -296,7 +298,9 @@ function render({ configured, room }) {
         : 'Next round soon';
     byId('play-instruction').textContent =
       result.outcome === 'review'
-        ? 'A suggested catch only counts after the streamer confirms it.'
+        ? Number.isFinite(result.confirmAt)
+          ? 'The catch confirms after 15 seconds unless the streamer rejects it.'
+          : 'A suggested catch only counts after the streamer confirms it.'
         : 'The next secret appears here when the streamer starts again.';
     byId('skip-note').hidden = true;
     announce(
@@ -336,7 +340,7 @@ const client = connectToTwitch({
   onStatus(status) {
     connected = status.kind === 'connected';
     connectionView(status);
-    if (['invalid', 'authorization', 'forbidden', 'connecting'].includes(status.kind)) {
+    if (['invalid', 'authorization', 'forbidden', 'connecting', 'reconnecting', 'unavailable', 'signin'].includes(status.kind)) {
       clearCard(
         'Waiting for the word.',
         status.kind === 'connecting'
@@ -351,6 +355,8 @@ const client = connectToTwitch({
       byId('card-kicker').textContent = 'Twitch connection';
       byId('card').dataset.state = 'reconnecting';
     }
+    if (status.kind === 'unavailable') byId('phase-label').textContent = 'Unavailable';
+    if (status.kind === 'signin') byId('phase-label').textContent = 'Sign in to Twitch';
     renderClock();
   },
 });

@@ -8,6 +8,8 @@ Start with [Baited setup](packages/app/docs/GETTING_STARTED.md). Moonshine runs 
 | --- | --- |
 | [`packages/app`](packages/app/README.md) | Streamer Studio, standalone viewer, OBS overlay, game server, Moonshine and native Twitch Extension |
 | [`packages/landing`](packages/landing/README.md) | Landing source and assets for the requested `dev.baited.maff.app` and `baited.maff.app` domains |
+| [`packages/game-core`](packages/game-core/README.md) | Shared portable game rules and versioned recovery checkpoints |
+| [`packages/edge-game`](packages/edge-game/README.md) | Active Cloudflare pilot for `komediruzecki7` and `lakeeko`, with per-channel room authority |
 | [`packages/review-host`](packages/review-host/README.md) | Small shared helper for preview hosts and indexing policy |
 
 ## Develop
@@ -33,13 +35,19 @@ pnpm build:extension     # Requires public Extension client ID and backend origi
 
 The Extension ZIP is separate from the app server and the landing. It never includes the Moonshine model, backend credentials or the server. Production hosting of the game is a separate task from landing releases.
 
-For a round with remote testers, follow [Twitch Hosted Test](packages/app/docs/HOSTED_TEST.md). It covers the named Cloudflare Tunnel on the Linux host, Proton-backed backend commands, the upload ZIP, Twitch settings and an OBS round with Paolo. The planned test service is `play-baited.maff.app`; it is available only while the host and both bounded processes are running. See the guide's verification status before treating it as live.
+For the current remote test, open [Cloudflare pilot Studio](https://pilot-baited.maff.app/studio) and follow [the active pilot handoff](packages/edge-game/ACTIVE-PILOT.md). The older [PC Hosted Test guide](packages/app/docs/HOSTED_TEST.md) describes the Linux server and Cloudflare Tunnel; those processes remain stopped and are not needed by the cloud pilot.
 
 The approved original wordmark and upload-ready logo, icon and discovery exports live in [Twitch listing assets](packages/app/assets/twitch/v0.0.1/README.md). Older logo variants remain available for reference. Preparing these files does not submit the Extension for review.
 
 The built-in game deck has 100 targets: 35 easy, 34 medium and 31 hard. The public landing shows ten fixed example cards; its build includes only those card records and artwork. [The deck notes](packages/app/docs/deck-100.md) cover the latest 22 targets and verification. [Card artwork and provenance](packages/app/public/cards/proofs/README.md) records each illustration batch. Artwork is separate from titles, clue restrictions and example questions. Run `node packages/app/scripts/sync-card-art.mjs --check` to verify the unchanged source image copies used by the app, native Extension and landing. Updating the landing does not update an installed Twitch Extension; that requires a rebuilt ZIP and a new Hosted Test upload.
 
 The development-only [Card Lab](https://dev.baited.maff.app/card-lab/) compares card editions, materials, backs and gameplay states at panel, phone and Studio sizes. It uses synthetic rounds, and review choices stay in that browser without changing the game. The route and its assets are excluded from production. See [the design and test record](packages/app/docs/card-product-review.md) for local previews, the design direction and the checks completed so far.
+
+## Cloudflare pilot
+
+The [edge pilot](packages/edge-game/README.md) is active at [pilot-baited.maff.app/studio](https://pilot-baited.maff.app/studio) for two invited streamer channels: `komediruzecki7` and `lakeeko`. Each channel allows 100 distinct participants per round and 100 concurrent viewer sockets. It uses the built-in 100-card deck, a Worker gateway, SQLite Durable Objects, local Moonshine and WebSockets. Custom decks and Card Maker are excluded.
+
+[The activation receipt](packages/edge-game/ACTIVE-PILOT.md) records the verified public endpoint and owner steps. Studio renders and signed-out access checks pass; the first real OAuth, microphone, chat and OBS round on this cloud deployment remains to be tested. The repository stays private and the Extension remains in Hosted Test without a review submission. `pnpm dev:edge:local` retains the separate bounded synthetic loopback proof.
 
 ## Deployment and access
 

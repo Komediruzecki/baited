@@ -10,20 +10,10 @@ import type { Difficulty } from '../shared/types.js';
 import { words } from './words.js';
 import { forbiddenClues } from './cards.js';
 
-export interface DeckCard {
-  target: string;
-  difficulty: Difficulty;
-  blockedClues: string[];
-  acceptedSpellings: string[];
-  cardId?: string;
-  revision?: number;
-  artId?: string;
-}
+import { CardLibraryError, type DeckCard } from '@baited/game-core';
+export { CardLibraryError, type DeckCard } from '@baited/game-core';
 interface Library { revision: number; packs: CardPack[]; selection: DeckSelection }
 interface Snapshot { version: 1; channels: Record<string, Library> }
-export class CardLibraryError extends Error {
-  constructor(public status: number, message: string) { super(message); }
-}
 const empty = (): Library => ({ revision: 0, packs: [], selection: { mode: 'builtin', packId: null } });
 const counts = (): Record<Difficulty, number> => ({ easy: words.easy.length, medium: words.medium.length, hard: words.hard.length });
 const builtin = (difficulty: Difficulty): DeckCard[] => words[difficulty].map((target) => ({ target, difficulty, blockedClues: forbiddenClues(target, difficulty), acceptedSpellings: [] }));

@@ -92,6 +92,21 @@ test('!bait alone still joins; named commands parse strictly', () => {
     assert.equal(parseCommand(text), null, text);
 });
 
+test('pending catch posts explain automatic scoring and expire at its deadline', () => {
+  const f = fixture();
+  f.game.begin();
+  f.game.transcript(f.transcript(), 'confirm');
+  const view = f.game.view('overlay');
+  const post = eventAnnouncement(view, { type: 'review' });
+  assert.ok(post);
+  assert.match(post.text, /Counts in 15s unless rejected\./);
+  assert.equal(post.ttl, 15000);
+  assert.equal(matches(post.text, f.game.round!.word), false);
+  assert.equal(eventAnnouncement({ ...view, serverTime: view.result!.confirmAt! }, { type: 'review' }), null);
+  const legacy = { ...view, result: { ...view.result!, confirmAt: undefined } };
+  assert.doesNotMatch(eventAnnouncement(legacy, { type: 'review' })!.text, /Counts in/);
+});
+
 test('no announcement during a round contains its word, for every target', () => {
   for (const difficulty of ['easy', 'medium', 'hard'] as const)
     for (let i = 0; i < words[difficulty].length; i++) {

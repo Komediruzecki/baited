@@ -166,8 +166,13 @@ export function eventAnnouncement(view: GameView, event: GameEvent): Announcemen
       return round
         ? { key: 'round-state', ttl: 20000, text: line(view, 'resume', mood, { time: clock(round.remaining) }) }
         : null;
-    case 'review':
-      return { key: 'round-state', ttl: 20000, text: line(view, 'review', mood) };
+    case 'review': {
+      const remaining = view.result?.confirmAt === undefined ? null : view.result.confirmAt - view.serverTime;
+      if (remaining !== null && remaining <= 0) return null;
+      const text = line(view, 'review', mood);
+      return { key: 'round-state', ttl: remaining === null ? 20000 : Math.min(20000, remaining),
+        text: remaining === null ? text : text + after(text, `Counts in ${Math.ceil(remaining / 1000)}s unless rejected.`) };
+    }
     case 'finish':
       return finished(view, event.streakBefore);
     case 'reverse':

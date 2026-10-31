@@ -70,45 +70,6 @@
 .modal {
   box-shadow: 9px 9px 0 #6230a8, 0 24px 70px #0009;
 }
-.rules-goal {
-  color: #f3e9ff;
-  font-size: 19px;
-  font-weight: 700;
-  margin-bottom: 13px;
-}
-.how-to .how-step {
-  padding-block: 18px;
-}
-.how-options {
-  margin: 18px 0;
-  padding: 0;
-  border: 1px solid #4f3c65;
-  background: #241b2e;
-}
-.how-options summary {
-  cursor: pointer;
-  min-height: 48px;
-  padding: 16px 18px;
-  color: #d7baff;
-  font-size: 14px;
-  font-weight: 700;
-}
-.how-options summary:focus-visible {
-  outline: 3px solid #d9bdff;
-  outline-offset: 4px;
-}
-.how-options ul {
-  padding: 0 25px 10px 35px;
-  margin: 0;
-}
-.how-options li {
-  padding: 0 0 15px 3px;
-  color: #c9bdd5;
-  font-size: 13px;
-  line-height: 1.7;
-}
-.how-options strong { color: #efeff1; }
-
 /* The source remains transparent outside these deliberately opaque frames. */
 .obs-root { padding: 40px; }
 .obs-hud {

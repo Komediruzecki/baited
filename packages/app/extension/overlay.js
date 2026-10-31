@@ -350,7 +350,7 @@ function showResult(room) {
     skipped: ['Skipped', 'New bait next'],
     ended: ['Round ended', 'New bait next'],
     overturned: ['Catch rejected', 'That catch does not count'],
-    review: ['Catch pending', 'The streamer is checking'],
+    review: ['Catch pending', Number.isFinite(result.confirmAt) ? 'Waiting for the confirmed result' : 'The streamer is checking'],
   }[result.outcome];
   const card = byId('card');
   setVisible(true);
@@ -440,21 +440,25 @@ byId('collapse').addEventListener('click', () => {
   writeCollapsed(collapsed);
 });
 
-connectToTwitch({
+const client = connectToTwitch({
   path: '/api/extension/state',
   parse: readState,
   onData: render,
   onStatus(status) {
     connected = status.kind === 'connected';
+    byId('connection-notice').hidden = !['unavailable', 'signin'].includes(status.kind);
+    byId('connection-notice-copy').textContent = ['unavailable', 'signin'].includes(status.kind) ? status.message : '';
+    byId('connection-retry').hidden = status.kind !== 'unavailable';
     byId('card').dataset.stale = String(status.kind === 'reconnecting');
     // A fresh Helper JWT can change account or role. Clear before the new response arrives.
-    if (['invalid', 'authorization', 'forbidden', 'connecting'].includes(status.kind)) {
+    if (['invalid', 'authorization', 'forbidden', 'connecting', 'reconnecting', 'unavailable', 'signin'].includes(status.kind)) {
       current = null;
       hide(true);
     }
     renderClock();
   },
 });
+byId('connection-retry').addEventListener('click', () => client?.refresh());
 
 let tick;
 function startClock() {

@@ -23,7 +23,7 @@ export class Moonshine {
   async load() {
     if (this.loaded) return;
     if (!crossOriginIsolated || typeof SharedArrayBuffer === 'undefined')
-      throw new Error('Local speech needs a cross-origin isolated browser page. Open the standalone BAIT studio on localhost or HTTPS.');
+      throw new Error('Local speech needs a cross-origin isolated browser page. Open the standalone Baited Studio on localhost or HTTPS.');
     this.worker = new Worker('/moonshine-worker.js?v=0.1.5-csp1', { type: 'module', name: 'bait-moonshine' });
     this.worker.onmessage = ({ data }) => {
       if (data.type === 'reply' || data.type === 'error') {

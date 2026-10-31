@@ -13,7 +13,7 @@ export interface Settings {
   mission: 'single' | 'three';
   missionDuration: number;
   callBait: boolean;
-  /** The bot announces rounds in Twitch chat. Off until the streamer opts in. */
+  /** Round announcements. New channels default on; posting still requires bot authorization. */
   chatBot: boolean;
   /** Moderators can type !bait start, !bait pause and !bait resume. */
   modCommands: boolean;
@@ -28,6 +28,8 @@ export interface Result {
   elapsed: number;
   participants: number;
   at: number;
+  /** Server deadline for a pending speech catch; omitted after it is decided. */
+  confirmAt?: number;
   /** The streamer's "You baited me" pick; `at` (when it was chosen) cues the OBS sting. */
   award?: { name: string; at?: number };
   reason?: 'guess' | 'timer';

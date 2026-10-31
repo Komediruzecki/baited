@@ -1,6 +1,9 @@
 import { cardArtPath, cardArtSource } from './presentation.js';
 
 const VERSION = '0.0.1';
+// Saturated built-in pilot projections are verified below this limit in the
+// edge client tests. Private hints and the full leaderboard are never sent here.
+export const EDGE_SNAPSHOT_MAX_BYTES = 64 * 1024;
 const phases = new Set(['idle', 'active', 'paused', 'settling', 'cooldown']);
 const outcomes = new Set(['caught', 'escaped', 'skipped', 'ended', 'overturned', 'review']);
 const difficulties = new Set(['easy', 'medium', 'hard']);
@@ -23,7 +26,8 @@ export function readRuntimeConfig(value) {
   }
   const apiBaseUrl = origin(value.apiBaseUrl);
   const studioBaseUrl = value.studioBaseUrl === undefined ? apiBaseUrl : origin(value.studioBaseUrl);
-  return { clientId: value.clientId, apiBaseUrl, studioBaseUrl };
+  if (value.transport !== undefined && value.transport !== 'edge') throw new Error('Extension transport is invalid.');
+  return { clientId: value.clientId, apiBaseUrl, studioBaseUrl, ...(value.transport === 'edge' ? { transport: 'edge' } : {}) };
 }
 
 /** Resolve a round capability only against this build's validated backend origin. */
@@ -58,6 +62,7 @@ export function readState(value) {
   if (r.result !== null) {
     const resultValue = r.result;
     if (!object(resultValue) || !string(resultValue.id) || !string(resultValue.word) || !outcomes.has(resultValue.outcome)) throw new Error('Invalid result.');
+    if (resultValue.confirmAt !== undefined && !(Number.isSafeInteger(resultValue.confirmAt) && resultValue.confirmAt > 0)) throw new Error('Invalid catch deadline.');
     if (resultValue.reason !== undefined && !['guess', 'timer'].includes(resultValue.reason)) throw new Error('Invalid result.');
     // Stays self-contained for the LAN harness; screens ignore counts that are not a tier.
     if (resultValue.milestone !== undefined && !(count(resultValue.milestone) && resultValue.milestone >= 2)) throw new Error('Invalid result.');
@@ -67,6 +72,7 @@ export function readState(value) {
     const award = resultValue.award;
     if (award !== undefined && !(object(award) && string(award.name, 40) && (award.at === undefined || number(award.at)))) throw new Error('Invalid result.');
     result = { id: resultValue.id, word: resultValue.word, outcome: resultValue.outcome, ...(resultValue.reason ? { reason: resultValue.reason } : {}),
+      ...(resultValue.outcome === 'review' && resultValue.confirmAt !== undefined ? { confirmAt: resultValue.confirmAt } : {}),
       ...(resultValue.artUrl && ['caught', 'escaped'].includes(resultValue.outcome) ? { artUrl: resultValue.artUrl } : {}),
       ...(resultValue.milestone ? { milestone: resultValue.milestone, newBadge: resultValue.newBadge === true } : {}),
       ...(award && resultValue.outcome === 'caught' ? { award: { name: award.name, ...(award.at !== undefined ? { at: award.at } : {}) } } : {}) };
@@ -221,6 +227,150 @@ export function createExtensionClient({ config, path, parse, onData, onStatus, f
   };
 }
 
+/** Edge pilot: retain the room connection across brief tab switches, never poll. */
+export function createEdgeExtensionClient({ config, path, parse, onData, onStatus,
+  WebSocketImpl = globalThis.WebSocket, setTimer = setTimeout, clearTimer = clearTimeout, now = Date.now, random = Math.random }) {
+  let authorization = null, socket = null, timer = null, deadline = null, hiddenTimer = null, lastView = null;
+  let stopped = false, visible = true, generation = 0, retries = 0, lastRevision = -1, roomGeneration = -1;
+  let connectedOnce = false, retryUntil = 0;
+  const report = (kind, message) => onStatus({ kind, message });
+  const clearScheduled = () => {
+    if (timer !== null) clearTimer(timer);
+    if (deadline !== null) clearTimer(deadline);
+    timer = deadline = null;
+  };
+  const close = () => {
+    const old = socket; socket = null;
+    if (old) { old.onopen = old.onmessage = old.onerror = old.onclose = null; old.close(1000, 'Panel closed.'); }
+  };
+  const clearHidden = () => { if (hiddenTimer !== null) clearTimer(hiddenTimer); hiddenTimer = null; };
+  const connect = () => {
+    clearScheduled();
+    close();
+    if (stopped || !visible || !authorization) return;
+    const activeGeneration = generation;
+    const url = new URL(`/v1/rooms/${authorization.channelId}/socket`, config.apiBaseUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    const current = new WebSocketImpl(url.href, ['baited.v1', `baited.auth.${authorization.token}`]);
+    socket = current;
+    const valid = () => !stopped && current === socket && activeGeneration === generation;
+    deadline = setTimer(() => { if (valid()) current.close(4000, 'Connection timed out.'); }, 10000);
+    current.onmessage = (event) => {
+      if (!valid()) return;
+      try {
+        if (typeof event.data !== 'string' || event.data.length > EDGE_SNAPSHOT_MAX_BYTES ||
+          new TextEncoder().encode(event.data).byteLength > EDGE_SNAPSHOT_MAX_BYTES) throw new Error('Invalid frame');
+        const frame = JSON.parse(event.data);
+        if (frame.type !== 'snapshot' || frame.protocol !== 1 || !count(frame.revision) || !count(frame.generation)) throw new Error('Invalid snapshot');
+        if (roomGeneration === frame.generation && frame.revision < lastRevision) return;
+        const value = path.endsWith('/config')
+          ? { version: VERSION, connected: !!frame.room && frame.room.connection?.status === 'connected',
+              channelId: authorization.channelId, channelName: frame.room?.channel ?? null,
+              studioUrl: `${config.studioBaseUrl ?? config.apiBaseUrl}/studio` }
+          : { version: VERSION, configured: frame.room !== null, room: frame.room };
+        const parsed = parse(value);
+        connectedOnce = true; retryUntil = 0; lastView = parsed;
+        lastRevision = frame.revision; roomGeneration = frame.generation;
+        retries = 0;
+        if (deadline !== null) clearTimer(deadline);
+        deadline = null;
+        if (visible) { onData(parsed); report('connected', 'Connected'); }
+      } catch {
+        // Keep neither an old secret nor an unvalidated partial snapshot on screen.
+        report('invalid', 'The round could not be read. Reload the panel on Twitch.');
+        lastView = null; clearScheduled(); close();
+      }
+    };
+    current.onerror = () => { if (valid() && visible) report('reconnecting', 'Connection interrupted. Retrying…'); };
+    current.onclose = (event) => {
+      if (!valid()) return;
+      socket = null;
+      lastView = null;
+      clearScheduled();
+      if (event.code === 1008 || event.code === 4001) {
+        connectedOnce = false; retryUntil = 0;
+        report('authorization', 'Twitch authorization expired. Waiting for it to refresh.');
+        return;
+      }
+      if (event.code === 4408 || event.code === 4429) {
+        connectedOnce = false; retryUntil = 0;
+        report('unavailable', 'This pilot is full or busy. Try again later.');
+        return;
+      }
+      if (!visible) return;
+      // Browsers hide a refused upgrade's HTTP status (including a full pilot's
+      // 429). New viewers wait for manual retry; admitted viewers get a bounded
+      // recovery window after losing a previously healthy connection.
+      if (!connectedOnce) {
+        report('unavailable', 'This pilot may be full or temporarily unavailable. Try again later.');
+        return;
+      }
+      if (!retryUntil) retryUntil = now() + 300000;
+      const cap = Math.min(60000, 1000 * 2 ** Math.min(retries++, 6));
+      const delay = Math.round(cap * (0.5 + 0.5 * random()));
+      if (now() + delay > retryUntil) {
+        report('unavailable', 'The round is still unavailable. Try again when your connection returns.');
+        return;
+      }
+      report('reconnecting', 'Connection interrupted. Retrying…');
+      timer = setTimer(connect, delay);
+    };
+  };
+  return {
+    authorize(value) {
+      const previous = authorization;
+      generation += 1; clearScheduled(); clearHidden(); close(); lastView = null;
+      if (stopped) return;
+      if (!object(value) || value.clientId !== config.clientId || typeof value.channelId !== 'string' || !/^[1-9][0-9]{0,24}$/.test(value.channelId) ||
+        !string(value.token, 4096) || !/^[A-Za-z0-9_.-]+$/.test(value.token)) {
+        authorization = null; connectedOnce = false; retryUntil = 0;
+        report('invalid', 'This Extension is configured for a different Twitch application.');
+        return;
+      }
+      // This is a UI hint only; the server independently verifies the JWT and
+      // rejects anonymous seats. Logged-in opaque U identities need no sharing.
+      let identityHint = null;
+      try {
+        const payload = JSON.parse(atob(value.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (object(payload) && typeof payload.opaque_user_id === 'string' && payload.opaque_user_id.startsWith('A')) {
+          authorization = null; connectedOnce = false;
+          report('signin', 'Sign in to Twitch to join this pilot. You do not need to share your identity.');
+          return;
+        }
+        if (object(payload) && typeof payload.opaque_user_id === 'string' && typeof payload.role === 'string')
+          identityHint = JSON.stringify([payload.opaque_user_id, payload.role, payload.user_id ?? null]);
+      } catch { /* Malformed claims are handled by the server, never trusted here. */ }
+      const sameIdentity = previous?.channelId === value.channelId &&
+        (previous.token === value.token || identityHint !== null && previous.identityHint === identityHint);
+      authorization = { token: value.token, channelId: value.channelId, identityHint };
+      // Refreshing Twitch's token does not turn an admitted viewer into a first
+      // join. Keep its existing recovery deadline; changing users/channels does.
+      if (!sameIdentity) { retries = 0; retryUntil = 0; connectedOnce = false; }
+      lastRevision = roomGeneration = -1;
+      report('connecting', 'Connecting to the round…');
+      connect();
+    },
+    refresh() { if (!stopped) { retries = 0; retryUntil = 0; connect(); } },
+    invalidate() { generation += 1; authorization = null; connectedOnce = false; retryUntil = 0; lastView = null; clearScheduled(); clearHidden(); close(); },
+    setVisible(value) {
+      if (visible === Boolean(value) || stopped) return;
+      visible = Boolean(value); clearHidden();
+      if (visible) {
+        if (socket?.readyState === 1 && lastView) { onData(lastView); report('connected', 'Connected'); }
+        else if (!socket) { report('connecting', 'Connecting to the round…'); connect(); }
+      } else {
+        // Keep the connection and validate/cache updates while the UI is hidden.
+        // Brief tab switches must not consume another viewer admission slot.
+        if (timer !== null) clearTimer(timer);
+        timer = null;
+        report('authorization', 'The card is hidden while you are away.');
+        hiddenTimer = setTimer(() => { hiddenTimer = null; lastView = null; close(); }, 300000);
+      }
+    },
+    destroy() { stopped = true; generation += 1; authorization = null; lastView = null; clearScheduled(); clearHidden(); close(); },
+  };
+}
+
 export function connectToTwitch(options) {
   const { onStatus } = options;
   let config;
@@ -231,7 +381,8 @@ export function connectToTwitch(options) {
     onStatus({ kind: 'invalid', message: 'Open baited on its Twitch channel to connect.' });
     return null;
   }
-  const client = createExtensionClient({ ...options, config, parse: (value) => options.parse(value, config.studioBaseUrl) });
+  const factory = config.transport === 'edge' ? createEdgeExtensionClient : createExtensionClient;
+  const client = factory({ ...options, config, parse: (value) => options.parse(value, config.studioBaseUrl) });
   let twitchVisible = true;
   const updateVisibility = () => client.setVisible(twitchVisible && document.visibilityState !== 'hidden');
   helper.onAuthorized((auth) => client.authorize(auth));
@@ -253,7 +404,7 @@ export function connectToTwitch(options) {
 export function connectionView(status) {
   const element = document.getElementById('connection');
   element.hidden = status.kind === 'connected';
-  element.dataset.tone = ['invalid', 'forbidden', 'authorization'].includes(status.kind) ? 'error' : 'notice';
+  element.dataset.tone = ['invalid', 'forbidden', 'authorization', 'signin'].includes(status.kind) ? 'error' : 'notice';
   document.getElementById('connection-copy').textContent = status.message;
-  document.getElementById('retry').hidden = status.kind !== 'reconnecting';
+  document.getElementById('retry').hidden = !['reconnecting', 'unavailable'].includes(status.kind);
 }
