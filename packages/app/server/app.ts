@@ -835,6 +835,12 @@ export async function createBait(
     game.update(req.body);
     res.json(studio(game));
   });
+  app.post('/api/studio/chaos/reset', protect, (req, res) => {
+    const { sessionId } = z.object({ sessionId: z.string().uuid() }).strict().parse(req.body);
+    const game = gameFor(res);
+    game.restartChaosSession(sessionId);
+    res.json(studio(game));
+  });
   app.post('/api/studio/voice-guess-draft', protect, (req, res) => {
     const body=z.object({roundId:z.string().uuid(),epoch:z.number().int().positive(),word:z.string().min(1).max(80),draftId:z.string().uuid(),expiresAt:z.number().int().positive()}).strict().parse(req.body);
     const game=gameFor(res),session=res.locals.session as Session,lease=microphoneLeases.get(game.data.id);

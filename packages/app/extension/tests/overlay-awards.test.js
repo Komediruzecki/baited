@@ -93,6 +93,21 @@ test('the overlay result card names the streamer’s pick, lists the top three M
     assert.equal(elements.get('front-mvps').hidden, true);
     assert.equal(elements.get('front-mvp-list').children.length, 0);
 
+    // Keep the true reason visible even when a gift crosses a badge milestone.
+    const gift = caught(null);
+    gift.room.result = { id: 'round-gift', word: 'VOLCANO', outcome: 'caught', reason: 'baity-chaos', milestone: 5, newBadge: true };
+    gift.room.score = { streak: 5, best: 5 };
+    await show(gift);
+    assert.equal(elements.get('front-chip').textContent, 'Baity’s call');
+    assert.equal(elements.get('front-note').textContent, 'The streamer guessed correctly. Baity gave chat the win.');
+    assert.match(elements.get('announcement').textContent, /guessed correctly/);
+    assert.doesNotMatch(elements.get('announcement').textContent, /They said it|catch is confirmed/);
+    assert.equal(award().hidden, true, 'The gift does not invent a streamer pick.');
+    await show({ ...gift, room: { ...gift.room, result: { id: 'round-gift', word: 'Hidden', outcome: 'overturned', reason: 'baity-chaos' } } });
+    assert.equal(elements.get('front-chip').textContent, 'Gift reversed');
+    assert.equal(elements.get('front-note').textContent, 'Baity’s gifted win was removed.');
+    assert.doesNotMatch(elements.get('announcement').textContent, /Catch rejected|catch does not count/);
+
     // A renewed Helper token clears the card before its response arrives.
     await show({ ...caught({ name: 'Alex', at: now }), room: { ...caught({ name: 'Alex', at: now }).room, result: { id: 'round-three', word: 'DISCO', outcome: 'caught', award: { name: 'Alex', at: now } } } });
     assert.equal(award().textContent, 'Streamer’s pick: @Alex');

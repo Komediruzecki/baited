@@ -1,5 +1,6 @@
 import { clockValue, connectToTwitch, nativeCardArtSource, readState } from './client.js';
 import {
+  baityChaosCopy,
   cardArtFile,
   cardWordSize,
   glassRules,
@@ -341,7 +342,8 @@ function showRound(room) {
 function showResult(room) {
   const result = room.result;
   const streak = room.score.streak;
-  const copy = {
+  const chaos = baityChaosCopy(result);
+  const copy = chaos ?? {
     caught: ['They said it', streak >= 2 ? `Chat wins · ${streak} in a row` : 'Chat wins'],
     escaped:
       result.reason === 'guess'
@@ -371,8 +373,9 @@ function showResult(room) {
   const award = caught ? result.award : undefined;
   setAward(award);
   setMvps(caught ? room.mvps : []);
-  byId('front-chip').textContent = tier ? (result.newBadge ? 'New streak badge' : 'Streak badge') : copy[0];
-  byId('front-note').textContent = tier ? `${tier.name} · ${tier.count} in a row` : copy[1];
+  // A badge must not replace the explanation of Baity's intervention.
+  byId('front-chip').textContent = tier && !chaos ? (result.newBadge ? 'New streak badge' : 'Streak badge') : copy[0];
+  byId('front-note').textContent = tier && !chaos ? `${tier.name} · ${tier.count} in a row` : copy[1];
   byId('front-question').textContent = !caught || streak < 1
     ? ''
     : next
@@ -383,7 +386,7 @@ function showResult(room) {
   setFace('front');
   announce(
     `result:${result.id}:${result.outcome}:${award?.name ?? ''}`,
-    `${copy[0]}. The word was ${result.word}.${tier ? ` Streak badge: ${tier.name}.` : ''}${award ? ` Streamer’s pick: @${award.name}.` : ''}`,
+    `${copy[0]}. The word was ${result.word}.${chaos ? ` ${copy[1]}` : ''}${tier ? ` Streak badge: ${tier.name}.` : ''}${award ? ` Streamer’s pick: @${award.name}.` : ''}`,
   );
 }
 

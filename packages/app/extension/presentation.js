@@ -1,4 +1,14 @@
 // Shared presentation only. Never select a secret or infer one from a round ID.
+/** A gifted win must never be presented as speech detection, including after reversal. */
+export function baityChaosCopy(result) {
+  if (result?.reason !== 'baity-chaos') return null;
+  if (result.outcome === 'caught')
+    return ['Baity’s call', 'The streamer guessed correctly. Baity gave chat the win.'];
+  if (result.outcome === 'overturned')
+    return ['Gift reversed', 'Baity’s gifted win was removed.'];
+  return null;
+}
+
 export const proofWords = Object.freeze([
   'banana',
   'penguin',

@@ -13,6 +13,8 @@ export interface Settings {
   mission: 'single' | 'three';
   missionDuration: number;
   callBait: boolean;
+  /** Optional: Baity can give chat one correct guess per session when its streak is at least three. */
+  baityChaos: boolean;
   /** Round announcements. New channels default on; posting still requires bot authorization. */
   chatBot: boolean;
   /** Moderators can type !bait start, !bait pause and !bait resume. */
@@ -34,7 +36,7 @@ export interface Result {
   confirmAt?: number;
   /** The streamer's "You baited me" pick; `at` (when it was chosen) cues the OBS sting. */
   award?: { name: string; at?: number };
-  reason?: 'guess' | 'timer';
+  reason?: 'guess' | 'timer' | 'baity-chaos';
   /** This win landed chat's streak on a badge tier. */
   milestone?: number;
   /** ...and unlocked that badge for the first time in this room. */
@@ -95,6 +97,8 @@ export interface GameView {
     difficulty: Difficulty;
     guessEnabled: boolean;
     guessUsed: boolean;
+    /** Snapshotted at the start of this word. */
+    baityChaos: boolean;
     wrongGuessBonus: number;
   } | null;
   // OBS reveals only caught/escaped results and never receives words in history.
@@ -104,6 +108,8 @@ export interface GameView {
   score: { wins: number; played: number; streak: number; best: number };
   /** Owner-only take controls; never contains upcoming targets. */
   recording?: { takeId: string; roundsStarted: number; scriptedRounds: 3 };
+  /** Owner-only allowance; reconnecting never starts a new chaos session. */
+  chaosSession?: { id: string; used: boolean };
   participants: number;
   voters: number;
   voteThreshold: number;

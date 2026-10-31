@@ -1,9 +1,10 @@
 import React from 'react';
 import type { GameView } from '../shared/types';
 import { Card, Pause } from './pixel-icons';
+import { BaityChaosRule } from './BaityChaos';
 import { MissionStatus } from './mechanics';
 import { StreakFlame, StreakRow } from './streak';
-import { nextStreakTier, winLabel } from '../extension/presentation.js';
+import { baityChaosCopy, nextStreakTier, winLabel } from '../extension/presentation.js';
 
 export function ObsHud({
   game: g,
@@ -22,6 +23,7 @@ export function ObsHud({
 }) {
   const playing = ['active', 'paused', 'settling'].includes(g.phase);
   const result = !offline && !playing ? g.result : null;
+  const chaos = baityChaosCopy(result);
   const pending = result?.outcome === 'review';
   const won = result?.outcome === 'caught';
   const reveal = result && ['caught', 'escaped'].includes(result.outcome);
@@ -31,6 +33,8 @@ export function ObsHud({
       ? 'Checking final words'
       : pending
         ? 'Catch pending'
+        : chaos
+          ? won ? 'Correct guess · Baity’s call' : chaos[0]
         : won
           ? 'Chat wins'
           : g.phase === 'active'
@@ -101,6 +105,7 @@ export function ObsHud({
           <i style={{ width: `${Math.min(1, fraction) * 100}%` }} />
         </div>
       </div>
+      {!offline && <BaityChaosRule compact game={g} />}
       {!offline && <MissionStatus compact game={g} now={now} offset={offset} />}
       {!offline && streak >= 2 && (
         <div className="obs-streak">

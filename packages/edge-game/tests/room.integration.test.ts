@@ -349,6 +349,35 @@ test('receipts are idempotent and reject conflicting IDs, stale revisions, gener
   } finally { await mf.dispose(); }
 });
 
+test('chaos session resets are owner-only, idle-only, idempotent and cannot erase the score', { timeout: 15_000 }, async () => {
+  const mf = await runtime();
+  try {
+    const initial = await start(mf), round = live(initial).round;
+    const owner = await state(mf, studio);
+    assert.equal(owner.room!.settings.baityChaos, false);
+    const oldSession = owner.room!.chaosSession!;
+    assert.equal(initial.room!.chaosSession, undefined);
+    assert.equal((await state(mf, overlay)).room!.chaosSession, undefined);
+    const reset = { type: 'reset-chaos-session', sessionId: oldSession.id } as const;
+    assert.equal((await send(mf, studio, command(reset, owner.revision), 409)).code, 'action_unavailable');
+    const ended = await send(mf, studio, command({ type: 'end', roundId: round.id, epoch: round.epoch }, owner.revision));
+    assert.equal((await send(mf, viewer, command(reset, ended.revision), 403)).code, 'role');
+    assert.equal((await send(mf, overlay, command(reset, ended.revision), 403)).code, 'role');
+    const request = command(reset, ended.revision, 'reset-chaos-once');
+    const accepted = await send(mf, studio, request);
+    const changed = accepted.snapshot.room!.chaosSession!;
+    assert.notEqual(changed.id, oldSession.id);
+    assert.equal(changed.used, false);
+    assert.deepEqual(accepted.snapshot.room!.score, ended.snapshot.room!.score);
+    assert.deepEqual(accepted.snapshot.room!.history, ended.snapshot.room!.history);
+    const replay = await send(mf, studio, request);
+    assert.deepEqual(receiptMetadata(replay), receiptMetadata(accepted));
+    assert.deepEqual(replay.snapshot.room!.chaosSession, changed);
+    assert.equal((await send(mf, studio, command(reset, accepted.revision), 409)).code, 'action_unavailable');
+    assert.deepEqual((await state(mf, studio)).room!.chaosSession, changed);
+  } finally { await mf.dispose(); }
+});
+
 test('two viewers may reuse a client command ID without losing either vote', { timeout: 15_000 }, async () => {
   const mf = await runtime();
   try {

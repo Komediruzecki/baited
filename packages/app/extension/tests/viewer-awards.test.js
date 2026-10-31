@@ -85,6 +85,20 @@ test('the panel shows the streamer’s pick and the top three MVPs between round
     assert.equal(flame.attributes.get('aria-hidden'), 'true');
     assert.doesNotMatch(detail.textContent, /[\u{2190}-\u{2BFF}\u{1F000}-\u{1FAFF}\u{FE0F}]/u);
 
+    // A gifted win is explicit, even when it also earns a streak badge.
+    await show(room({ result: { id: 'round-gift', word: 'VOLCANO', outcome: 'caught', reason: 'baity-chaos', milestone: 5, newBadge: true },
+      score: { streak: 5, best: 5 } }));
+    assert.equal(elements.get('card-kicker').textContent, 'Baity’s call.');
+    assert.match(detail.textContent, /The streamer guessed correctly\. Baity gave chat the win\./);
+    assert.match(detail.textContent, /New streak badge/);
+    assert.doesNotMatch(detail.textContent, /catch is confirmed|They said it/);
+    assert.match(elements.get('announcement').textContent, /guessed correctly/);
+    assert.equal(award().hidden, true, 'The gift does not invent a streamer pick.');
+    await show(room({ result: { id: 'round-gift', word: 'Hidden', outcome: 'overturned', reason: 'baity-chaos' } }));
+    assert.equal(elements.get('card-kicker').textContent, 'Gift reversed.');
+    assert.equal(detail.textContent, 'Baity’s gifted win was removed.');
+    assert.doesNotMatch(elements.get('announcement').textContent, /Catch rejected|catch does not count/);
+
     // A live round needs the room for the word, clues and clock.
     await show(live);
     assert.equal(award().hidden, true);

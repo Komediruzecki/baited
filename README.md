@@ -51,6 +51,10 @@ Use [the three-round shoot guide](docs/recording/2026-10-31-pilot-shoot.md) and 
 
 **Restart take** returns only that channel to round zero and clears the take's scores/streak. It preserves Twitch connections, microphone permission and lifetime history, and waits for the owner to start again. Recording mode is off by default. Backend and Studio must be updated together before using these controls on a hosted pilot; no Twitch ZIP change is needed for them.
 
+Voice guesses are an explicit browser opt-in. Say “Hey Baity, the bait is banana,” check the draft, then say “lock in.” “I am calling the bait” also opens the command flow without the wake phrase, and the recognizer handles Moonshine's observed “Baity bought” spelling. The browser remembers the opt-in; it does not save the transcript or microphone permission.
+
+[Baity chaos](packages/app/docs/baity-chaos.md) is a separate optional rule, off by default: with chat on a streak of three or more, a correct guess has a one-in-four chance of giving chat the win instead, once per chaos session. It has explicit result copy and requires the matching Extension ZIP.
+
 ## Cloudflare pilot
 
 The [edge pilot](packages/edge-game/README.md) is active at [pilot-baited.maff.app/studio](https://pilot-baited.maff.app/studio) for two invited streamer channels: `komediruzecki7` and `lakeeko`. Each channel allows 100 distinct participants per round and 100 concurrent viewer sockets. It uses the built-in 100-card deck, a Worker gateway, SQLite Durable Objects, local Moonshine and WebSockets. Custom decks and Card Maker are excluded.

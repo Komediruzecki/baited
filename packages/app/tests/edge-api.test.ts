@@ -6,9 +6,10 @@ test('edge chat controls use the session CSRF endpoint and bot sign-in verifies 
   const previous = { fetch: globalThis.fetch, location: Object.getOwnPropertyDescriptor(globalThis, 'location'), socket: globalThis.WebSocket };
   const calls: { path: string; body?: unknown; csrf: string | null }[] = [];
   let revision = 1, canAuthorize = true, botAuthorized=false, redirect = 'https://id.twitch.tv/oauth2/authorize?client_id=fixture';
+  let roundResult: {id:string;reason:string;outcome:string} | undefined;
   const frames: unknown[] = [];
   const state = () => ({ type: 'snapshot', protocol: 1, revision, generation: 1,
-    room: { serverTime: Date.now(), phase: 'idle', score: {}, settings: {chatBot:true}, connection: { status: 'connected' } } });
+    room: { result: roundResult, serverTime: Date.now(), phase: 'idle', score: {}, settings: {chatBot:true}, connection: { status: 'connected' } } });
   class Socket {
     readyState = 1; bufferedAmount = 0;
     onmessage: ((event: { data: string }) => void) | null = null;
@@ -70,6 +71,20 @@ test('edge chat controls use the session CSRF endpoint and bot sign-in verifies 
     assert.deepEqual((draftCall.body as {action:unknown}).action,{type:'voice-guess-draft',roundId:draft.roundId,epoch:1,text:'banana',draftId:draft.draftId,expiresAt:draft.expiresAt});
     assert.equal(canAuthorizeEdgeBot(), false);
     await assert.rejects(authorizeEdgeBot(), /operator connects/);
+    await request('/api/studio/chaos/reset', {sessionId:'chaos-session'});
+    const chaosReset = calls.filter(call => call.path.endsWith('/commands')).at(-1)!;
+    assert.deepEqual((chaosReset.body as {action:unknown}).action, {type:'reset-chaos-session',sessionId:'chaos-session'});
+    assert.equal(calls.some(call=>call.path==='/api/studio/chaos/reset'), false);
+    roundResult={id:draft.roundId,reason:'baity-chaos',outcome:'caught'};
+    const gifted = await request<{correct:boolean;intervened?:boolean;bonus:number}>('/api/studio/guess', draft);
+    assert.equal(gifted.correct,true); assert.equal(gifted.intervened,true); assert.equal(gifted.bonus,0);
+    roundResult={id:draft.roundId,reason:'guess',outcome:'escaped'};
+    const escaped = await request<{correct:boolean;intervened?:boolean}>('/api/studio/guess', draft);
+    assert.equal(escaped.correct,true); assert.equal(escaped.intervened,undefined);
+    roundResult={id:'older-round',reason:'baity-chaos',outcome:'caught'};
+    const stale = await request<{correct:boolean;intervened?:boolean}>('/api/studio/guess', draft);
+    assert.equal(stale.correct,false); assert.equal(stale.intervened,undefined);
+
   } finally {
     await request('/api/logout', {});
     globalThis.fetch = previous.fetch; globalThis.WebSocket = previous.socket;

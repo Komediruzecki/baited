@@ -1,5 +1,5 @@
 import { clockValue, connectToTwitch, connectionView, nativeCardArtSource, readState } from './client.js';
-import { cardArtFile, cardWordSize, glassRules, streakMilestone } from './presentation.js';
+import { baityChaosCopy, cardArtFile, cardWordSize, glassRules, streakMilestone } from './presentation.js';
 import { revealPixels } from './pixel-reveal.js';
 
 const byId = (id) => document.getElementById(id);
@@ -248,7 +248,8 @@ function render({ configured, room }) {
   }
   if (room.result) {
     const result = room.result;
-    const copy = {
+    const chaos = baityChaosCopy(result);
+    const copy = chaos ?? {
       caught: ['Baited.', 'The catch is confirmed. Chat got the word.'],
       escaped: ['Got away.', 'Time ran out. Another word, another chance.'],
       skipped: ['New bait next.', 'Chat skipped this word.'],
@@ -259,7 +260,7 @@ function render({ configured, room }) {
         : 'The streamer is checking what they heard.'],
     }[result.outcome];
     byId('card').dataset.state = result.outcome === 'review' ? 'review' : 'result';
-    byId('card-kicker').textContent = copy[0];
+    byId('card-kicker').textContent = chaos ? `${copy[0]}.` : copy[0];
     byId('phase-label').textContent =
       result.outcome === 'review' ? (Number.isFinite(result.confirmAt) ? 'Checking the catch' : 'Streamer’s call') : 'Complete';
     setTitle(result.word, true, dealtInk.id === result.id ? dealtInk.ink : '');
@@ -294,7 +295,7 @@ function render({ configured, room }) {
       result.outcome === 'caught'
         ? streak >= 2
           ? `${streak} in a row`
-          : 'They said it'
+          : chaos ? 'Chat wins' : 'They said it'
         : 'Next round soon';
     byId('play-instruction').textContent =
       result.outcome === 'review'

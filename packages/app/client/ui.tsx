@@ -221,11 +221,14 @@ export function HowTo({ speechProvider }: { speechProvider: SpeechProvider }) {
           </li>
           <li>
             <strong>Call the bait:</strong> One private typed guess per word. Correct: escape the
-            round and mission. Wrong: chat gets +15 seconds.
+            round and mission, unless optional Baity chaos intervenes. Wrong: chat gets +15 seconds.
+          </li>
+          <li>
+            <strong>Baity chaos:</strong> Optional and off by default. At 3+ chat wins in a row, a correct guess has a 1 in 4 chance to give chat the win. At most once per session. The result names Baity’s intervention, and the streamer can reverse it.
           </li>
           <li>
             <strong>You baited me:</strong> After a win, the streamer can award one eligible hint.
-            The community keeps the shared win; the chatter gets a sting on stream and a spot on
+            Baity’s gifted wins cannot receive an award. The community keeps the shared win; the chatter gets a sting on stream and a spot on
             the Bait MVPs board.
           </li>
         </ul>

@@ -134,7 +134,8 @@ export function StreakCelebration({
   age: number;
 }) {
   const tier = result.outcome === 'caught' && result.milestone ? streakMilestone(result.milestone) : null;
-  if (!tier) return null;
+  // Keep the correct-guess explanation visible instead of covering it with a badge takeover.
+  if (!tier || result.reason === 'baity-chaos') return null;
   const next = nextStreakTier(tier.count);
   return (
     <div

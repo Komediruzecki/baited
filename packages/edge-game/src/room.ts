@@ -375,6 +375,7 @@ export class ChannelRoom extends DurableObject<Env> {
         game.mic='listening';break;
       }
       case 'restart-take': game.restartTake(a.takeId); break;
+      case 'reset-chaos-session': game.restartChaosSession(a.sessionId); break;
       case 'skip': game.end('skipped');break;
       case 'pause': game.pause(); break;
       case 'resume': if (this.pilot() && (!pilot.chatConnected || !this.leaseValid())) throw new Error('stream_not_ready');game.resume(); break;
@@ -418,7 +419,7 @@ export class ChannelRoom extends DurableObject<Env> {
     if (previous) return previous.fingerprint === hash
       ? {status:200,body:JSON.parse(previous.body)}
       : {status:409,body:{ok:false,code:'id_conflict',revision:this.revision,generation:this.generation}};
-    const acceptsOlderRevision=this.pilot() && !['start','settings','restart-take','revoke-connections'].includes(command.action.type);
+    const acceptsOlderRevision=this.pilot() && !['start','settings','restart-take','reset-chaos-session','revoke-connections'].includes(command.action.type);
     if (command.generation !== this.generation || ((command.action.type === 'fixture-chat' || acceptsOlderRevision)
       ? command.expectedRevision > this.revision : command.expectedRevision !== this.revision))
       return {status:409,body:{ok:false,code:'stale_revision',revision:this.revision,generation:this.generation}};

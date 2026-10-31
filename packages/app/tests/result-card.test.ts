@@ -4,6 +4,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ResultCard } from '../client/ResultCard';
 import { ObsHud } from '../client/ObsHud';
+import { StreakCelebration } from '../client/streak';
 import { CatchDecision } from '../client/CatchDecision';
 import { cardArtFile, winLabel } from '../extension/presentation.js';
 import type { Result } from '../shared/types';
@@ -204,4 +205,38 @@ test('reopened catch review does not restart its countdown or claim a local win'
   const due = render(17000);
   assert.match(due, /Waiting for the confirmed result/);
   assert.doesNotMatch(due, /Chat got you\.|Reverse win|>0s</);
+});
+
+
+test('Baity chaos is a correct guess awarded to chat, never a false microphone catch', () => {
+  const gifted: Result = { ...result, outcome: 'caught', reason: 'baity-chaos', milestone: 4, newBadge: true };
+  const card = renderToStaticMarkup(React.createElement(ResultCard, { result: gifted, broadcast: true }));
+  assert.match(card, /Baity’s call/);
+  assert.match(card, /Correct guess. Chat wins./);
+  assert.doesNotMatch(card, /They said it|Heard|Not scored yet/);
+  const decision = renderToStaticMarkup(React.createElement(CatchDecision, {
+    result: gifted, disabled: false, hasAward: true, onDecide() {}, onReverse() {},
+  }));
+  assert.match(decision, /The streamer guessed correctly. Baity gave chat the win./);
+  assert.match(decision, /Reverse Baity’s win/);
+  assert.doesNotMatch(decision, /You said it|Wrong detection|award-review|Choose “You baited me”/);
+  const game = fixture().game.view('overlay');
+  const hud = renderToStaticMarkup(React.createElement(ObsHud, {
+    game: { ...game, phase: 'cooldown', result: gifted }, timeLeft: '00:00', now: 1000, offset: 0, offline: false,
+  }));
+  assert.match(hud, /Correct guess · Baity’s call/);
+  assert.match(hud, /VOLCANO/);
+  assert.equal(renderToStaticMarkup(React.createElement(StreakCelebration, {result: gifted, streak: 4, age: 0})), '', 'Badge takeover must not cover the intervention explanation.');
+});
+
+test('reversing a Baity gift keeps its actual reason visible', () => {
+  const reversed: Result = { ...result, outcome: 'overturned', reason: 'baity-chaos' };
+  for (const markup of [
+    renderToStaticMarkup(React.createElement(ResultCard, { result: reversed })),
+    renderToStaticMarkup(React.createElement(CatchDecision, {result: reversed, disabled: false, hasAward: true, onDecide() {}, onReverse() {}})),
+    renderToStaticMarkup(React.createElement(ObsHud, {game: {...fixture().game.view('overlay'), phase: 'cooldown', result: reversed}, timeLeft: '00:00', now: 1000, offset: 0, offline: false})),
+  ]) {
+    assert.match(markup, /Gift reversed/);
+    assert.doesNotMatch(markup, /Catch rejected|Wrong detection|You said it|award-review/);
+  }
 });

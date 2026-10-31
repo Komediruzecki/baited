@@ -116,6 +116,7 @@ export async function request<T>(path: string, body?: unknown, csrf?: string, si
           ? { type, roundId: snapshot.room?.round?.id, epoch: snapshot.room?.round?.epoch }
           : type === 'reverse' ? { type, roundId: snapshot.room?.result?.id } : { type };
       } else if (path === '/api/studio/settings') action = { type: 'settings', settings: body };
+      else if (path === '/api/studio/chaos/reset') action = { type: 'reset-chaos-session', sessionId: value.sessionId };
       else if (path === '/api/recording/restart') action = { type: 'restart-take', takeId: value.takeId };
       else if (path === '/api/studio/guess') action = { type: 'guess', roundId: value.roundId, epoch: value.epoch, text: value.word };
       else if (path === '/api/studio/voice-guess-draft') action = { type:'voice-guess-draft',roundId:value.roundId,epoch:value.epoch,text:value.word,draftId:value.draftId,expiresAt:value.expiresAt };
@@ -126,8 +127,14 @@ export async function request<T>(path: string, body?: unknown, csrf?: string, si
       snapshot = await transport.command(action, signal);
       if(path==='/api/studio/voice-guess-draft') return {status:'requested'} as T;
       if (path === '/api/studio/microphone') return { armed: value.armed === true } as T;
-      if (path === '/api/studio/guess') return { correct: snapshot.room?.result?.reason === 'guess',
-        bonus: snapshot.room?.round?.wrongGuessBonus ?? 0, studio: edgeStudio(snapshot, transport.bootstrap!) } as T;
+      if (path === '/api/studio/guess') {
+        const result = snapshot.room?.result;
+        const current = result?.id === value.roundId;
+        const intervened = current && result?.reason === 'baity-chaos' && result.outcome === 'caught';
+        return { correct: current && (result?.reason === 'guess' || intervened),
+          ...(intervened ? { intervened: true } : {}),
+          bonus: snapshot.room?.round?.wrongGuessBonus ?? 0, studio: edgeStudio(snapshot, transport.bootstrap!) } as T;
+      }
     }
     return edgeStudio(snapshot, transport.bootstrap!) as T;
   }

@@ -1,3 +1,4 @@
+export function baityChaosCopy(result: { reason?: string; outcome: string } | null | undefined): [string, string] | null;
 export const proofWords: readonly [
   'banana',
   'penguin',

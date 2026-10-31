@@ -50,7 +50,9 @@ import { ResultCard } from './ResultCard';
 import { CardBack } from './CardBack';
 import { CatchDecision } from './CatchDecision';
 import { ObsHud } from './ObsHud';
-import { nextStreakTier, streakMilestone } from '../extension/presentation.js';
+import { BaityChaosRule, BaityChaosSettings } from './BaityChaos';
+import './baity-chaos.css';
+import { baityChaosCopy, nextStreakTier, streakMilestone } from '../extension/presentation.js';
 import { CutCard } from './CutCard';
 import { StreakBadge, StreakBadges, StreakCelebration, StreakCount, StreakRow } from './streak';
 import { SoundControls } from './SoundControls';
@@ -281,7 +283,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
         (current.room.recording?.takeId ?? '') === draft.context.takeId && capture.current?.lease.id === draft.context.leaseId;
     };
     try {
-      const reply = await request<{ correct: boolean; bonus: number; studio: Studio }>(
+      const reply = await request<{ correct: boolean; intervened?: boolean; bonus: number; studio: Studio }>(
         '/api/studio/guess',
         { roundId: draft.context.roundId, epoch: draft.context.epoch, word: draft.word },
         session.csrf,
@@ -289,7 +291,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       // A late scoring response must not repaint a newer round or recording take.
       if (!sameRound()) return;
       if (reply.studio.room.serverTime >= (currentStudio.current?.room.serverTime ?? 0)) receive(reply.studio);
-      setVoiceMessage(reply.correct ? 'Bait called. You escaped.' : `Not the word. Chat gets ${reply.bonus} extra seconds.`);
+      setVoiceMessage(reply.intervened ? 'Correct guess. Baity gave chat the win.' : reply.correct ? 'Bait called. You escaped.' : `Not the word. Chat gets ${reply.bonus} extra seconds.`);
     } catch (error) {
       // Never retry a scoring action automatically: the server may have accepted it.
       if (sameRound()) setVoiceMessage((error as Error).message || 'Could not check the guess. Check the round before trying again.');
@@ -451,6 +453,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     } finally {
       setBusy(false);
     }
+  };
+  const resetChaos = async () => {
+    const game = currentStudio.current?.room;
+    if (!game?.chaosSession || busy || offline || ['active', 'paused', 'settling'].includes(game.phase) || game.result?.outcome === 'review')
+      throw new Error('Finish the round and reconnect before resetting the allowance.');
+    setBusy(true);
+    try { receive(await request<Studio>('/api/studio/chaos/reset', { sessionId: game.chaosSession.id }, session.csrf)); }
+    finally { setBusy(false); }
   };
   const save = async (settings: Settings) => {
     setBusy(true);
@@ -870,6 +880,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         </>
                       )}
                     </div>
+                    <BaityChaosRule game={g} />
                     {!active && !paused && !pendingCatch && !readyToBegin && <p className="start-reason" role="status">{studio.deck?.problem ? 'Choose a playable deck before starting the next round.' : modelLoading ? 'Waiting for the speech model.' : 'Connect chat and turn on your microphone to start.'}</p>}
                   </div>
                   <div
@@ -1204,7 +1215,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   </section>
                 </div>
               </div>
-              {studio.awardBoard && (
+              {studio.awardBoard && g.result?.reason !== 'baity-chaos' && (
                 <AwardReview
                   key={studio.awardBoard.roundId}
                   board={studio.awardBoard}
@@ -1296,7 +1307,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <SettingsForm
               settings={g.settings}
               chatBot={studio.chatBot}
-              busy={busy || settling}
+              busy={busy || settling || offline}
+              chaosSession={g.chaosSession}
+              onResetChaos={resetChaos}
               recordingLocked={active || paused || pendingCatch || settling}
               onSave={save}
             />
@@ -1415,6 +1428,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   );
 }
 function ResultRow({ result: r }: { result: GameView['history'][number] }) {
+  const chaos = baityChaosCopy(r);
   return (
     <div className="result-row">
       <span className={cx('result-icon', r.outcome === 'caught' && 'win')}>
@@ -1423,9 +1437,10 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
       <strong>{r.word}</strong>
       <span className="result-time">{r.outcome === 'caught' ? `${r.elapsed}s` : '—'}</span>
       <Tag tone={r.outcome === 'caught' ? 'lime' : 'muted'}>
-        {r.reason === 'guess' ? 'Bait called' : outcomeLabel[r.outcome]}
+        {chaos ? chaos[0] : r.reason === 'guess' ? 'Bait called' : outcomeLabel[r.outcome]}
       </Tag>
-      {r.award && (
+      {chaos && <span className="result-chaos-note">{chaos[1]}</span>}
+      {r.award && !chaos && (
         <span className="result-award">
           <Check size={12} />
           <span>Streamer’s pick: @{r.award.name}</span>
@@ -1451,12 +1466,16 @@ function SettingsForm({
   chatBot,
   busy,
   recordingLocked,
+  chaosSession,
+  onResetChaos,
   onSave,
 }: {
   settings: Settings;
   chatBot: ChatBotStatus;
   busy: boolean;
   recordingLocked: boolean;
+  chaosSession?: GameView['chaosSession'];
+  onResetChaos: () => Promise<void>;
   onSave: (s: Settings) => void;
 }) {
   const [s, set] = useState(settings);
@@ -1590,6 +1609,9 @@ function SettingsForm({
           onChange={(e) => set({ ...s, callBait: e.target.checked })}
         />
       </label>
+      <BaityChaosSettings enabled={s.baityChaos ?? false} callBait={s.callBait}
+        session={chaosSession} locked={recordingLocked} busy={busy}
+        onChange={(enabled) => set({ ...s, baityChaos: enabled })} onReset={onResetChaos} />
       <p className="field-label">Baity, the chat bot</p>
       <label className="toggle-row">
         <span>
@@ -2139,11 +2161,13 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     </div>;
   const playing = active || paused || settling;
   const visibleWord = stale ? undefined : playing ? g.round?.target : finished ? g.result?.word : undefined;
+  const chaos = baityChaosCopy(g.result);
   const heading = stale ? 'Reconnecting.'
     : pendingCatch ? 'Catch pending.'
     : settling ? 'Checking final words.'
     : paused ? 'Round paused.'
     : active ? 'Make them say it.'
+    : chaos && finished ? chaos[0]
     : g.mission?.status === 'complete' ? 'Chat cleared the mission.'
     : g.mission?.status === 'failed' ? 'Time ran out.'
     : g.result?.reason === 'guess' && finished ? 'The streamer called it.'
@@ -2154,6 +2178,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     : settling ? 'Only words spoken before the buzzer count.'
     : paused ? 'The clock and listening are stopped.'
     : active ? 'Don’t type it.'
+    : chaos && finished ? chaos[1]
     : g.mission?.status === 'complete' ? 'All three words landed before the timer.'
     : g.mission?.status === 'failed' ? `${g.mission.completed} of 3 words landed. Those wins still count.`
     : g.result?.reason === 'guess' && finished ? 'The private guess was right. The streamer escaped.'
@@ -2179,7 +2204,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
               chip={active && !stale ? `Round ${g.round?.number}` : stateLabel}
               level={playing && g.round ? { easy: 1, medium: 2, hard: 3 }[g.round.difficulty] : null}
               clues={playing && !stale ? g.round?.forbiddenClues ?? [] : null}
-              note={!playing ? (won ? 'Chat wins' : pendingCatch ? 'Not scored yet' : 'Round complete') : null}
+              note={!playing ? (chaos && won ? 'Correct guess. Chat wins.' : won ? 'Chat wins' : pendingCatch ? 'Not scored yet' : 'Round complete') : null}
               question={playing && !stale ? g.round?.example : null}
               progress={playing && g.round ? ms / g.round.duration : null}
               urgent={active && !stale && ms <= 15000}
@@ -2188,7 +2213,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             {!stale && <ForbiddenClueCard game={g} rulesOnly />}
           </section> : <div className="viewer-card-waiting"><div className="viewer-back"><CardBack /></div><p>{stale ? 'Waiting for updates.' : 'The word is coming.'}</p>{stale && <span className="viewer-stale-clock" aria-label="Timer unavailable while reconnecting">—:—</span>}</div>}
         </div>
-        {!stale && <PublicAward award={g.history[0]?.award} />}
+        {!stale && g.history[0]?.reason !== 'baity-chaos' && <PublicAward award={g.history[0]?.award} />}
       </div>
       <aside className="viewer-support" aria-label="Round status and how to play">
         <div className="viewer-state"><h1>{heading}</h1><p>{detail}</p>
@@ -2203,10 +2228,11 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             </p>
           )}
         </div>
+        {!stale && <BaityChaosRule game={g} />}
         <ul className="viewer-playbook">
           <li><MessageSquare size={20} /><span>Steer the conversation.</span></li>
           <li><NoChat size={20} /><span>Keep the word and clues out of chat.</span></li>
-          <li><Mic size={20} /><span>Only the streamer’s voice counts.</span></li>
+          <li><Mic size={20} /><span>{g.round?.baityChaos ? 'Baity chaos is on for this round.' : 'Only the streamer’s voice counts.'}</span></li>
         </ul>
         {!stale && g.score.streak >= 2 && (
           <div className="viewer-streak">
