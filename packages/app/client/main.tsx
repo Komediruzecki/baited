@@ -1432,8 +1432,8 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
 function chatBotHint(bot: ChatBotStatus) {
   const what =
     isEdgeRuntime()
-      ? 'Baity posts round starts, results and game events. Never the word while a round is live.'
-      : 'Baity posts round starts, halfway, the last 10 seconds and results, and gets louder every round chat loses. Never the word while a round is live.';
+      ? 'Baity posts round starts, results and game events. Round announcements keep the secret word out of chat.'
+      : 'Baity posts round starts, halfway, the last 10 seconds and results, and gets louder every round chat loses. Round announcements keep the secret word out of chat.';
   if (bot.mode === 'demo') return `${what} In this demo, posts appear under Demo controls.`;
   if (bot.mode === 'unconfigured') return `${what} This server has no bot account yet, so nothing is posted.`;
   if (bot.mode === 'unauthorized')
@@ -2037,7 +2037,8 @@ function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
                 : bot.channelAllowed
                   ? `${bot.name} posts in your chat with Twitch’s Chat Bot badge. Turn announcements on in Game settings.`
                   : `Allow ${bot.name} to post in your chat. Twitch asks you once; baited keeps reading chat as before.`}{' '}
-          It never posts the word while a round is live, because you read your chat too.
+          Round announcements keep the secret word out of chat. With Voice guesses enabled,
+          Baity can also share your unconfirmed guess.
         </p>
         {game.mode === 'twitch' && bot.mode === 'twitch' && !bot.channelAllowed && (
           <AllowBotButton phase={game.phase} />
