@@ -152,6 +152,7 @@
 .studio-shell .solo-target button, .studio-shell .transcript-preview button { min-height: 44px; color: var(--b-lilac); }
 .studio-shell .solo-target__word { color: var(--b-paper); }
 .studio-shell .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; min-width: 0; }
+.studio-shell .streak-panel + .bottom-grid { margin-top: 24px; }
 .studio-shell .studio-grid > .bottom-grid { grid-column: 1 / -1; }
 .studio-shell .panel { padding: 20px; }
 .studio-shell .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 12px; }
@@ -284,6 +285,7 @@
   .studio-shell .studio-stage__copy h2 { font-size: 24px; }
   .studio-shell .timer { font-size: 48px; }
   .studio-shell .bottom-grid { grid-template-columns: 1fr; gap: 18px; }
+  .studio-shell .streak-panel + .bottom-grid { margin-top: 18px; }
   .studio-shell .privacy-panel { grid-template-columns: 20px 1fr; }
   .studio-shell .privacy-panel > .button { grid-column: 2; justify-self: start; }
   .signin-sheet { grid-template-columns: 180px minmax(0, 1fr); }
