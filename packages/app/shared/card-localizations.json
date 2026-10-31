@@ -1,0 +1,3772 @@
+{
+  "version": 1,
+  "sourceLanguage": "en",
+  "status": "authored-review-data",
+  "cards": {
+    "volcano": {
+      "en": {
+        "target": "volcano",
+        "clues": [
+          "lava",
+          "eruption",
+          "magma",
+          "mountain"
+        ],
+        "question": "Where would you definitely not build a house?",
+        "alternatives": [],
+        "originalQuestion": "Where would you definitely not build a house?"
+      },
+      "hr": {
+        "target": "vulkan",
+        "clues": [
+          "lava",
+          "erupcija",
+          "magma",
+          "planina"
+        ],
+        "question": "Gdje nikako ne bi sagradio kuću?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "vulkana",
+          "vulkanu",
+          "vulkanom",
+          "vulkani",
+          "vulkane"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "banana": {
+      "en": {
+        "target": "banana",
+        "clues": [
+          "fruit",
+          "yellow",
+          "peel",
+          "smoothie"
+        ],
+        "question": "What do you always put in a smoothie?",
+        "alternatives": [
+          "What do cartoon characters slip on?",
+          "What is yellow and shaped like a boomerang?"
+        ],
+        "originalQuestion": "What do cartoon characters slip on?"
+      },
+      "hr": {
+        "target": "banana",
+        "clues": [
+          "voće",
+          "žuto",
+          "kora",
+          "smoothie"
+        ],
+        "question": "Što obavezno stavljaš u smoothie?",
+        "alternatives": [
+          "Na čemu se likovi iz crtića poskliznu?",
+          "Što je žuto i nalikuje bumerangu?"
+        ],
+        "acceptedSpellings": [
+          "bananu",
+          "banane",
+          "bananom",
+          "banani",
+          "bananama"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "More conversational than the cartoon riddle; fits the recording setup."
+      }
+    },
+    "monocle": {
+      "en": {
+        "target": "monocle",
+        "clues": [
+          "eye",
+          "lens",
+          "glasses",
+          "single"
+        ],
+        "question": "What does a fancy villain squint through?",
+        "alternatives": [],
+        "originalQuestion": "What does a fancy villain squint through?"
+      },
+      "hr": {
+        "target": "monokl",
+        "clues": [
+          "oko",
+          "leća",
+          "naočale",
+          "jedan"
+        ],
+        "question": "Kroz što bi škiljio otmjeni negativac iz crtića?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "monokla",
+          "monoklu",
+          "monoklom",
+          "monokli",
+          "monokle"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "penguin": {
+      "en": {
+        "target": "penguin",
+        "clues": [
+          "bird",
+          "ice",
+          "antarctica",
+          "waddle"
+        ],
+        "question": "Who would win a belly-slide race?",
+        "alternatives": [],
+        "originalQuestion": "Who would win a belly-slide race?"
+      },
+      "hr": {
+        "target": "pingvin",
+        "clues": [
+          "ptica",
+          "led",
+          "Antarktika",
+          "gegati"
+        ],
+        "question": "Tko bi pobijedio u utrci klizanja na trbuhu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "pingvina",
+          "pingvinu",
+          "pingvinom",
+          "pingvini",
+          "pingvine"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "dragon": {
+      "en": {
+        "target": "dragon",
+        "clues": [
+          "fire",
+          "wings",
+          "scales",
+          "fantasy"
+        ],
+        "question": "What would you put in charge of a castle?",
+        "alternatives": [],
+        "originalQuestion": "What would you put in charge of a castle?"
+      },
+      "hr": {
+        "target": "zmaj",
+        "clues": [
+          "vatra",
+          "krila",
+          "ljuske",
+          "fantazija"
+        ],
+        "question": "Koga bi postavio da čuva tvoj dvorac?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "zmaja",
+          "zmaju",
+          "zmajem",
+          "zmajevi",
+          "zmajeve"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "boomerang": {
+      "en": {
+        "target": "boomerang",
+        "clues": [
+          "throw",
+          "return",
+          "australia",
+          "curved"
+        ],
+        "question": "What's the worst thing to toss away when you want it gone for good?",
+        "alternatives": [
+          "What's the worst thing to toss away?"
+        ],
+        "originalQuestion": "What's the worst thing to toss away?"
+      },
+      "hr": {
+        "target": "bumerang",
+        "clues": [
+          "baciti",
+          "vratiti",
+          "Australija",
+          "zakrivljeno"
+        ],
+        "question": "Čega se ne možeš riješiti ni kad svom snagom zamahneš?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "bumeranga",
+          "bumerangu",
+          "bumerangom",
+          "bumeranzi",
+          "bumerange"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Keeps the joke but makes the return property more deliberate."
+      }
+    },
+    "microwave": {
+      "en": {
+        "target": "microwave",
+        "clues": [
+          "heat",
+          "oven",
+          "reheat",
+          "cooking"
+        ],
+        "question": "How do you rescue cold leftovers?",
+        "alternatives": [],
+        "originalQuestion": "How do you rescue cold leftovers?"
+      },
+      "hr": {
+        "target": "mikrovalna",
+        "clues": [
+          "grijanje",
+          "pećnica",
+          "podgrijavanje",
+          "kuhanje"
+        ],
+        "question": "Kako bi najbrže spasio hladne ostatke ručka?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "mikrovalnu",
+          "mikrovalne",
+          "mikrovalnoj",
+          "mikrovalnom",
+          "mikrovalna pećnica"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "pizza": {
+      "en": {
+        "target": "pizza",
+        "clues": [
+          "cheese",
+          "slice",
+          "dough",
+          "pepperoni"
+        ],
+        "question": "What would you order for the whole chat?",
+        "alternatives": [],
+        "originalQuestion": "What would you order for the whole chat?"
+      },
+      "hr": {
+        "target": "pizza",
+        "clues": [
+          "sir",
+          "kriška",
+          "tijesto",
+          "pepperoni"
+        ],
+        "question": "Što bi naručio za cijeli chat?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "pizzu",
+          "pizze",
+          "pizzom",
+          "pizzi",
+          "pizzama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "narwhal": {
+      "en": {
+        "target": "narwhal",
+        "clues": [
+          "whale",
+          "tusk",
+          "arctic",
+          "unicorn"
+        ],
+        "question": "Which sea creature has a horn on its face?",
+        "alternatives": [],
+        "originalQuestion": "Which sea creature has a horn on its face?"
+      },
+      "hr": {
+        "target": "narval",
+        "clues": [
+          "kit",
+          "kljova",
+          "Arktik",
+          "jednorog"
+        ],
+        "question": "Koja morska životinja ima rog na licu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "narvala",
+          "narvalu",
+          "narvalom",
+          "narvali",
+          "narvale"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "cactus": {
+      "en": {
+        "target": "cactus",
+        "clues": [
+          "desert",
+          "plant",
+          "spines",
+          "succulent"
+        ],
+        "question": "What's the worst thing to hug?",
+        "alternatives": [],
+        "originalQuestion": "What's the worst thing to hug?"
+      },
+      "hr": {
+        "target": "kaktus",
+        "clues": [
+          "pustinja",
+          "biljka",
+          "bodlje",
+          "sukulent"
+        ],
+        "question": "Što bi bilo najgore zagrliti?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kaktusa",
+          "kaktusu",
+          "kaktusom",
+          "kaktusi",
+          "kaktuse"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "robot": {
+      "en": {
+        "target": "robot",
+        "clues": [
+          "machine",
+          "metal",
+          "android",
+          "automation"
+        ],
+        "question": "Who could follow programmed instructions to clean while you stream?",
+        "alternatives": [
+          "Who should do the chores while you stream?"
+        ],
+        "originalQuestion": "Who should do the chores while you stream?"
+      },
+      "hr": {
+        "target": "robot",
+        "clues": [
+          "stroj",
+          "metal",
+          "android",
+          "automatizacija"
+        ],
+        "question": "Tko bi mogao slijediti programirane upute i čistiti dok streamaš?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "robota",
+          "robotu",
+          "robotom",
+          "roboti",
+          "robote"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Keeps the streaming setup while reducing human housekeeper answers."
+      }
+    },
+    "parachute": {
+      "en": {
+        "target": "parachute",
+        "clues": [
+          "jump",
+          "skydiving",
+          "canopy",
+          "fall"
+        ],
+        "question": "What would you double-check before leaving the plane?",
+        "alternatives": [],
+        "originalQuestion": "What would you double-check before leaving the plane?"
+      },
+      "hr": {
+        "target": "padobran",
+        "clues": [
+          "skok",
+          "padobranstvo",
+          "kupola",
+          "pad"
+        ],
+        "question": "Što bi dvaput provjerio prije izlaska iz aviona?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "padobrana",
+          "padobranu",
+          "padobranom",
+          "padobrani",
+          "padobrane"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "jellyfish": {
+      "en": {
+        "target": "jellyfish",
+        "clues": [
+          "ocean",
+          "sting",
+          "tentacles",
+          "sea"
+        ],
+        "question": "What looks like a swimming lava lamp?",
+        "alternatives": [],
+        "originalQuestion": "What looks like a swimming lava lamp?"
+      },
+      "hr": {
+        "target": "meduza",
+        "clues": [
+          "ocean",
+          "žarenje",
+          "lovke",
+          "more"
+        ],
+        "question": "Što izgleda kao lava-lampa koja pliva?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "meduzu",
+          "meduze",
+          "meduzom",
+          "meduzi",
+          "meduzama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "rocket": {
+      "en": {
+        "target": "rocket",
+        "clues": [
+          "space",
+          "launch",
+          "astronaut",
+          "moon"
+        ],
+        "question": "What carries a crew beyond the atmosphere?",
+        "alternatives": [],
+        "originalQuestion": "What carries a crew beyond the atmosphere?"
+      },
+      "hr": {
+        "target": "raketa",
+        "clues": [
+          "svemir",
+          "lansiranje",
+          "astronaut",
+          "Mjesec"
+        ],
+        "question": "Čime bi posadu poslao izvan atmosfere?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "raketu",
+          "rakete",
+          "raketom",
+          "raketi",
+          "raketama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "telescope": {
+      "en": {
+        "target": "telescope",
+        "clues": [
+          "stars",
+          "space",
+          "lens",
+          "astronomy"
+        ],
+        "question": "How would you get a closer look at Saturn?",
+        "alternatives": [],
+        "originalQuestion": "How would you get a closer look at Saturn?"
+      },
+      "hr": {
+        "target": "teleskop",
+        "clues": [
+          "zvijezde",
+          "svemir",
+          "leća",
+          "astronomija"
+        ],
+        "question": "Kako bi izbliza pogledao Saturn?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "teleskopa",
+          "teleskopu",
+          "teleskopom",
+          "teleskopi",
+          "teleskope"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "pirate": {
+      "en": {
+        "target": "pirate",
+        "clues": [
+          "ship",
+          "treasure",
+          "sword",
+          "eyepatch"
+        ],
+        "question": "Who says arr and wears a tricorn?",
+        "alternatives": [],
+        "originalQuestion": "Who says arr and wears a tricorn?"
+      },
+      "hr": {
+        "target": "gusar",
+        "clues": [
+          "brod",
+          "blago",
+          "mač",
+          "povez"
+        ],
+        "question": "Tko bi se potpisao lubanjom umjesto svojim imenom?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "gusara",
+          "gusaru",
+          "gusarom",
+          "gusari",
+          "gusare",
+          "pirat",
+          "pirata",
+          "pirati"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "saxophone": {
+      "en": {
+        "target": "saxophone",
+        "clues": [
+          "jazz",
+          "instrument",
+          "brass",
+          "reed"
+        ],
+        "question": "What would you play in a smoky club at 2 a.m.?",
+        "alternatives": [],
+        "originalQuestion": "What would you play in a smoky club at 2 a.m.?"
+      },
+      "hr": {
+        "target": "saksofon",
+        "clues": [
+          "jazz",
+          "instrument",
+          "mjed",
+          "jezičak"
+        ],
+        "question": "Što bi svirao u zadimljenom klubu u dva ujutro?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "saksofona",
+          "saksofonu",
+          "saksofonom",
+          "saksofoni",
+          "saksofone"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "octopus": {
+      "en": {
+        "target": "octopus",
+        "clues": [
+          "tentacles",
+          "eight",
+          "ocean",
+          "ink"
+        ],
+        "question": "Who could hold every controller at once?",
+        "alternatives": [],
+        "originalQuestion": "Who could hold every controller at once?"
+      },
+      "hr": {
+        "target": "hobotnica",
+        "clues": [
+          "lovke",
+          "osam",
+          "ocean",
+          "tinta"
+        ],
+        "question": "Tko bi mogao držati sve kontrolere odjednom?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "hobotnicu",
+          "hobotnice",
+          "hobotnicom",
+          "hobotnici",
+          "hobotnicama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "coffee": {
+      "en": {
+        "target": "coffee",
+        "clues": [
+          "caffeine",
+          "beans",
+          "espresso",
+          "latte"
+        ],
+        "question": "What gets you through the early shift?",
+        "alternatives": [],
+        "originalQuestion": "What gets you through the early shift?"
+      },
+      "hr": {
+        "target": "kava",
+        "clues": [
+          "kofein",
+          "zrna",
+          "espresso",
+          "latte"
+        ],
+        "question": "Bez čega ne možeš započeti jutro?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kavu",
+          "kave",
+          "kavom",
+          "kavi",
+          "kavama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "chicken": {
+      "en": {
+        "target": "chicken",
+        "clues": [
+          "bird",
+          "poultry",
+          "egg",
+          "rooster"
+        ],
+        "question": "Which farm animal would you keep for fresh eggs?",
+        "alternatives": [
+          "Who keeps waking the farm at sunrise?"
+        ],
+        "originalQuestion": "Who keeps waking the farm at sunrise?"
+      },
+      "hr": {
+        "target": "kokoš",
+        "clues": [
+          "ptica",
+          "perad",
+          "jaje",
+          "pijetao"
+        ],
+        "question": "Koju bi životinju držao na selu da svaki dan imaš svježa jaja?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kokoši",
+          "kokošima",
+          "kokošku",
+          "kokoška"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Original sunrise clue strongly points to rooster rather than the target. Easy permits egg."
+      }
+    },
+    "potato": {
+      "en": {
+        "target": "potato",
+        "clues": [
+          "fries",
+          "chips",
+          "mash",
+          "vegetable"
+        ],
+        "question": "What vegetable would you roast whole for a jacket dinner?",
+        "alternatives": [
+          "What deserves its own section on the dinner plate?"
+        ],
+        "originalQuestion": "What deserves its own section on the dinner plate?"
+      },
+      "hr": {
+        "target": "krumpir",
+        "clues": [
+          "pomfrit",
+          "čips",
+          "pire",
+          "povrće"
+        ],
+        "question": "Koje povrće pečeš cijelo, pa ga puniš vrhnjem?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "krumpira",
+          "krumpiru",
+          "krumpirom",
+          "krumpiri",
+          "krumpire"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Original could elicit any side dish; easy permits vegetable."
+      }
+    },
+    "cookie": {
+      "en": {
+        "target": "cookie",
+        "clues": [
+          "biscuit",
+          "bake",
+          "chocolate",
+          "dough"
+        ],
+        "question": "What do you dunk in milk when nobody is counting?",
+        "alternatives": [
+          "What disappears fastest from the kitchen jar?"
+        ],
+        "originalQuestion": "What disappears fastest from the kitchen jar?"
+      },
+      "hr": {
+        "target": "keks",
+        "clues": [
+          "biskvit",
+          "pečenje",
+          "čokolada",
+          "tijesto"
+        ],
+        "question": "Što umačeš u mlijeko kad nitko ne broji?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "keksa",
+          "keksu",
+          "keksom",
+          "keksi",
+          "kekse",
+          "keksima"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "More actionable everyday scene than an unspecified kitchen jar; biscuit is an optional follow-up topic, not an accepted spelling."
+      }
+    },
+    "rainbow": {
+      "en": {
+        "target": "rainbow",
+        "clues": [
+          "colors",
+          "colours",
+          "rain",
+          "sky"
+        ],
+        "question": "What would make you stop and take a photo after a storm?",
+        "alternatives": [],
+        "originalQuestion": "What would make you stop and take a photo after a storm?"
+      },
+      "hr": {
+        "target": "duga",
+        "clues": [
+          "boje",
+          "kiša",
+          "nebo",
+          "luk"
+        ],
+        "question": "Što bi te nakon nevremena natjeralo da izvadiš mobitel i slikaš?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "dugu",
+          "duge",
+          "dugom",
+          "dugi"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "football": {
+      "en": {
+        "target": "football",
+        "clues": [
+          "ball",
+          "goal",
+          "sport",
+          "touchdown"
+        ],
+        "question": "What sport would you play in a World Cup final?",
+        "alternatives": [
+          "What gets the whole neighbourhood shouting at the TV?"
+        ],
+        "originalQuestion": "What gets the whole neighbourhood shouting at the TV?"
+      },
+      "hr": {
+        "target": "nogomet",
+        "clues": [
+          "lopta",
+          "gol",
+          "sport",
+          "utakmica"
+        ],
+        "question": "Koji se sport igra u finalu Svjetskog prvenstva?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "nogometa",
+          "nogometu",
+          "nogometom"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Clarifies sport rather than a general TV event; football remains region-dependent."
+      }
+    },
+    "cheese": {
+      "en": {
+        "target": "cheese",
+        "clues": [
+          "milk",
+          "dairy",
+          "cheddar",
+          "mozzarella"
+        ],
+        "question": "What makes a toastie worth the burnt fingers?",
+        "alternatives": [],
+        "originalQuestion": "What makes a toastie worth the burnt fingers?"
+      },
+      "hr": {
+        "target": "sir",
+        "clues": [
+          "mlijeko",
+          "mliječno",
+          "cheddar",
+          "mozzarella"
+        ],
+        "question": "Što se mora dobro rastezati kad zagrizeš tost?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "sira",
+          "siru",
+          "sirom",
+          "sirevi",
+          "sireve"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "sandwich": {
+      "en": {
+        "target": "sandwich",
+        "clues": [
+          "bread",
+          "lunch",
+          "filling",
+          "sub"
+        ],
+        "question": "What would you pack for a long train ride?",
+        "alternatives": [],
+        "originalQuestion": "What would you pack for a long train ride?"
+      },
+      "hr": {
+        "target": "sendvič",
+        "clues": [
+          "kruh",
+          "ručak",
+          "nadjev",
+          "pecivo"
+        ],
+        "question": "Što bi spakirao za dugo putovanje vlakom?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "sendviča",
+          "sendviču",
+          "sendvičem",
+          "sendviči",
+          "sendviče"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "birthday": {
+      "en": {
+        "target": "birthday",
+        "clues": [
+          "cake",
+          "candles",
+          "party",
+          "age"
+        ],
+        "question": "Which yearly occasion gets your relatives calling all at once?",
+        "alternatives": [
+          "When do people suddenly remember to call you?"
+        ],
+        "originalQuestion": "When do people suddenly remember to call you?"
+      },
+      "hr": {
+        "target": "rođendan",
+        "clues": [
+          "torta",
+          "svjećice",
+          "zabava",
+          "godine"
+        ],
+        "question": "Kojim te godišnjim povodom rodbina odjednom počne zvati?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "rođendana",
+          "rođendanu",
+          "rođendanom",
+          "rođendani",
+          "rođendane"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Adds annual context to reduce anniversary and Christmas ambiguity."
+      }
+    },
+    "pancake": {
+      "en": {
+        "target": "pancake",
+        "clues": [
+          "breakfast",
+          "syrup",
+          "batter",
+          "flip"
+        ],
+        "question": "What would you try to toss with a frying pan?",
+        "alternatives": [],
+        "originalQuestion": "What would you try to toss with a frying pan?"
+      },
+      "hr": {
+        "target": "palačinka",
+        "clues": [
+          "doručak",
+          "sirup",
+          "smjesa",
+          "okretanje"
+        ],
+        "question": "Što bi pokušao baciti u zrak iz tave?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "palačinku",
+          "palačinke",
+          "palačinkom",
+          "palačinki",
+          "palačinkama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "dinosaur": {
+      "en": {
+        "target": "dinosaur",
+        "clues": [
+          "extinct",
+          "prehistoric",
+          "fossil",
+          "jurassic"
+        ],
+        "question": "Which animal from Jurassic Park would make the worst garden visitor?",
+        "alternatives": [
+          "What would make the worst surprise in your back garden?"
+        ],
+        "originalQuestion": "What would make the worst surprise in your back garden?"
+      },
+      "hr": {
+        "target": "dinosaur",
+        "clues": [
+          "izumrlo",
+          "prapovijest",
+          "fosil",
+          "jura"
+        ],
+        "question": "Koja bi životinja iz Jurskog parka bila najgori gost u vrtu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "dinosaura",
+          "dinosauru",
+          "dinosaurom",
+          "dinosauri",
+          "dinosaure"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Adds a recognisable category. Easy permits jurassic; question avoids the target."
+      }
+    },
+    "popcorn": {
+      "en": {
+        "target": "popcorn",
+        "clues": [
+          "corn",
+          "movie",
+          "butter",
+          "snack"
+        ],
+        "question": "What snack announces itself while you make it?",
+        "alternatives": [],
+        "originalQuestion": "What snack announces itself while you make it?"
+      },
+      "hr": {
+        "target": "kokice",
+        "clues": [
+          "kukuruz",
+          "kino",
+          "maslac",
+          "grickalice"
+        ],
+        "question": "Koji se zalogaj čuje dok ga pripremaš?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kokica",
+          "kokicama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "turtle": {
+      "en": {
+        "target": "turtle",
+        "clues": [
+          "shell",
+          "reptile",
+          "slow",
+          "tortoise"
+        ],
+        "question": "Who brings their own roof everywhere?",
+        "alternatives": [],
+        "originalQuestion": "Who brings their own roof everywhere?"
+      },
+      "hr": {
+        "target": "kornjača",
+        "clues": [
+          "oklop",
+          "gmaz",
+          "sporo",
+          "kopnena"
+        ],
+        "question": "Tko svugdje nosi vlastiti krov?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kornjaču",
+          "kornjače",
+          "kornjačom",
+          "kornjači",
+          "kornjačama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "bubble": {
+      "en": {
+        "target": "bubble",
+        "clues": [
+          "soap",
+          "pop",
+          "float",
+          "round"
+        ],
+        "question": "What floats away when you blow through a soapy wand?",
+        "alternatives": [
+          "What can you make with a wand but never hold?"
+        ],
+        "originalQuestion": "What can you make with a wand but never hold?"
+      },
+      "hr": {
+        "target": "mjehurić",
+        "clues": [
+          "sapun",
+          "pucanje",
+          "lebdenje",
+          "okruglo"
+        ],
+        "question": "Što odleti kad puhneš kroz kolutić umočen u sapunicu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "mjehurića",
+          "mjehuriću",
+          "mjehurićem",
+          "mjehurići",
+          "mjehuriće"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Adds the missing mechanism; easy permits soap."
+      }
+    },
+    "snowman": {
+      "en": {
+        "target": "snowman",
+        "clues": [
+          "snow",
+          "carrot",
+          "winter",
+          "frosty"
+        ],
+        "question": "Who needs a scarf but should never come inside?",
+        "alternatives": [],
+        "originalQuestion": "Who needs a scarf but should never come inside?"
+      },
+      "hr": {
+        "target": "snjegović",
+        "clues": [
+          "snijeg",
+          "mrkva",
+          "zima",
+          "led"
+        ],
+        "question": "Tko treba šal, ali ga nikad ne smiješ pustiti u kuću?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "snjegovića",
+          "snjegoviću",
+          "snjegovićem",
+          "snjegovići",
+          "snjegoviće"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "pillow": {
+      "en": {
+        "target": "pillow",
+        "clues": [
+          "bed",
+          "sleep",
+          "cushion",
+          "head"
+        ],
+        "question": "What do you flip to find the cold side?",
+        "alternatives": [],
+        "originalQuestion": "What do you flip to find the cold side?"
+      },
+      "hr": {
+        "target": "jastuk",
+        "clues": [
+          "krevet",
+          "spavanje",
+          "uzglavlje",
+          "glava"
+        ],
+        "question": "Što okrećeš da pronađeš hladnu stranu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "jastuka",
+          "jastuku",
+          "jastukom",
+          "jastuci",
+          "jastuke"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "monkey": {
+      "en": {
+        "target": "monkey",
+        "clues": [
+          "primate",
+          "banana",
+          "tree",
+          "ape"
+        ],
+        "question": "What animal from a jungle story would steal your sunglasses?",
+        "alternatives": [
+          "Who would steal your sunglasses at the zoo?"
+        ],
+        "originalQuestion": "Who would steal your sunglasses at the zoo?"
+      },
+      "hr": {
+        "target": "majmun",
+        "clues": [
+          "primat",
+          "banana",
+          "stablo",
+          "čimpanza"
+        ],
+        "question": "Koja bi ti životinja iz priče o džungli ukrala sunčane naočale?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "majmuna",
+          "majmunu",
+          "majmunom",
+          "majmuni",
+          "majmune"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Provides a category without naming the answer."
+      }
+    },
+    "bicycle": {
+      "en": {
+        "target": "bicycle",
+        "clues": [
+          "bike",
+          "pedal",
+          "wheels",
+          "cycling"
+        ],
+        "question": "What did you learn to ride after a few scraped knees?",
+        "alternatives": [],
+        "originalQuestion": "What did you learn to ride after a few scraped knees?"
+      },
+      "hr": {
+        "target": "bicikl",
+        "clues": [
+          "pedala",
+          "kotači",
+          "biciklizam",
+          "lanac"
+        ],
+        "question": "Što si naučio voziti nakon nekoliko oguljenih koljena?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "bicikla",
+          "biciklu",
+          "biciklom",
+          "bicikli",
+          "bicikle"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "avocado": {
+      "en": {
+        "target": "avocado",
+        "clues": [
+          "guacamole",
+          "toast",
+          "fruit",
+          "green"
+        ],
+        "question": "What stays rock hard all week, then goes bad overnight?",
+        "alternatives": [],
+        "originalQuestion": "What stays rock hard all week, then goes bad overnight?"
+      },
+      "hr": {
+        "target": "avokado",
+        "clues": [
+          "guacamole",
+          "tost",
+          "voće",
+          "zeleno"
+        ],
+        "question": "Što je cijeli tjedan pretvrdo, a onda se pokvari preko noći?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "avokada",
+          "avokadu",
+          "avokadom"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "tornado": {
+      "en": {
+        "target": "tornado",
+        "clues": [
+          "storm",
+          "twister",
+          "wind",
+          "funnel"
+        ],
+        "question": "What could move a barn without asking?",
+        "alternatives": [],
+        "originalQuestion": "What could move a barn without asking?"
+      },
+      "hr": {
+        "target": "tornado",
+        "clues": [
+          "oluja",
+          "vihor",
+          "vjetar",
+          "lijevak"
+        ],
+        "question": "Što može odnijeti cijelu štalu bez pitanja?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "tornada",
+          "tornadu",
+          "tornadom"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "waffle": {
+      "en": {
+        "target": "waffle",
+        "clues": [
+          "breakfast",
+          "syrup",
+          "batter",
+          "grid"
+        ],
+        "question": "Which food has tiny pockets for your toppings?",
+        "alternatives": [],
+        "originalQuestion": "Which food has tiny pockets for your toppings?"
+      },
+      "hr": {
+        "target": "vafl",
+        "clues": [
+          "doručak",
+          "sirup",
+          "smjesa",
+          "mreža"
+        ],
+        "question": "Koja hrana ima male džepove za sve preljeve?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "vafla",
+          "vaflu",
+          "vaflom",
+          "vafli",
+          "vafle",
+          "vaflima"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "squirrel": {
+      "en": {
+        "target": "squirrel",
+        "clues": [
+          "nuts",
+          "tree",
+          "rodent",
+          "tail"
+        ],
+        "question": "Who keeps burying snacks and forgetting where?",
+        "alternatives": [],
+        "originalQuestion": "Who keeps burying snacks and forgetting where?"
+      },
+      "hr": {
+        "target": "vjeverica",
+        "clues": [
+          "orašasti plodovi",
+          "stablo",
+          "glodavac",
+          "rep"
+        ],
+        "question": "Tko stalno zakapa zalihe i zaboravlja gdje su?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "vjevericu",
+          "vjeverice",
+          "vjevericom",
+          "vjeverici",
+          "vjevericama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "disco": {
+      "en": {
+        "target": "disco",
+        "clues": [
+          "dance",
+          "music",
+          "seventies",
+          "ball"
+        ],
+        "question": "Where would flared trousers and a mirrored ceiling fit right in?",
+        "alternatives": [],
+        "originalQuestion": "Where would flared trousers and a mirrored ceiling fit right in?"
+      },
+      "hr": {
+        "target": "disko",
+        "clues": [
+          "ples",
+          "glazba",
+          "sedamdesete",
+          "kugla"
+        ],
+        "question": "Gdje bi trapez-hlače i zrcalni strop bili sasvim normalni?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "diska",
+          "disku",
+          "diskom",
+          "disco"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "flamingo": {
+      "en": {
+        "target": "flamingo",
+        "clues": [
+          "pink",
+          "bird",
+          "leg",
+          "feathers"
+        ],
+        "question": "Who stands around on one foot all day?",
+        "alternatives": [],
+        "originalQuestion": "Who stands around on one foot all day?"
+      },
+      "hr": {
+        "target": "plamenac",
+        "clues": [
+          "ružičasto",
+          "ptica",
+          "noga",
+          "perje"
+        ],
+        "question": "Tko cijeli dan stoji na jednoj nozi?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "plamenca",
+          "plamencu",
+          "plamencem",
+          "plamenci",
+          "plamence",
+          "flamingo",
+          "flaminga"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "igloo": {
+      "en": {
+        "target": "igloo",
+        "clues": [
+          "snow",
+          "house",
+          "ice",
+          "dome"
+        ],
+        "question": "Where would you sleep if every brick was frozen?",
+        "alternatives": [],
+        "originalQuestion": "Where would you sleep if every brick was frozen?"
+      },
+      "hr": {
+        "target": "iglu",
+        "clues": [
+          "snijeg",
+          "kuća",
+          "led",
+          "kupola"
+        ],
+        "question": "Gdje bi prespavao da je svaka cigla smrznuta?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "iglua",
+          "igluu",
+          "igluom"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "compass": {
+      "en": {
+        "target": "compass",
+        "clues": [
+          "north",
+          "direction",
+          "needle",
+          "navigation"
+        ],
+        "question": "What would you pack for a hike with no phone signal?",
+        "alternatives": [],
+        "originalQuestion": "What would you pack for a hike with no phone signal?"
+      },
+      "hr": {
+        "target": "kompas",
+        "clues": [
+          "sjever",
+          "smjer",
+          "igla",
+          "navigacija"
+        ],
+        "question": "Što bi ponio na planinarenje bez signala na mobitelu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kompasa",
+          "kompasu",
+          "kompasom",
+          "kompasi",
+          "kompase"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "marshmallow": {
+      "en": {
+        "target": "marshmallow",
+        "clues": [
+          "sugar",
+          "campfire",
+          "smores",
+          "fluffy"
+        ],
+        "question": "What goes on a stick and always seems to catch fire?",
+        "alternatives": [],
+        "originalQuestion": "What goes on a stick and always seems to catch fire?"
+      },
+      "hr": {
+        "target": "sljezov kolačić",
+        "clues": [
+          "šećer",
+          "logorska vatra",
+          "smores",
+          "pahuljasto"
+        ],
+        "question": "Što nabodeš na štapić, a onda ti gotovo uvijek zagori?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "sljezove kolačiće",
+          "sljezovi kolačići",
+          "marshmallow",
+          "marshmallows"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "mermaid": {
+      "en": {
+        "target": "mermaid",
+        "clues": [
+          "fish",
+          "tail",
+          "ocean",
+          "ariel"
+        ],
+        "question": "Who would struggle to buy a pair of shoes?",
+        "alternatives": [],
+        "originalQuestion": "Who would struggle to buy a pair of shoes?"
+      },
+      "hr": {
+        "target": "sirena",
+        "clues": [
+          "riba",
+          "rep",
+          "ocean",
+          "Ariel"
+        ],
+        "question": "Kojoj bi junakinji bilo teško kupiti par cipela?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "sirenu",
+          "sirene",
+          "sirenom",
+          "sireni",
+          "sirenama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "lighthouse": {
+      "en": {
+        "target": "lighthouse",
+        "clues": [
+          "coast",
+          "beacon",
+          "ships",
+          "tower"
+        ],
+        "question": "What flashes all night so sailors can get home?",
+        "alternatives": [],
+        "originalQuestion": "What flashes all night so sailors can get home?"
+      },
+      "hr": {
+        "target": "svjetionik",
+        "clues": [
+          "obala",
+          "signal",
+          "brodovi",
+          "toranj"
+        ],
+        "question": "Što bljeska cijelu noć da se pomorci vrate kući?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "svjetionika",
+          "svjetioniku",
+          "svjetionikom",
+          "svjetionici",
+          "svjetionike"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "mustache": {
+      "en": {
+        "target": "mustache",
+        "clues": [
+          "moustache",
+          "hair",
+          "lip",
+          "beard"
+        ],
+        "question": "What would a cartoon detective glue under their nose?",
+        "alternatives": [],
+        "originalQuestion": "What would a cartoon detective glue under their nose?"
+      },
+      "hr": {
+        "target": "brkovi",
+        "clues": [
+          "dlake",
+          "usna",
+          "brada",
+          "lice"
+        ],
+        "question": "Što bi si detektiv iz crtića zalijepio ispod nosa?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "brkova",
+          "brkovima",
+          "brk",
+          "brka",
+          "brku",
+          "brkom"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "origami": {
+      "en": {
+        "target": "origami",
+        "clues": [
+          "paper",
+          "fold",
+          "japan",
+          "crane"
+        ],
+        "question": "What is the art of making tiny figures without scissors or glue?",
+        "alternatives": [
+          "What could you turn an old receipt into?"
+        ],
+        "originalQuestion": "What could you turn an old receipt into?"
+      },
+      "hr": {
+        "target": "origami",
+        "clues": [
+          "papir",
+          "presavijanje",
+          "Japan",
+          "ždral"
+        ],
+        "question": "Kako se zove umijeće izrade malenih figura bez škara i ljepila?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "origamija",
+          "origamiju",
+          "origamijem"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Original asks for an object made from a receipt, not the name of the craft."
+      }
+    },
+    "trampoline": {
+      "en": {
+        "target": "trampoline",
+        "clues": [
+          "bounce",
+          "jump",
+          "springs",
+          "gymnastics"
+        ],
+        "question": "What makes the back garden feel like low gravity?",
+        "alternatives": [],
+        "originalQuestion": "What makes the back garden feel like low gravity?"
+      },
+      "hr": {
+        "target": "trampolin",
+        "clues": [
+          "odskok",
+          "skok",
+          "opruge",
+          "gimnastika"
+        ],
+        "question": "Što dvorište pretvara u mjesto s manjom gravitacijom?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "trampolina",
+          "trampolinu",
+          "trampolinom",
+          "trampolini",
+          "trampoline"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "yogurt": {
+      "en": {
+        "target": "yogurt",
+        "clues": [
+          "yoghurt",
+          "milk",
+          "dairy",
+          "bacteria"
+        ],
+        "question": "What do you peel open and spoon over granola?",
+        "alternatives": [
+          "What do you peel open and eat with a tiny spoon?"
+        ],
+        "originalQuestion": "What do you peel open and eat with a tiny spoon?"
+      },
+      "hr": {
+        "target": "jogurt",
+        "clues": [
+          "mlijeko",
+          "mliječno",
+          "bakterije",
+          "fermentacija"
+        ],
+        "question": "Što otvoriš i žlicom dodaš granoli?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "jogurta",
+          "jogurtu",
+          "jogurtom",
+          "jogurti",
+          "jogurte"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Narrows a very broad container clue while avoiding the first two off-limits clues."
+      }
+    },
+    "glacier": {
+      "en": {
+        "target": "glacier",
+        "clues": [
+          "ice",
+          "mountain",
+          "frozen",
+          "melting"
+        ],
+        "question": "What moves so slowly you need years of photos to notice?",
+        "alternatives": [],
+        "originalQuestion": "What moves so slowly you need years of photos to notice?"
+      },
+      "hr": {
+        "target": "ledenjak",
+        "clues": [
+          "led",
+          "planina",
+          "smrznuto",
+          "otapanje"
+        ],
+        "question": "Što se pomiče toliko sporo da to vidiš tek nakon više godina fotografiranja?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "ledenjaka",
+          "ledenjaku",
+          "ledenjakom",
+          "ledenjaci",
+          "ledenjake"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "platypus": {
+      "en": {
+        "target": "platypus",
+        "clues": [
+          "duck",
+          "bill",
+          "mammal",
+          "australia"
+        ],
+        "question": "Which creature looks like someone ignored the assembly instructions?",
+        "alternatives": [],
+        "originalQuestion": "Which creature looks like someone ignored the assembly instructions?"
+      },
+      "hr": {
+        "target": "čudnovati kljunaš",
+        "clues": [
+          "patka",
+          "kljun",
+          "sisavac",
+          "Australija"
+        ],
+        "question": "Koja životinja izgleda kao da ju je netko sastavio bez uputa?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "čudnovatog kljunaša",
+          "čudnovatom kljunašu",
+          "čudnovatim kljunašem",
+          "kljunaš",
+          "kljunaša",
+          "kljunaši"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "accordion": {
+      "en": {
+        "target": "accordion",
+        "clues": [
+          "instrument",
+          "bellows",
+          "keys",
+          "squeeze"
+        ],
+        "question": "What makes a tune when you push and pull its middle?",
+        "alternatives": [],
+        "originalQuestion": "What makes a tune when you push and pull its middle?"
+      },
+      "hr": {
+        "target": "harmonika",
+        "clues": [
+          "instrument",
+          "mijeh",
+          "tipke",
+          "stiskanje"
+        ],
+        "question": "Što svira dok mu stišćeš i rastežeš sredinu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "harmoniku",
+          "harmonike",
+          "harmonikom",
+          "harmonici",
+          "harmonikama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "kaleidoscope": {
+      "en": {
+        "target": "kaleidoscope",
+        "clues": [
+          "patterns",
+          "mirrors",
+          "colors",
+          "colours"
+        ],
+        "question": "What changes the view every time you turn the tube?",
+        "alternatives": [],
+        "originalQuestion": "What changes the view every time you turn the tube?"
+      },
+      "hr": {
+        "target": "kaleidoskop",
+        "clues": [
+          "uzorci",
+          "zrcala",
+          "boje",
+          "simetrija"
+        ],
+        "question": "Kroz koju se cjevčicu pogled promijeni čim je zakreneš?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kaleidoskopa",
+          "kaleidoskopu",
+          "kaleidoskopom",
+          "kaleidoskopi",
+          "kaleidoskope"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "chandelier": {
+      "en": {
+        "target": "chandelier",
+        "clues": [
+          "ceiling",
+          "lights",
+          "crystal",
+          "hanging"
+        ],
+        "question": "What would be a nightmare to dust in a ballroom?",
+        "alternatives": [],
+        "originalQuestion": "What would be a nightmare to dust in a ballroom?"
+      },
+      "hr": {
+        "target": "luster",
+        "clues": [
+          "strop",
+          "svjetla",
+          "kristal",
+          "viseći"
+        ],
+        "question": "S čega bi bilo najteže obrisati prašinu u plesnoj dvorani?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "lustera",
+          "lusteru",
+          "lusterom",
+          "lusteri",
+          "lustere"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "archipelago": {
+      "en": {
+        "target": "archipelago",
+        "clues": [
+          "islands",
+          "ocean",
+          "chain",
+          "geography"
+        ],
+        "question": "What is the name for a group of separate pieces of land surrounded by sea?",
+        "alternatives": [
+          "What do you call a whole group of little holiday destinations?"
+        ],
+        "originalQuestion": "What do you call a whole group of little holiday destinations?"
+      },
+      "hr": {
+        "target": "arhipelag",
+        "clues": [
+          "otoci",
+          "ocean",
+          "lanac",
+          "geografija"
+        ],
+        "question": "Kako se zove skup više odvojenih komadića kopna okruženih morem?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "arhipelaga",
+          "arhipelagu",
+          "arhipelagom",
+          "arhipelazi",
+          "otočje",
+          "otočja",
+          "otočju"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Replaces vague holiday destinations with a clear geographical concept without saying islands."
+      }
+    },
+    "quicksand": {
+      "en": {
+        "target": "quicksand",
+        "clues": [
+          "sand",
+          "sink",
+          "stuck",
+          "swamp"
+        ],
+        "question": "What did adventure films make you worry about stepping in?",
+        "alternatives": [],
+        "originalQuestion": "What did adventure films make you worry about stepping in?"
+      },
+      "hr": {
+        "target": "živi pijesak",
+        "clues": [
+          "pijesak",
+          "tonuti",
+          "zapeti",
+          "močvara"
+        ],
+        "question": "Na što su te pustolovni filmovi naučili paziti dok hodaš?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "živog pijeska",
+          "živom pijesku",
+          "živim pijeskom"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "sundial": {
+      "en": {
+        "target": "sundial",
+        "clues": [
+          "time",
+          "shadow",
+          "sun",
+          "clock"
+        ],
+        "question": "Which garden ornament can tell you the hour only in daylight?",
+        "alternatives": [
+          "What garden ornament becomes useless after dark?"
+        ],
+        "originalQuestion": "What garden ornament becomes useless after dark?"
+      },
+      "hr": {
+        "target": "sunčani sat",
+        "clues": [
+          "vrijeme",
+          "sjena",
+          "Sunce",
+          "sat"
+        ],
+        "question": "Koji vrtni ukras pokazuje doba dana samo dok ima dnevnog svjetla?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "sunčanog sata",
+          "sunčanom satu",
+          "sunčanim satom",
+          "sunčani satovi",
+          "sunčane satove"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Adds purpose without time/shadow/sun/clock."
+      }
+    },
+    "gargoyle": {
+      "en": {
+        "target": "gargoyle",
+        "clues": [
+          "stone",
+          "statue",
+          "roof",
+          "gothic"
+        ],
+        "question": "What is the name of the grumpy monster-shaped waterspout on a cathedral?",
+        "alternatives": [
+          "Who is the grumpy little monster on the cathedral?"
+        ],
+        "originalQuestion": "Who is the grumpy little monster on the cathedral?"
+      },
+      "hr": {
+        "target": "vodoriga",
+        "clues": [
+          "kamen",
+          "kip",
+          "krov",
+          "gotika"
+        ],
+        "question": "Kako se zove odvod za kišnicu u obliku mrkog čudovišta na katedrali?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "vodorigu",
+          "vodorige",
+          "vodorigom",
+          "vodorigi",
+          "vodorigama",
+          "gargojl",
+          "gargojla"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Asks for the architectural object rather than a generic monster; avoids all four forbidden clues."
+      }
+    },
+    "labyrinth": {
+      "en": {
+        "target": "labyrinth",
+        "clues": [
+          "maze",
+          "minotaur",
+          "lost",
+          "paths"
+        ],
+        "question": "Where would a very long piece of string come in handy?",
+        "alternatives": [],
+        "originalQuestion": "Where would a very long piece of string come in handy?"
+      },
+      "hr": {
+        "target": "labirint",
+        "clues": [
+          "slijepa ulica",
+          "Minotaur",
+          "izgubiti",
+          "staze"
+        ],
+        "question": "Gdje bi ti klupko duge špage moglo spasiti dan?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "labirinta",
+          "labirintu",
+          "labirintom",
+          "labirinti",
+          "labirinte"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "bagpipes": {
+      "en": {
+        "target": "bagpipes",
+        "clues": [
+          "scotland",
+          "instrument",
+          "air",
+          "tartan"
+        ],
+        "question": "What would you expect to hear leading a kilted parade?",
+        "alternatives": [
+          "What would be a terrible choice to practise in a library?"
+        ],
+        "originalQuestion": "What would be a terrible choice to practise in a library?"
+      },
+      "hr": {
+        "target": "gajde",
+        "clues": [
+          "Škotska",
+          "instrument",
+          "zrak",
+          "tartan"
+        ],
+        "question": "Što bi očekivao čuti na čelu povorke ljudi u kiltovima?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "gajdi",
+          "gajdama"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Original library question allows almost any instrument; kilted parade narrows it without scotland/instrument/air/tartan."
+      }
+    },
+    "alchemy": {
+      "en": {
+        "target": "alchemy",
+        "clues": [
+          "gold",
+          "transmutation",
+          "metal",
+          "elixir"
+        ],
+        "question": "What was the old practice behind the philosopher's stone?",
+        "alternatives": [
+          "What were those old experimenters trying to do with lead?"
+        ],
+        "originalQuestion": "What were those old experimenters trying to do with lead?"
+      },
+      "hr": {
+        "target": "alkemija",
+        "clues": [
+          "zlato",
+          "pretvorba",
+          "metal",
+          "eliksir"
+        ],
+        "question": "Kako se zvala stara praksa koja je obećavala kamen mudraca?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "alkemiju",
+          "alkemije",
+          "alkemijom",
+          "alkemiji"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Original asks for the outcome of the practice, often eliciting gold, an off-limits clue."
+      }
+    },
+    "tumbleweed": {
+      "en": {
+        "target": "tumbleweed",
+        "clues": [
+          "desert",
+          "western",
+          "rolling",
+          "plant"
+        ],
+        "question": "What drifts through the scene when nobody answers your joke?",
+        "alternatives": [],
+        "originalQuestion": "What drifts through the scene when nobody answers your joke?"
+      },
+      "hr": {
+        "target": "kotrljajući grm",
+        "clues": [
+          "pustinja",
+          "vestern",
+          "kotrljanje",
+          "biljka"
+        ],
+        "question": "Što prođe praznom ulicom u kaubojskom filmu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kotrljajućeg grma",
+          "kotrljajućem grmu",
+          "kotrljajućim grmom",
+          "kotrljajući grmovi"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "zeppelin": {
+      "en": {
+        "target": "zeppelin",
+        "clues": [
+          "airship",
+          "blimp",
+          "hydrogen",
+          "flying"
+        ],
+        "question": "What looks like a huge cigar with passengers underneath?",
+        "alternatives": [],
+        "originalQuestion": "What looks like a huge cigar with passengers underneath?"
+      },
+      "hr": {
+        "target": "cepelin",
+        "clues": [
+          "zračni brod",
+          "balon",
+          "vodik",
+          "letjeti"
+        ],
+        "question": "Što izgleda kao golema cigara s putnicima ispod nje?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "cepelina",
+          "cepelinu",
+          "cepelinom",
+          "cepelini",
+          "cepeline"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "sphinx": {
+      "en": {
+        "target": "sphinx",
+        "clues": [
+          "egypt",
+          "riddle",
+          "lion",
+          "pyramid"
+        ],
+        "question": "Which ancient giant has a human face and paws?",
+        "alternatives": [],
+        "originalQuestion": "Which ancient giant has a human face and paws?"
+      },
+      "hr": {
+        "target": "sfinga",
+        "clues": [
+          "Egipat",
+          "zagonetka",
+          "lav",
+          "piramida"
+        ],
+        "question": "Koji drevni div ima ljudsko lice i šape?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "sfingu",
+          "sfinge",
+          "sfingom",
+          "sfingi",
+          "sfingama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "catapult": {
+      "en": {
+        "target": "catapult",
+        "clues": [
+          "launch",
+          "siege",
+          "throw",
+          "medieval"
+        ],
+        "question": "What would a castle really hate to see outside its gates?",
+        "alternatives": [],
+        "originalQuestion": "What would a castle really hate to see outside its gates?"
+      },
+      "hr": {
+        "target": "katapult",
+        "clues": [
+          "lansirati",
+          "opsada",
+          "baciti",
+          "srednjovjekovni"
+        ],
+        "question": "Što bi dvorac najmanje htio vidjeti pred svojim vratima?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "katapulta",
+          "katapultu",
+          "katapultom",
+          "katapulti",
+          "katapulte"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "obelisk": {
+      "en": {
+        "target": "obelisk",
+        "clues": [
+          "stone",
+          "monument",
+          "egypt",
+          "pillar"
+        ],
+        "question": "What do you call a tall four-sided shape with a pointed top?",
+        "alternatives": [
+          "What tall shape has four sides and a pointed top?"
+        ],
+        "originalQuestion": "What tall shape has four sides and a pointed top?"
+      },
+      "hr": {
+        "target": "obelisk",
+        "clues": [
+          "kamen",
+          "spomenik",
+          "Egipat",
+          "stup"
+        ],
+        "question": "Kako se zove visoki četverostrani oblik sa šiljastim vrhom?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "obeliska",
+          "obelisku",
+          "obeliskom",
+          "obelisci",
+          "obeliske"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Directly asks for the name of the form; original mostly worked."
+      }
+    },
+    "armadillo": {
+      "en": {
+        "target": "armadillo",
+        "clues": [
+          "armor",
+          "armour",
+          "shell",
+          "mammal"
+        ],
+        "question": "Who looks dressed for a tiny jousting tournament?",
+        "alternatives": [],
+        "originalQuestion": "Who looks dressed for a tiny jousting tournament?"
+      },
+      "hr": {
+        "target": "oklopnik",
+        "clues": [
+          "oklop",
+          "ljuska",
+          "sisavac",
+          "zaštita"
+        ],
+        "question": "Tko izgleda spreman za mali viteški turnir?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "oklopnika",
+          "oklopniku",
+          "oklopnikom",
+          "oklopnici",
+          "oklopnike"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "periscope": {
+      "en": {
+        "target": "periscope",
+        "clues": [
+          "submarine",
+          "mirrors",
+          "underwater",
+          "view"
+        ],
+        "question": "What lets you peek over something without lifting your head?",
+        "alternatives": [],
+        "originalQuestion": "What lets you peek over something without lifting your head?"
+      },
+      "hr": {
+        "target": "periskop",
+        "clues": [
+          "podmornica",
+          "zrcala",
+          "podvodno",
+          "pogled"
+        ],
+        "question": "Čime možeš proviriti preko nečega bez podizanja glave?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "periskopa",
+          "periskopu",
+          "periskopom",
+          "periskopi",
+          "periskope"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "tapestry": {
+      "en": {
+        "target": "tapestry",
+        "clues": [
+          "woven",
+          "wall",
+          "fabric",
+          "hanging"
+        ],
+        "question": "What tells a whole story in coloured threads?",
+        "alternatives": [],
+        "originalQuestion": "What tells a whole story in coloured threads?"
+      },
+      "hr": {
+        "target": "tapiserija",
+        "clues": [
+          "tkano",
+          "zid",
+          "tkanina",
+          "viseći"
+        ],
+        "question": "Što može ispričati cijelu priču pomoću šarenih niti?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "tapiseriju",
+          "tapiserije",
+          "tapiserijom",
+          "tapiseriji",
+          "tapiserijama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "wombat": {
+      "en": {
+        "target": "wombat",
+        "clues": [
+          "australia",
+          "marsupial",
+          "burrow",
+          "animal"
+        ],
+        "question": "Who famously leaves cube-shaped droppings?",
+        "alternatives": [],
+        "originalQuestion": "Who famously leaves cube-shaped droppings?"
+      },
+      "hr": {
+        "target": "vombat",
+        "clues": [
+          "Australija",
+          "tobolčar",
+          "jazbina",
+          "životinja"
+        ],
+        "question": "Tko je poznat po izmetu u obliku kockica?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "vombata",
+          "vombatu",
+          "vombatom",
+          "vombati",
+          "vombate"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "mushroom": {
+      "en": {
+        "target": "mushroom",
+        "clues": [
+          "fungus",
+          "cap",
+          "toadstool",
+          "spores"
+        ],
+        "question": "What wears a cap but has no head?",
+        "alternatives": [],
+        "originalQuestion": "What wears a cap but has no head?"
+      },
+      "hr": {
+        "target": "gljiva",
+        "clues": [
+          "micelij",
+          "klobuk",
+          "muhara",
+          "spore"
+        ],
+        "question": "Što nosi kapu, a nema glavu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "gljivu",
+          "gljive",
+          "gljivom",
+          "gljivi",
+          "gljivama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "ghost": {
+      "en": {
+        "target": "ghost",
+        "clues": [
+          "haunted",
+          "spirit",
+          "boo",
+          "phantom"
+        ],
+        "question": "What's your favorite scary movie?",
+        "alternatives": [
+          "Who could walk through the door without opening it?",
+          "Would you spend a night in an abandoned house?"
+        ],
+        "originalQuestion": "Who could walk through the door without opening it?"
+      },
+      "hr": {
+        "target": "duh",
+        "clues": [
+          "ukleto",
+          "utvara",
+          "buu",
+          "fantom"
+        ],
+        "question": "Koji ti je najdraži horor film?",
+        "alternatives": [
+          "Tko bi mogao proći kroz vrata bez otvaranja?",
+          "Bi li prespavao u napuštenoj kući?"
+        ],
+        "acceptedSpellings": [
+          "duha",
+          "duhu",
+          "duhom",
+          "duhovi",
+          "duhove",
+          "duhovima"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Owner-selected conversational hook. Follow with an abandoned-house question if the reply never reaches ghost; Ghostface as one token is not a confirmed ghost match."
+      }
+    },
+    "donut": {
+      "en": {
+        "target": "donut",
+        "clues": [
+          "doughnut",
+          "glaze",
+          "hole",
+          "sprinkles"
+        ],
+        "question": "What do you buy by the dozen even though part of it is missing?",
+        "alternatives": [],
+        "originalQuestion": "What do you buy by the dozen even though part of it is missing?"
+      },
+      "hr": {
+        "target": "krafna",
+        "clues": [
+          "glazura",
+          "rupa",
+          "posip",
+          "prženje"
+        ],
+        "question": "Koji slatkiš izgleda kao jestivi kolut za plivanje?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "krafnu",
+          "krafne",
+          "krafnom",
+          "krafni",
+          "krafnama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "hedgehog": {
+      "en": {
+        "target": "hedgehog",
+        "clues": [
+          "spines",
+          "quills",
+          "prickly",
+          "hedge"
+        ],
+        "question": "Who looks like a hairbrush with tiny feet?",
+        "alternatives": [],
+        "originalQuestion": "Who looks like a hairbrush with tiny feet?"
+      },
+      "hr": {
+        "target": "jež",
+        "clues": [
+          "bodlje",
+          "iglice",
+          "bodljikavo",
+          "živica"
+        ],
+        "question": "Tko izgleda kao četka s malim nogama?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "ježa",
+          "ježu",
+          "ježem",
+          "ježevi",
+          "ježeve"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "gramophone": {
+      "en": {
+        "target": "gramophone",
+        "clues": [
+          "record",
+          "needle",
+          "horn",
+          "phonograph"
+        ],
+        "question": "What would you wind up to play a song a century ago?",
+        "alternatives": [],
+        "originalQuestion": "What would you wind up to play a song a century ago?"
+      },
+      "hr": {
+        "target": "gramofon",
+        "clues": [
+          "ploča",
+          "igla",
+          "truba",
+          "fonograf"
+        ],
+        "question": "Što bi prije sto godina navio da poslušaš pjesmu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "gramofona",
+          "gramofonu",
+          "gramofonom",
+          "gramofoni",
+          "gramofone"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "hourglass": {
+      "en": {
+        "target": "hourglass",
+        "clues": [
+          "sand",
+          "timer",
+          "glass",
+          "minute"
+        ],
+        "question": "What do you turn over to give yourself another minute?",
+        "alternatives": [],
+        "originalQuestion": "What do you turn over to give yourself another minute?"
+      },
+      "hr": {
+        "target": "pješčani sat",
+        "clues": [
+          "pijesak",
+          "mjerač",
+          "staklo",
+          "minuta"
+        ],
+        "question": "Što okreneš naopačke kad želiš još malo vremena?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "pješčanog sata",
+          "pješčanom satu",
+          "pješčanim satom",
+          "pješčani satovi",
+          "pješčane satove"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "balloon": {
+      "en": {
+        "target": "balloon",
+        "clues": [
+          "helium",
+          "inflate",
+          "party",
+          "float"
+        ],
+        "question": "What would ruin a party if you let go of its string?",
+        "alternatives": [],
+        "originalQuestion": "What would ruin a party if you let go of its string?"
+      },
+      "hr": {
+        "target": "balon",
+        "clues": [
+          "helij",
+          "napuhati",
+          "zabava",
+          "lebdjeti"
+        ],
+        "question": "Što će ti pobjeći sa zabave ako pustiš konac?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "balona",
+          "balonu",
+          "balonom",
+          "baloni",
+          "balone"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "guitar": {
+      "en": {
+        "target": "guitar",
+        "clues": [
+          "strings",
+          "strum",
+          "chords",
+          "instrument"
+        ],
+        "question": "What would you bring to play songs around a campfire?",
+        "alternatives": [],
+        "originalQuestion": "What would you bring to play songs around a campfire?"
+      },
+      "hr": {
+        "target": "gitara",
+        "clues": [
+          "žice",
+          "trzanje",
+          "akordi",
+          "instrument"
+        ],
+        "question": "Što bi ponio da svima sviraš uz logorsku vatru?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "gitaru",
+          "gitare",
+          "gitarom",
+          "gitari",
+          "gitarama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "carrot": {
+      "en": {
+        "target": "carrot",
+        "clues": [
+          "orange",
+          "rabbit",
+          "vegetable",
+          "root"
+        ],
+        "question": "What would a snowman borrow from your shopping bag?",
+        "alternatives": [],
+        "originalQuestion": "What would a snowman borrow from your shopping bag?"
+      },
+      "hr": {
+        "target": "mrkva",
+        "clues": [
+          "narančasto",
+          "zec",
+          "povrće",
+          "korijen"
+        ],
+        "question": "Što bi snjegović posudio iz tvoje vrećice iz dućana?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "mrkvu",
+          "mrkve",
+          "mrkvom",
+          "mrkvi",
+          "mrkvama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "cupcake": {
+      "en": {
+        "target": "cupcake",
+        "clues": [
+          "frosting",
+          "muffin",
+          "bake",
+          "icing"
+        ],
+        "question": "Which individual cake gets its own little paper wrapper?",
+        "alternatives": [
+          "What tiny treat deserves its own paper wrapper?"
+        ],
+        "originalQuestion": "What tiny treat deserves its own paper wrapper?"
+      },
+      "hr": {
+        "target": "kolačić",
+        "clues": [
+          "glazura",
+          "muffin",
+          "pečenje",
+          "preljev"
+        ],
+        "question": "Koji desert dobije vlastitu papirnatu košaricu i ukras na vrhu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kolačića",
+          "kolačiću",
+          "kolačićem",
+          "kolačići",
+          "kolačiće",
+          "cupcake"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Adds a useful category; easy permits cake."
+      }
+    },
+    "umbrella": {
+      "en": {
+        "target": "umbrella",
+        "clues": [
+          "rain",
+          "parasol",
+          "canopy",
+          "handle"
+        ],
+        "question": "What turns inside out at the worst possible moment?",
+        "alternatives": [],
+        "originalQuestion": "What turns inside out at the worst possible moment?"
+      },
+      "hr": {
+        "target": "kišobran",
+        "clues": [
+          "kiša",
+          "suncobran",
+          "krović",
+          "drška"
+        ],
+        "question": "Što se izvrne baš kad ti je najpotrebnije?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kišobrana",
+          "kišobranu",
+          "kišobranom",
+          "kišobrani",
+          "kišobrane"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "elephant": {
+      "en": {
+        "target": "elephant",
+        "clues": [
+          "trunk",
+          "tusks",
+          "herd",
+          "mammal"
+        ],
+        "question": "Which zoo animal would need the biggest seat on a bus?",
+        "alternatives": [
+          "Who would need the biggest seat on this bus?"
+        ],
+        "originalQuestion": "Who would need the biggest seat on this bus?"
+      },
+      "hr": {
+        "target": "slon",
+        "clues": [
+          "surla",
+          "kljove",
+          "krdo",
+          "sisavac"
+        ],
+        "question": "Kojoj bi životinji iz zoološkog vrta trebalo najveće sjedalo u autobusu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "slona",
+          "slonu",
+          "slonom",
+          "slonovi",
+          "slonove"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Narrows an otherwise open question while keeping a playful picture."
+      }
+    },
+    "hamburger": {
+      "en": {
+        "target": "hamburger",
+        "clues": [
+          "burger",
+          "bun",
+          "patty",
+          "beef"
+        ],
+        "question": "Which fast-food meal looks taller in the advert than in your hands?",
+        "alternatives": [
+          "What meal always seems taller in the advert?"
+        ],
+        "originalQuestion": "What meal always seems taller in the advert?"
+      },
+      "hr": {
+        "target": "hamburger",
+        "clues": [
+          "burger",
+          "pecivo",
+          "pljeskavica",
+          "govedina"
+        ],
+        "question": "Koji obrok iz brze hrane izgleda viši u reklami nego u rukama?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "hamburgera",
+          "hamburgeru",
+          "hamburgerom",
+          "hamburgeri",
+          "hamburgere"
+        ]
+      },
+      "audit": {
+        "decision": "revised",
+        "reason": "Narrows the advert observation toward the illustrated meal."
+      }
+    },
+    "butterfly": {
+      "en": {
+        "target": "butterfly",
+        "clues": [
+          "wings",
+          "caterpillar",
+          "insect",
+          "cocoon"
+        ],
+        "question": "Who has the most dramatic makeover in the garden?",
+        "alternatives": [],
+        "originalQuestion": "Who has the most dramatic makeover in the garden?"
+      },
+      "hr": {
+        "target": "leptir",
+        "clues": [
+          "krila",
+          "gusjenica",
+          "kukac",
+          "kukuljica"
+        ],
+        "question": "Tko u vrtu doživi najveću promjenu izgleda?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "leptira",
+          "leptiru",
+          "leptirom",
+          "leptiri",
+          "leptire"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "pineapple": {
+      "en": {
+        "target": "pineapple",
+        "clues": [
+          "fruit",
+          "tropical",
+          "spiky",
+          "crown"
+        ],
+        "question": "What causes the biggest argument about pizza toppings?",
+        "alternatives": [],
+        "originalQuestion": "What causes the biggest argument about pizza toppings?"
+      },
+      "hr": {
+        "target": "ananas",
+        "clues": [
+          "voće",
+          "tropsko",
+          "bodljikavo",
+          "kruna"
+        ],
+        "question": "Zbog čega se ljudi najviše svađaju oko nadjeva za pizzu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "ananasa",
+          "ananasu",
+          "ananasom",
+          "ananasi",
+          "ananase"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "crocodile": {
+      "en": {
+        "target": "crocodile",
+        "clues": [
+          "reptile",
+          "alligator",
+          "teeth",
+          "swamp"
+        ],
+        "question": "Who should never be invited to a pool party?",
+        "alternatives": [],
+        "originalQuestion": "Who should never be invited to a pool party?"
+      },
+      "hr": {
+        "target": "krokodil",
+        "clues": [
+          "gmaz",
+          "aligator",
+          "zubi",
+          "močvara"
+        ],
+        "question": "Koga nikad ne bi pozvao na zabavu uz bazen?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "krokodila",
+          "krokodilu",
+          "krokodilom",
+          "krokodili",
+          "krokodile"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "astronaut": {
+      "en": {
+        "target": "astronaut",
+        "clues": [
+          "space",
+          "moon",
+          "rocket",
+          "orbit"
+        ],
+        "question": "Whose commute needs a countdown?",
+        "alternatives": [],
+        "originalQuestion": "Whose commute needs a countdown?"
+      },
+      "hr": {
+        "target": "astronaut",
+        "clues": [
+          "svemir",
+          "Mjesec",
+          "raketa",
+          "orbita"
+        ],
+        "question": "Čiji odlazak na posao počinje odbrojavanjem?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "astronauta",
+          "astronautu",
+          "astronautom",
+          "astronauti",
+          "astronaute"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "binoculars": {
+      "en": {
+        "target": "binoculars",
+        "clues": [
+          "lenses",
+          "zoom",
+          "birds",
+          "magnify"
+        ],
+        "question": "What would help you find a friend on the opposite hill?",
+        "alternatives": [],
+        "originalQuestion": "What would help you find a friend on the opposite hill?"
+      },
+      "hr": {
+        "target": "dalekozor",
+        "clues": [
+          "leće",
+          "povećanje",
+          "ptice",
+          "uvećavanje"
+        ],
+        "question": "Čime bi pronašao prijatelja na suprotnom brdu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "dalekozora",
+          "dalekozoru",
+          "dalekozorom",
+          "dalekozori",
+          "dalekozore"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "seahorse": {
+      "en": {
+        "target": "seahorse",
+        "clues": [
+          "ocean",
+          "fish",
+          "tail",
+          "snout"
+        ],
+        "question": "Which tiny swimmer leaves the pregnancy to dad?",
+        "alternatives": [],
+        "originalQuestion": "Which tiny swimmer leaves the pregnancy to dad?"
+      },
+      "hr": {
+        "target": "morski konjić",
+        "clues": [
+          "ocean",
+          "riba",
+          "rep",
+          "njuška"
+        ],
+        "question": "Kod kojeg malenog plivača tata nosi bebe?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "morskog konjića",
+          "morskom konjiću",
+          "morskim konjićem",
+          "morski konjići",
+          "morske konjiće"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "hammock": {
+      "en": {
+        "target": "hammock",
+        "clues": [
+          "swing",
+          "sleep",
+          "rope",
+          "trees"
+        ],
+        "question": "What is the least graceful thing to climb out of on holiday?",
+        "alternatives": [],
+        "originalQuestion": "What is the least graceful thing to climb out of on holiday?"
+      },
+      "hr": {
+        "target": "viseća mreža",
+        "clues": [
+          "ljuljanje",
+          "spavanje",
+          "uže",
+          "drveće"
+        ],
+        "question": "Iz čega je najteže dostojanstveno ustati na godišnjem odmoru?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "viseće mreže",
+          "visećoj mreži",
+          "visećom mrežom",
+          "viseću mrežu",
+          "visećim mrežama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "scarecrow": {
+      "en": {
+        "target": "scarecrow",
+        "clues": [
+          "straw",
+          "birds",
+          "field",
+          "crops"
+        ],
+        "question": "Who stands outside all day wearing somebody else's old clothes?",
+        "alternatives": [],
+        "originalQuestion": "Who stands outside all day wearing somebody else's old clothes?"
+      },
+      "hr": {
+        "target": "strašilo",
+        "clues": [
+          "slama",
+          "ptice",
+          "polje",
+          "usjevi"
+        ],
+        "question": "Tko cijeli dan stoji vani u tuđoj staroj odjeći?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "strašila",
+          "strašilu",
+          "strašilom",
+          "strašilima"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "waterfall": {
+      "en": {
+        "target": "waterfall",
+        "clues": [
+          "water",
+          "cascade",
+          "river",
+          "cliff"
+        ],
+        "question": "What makes a hike noisier before you can even see it?",
+        "alternatives": [],
+        "originalQuestion": "What makes a hike noisier before you can even see it?"
+      },
+      "hr": {
+        "target": "vodopad",
+        "clues": [
+          "voda",
+          "slap",
+          "rijeka",
+          "litica"
+        ],
+        "question": "Što čuješ na planinarenju puno prije nego što ga ugledaš?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "vodopada",
+          "vodopadu",
+          "vodopadom",
+          "vodopadi",
+          "vodopade"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "chameleon": {
+      "en": {
+        "target": "chameleon",
+        "clues": [
+          "lizard",
+          "color",
+          "camouflage",
+          "scales"
+        ],
+        "question": "Who could wear a different outfit without getting dressed?",
+        "alternatives": [],
+        "originalQuestion": "Who could wear a different outfit without getting dressed?"
+      },
+      "hr": {
+        "target": "kameleon",
+        "clues": [
+          "gušter",
+          "boja",
+          "kamuflaža",
+          "ljuske"
+        ],
+        "question": "Tko može promijeniti izgled bez presvlačenja?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "kameleona",
+          "kameleonu",
+          "kameleonom",
+          "kameleoni",
+          "kameleone"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "metronome": {
+      "en": {
+        "target": "metronome",
+        "clues": [
+          "tempo",
+          "beat",
+          "rhythm",
+          "tick"
+        ],
+        "question": "What is the strictest teacher on a pianist's desk?",
+        "alternatives": [],
+        "originalQuestion": "What is the strictest teacher on a pianist's desk?"
+      },
+      "hr": {
+        "target": "metronom",
+        "clues": [
+          "tempo",
+          "takt",
+          "ritam",
+          "kucanje"
+        ],
+        "question": "Tko je najstroži učitelj na pijanistovu stolu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "metronoma",
+          "metronomu",
+          "metronomom",
+          "metronomi",
+          "metronome"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "terrarium": {
+      "en": {
+        "target": "terrarium",
+        "clues": [
+          "glass",
+          "plants",
+          "container",
+          "ecosystem"
+        ],
+        "question": "What tiny garden could live on your desk?",
+        "alternatives": [],
+        "originalQuestion": "What tiny garden could live on your desk?"
+      },
+      "hr": {
+        "target": "terarij",
+        "clues": [
+          "staklo",
+          "biljke",
+          "posuda",
+          "ekosustav"
+        ],
+        "question": "Koji bi mali vrt mogao živjeti na tvojem stolu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "terarija",
+          "terariju",
+          "terarijem",
+          "terariji",
+          "terarije"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "pendulum": {
+      "en": {
+        "target": "pendulum",
+        "clues": [
+          "swing",
+          "clock",
+          "weight",
+          "bob"
+        ],
+        "question": "What goes back and forth without ever leaving its spot?",
+        "alternatives": [],
+        "originalQuestion": "What goes back and forth without ever leaving its spot?"
+      },
+      "hr": {
+        "target": "njihalo",
+        "clues": [
+          "njihanje",
+          "sat",
+          "uteg",
+          "kuglica"
+        ],
+        "question": "Što stalno ide naprijed-natrag, a ne odlazi nikamo?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "njihala",
+          "njihalu",
+          "njihalom",
+          "njihalima",
+          "klatno",
+          "klatna",
+          "klatnu"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "pomegranate": {
+      "en": {
+        "target": "pomegranate",
+        "clues": [
+          "fruit",
+          "seeds",
+          "red",
+          "juice"
+        ],
+        "question": "What snack takes ages to open and leaves your shirt looking guilty?",
+        "alternatives": [],
+        "originalQuestion": "What snack takes ages to open and leaves your shirt looking guilty?"
+      },
+      "hr": {
+        "target": "nar",
+        "clues": [
+          "voće",
+          "sjemenke",
+          "crveno",
+          "sok"
+        ],
+        "question": "Koji zalogaj otvaraš sto godina, a poslije moraš prati majicu?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "nara",
+          "naru",
+          "narom",
+          "narovi",
+          "narove",
+          "šipak",
+          "šipka",
+          "šipku"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    },
+    "marionette": {
+      "en": {
+        "target": "marionette",
+        "clues": [
+          "puppet",
+          "strings",
+          "wooden",
+          "control"
+        ],
+        "question": "Who can't take a bow until somebody above them says so?",
+        "alternatives": [],
+        "originalQuestion": "Who can't take a bow until somebody above them says so?"
+      },
+      "hr": {
+        "target": "marioneta",
+        "clues": [
+          "lutka",
+          "konci",
+          "drveno",
+          "upravljanje"
+        ],
+        "question": "Tko se ne može nakloniti dok mu netko iznad njega ne dopusti?",
+        "alternatives": [],
+        "acceptedSpellings": [
+          "marionetu",
+          "marionete",
+          "marionetom",
+          "marioneti",
+          "marionetama"
+        ]
+      },
+      "audit": {
+        "decision": "keep",
+        "reason": "Keep: the prompt supplies a recognisable situation or visual trait without naming the target."
+      }
+    }
+  },
+  "recordingCards": {
+    "bait": {
+      "en": {
+        "target": "bait",
+        "clues": [],
+        "question": "What swims and might be on the menu on Friday?",
+        "alternatives": [
+          "What would you use to get something to bite?"
+        ],
+        "originalQuestion": null
+      },
+      "hr": {
+        "target": "mamac",
+        "clues": [],
+        "question": "Što pliva, a petkom se može naći na tanjuru?",
+        "alternatives": [
+          "Što stavljaš na udicu?"
+        ],
+        "acceptedSpellings": [
+          "mamca",
+          "mamcu",
+          "mamcem",
+          "mamci",
+          "mamce"
+        ]
+      },
+      "audit": {
+        "decision": "recording-only",
+        "reason": "Deliberately misleading fish setup for the agreed scripted ending. The bare word bait is the spoken target; Baited stays the product name."
+      }
+    }
+  },
+  "labels": {
+    "en": {
+      "round": "Round",
+      "keepOutOfChat": "Keep out of chat",
+      "onlyThisWord": "Only this word is off limits.",
+      "chatHasTheWord": "Chat has the word.",
+      "waiting": "Waiting",
+      "nextRound": "Next round",
+      "wordIsComing": "The word is coming.",
+      "baitThem": "Bait them.",
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "timeLeft": "Time left",
+      "skip": "Vote to skip",
+      "newStreakBadge": "New streak badge",
+      "inARow": "in a row",
+      "chatWins": "Chat wins",
+      "streamerWins": "Streamer wins",
+      "inPlay": "In play",
+      "paused": "Paused",
+      "checking": "Checking",
+      "checkingFinalWords": "Checking final words",
+      "catchPending": "Catch pending",
+      "heard": "Heard",
+      "notScoredYet": "Not scored yet",
+      "theySaidIt": "They said it",
+      "streamerEscaped": "The streamer escaped",
+      "catchRejected": "Catch rejected",
+      "roundEnded": "Round ended",
+      "baitCalled": "Bait called",
+      "timesUp": "Time’s up",
+      "newWordNext": "New word next",
+      "skipped": "Skipped",
+      "notCounted": "Not counted",
+      "reconnecting": "Reconnecting",
+      "viewersHaveWord": "Your viewers have the word.",
+      "liveRound": "Live round",
+      "finalSeconds": "Final seconds",
+      "heardNotScored": "Heard. Not scored yet.",
+      "timeRanOut": "Time ran out"
+    },
+    "hr": {
+      "round": "Runda",
+      "keepOutOfChat": "Ne piši u chat",
+      "onlyThisWord": "Samo je ova riječ zabranjena.",
+      "chatHasTheWord": "Chat zna riječ.",
+      "waiting": "Čekanje",
+      "nextRound": "Sljedeća runda",
+      "wordIsComing": "Riječ stiže.",
+      "baitThem": "Navuci ih.",
+      "easy": "Lako",
+      "medium": "Srednje",
+      "hard": "Teško",
+      "timeLeft": "Preostalo vrijeme",
+      "skip": "Glasaj za preskakanje",
+      "newStreakBadge": "Nova značka za niz pobjeda",
+      "inARow": "zaredom",
+      "chatWins": "Chat pobjeđuje",
+      "streamerWins": "Streamer pobjeđuje",
+      "inPlay": "U igri",
+      "paused": "Pauzirano",
+      "checking": "Provjera",
+      "checkingFinalWords": "Provjera zadnjih riječi",
+      "catchPending": "Čeka se potvrda",
+      "heard": "Prepoznato",
+      "notScoredYet": "Bod još nije dodijeljen",
+      "theySaidIt": "Riječ je izgovorena",
+      "streamerEscaped": "Streamer se izvukao",
+      "catchRejected": "Pogrešna detekcija",
+      "roundEnded": "Runda je završila",
+      "baitCalled": "Mamac je otkriven",
+      "timesUp": "Vrijeme je isteklo",
+      "newWordNext": "Slijedi nova riječ",
+      "skipped": "Preskočeno",
+      "notCounted": "Ne računa se",
+      "reconnecting": "Ponovno povezivanje",
+      "viewersHaveWord": "Tvoji gledatelji znaju riječ.",
+      "liveRound": "Runda u tijeku",
+      "finalSeconds": "Zadnje sekunde",
+      "heardNotScored": "Prepoznato. Bod još nije dodijeljen.",
+      "timeRanOut": "Vrijeme je isteklo"
+    }
+  }
+}

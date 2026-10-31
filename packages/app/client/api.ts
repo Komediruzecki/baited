@@ -94,7 +94,7 @@ export async function request<T>(path: string, body?: unknown, csrf?: string, si
   if (path === '/api/logout' || path.startsWith('/api/account/')) {
     const result = await direct<T>(path, body, csrf); clearEdge(); return result;
   }
-  if (path === '/api/studio' || path.startsWith('/api/studio/')) {
+  if (path === '/api/studio' || path.startsWith('/api/studio/') || path === '/api/recording/restart') {
     const transport = studioEdge();
     let snapshot = await transport.state(signal);
     if (body !== undefined) {
@@ -111,6 +111,7 @@ export async function request<T>(path: string, body?: unknown, csrf?: string, si
           ? { type, roundId: snapshot.room?.round?.id, epoch: snapshot.room?.round?.epoch }
           : type === 'reverse' ? { type, roundId: snapshot.room?.result?.id } : { type };
       } else if (path === '/api/studio/settings') action = { type: 'settings', settings: body };
+      else if (path === '/api/recording/restart') action = { type: 'restart-take', takeId: value.takeId };
       else if (path === '/api/studio/guess') action = { type: 'guess', roundId: value.roundId, epoch: value.epoch, text: value.word };
       else if (path === '/api/studio/catch') action = { type: 'catch', ...value };
       else if (path === '/api/studio/award') action = { type: 'award', ...value };

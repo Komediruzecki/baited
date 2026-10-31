@@ -17,6 +17,8 @@ export interface Settings {
   chatBot: boolean;
   /** Moderators can type !bait start, !bait pause and !bait resume. */
   modCommands: boolean;
+  /** Opt-in video take: three prepared rounds, then the normal deck. */
+  recordingMode: boolean;
 }
 export interface Result {
   id: string;
@@ -100,6 +102,8 @@ export interface GameView {
   history: ResultView[];
   settings: Settings;
   score: { wins: number; played: number; streak: number; best: number };
+  /** Owner-only take controls; never contains upcoming targets. */
+  recording?: { takeId: string; roundsStarted: number; scriptedRounds: 3 };
   participants: number;
   voters: number;
   voteThreshold: number;

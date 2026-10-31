@@ -868,6 +868,13 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     const prefix = `room:${input.channelId}:${isCommand ? 'command' : 'round'}:`;
     const key = `${prefix}${input.eventId}`;
     if (this.data.dedupe[key]) return json({ ok: true });
+    const rememberEvent = () => {
+      const receipts = Object.entries(this.data.dedupe).filter(([id]) => id.startsWith(prefix));
+      if (receipts.length >= (isCommand ? 32 : 128)) {
+        receipts.sort((a, b) => a[1] - b[1]); delete this.data.dedupe[receipts[0]![0]];
+      }
+      this.data.dedupe[key] = Date.now() + CONTROL_LIMITS.webhookMs;
+    };
     // Never let even an accidentally supplied viewer projection feed the bot.
     const view = structuredClone(input.safeView) as GameView;
     if (view.round) { delete view.round.target; delete view.round.forbiddenClues; delete view.round.artUrl; delete view.round.example; delete view.round.ink; }
@@ -875,6 +882,15 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     if (view.result && !['caught', 'escaped'].includes(view.result.outcome)) delete view.result.word;
     let announcement = null;
     const channelSettings = this.data.channels[input.channelId]!;
+    if (input.event.type === 'recording-reset') {
+      // The outbox can retry after Control committed but its reply was lost.
+      // Clearing a later take's new messages again would be an observable reset bug.
+      rememberEvent();
+      channelSettings.botGeneration = (channelSettings.botGeneration ?? 0) + 1;
+      this.data.queue = this.data.queue.filter(q => q.channelId !== input.channelId);
+      await this.persist();
+      return json({ ok: true });
+    }
     if (input.event.type === 'bot-settings') { channelSettings.botGeneration = (channelSettings.botGeneration ?? 0) + 1; await this.persist(); }
     if (!view.settings.chatBot) {
       const previous = this.data.queue.length;
@@ -896,11 +912,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     // Cooldown-ignored commands do not consume announcement receipt capacity or
     // rewrite the full durable state. Each channel has its own bounded buckets.
     if (!announcement) return json({ ok: true });
-    const receipts = Object.entries(this.data.dedupe).filter(([id]) => id.startsWith(prefix));
-    if (receipts.length >= (isCommand ? 32 : 128)) {
-      receipts.sort((a, b) => a[1] - b[1]); delete this.data.dedupe[receipts[0]![0]];
-    }
-    this.data.dedupe[key] = Date.now() + CONTROL_LIMITS.webhookMs;
+    rememberEvent();
     const channel = this.data.channels[input.channelId]!; const bot = this.botStatus(channel);
     if (announcement && channel.chatWanted !== false && bot.configured && bot.authorized && bot.channelAllowed) {
       const text = announcement.text.trim();

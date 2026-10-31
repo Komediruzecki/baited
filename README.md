@@ -43,6 +43,14 @@ The built-in game deck has 100 targets: 35 easy, 34 medium and 31 hard. The publ
 
 The development-only [Card Lab](https://dev.baited.maff.app/card-lab/) compares card editions, materials, backs and gameplay states at panel, phone and Studio sizes. It uses synthetic rounds, and review choices stay in that browser without changing the game. The route and its assets are excluded from production. See [the design and test record](packages/app/docs/card-product-review.md) for local previews, the design direction and the checks completed so far.
 
+The **Questions & language** tab in Card Lab reviews all 100 English/Croatian cards, preferred questions and preserved originals. [The content audit](docs/cards-content-audit.md) explains the suggested changes. Croatian is review content for now; live speech recognition and matching remain English.
+
+## Record a demonstration
+
+Use [the three-round shoot guide](docs/recording/2026-10-31-pilot-shoot.md) and [participant role cards](docs/recording/chat-role-cards.md). In Studio settings, **Recording take** deals Banana, Ghost and Bait first, then returns to the selected random deck. Those first three rounds use easy single-word rules and allow Call the bait, regardless of the saved difficulty, mission or guessing setting. The selected duration and automatic-round setting still apply.
+
+**Restart take** returns only that channel to round zero and clears the take's scores/streak. It preserves Twitch connections, microphone permission and lifetime history, and waits for the owner to start again. Recording mode is off by default. Backend and Studio must be updated together before using these controls on a hosted pilot; no Twitch ZIP change is needed for them.
+
 ## Cloudflare pilot
 
 The [edge pilot](packages/edge-game/README.md) is active at [pilot-baited.maff.app/studio](https://pilot-baited.maff.app/studio) for two invited streamer channels: `komediruzecki7` and `lakeeko`. Each channel allows 100 distinct participants per round and 100 concurrent viewer sockets. It uses the built-in 100-card deck, a Worker gateway, SQLite Durable Objects, local Moonshine and WebSockets. Custom decks and Card Maker are excluded.

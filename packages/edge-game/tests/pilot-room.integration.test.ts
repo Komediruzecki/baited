@@ -73,6 +73,7 @@ before(async () => {
           admissionStatus = 200;
           deliveryStatus = 200;
           deliveries = 0;
+          deliveredEvents = [];
           heldRole = null;
           authorizeWaiting = 0;
           authorizeGate = null;
@@ -81,6 +82,7 @@ before(async () => {
           admissionStatusFixture(status) { this.admissionStatus = status; }
           deliveryFixture(status) { this.deliveryStatus = status; }
           deliveredFixture() { return this.deliveries; }
+          deliveredEventsFixture() { return this.deliveredEvents; }
           holdAuthorizeFixture(role) {
             this.heldRole=role;
             this.authorizeGate=new Promise(resolve=>{this.releaseAuthorize=resolve;});
@@ -94,7 +96,7 @@ before(async () => {
               if(this.heldRole===body.role) {this.authorizeWaiting++;await this.authorizeGate;this.authorizeWaiting--;}
               return Response.json({allowed: this.allowed && body.channelId === '123', login: 'komediruzecki7'}, {status:this.admissionStatus});
             }
-            if (path === '/internal/room-event') { this.deliveries++; return Response.json({ok: this.deliveryStatus === 200}, {status:this.deliveryStatus}); }
+            if (path === '/internal/room-event') { this.deliveries++; const body=await request.json(); this.deliveredEvents.push({type:body.event?.type,status:this.deliveryStatus}); return Response.json({ok: this.deliveryStatus === 200}, {status:this.deliveryStatus}); }
             return new Response('No external provider in this fixture.', {status: 503});
           }
         }
@@ -1632,5 +1634,121 @@ test('operator uninitialized room rejects a stale enable after a higher failed s
     assert.equal((await stub.operatorFixture(false,3)).status,200);
     assert.equal((await stub.operatorFixture(true,4)).status,200);
     assert.equal(await stub.bootstrapFixture(),200);
+  } finally {await mf.dispose();}
+});
+
+test('recording take restart is owner-only, revision-fenced and keeps the microphone while dropping stale round inputs', {timeout:15_000}, async () => {
+  const {mf, stub} = await runtime();
+  try {
+    let snapshot = await state(mf);
+    await send(mf, {type:'settings',settings:{...snapshot.room.settings,recordingMode:true,difficulty:'hard',mission:'three',callBait:false}}, snapshot.revision);
+    await start(mf);
+    snapshot = await state(mf);
+    const takeId = snapshot.room.recording!.takeId;
+    const before = await stub.inspectFixture();
+    assert.equal((await state(mf,'viewer')).room.round!.target,'banana');
+    assert.equal(snapshot.room.round!.target,undefined);
+    assert.equal(snapshot.room.round!.difficulty,'easy');
+    assert.equal(snapshot.room.round!.guessEnabled,true);
+    assert.equal(snapshot.room.mission,null);
+    const sendRaw = async (role:Parameters<typeof token>[0], action:Command['action'], revision:number) => {
+      const response = await mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',headers:{origin:ORIGIN,
+        authorization:`Bearer ${await fixtureToken(mf,role)}`,'content-type':'application/json'},
+        body:JSON.stringify({id:randomUUID(),generation:1,expectedRevision:revision,action})});
+      return {status:response.status,body:await response.json() as Receipt};
+    };
+    for (const role of ['viewer','overlay','broadcaster'] as const) {
+      const rejected=await sendRaw(role,{type:'restart-take',takeId},snapshot.revision);
+      assert.equal(rejected.status,403);
+    }
+    await send(mf,{type:'pause',roundId:before.round!.id,epoch:before.round!.epoch},snapshot.revision);
+    const stale=await sendRaw('studio',{type:'restart-take',takeId},snapshot.revision);
+    assert.equal(stale.status,409); assert.equal(stale.body.code,'stale_revision');
+    snapshot=await state(mf);
+    await send(mf,{type:'restart-take',takeId},snapshot.revision);
+    const reset=await state(mf), inspect=await stub.inspectFixture();
+    assert.equal(reset.room.phase,'idle'); assert.equal(reset.room.round,null); assert.equal(reset.room.nextAt,null);
+    assert.deepEqual(reset.room.score,{wins:0,played:0,streak:0,best:0});
+    assert.notEqual(reset.room.recording!.takeId,takeId);
+    assert.deepEqual(inspect.lease,before.lease); assert.equal(inspect.mic,'listening');
+    const duplicate=await sendRaw('studio',{type:'restart-take',takeId},reset.revision);
+    assert.equal(duplicate.status,409); assert.equal(duplicate.body.code,'action_unavailable');
+    await send(mf,{type:'start'},reset.revision);
+    const fresh=await state(mf);
+    assert.equal(fresh.room.round!.number,1);
+    assert.notEqual(fresh.room.round!.id,before.round!.id);
+    assert.equal((await state(mf,'viewer')).room.round!.target,'banana');
+    const oldGuess=await sendRaw('studio',{type:'guess',roundId:before.round!.id,epoch:before.round!.epoch,text:'banana'},fresh.revision);
+    assert.equal(oldGuess.status,409);
+    await stub.ownerMessageAtFixture(await stub.clockFixture(),{type:'speech-audio',leaseId:before.lease!.id,
+      roundId:before.round!.id,epoch:before.round!.epoch,samples:512});
+    const recovered=await stub.recoverFixture();
+    assert.equal(recovered.round!.id,fresh.room.round!.id);
+    assert.equal(recovered.mic,'listening'); assert.equal(recovered.history,0);
+    assert.equal((await state(mf)).room.recording!.takeId,reset.room.recording!.takeId);
+  } finally {await mf.dispose();}
+});
+
+
+test('recording reset ignores delayed EventSub moderator commands from the previous take', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    let snapshot=await state(mf);
+    await send(mf,{type:'settings',settings:{...snapshot.room.settings,recordingMode:true,modCommands:true}},snapshot.revision);
+    await start(mf);
+    const at=await stub.clockFixture();
+    await stub.freezeAtFixture(at+1000);
+    snapshot=await state(mf);
+    await send(mf,{type:'restart-take',takeId:snapshot.room.recording!.takeId},snapshot.revision);
+    const event={eventId:randomUUID(),messageId:randomUUID(),channelId:'123',userId:'456',name:'Moderator',badges:['moderator'],kind:'message',text:'!bait start',at};
+    const ignored=await stub.chatFixture(event);
+    assert.equal(ignored.status,200); assert.equal(ignored.body.reason,'previous_take');
+    assert.equal((await state(mf)).room.phase,'idle');
+    await stub.freezeAtFixture(at+1001);
+    const fresh=await stub.chatFixture({...event,eventId:randomUUID(),messageId:randomUUID(),at:at+1001});
+    assert.equal(fresh.status,200);
+    assert.equal((await state(mf)).room.phase,'active');
+    assert.equal((await state(mf,'viewer')).room.round!.target,'banana');
+  } finally {await mf.dispose();}
+});
+
+
+test('a deferred recording reset is an outbox barrier without blocking gameplay or spinning alarms', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const namespace=await mf.getDurableObjectNamespace('CONTROL');
+    const control=namespace.get(namespace.idFromName('control-v1')) as unknown as {
+      deliveryFixture(status:number):Promise<void>;
+      deliveredEventsFixture():Promise<{type:string;status:number}[]>;
+    };
+    const at=Date.now()+30_000;
+    await stub.freezeAtFixture(at);
+    await control.deliveryFixture(503);
+    let snapshot=await state(mf);
+    await send(mf,{type:'settings',settings:{...snapshot.room.settings,recordingMode:true}},snapshot.revision);
+    await stub.flushOutboxAtFixture(at);
+    assert.deepEqual(await control.deliveredEventsFixture(),[{type:'recording-reset',status:503}]);
+    // Gameplay commands remain available while announcements wait for Control.
+    await start(mf);
+    snapshot=await state(mf);
+    assert.equal(snapshot.room.phase,'active');
+    assert.equal((await state(mf,'viewer')).room.round!.target,'banana');
+    await send(mf,{type:'pause',roundId:snapshot.room.round!.id,epoch:snapshot.room.round!.epoch},snapshot.revision);
+    await control.deliveryFixture(200);
+    const blocked=await stub.flushOutboxAtFixture(at+1);
+    assert.equal(blocked.phase,'paused'); assert.ok(blocked.outbox>=3);
+    assert.equal(blocked.alarm,at+15_000,'Due events behind the reset must not schedule immediate repeated alarms.');
+    assert.deepEqual(await control.deliveredEventsFixture(),[{type:'recording-reset',status:503}]);
+    await stub.flushOutboxAtFixture(at+15_000);
+    assert.deepEqual(await control.deliveredEventsFixture(),[
+      {type:'recording-reset',status:503},{type:'recording-reset',status:200},
+    ]);
+    const drained=await stub.flushOutboxAtFixture(at+15_001);
+    const events=await control.deliveredEventsFixture();
+    assert.deepEqual(events.slice(2),[
+      {type:'bot-settings',status:200},{type:'start',status:200},{type:'pause',status:200},
+    ]);
+    assert.equal(drained.outbox,0);
+    assert.equal(drained.phase,'paused');
   } finally {await mf.dispose();}
 });

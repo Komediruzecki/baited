@@ -252,3 +252,33 @@ test('production never exposes development fixture routes', async (t) => {
   const wrongHost = await fetch(base + '/api/session');
   assert.equal(wrongHost.status, 421);
 });
+
+test('recording reset uses the owner session and CSRF, preserves history, and rejects an old take', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'bait-recording-http-'));
+  const config = loadConfig({ PORT: '0', DATA_DIR: dir }), b = await createBait(config);
+  await new Promise<void>(resolve => b.server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => { await b.close(); await rm(dir, {recursive:true,force:true}); });
+  const base = `http://127.0.0.1:${(b.server.address() as AddressInfo).port}`;
+  const post = (path:string, body:unknown, cookie='', csrf='') => fetch(base+path,{method:'POST',
+    headers:{Origin:config.origin,'Content-Type':'application/json',Cookie:cookie,'x-csrf-token':csrf},body:JSON.stringify(body)});
+  const signIn = await post('/api/demo/start',{}), cookie=signIn.headers.get('set-cookie')!.split(';')[0];
+  const {csrf}=await signIn.json();
+  const studio=await (await fetch(base+'/api/studio',{headers:{Cookie:cookie}})).json() as Studio;
+  const enabled=await post('/api/studio/settings',{...studio.room.settings,recordingMode:true},cookie,csrf);
+  assert.equal(enabled.status,200);
+  const take=(await enabled.json() as Studio).room.recording!;
+  const game=b.rooms.get(studio.room.id)!;
+  game.start(); game.end('caught');
+  const history=structuredClone(game.data.history);
+  assert.equal((await post('/api/recording/restart',{takeId:take.takeId})).status,401);
+  assert.equal((await post('/api/recording/restart',{takeId:take.takeId},cookie,'wrong')).status,403);
+  assert.equal(game.score.played,1);
+  const reset=await post('/api/recording/restart',{takeId:take.takeId},cookie,csrf);
+  assert.equal(reset.status,200);
+  const fresh=await reset.json() as Studio;
+  assert.equal(fresh.room.phase,'idle'); assert.equal(fresh.room.round,null);
+  assert.deepEqual(fresh.room.score,{wins:0,played:0,streak:0,best:0});
+  assert.deepEqual(game.data.history,history);
+  assert.notEqual(fresh.room.recording!.takeId,take.takeId);
+  assert.equal((await post('/api/recording/restart',{takeId:take.takeId},cookie,csrf)).status,400);
+});

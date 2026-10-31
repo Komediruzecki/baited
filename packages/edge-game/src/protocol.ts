@@ -8,6 +8,7 @@ const round = { roundId: z.string().uuid(), epoch: z.number().int().positive() }
 const id = z.string().regex(/^[a-zA-Z0-9:_-]{1,128}$/);
 const input = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start') }).strict(),
+  z.object({ type: z.literal('restart-take'), takeId: z.string().uuid() }).strict(),
   z.object({ type: z.literal('connect') }).strict(),
   z.object({ type: z.literal('disconnect') }).strict(),
   z.object({ type: z.literal('microphone'), armed: z.boolean(), leaseId: z.string().uuid(), socketId: z.string().uuid().optional(), renew: z.boolean().default(false) }).strict(),

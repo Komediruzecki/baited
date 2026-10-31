@@ -850,3 +850,34 @@ test('only the configured bot account can be stored as the bot, under its own va
   await assert.rejects(auth.exchange('code', 'bot'), AuthRevoked);
   assert.throws(() => loadConfig({ TWITCH_BOT_USER_ID: 'baitedbot' }), /TWITCH_BOT_USER_ID/);
 });
+
+
+test('restarting a recording take drops old announcements even during token refresh', async (t) => {
+  let release!: (response: Response) => void;
+  const pending = new Promise<Response>(resolve => { release = resolve; });
+  const { game, calls, bot, advance } = await twitchBot(t, url => url.endsWith('/oauth2/token') ? pending : sent());
+  game.update({ ...game.data.settings, recordingMode: true });
+  game.begin();
+  assert.equal(calls.filter(call => call.url.endsWith('/oauth2/token')).length, 1);
+  bot.chat(game, message('!bait score'));
+  game.restartTake(game.data.recordingTake!.id);
+  release(tokenReply()); await flush();
+  advance(LIMITS.channelGap); bot.tick(game); await flush();
+  assert.equal(calls.filter(call => call.url.endsWith('/helix/chat/messages')).length, 0);
+  assert.equal(bot.status(game).recent.length, 0);
+});
+
+
+test('a moderator command sent before a recording reset cannot start the next take', async (t) => {
+  const store=await tempStore(t), f=fixture();
+  const bot=new ChatBot({config:loadConfig({}),store,ready:()=>null,clock:f.now});
+  f.game.update({...f.game.data.settings,recordingMode:true,modCommands:true});
+  const oldAt=f.now(); f.advance(1000);
+  f.game.restartTake(f.game.data.recordingTake!.id);
+  bot.chat(f.game,message('!bait start',{at:oldAt,badges:['moderator']}));
+  assert.equal(f.game.phase,'idle');
+  f.advance(1);
+  bot.chat(f.game,message('!bait start',{at:f.now(),badges:['moderator']}));
+  assert.equal(f.game.phase,'active');
+  assert.equal(f.game.round!.word,'banana');
+});

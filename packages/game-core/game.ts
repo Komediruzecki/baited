@@ -34,6 +34,7 @@ export const settingsSchema = z
     callBait: z.boolean().default(false),
     chatBot: z.boolean().default(false),
     modCommands: z.boolean().default(false),
+    recordingMode: z.boolean().default(false),
   })
   .strict();
 export const defaults: Settings = {
@@ -49,9 +50,11 @@ export const defaults: Settings = {
   // Fresh channels announce by default. The schema keeps legacy missing values off.
   chatBot: true,
   modCommands: false,
+  recordingMode: false,
 };
 /** Moments the chat bot may announce. Listeners read public state from the overlay projection. */
 export type GameEvent =
+  | { type: 'recording-reset' }
   | { type: 'start' }
   | { type: 'pause' }
   | { type: 'resume' }
@@ -207,6 +210,8 @@ export interface SavedGame {
   history: Result[];
   /** Private repeat history; never included in a Studio, viewer or OBS projection. */
   recentCardForms?: { roundId: string; forms: string[] }[];
+  /** A recording take has its own scoreboard; lifetime history is never erased. */
+  recordingTake?: { id: string; startedAt: number; roundsStarted: number; wins: number; played: number; best: number; bestBeforeRound: number };
   priorWins: number;
   priorPlayed: number;
   priorBest: number;
@@ -263,6 +268,10 @@ const roundSchema = z.object({
   guessEnabled: z.boolean(), guessUsed: z.boolean(), wrongGuessBonus: count, hints, violations: count,
 }).strict();
 const safeKey = z.string().refine((key) => !['__proto__', 'constructor', 'prototype'].includes(key));
+// Normalize legacy take records at both persistence entry points. Live state and
+// newly written checkpoints always contain an explicit chat-message watermark.
+const recordingTakeSchema = z.object({ id: z.string().uuid(), startedAt: timestamp.default(0), roundsStarted: count, wins: count, played: count, best: count, bestBeforeRound: count }).strict()
+  .refine(take => take.wins <= take.played && take.played <= take.roundsStarted && take.best <= take.wins && take.bestBeforeRound <= take.best);
 const savedSchema = z.object({
   id: z.string(), owner: z.string(), channel: z.string(), mode: z.enum(['demo', 'twitch']),
   overlayKey: z.string(), settings: z.object({
@@ -275,6 +284,7 @@ const savedSchema = z.object({
     modCommands: settingsSchema.shape.modCommands.removeDefault(),
   }).strict(), history: z.array(resultSchema).max(100),
   recentCardForms: z.array(z.object({ roundId: z.string(), forms: z.array(z.string()) }).strict()).max(12).optional(),
+  recordingTake: recordingTakeSchema.optional(),
   priorWins: count, priorPlayed: count, priorBest: count,
   leaders: z.record(safeKey, z.object({ name: z.string(), rounds: count, baits: count.optional() }).strict())
     .refine((value) => Object.keys(value).length <= 1000),
@@ -366,6 +376,8 @@ export class Game {
     private uuid: () => string = () => crypto.randomUUID(),
   ) {
     data.settings = settingsSchema.parse(data.settings);
+    if (data.recordingTake) data.recordingTake = recordingTakeSchema.parse(data.recordingTake);
+    if (data.settings.recordingMode && !data.recordingTake) this.resetTakeState(true);
     // A restart never resumes an old live round or an old streak.
     if (data.mode === 'demo')
       this.connection = { status: 'offline', detail: 'Local demo · simulated chat only' };
@@ -474,6 +486,8 @@ export class Game {
     }
   }
   get score() {
+    const take = this.data.settings.recordingMode ? this.data.recordingTake : undefined;
+    if (take) return { wins: take.wins, played: take.played, streak: this.streak, best: take.best };
     const caught = this.data.history.filter((r) => r.outcome === 'caught').length;
     return {
       wins: this.data.priorWins + caught,
@@ -483,8 +497,37 @@ export class Game {
     };
   }
   update(settings: unknown) {
-    this.data.settings = settingsSchema.parse(settings);
+    const next = settingsSchema.parse(settings);
+    const changedMode = next.recordingMode !== this.data.settings.recordingMode;
+    if (changedMode && (this.pendingCatch || ['active', 'paused', 'settling'].includes(this.phase)))
+      throw new Error('Finish the current round before changing recording mode.');
+    this.data.settings = next;
+    if (changedMode) this.resetTakeState(next.recordingMode);
     this.changed();
+  }
+  /** Only authenticated owner adapters expose this; takeId rejects stale/double resets. */
+  restartTake(takeId: string) {
+    if (!this.data.settings.recordingMode || !this.data.recordingTake || this.data.recordingTake.id !== takeId)
+      throw new Error('This recording take has changed. Refresh Studio before resetting it.');
+    this.resetTakeState(true);
+    this.changed();
+  }
+  private resetTakeState(recording: boolean) {
+    this.round = null;
+    this.result = null;
+    this.phase = 'idle';
+    this.nextAt = null;
+    this.mission = null;
+    this.review = null;
+    this.streak = 0;
+    this.skipUsed = false;
+    this.recentChat.clear();
+    this.chatIds.clear();
+    this.bestBeforeRound = this.data.priorBest;
+    if (recording) this.data.recordingTake = { id: this.uuid(), startedAt: this.clock(), roundsStarted: 0, wins: 0, played: 0, best: 0, bestBeforeRound: 0 };
+    else delete this.data.recordingTake;
+    // Drop pending bot messages from the abandoned take, without posting a spoiler.
+    this.emit({ type: 'recording-reset' });
   }
   get pendingCatch() {
     return this.phase === 'cooldown' && this.result?.outcome === 'review';
@@ -498,7 +541,12 @@ export class Game {
     if (this.phase === 'cooldown' && this.nextAt !== null && this.clock() < this.nextAt)
       throw new Error('Let the cooldown finish first.');
     this.bestBeforeRound = this.data.priorBest;
-    const deck = this.deckFor(this.data.settings.difficulty);
+    const take = this.data.settings.recordingMode ? this.data.recordingTake : undefined;
+    // This private sequence is not part of the normal 100-card deck or any public projection.
+    const scriptedWord = take ? ['banana', 'ghost', 'bait'][take.roundsStarted] : undefined;
+    const deck: DeckCard[] = scriptedWord
+      ? [{ target: scriptedWord, difficulty: 'easy', blockedClues: [], acceptedSpellings: [] }]
+      : this.deckFor(this.data.settings.difficulty);
     if (!deck.length) throw new CardLibraryError(409, 'Choose a playable deck before starting.');
     const window = Math.min(12, Math.max(0, deck.length - 1));
     const pastForms = (entry: Result) =>
@@ -513,7 +561,8 @@ export class Game {
     const fallback = deck.filter((card) => !overlaps(card, latest));
     const pool = eligible.length ? eligible : fallback.length ? fallback : deck;
     const now = this.clock();
-    if (this.mission?.status !== 'active') {
+    if (scriptedWord) this.mission = null;
+    else if (this.mission?.status !== 'active') {
       this.mission =
         this.data.settings.mission === 'three'
           ? {
@@ -531,7 +580,8 @@ export class Game {
       this.mission?.status === 'active'
         ? Math.max(0, this.mission.endsAt - now)
         : this.data.settings.duration * 1000;
-    const card = pool[this.choose(pool.length)];
+    const card = scriptedWord ? deck[0] : pool[this.choose(pool.length)];
+    if (take) { take.bestBeforeRound = take.best; take.roundsStarted++; }
     const word = card.target;
     this.round = {
       id: this.uuid(),
@@ -549,12 +599,12 @@ export class Game {
       votes: new Set(),
       seen: new Set(),
       previousStreak: this.streak,
-      difficulty: this.data.settings.difficulty,
+      difficulty: card.difficulty,
       clues: [...card.blockedClues],
       acceptedSpellings: [...card.acceptedSpellings],
       ...(card.cardId ? { cardId: card.cardId, cardRevision: card.revision } : {}),
       printed: card.cardId ? {} : { ...printed.get(word) },
-      guessEnabled: this.data.settings.callBait,
+      guessEnabled: Boolean(scriptedWord) || this.data.settings.callBait,
       guessUsed: false,
       wrongGuessBonus: 0,
       hints: [],
@@ -700,6 +750,12 @@ export class Game {
       }
     }
     this.data.priorBest = Math.max(this.data.priorBest, this.streak);
+    const take = this.data.settings.recordingMode ? this.data.recordingTake : undefined;
+    if (take) {
+      take.played++;
+      if (outcome === 'caught') take.wins++;
+      take.best = Math.max(take.best, this.streak);
+    }
     for (const [id, name] of r.participants) {
       const item = this.data.leaders[id] ?? { name, rounds: 0 };
       item.name = name;
@@ -751,6 +807,11 @@ export class Game {
     // The word has already been revealed. A fresh target is required next round.
     // Historical best is tracked before each round so an overturned win cannot inflate it.
     this.data.priorBest = Math.max(this.streak, this.bestBeforeRound);
+    const take = this.data.settings.recordingMode ? this.data.recordingTake : undefined;
+    if (take) {
+      take.wins = Math.max(0, take.wins - 1);
+      take.best = Math.max(this.streak, take.bestBeforeRound);
+    }
     this.changed();
     this.emit({ type: 'reverse' });
   }
@@ -1108,6 +1169,9 @@ export class Game {
       }),
       settings: this.data.settings,
       score: this.score,
+      ...(role === 'studio' && this.data.settings.recordingMode && this.data.recordingTake ? {
+        recording: { takeId: this.data.recordingTake.id, roundsStarted: this.data.recordingTake.roundsStarted, scriptedRounds: 3 as const },
+      } : {}),
       participants: r?.participants.size ?? 0,
       voters: r?.votes.size ?? 0,
       voteThreshold: this.data.settings.skipVotes,

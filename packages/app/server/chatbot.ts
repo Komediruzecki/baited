@@ -52,11 +52,13 @@ const MODERATOR_BADGES = new Set(['broadcaster', 'moderator', 'lead_moderator'])
 const ROUND_KEYS = ['skip', 'nudge', 'round-state', 'guess'];
 
 interface Outgoing extends Announcement {
+  generation: number;
   id: string;
   expiresAt: number;
   replyTo?: string;
 }
 interface RoomState {
+  generation: number;
   /** Announcements and results. They always go before command replies. */
   queue: Outgoing[];
   /** Command replies, in their own lane so they never push an announcement out. */
@@ -126,6 +128,11 @@ export class ChatBot {
 
   /** Game events become announcements only when the streamer opted in and the bot may post. */
   event(game: Game, event: GameEvent) {
+    if (event.type === 'recording-reset') {
+      const room = this.rooms.get(game.data.id);
+      if (room) { room.generation++; room.queue = []; room.replies = []; }
+      return;
+    }
     if (!this.wants(game)) return;
     // A round that has ended or begun makes its skip tallies, nudges and state posts stale.
     if (['start', 'review', 'finish', 'mission-timeout'].includes(event.type))
@@ -139,6 +146,9 @@ export class ChatBot {
 
   /** Chat commands. Called for every accepted chat message, in any phase. */
   chat(game: Game, message: ChatMessage) {
+    // EventSub can deliver an old moderator start after the owner reset the take.
+    if (game.data.settings.recordingMode && game.data.recordingTake &&
+        message.at <= (game.data.recordingTake.startedAt ?? 0)) return;
     const command = parseCommand(message.text);
     if (!command || command === 'join') return;
     if (MOD_COMMANDS.has(command)) {
@@ -239,6 +249,7 @@ export class ChatBot {
     let room = this.rooms.get(id);
     if (!room) {
       room = {
+        generation: 0,
         queue: [],
         replies: [],
         live: false,
@@ -314,7 +325,7 @@ export class ChatBot {
     const lane = reply ? 'replies' : 'queue',
       limit = reply ? LIMITS.replyQueue : LIMITS.queue;
     room[lane] = room[lane].filter((item) => item.key !== announcement.key);
-    room[lane].push({ ...announcement, id: randomUUID(), expiresAt: now + announcement.ttl, replyTo });
+    room[lane].push({ ...announcement, generation: room.generation, id: randomUUID(), expiresAt: now + announcement.ttl, replyTo });
     if (room[lane].length > limit) room[lane].splice(0, room[lane].length - limit);
     this.drain(game);
   }
@@ -395,7 +406,7 @@ export class ChatBot {
     const room = this.room(game.data.id);
     try {
       const response = await this.post(game, item);
-      if (!response) return;
+      if (!response || item.generation !== room.generation) return;
       if (response.status === 429) {
         // Ratelimit-Reset is a Unix time in seconds. Without it, wait out a full window.
         const reset = Number(response.headers.get('Ratelimit-Reset'));
@@ -451,7 +462,7 @@ export class ChatBot {
   private async post(game: Game, item: Outgoing, retried = false): Promise<Response | null> {
     const token = await this.token(retried);
     // Token refresh may outlast a round or a permission change.
-    if (!this.wants(game) || this.revealsTarget(game, item.text)) return null;
+    if (item.generation !== this.room(game.data.id).generation || !this.wants(game) || this.revealsTarget(game, item.text)) return null;
     const response = await this.fetcher('https://api.twitch.tv/helix/chat/messages', {
       method: 'POST',
       headers: {

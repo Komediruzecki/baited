@@ -32,6 +32,7 @@ test('edge chat controls use the session CSRF endpoint and bot sign-in verifies 
     if (path === '/api/edge/chat') { revision++; return Response.json({ ok: true }); }
     if (path === '/v1/rooms/123/state') return Response.json({ error: 'Same-origin GET has no Origin.' }, { status: 403 });
     if (path === '/api/bot/authorize') return Response.json({ url: redirect });
+    if (path === '/v1/rooms/123/commands') { revision++; return Response.json({ok:true,revision,generation:1,snapshot:state()}); }
     if (path === '/api/logout') return Response.json({ ok: true });
     return Response.json({ error: 'Unexpected request.' }, { status: 404 });
   };
@@ -46,6 +47,12 @@ test('edge chat controls use the session CSRF endpoint and bot sign-in verifies 
     assert.equal(calls.filter((call) => call.path.endsWith('/state')).length, 0);
     assert.deepEqual(frames, ['resync', 'resync']);
     assert.ok(calls.every((call) => !call.path.endsWith('/commands')));
+    const takeId = crypto.randomUUID();
+    await request('/api/recording/restart', { takeId });
+    const resetCall = calls.find(call => call.path.endsWith('/commands'))!;
+    assert.deepEqual((resetCall.body as {action:unknown}).action, {type:'restart-take', takeId});
+    assert.equal((resetCall.body as {expectedRevision:number}).expectedRevision, 3);
+    assert.equal(calls.some(call => call.path === '/api/recording/restart'), false);
     assert.equal(canAuthorizeEdgeBot(), true);
     assert.match(await authorizeEdgeBot(), /^https:\/\/id\.twitch\.tv\/oauth2\/authorize/);
     assert.equal(calls.at(-1)?.csrf, 'fixture-csrf');

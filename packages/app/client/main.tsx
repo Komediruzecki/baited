@@ -195,6 +195,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [micIssue, setMicIssue] = useState(''),
     [micRecovering, setMicRecovering] = useState(false);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
+  const [restartTakeId, setRestartTakeId] = useState<string | null>(null);
   const [cardsDirty, setCardsDirty] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
   const [leaveCards, setLeaveCards] = useState<(() => void) | null>(null);
@@ -336,6 +337,21 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       setBusy(false);
     }
   };
+  const restartTake = async () => {
+    if (!restartTakeId || busy || offline) return;
+    setBusy(true);
+    setError('');
+    try {
+      receive(await request<Studio>('/api/recording/restart', { takeId: restartTakeId }, session.csrf));
+      setTranscriptLines(transcriptBuffer.current.clear());
+      setRestartTakeId(null);
+    } catch (e) {
+      setError((e as Error).message);
+      setRestartTakeId(null);
+    } finally {
+      setBusy(false);
+    }
+  };
   const save = async (settings: Settings) => {
     setBusy(true);
     try {
@@ -446,6 +462,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
         <p>{error || 'Opening your studio…'}</p>
       </div>
     );
+  const roundDifficulty = g.round?.difficulty ?? (g.recording && g.recording.roundsStarted < 3 ? 'easy' : g.settings.difficulty);
   const active = g.phase === 'active',
     settling = g.phase === 'settling',
     paused = g.phase === 'paused',
@@ -576,6 +593,12 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           )}
           {tab === 'studio' && (
             <>
+              {g.recording && <section className="recording-take" aria-label="Recording take">
+                <div><strong>Recording take</strong><span>{g.recording.roundsStarted <= 3
+                  ? `${g.recording.roundsStarted} of 3 prepared rounds started. Normal play follows.`
+                  : 'Prepared opening complete. Normal play continues.'}</span></div>
+                <Button className="secondary" disabled={busy || offline} onClick={() => setRestartTakeId(g.recording!.takeId)}>Restart take</Button>
+              </section>}
               {!offline && <MissionStatus game={g} now={now} offset={offset.current} />}
               <div className="studio-grid">
                 <section
@@ -597,7 +620,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           ? `Round ${String(g.round.number).padStart(2, '0')}`
                           : 'Next round'}
                     </span>
-                    <span className="desk-difficulty">{g.round?.difficulty ?? g.settings.difficulty}</span>
+                    <span className="desk-difficulty">{roundDifficulty}</span>
                     <Tag tone={active ? 'lime' : paused || pendingCatch ? 'amber' : 'muted'}>
                       <span className="dot" />
                       {active
@@ -642,7 +665,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                             : active || paused || settling
                               ? fmt(ms)
                               : fmt(
-                                  (g.settings.mission === 'three'
+                                  (g.settings.mission === 'three' && !(g.recording && g.recording.roundsStarted < 3)
                                     ? g.settings.missionDuration
                                     : g.settings.duration) * 1000,
                                 )}
@@ -689,7 +712,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           <Play size={16} fill="currentColor" />
                           {cool && next > 0
                             ? `Next round in ${fmt(next)}`
-                            : g.settings.mission === 'three'
+                            : g.settings.mission === 'three' && !(g.recording && g.recording.roundsStarted < 3)
                               ? 'Start mission'
                               : 'Start round'}
                         </Button>
@@ -848,7 +871,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   </div>
                   <div className="mission-footer">
                     <span className="round-difficulty">
-                      {g.round?.difficulty ?? g.settings.difficulty}
+                      {roundDifficulty}
                     </span>
                     <span className="round-totals">
                       <span>
@@ -1084,6 +1107,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           <Button className="primary" onClick={() => setLeaveCards(null)}>Keep editing</Button>
         </div>
       </Modal>}
+      {restartTakeId && <Modal title="Restart this take?" onClose={() => { if (!busy) setRestartTakeId(null); }}>
+        <p>This ends the current round and returns this channel to round zero. The take’s scores and streak start over, ready for the same three opening cards.</p>
+        <p className="muted">Twitch connections, microphone permission and saved history stay intact. Viewers will see the waiting card until you start again.</p>
+        <div className="modal-actions">
+          <Button className="text" disabled={busy} onClick={() => setRestartTakeId(null)}>Keep this take</Button>
+          <Button className="primary" disabled={busy || offline} onClick={() => void restartTake()}>{busy ? 'Restarting…' : 'Restart take'}</Button>
+        </div>
+      </Modal>}
       {modal && (
         <Modal
           title={
@@ -1110,6 +1141,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               settings={g.settings}
               chatBot={studio.chatBot}
               busy={busy || settling}
+              recordingLocked={active || paused || pendingCatch || settling}
               onSave={save}
             />
           ) : modal === 'how' ? (
@@ -1261,11 +1293,13 @@ function SettingsForm({
   settings,
   chatBot,
   busy,
+  recordingLocked,
   onSave,
 }: {
   settings: Settings;
   chatBot: ChatBotStatus;
   busy: boolean;
+  recordingLocked: boolean;
   onSave: (s: Settings) => void;
 }) {
   const [s, set] = useState(settings);
@@ -1280,6 +1314,13 @@ function SettingsForm({
         Clue rules and guessing apply to the next word. Changing the format takes effect after the
         current mission.
       </p>
+      <label className="toggle-row">
+        <span><strong>Recording take</strong><small>{recordingLocked
+          ? 'End the current round before changing recording mode.'
+          : 'Three prepared opening cards, then normal random play. Opening rounds use easy rules, one word and Call the bait.'}</small></span>
+        <input type="checkbox" role="switch" checked={s.recordingMode ?? false} disabled={busy || recordingLocked}
+          onChange={(e) => set({ ...s, recordingMode: e.target.checked })} />
+      </label>
       <label className="field-label">Game format</label>
       <div className="segmented" role="group" aria-label="Game format">
         {(['single', 'three'] as const).map((mission) => (

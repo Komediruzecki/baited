@@ -140,6 +140,7 @@ export function eventAnnouncement(view: GameView, event: GameEvent): Announcemen
   const round = view.round;
   const mood = moodOf(losingRun(view));
   switch (event.type) {
+    case 'recording-reset': return null;
     case 'start': {
       if (!round) return null;
       const time = clock(round.remaining);

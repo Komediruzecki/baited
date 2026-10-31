@@ -62,14 +62,25 @@ export class ChannelRoom extends DurableObject<Env> {
     if (!this.env.CONTROL) throw new Error('Control unavailable.');
     return internalFetch(this.env.CONTROL.get(this.env.CONTROL.idFromName('control-v1')),new Request(`https://control.internal${path}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
   }
+  private outboxResetBarrier() {
+    return this.ctx.storage.sql.exec<{id:string;body:string;retry_at:number}>(
+      "SELECT id,body,retry_at FROM pilot_outbox WHERE json_extract(body,'$.event.type')='recording-reset' ORDER BY rowid LIMIT 1",
+    ).toArray()[0];
+  }
   private async flushOutbox() {
     if (!this.pilot() || this.operatorBlocked()) return;
     const rows=await this.serial(async()=>{
       this.ctx.storage.sql.exec('DELETE FROM pilot_outbox WHERE expires_at<=?',Date.now());
+      // A reset must reach Control before any later event, including while its
+      // first delivery is backing off. Only announcements wait; gameplay does not.
+      const barrier=this.outboxResetBarrier();
+      if(barrier) return barrier.retry_at<=Date.now()?[barrier]:[];
       return this.ctx.storage.sql.exec<{id:string;body:string}>('SELECT id,body FROM pilot_outbox WHERE retry_at<=? ORDER BY rowid LIMIT 8',Date.now()).toArray();
     });
     for (const row of rows) {
       if(this.operatorBlocked()) return;
+      // A recording reset may retire rows while a previous delivery awaits Control.
+      if(!await this.serial(async()=>this.ctx.storage.sql.exec('SELECT id FROM pilot_outbox WHERE id=?',row.id).toArray().length>0)) continue;
       try {
         const response=await this.control('/internal/room-event',JSON.parse(row.body));
         // Authorization/validation failures cannot recover by replaying this old
@@ -205,7 +216,8 @@ export class ChannelRoom extends DurableObject<Env> {
         this.ctx.storage.sql.exec('DELETE FROM pilot_chat_receipt WHERE expires<=?',this.now);
         if (chatId) this.ctx.storage.sql.exec('INSERT OR IGNORE INTO pilot_chat_receipt(id,expires) VALUES(?,?)',chatId,this.now+600_000);
         const pending=this.events.get(candidate)??[];
-        if (pending.length && (candidate.data.settings.chatBot || pending.some(item=>item.event.type==='bot-settings'))) {
+        if(pending.some(item=>item.event.type==='recording-reset')) this.ctx.storage.sql.exec('DELETE FROM pilot_outbox');
+        if (pending.length && (candidate.data.settings.chatBot || pending.some(item=>item.event.type==='bot-settings' || item.event.type==='recording-reset'))) {
           const count=this.ctx.storage.sql.exec<{n:number}>('SELECT count(*) AS n FROM pilot_outbox').one().n;
           // Announcements are best-effort and bounded; never hold gameplay hostage to a chat outage.
           for (const [i,item] of pending.entries()) if (count+i<32) {
@@ -298,7 +310,9 @@ export class ChannelRoom extends DurableObject<Env> {
     const deadlines = [game?.nextDeadline() ?? null, receiptAt];
     if (this.pilot()) {
       if (pilot.lease) deadlines.push(pilot.lease.expiresAt,this.speechDeadline(game,pilot));
-      const outbox=this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(retry_at) AS at FROM pilot_outbox').one().at;
+      const barrier=this.outboxResetBarrier();
+      // Younger due rows behind a backed-off reset must not create a hot alarm loop.
+      const outbox=barrier?.retry_at??this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(retry_at) AS at FROM pilot_outbox').one().at;
       const outboxExpiry=this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(expires_at) AS at FROM pilot_outbox').one().at;
       const chat=this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(expires) AS at FROM pilot_chat_receipt').one().at;
       deadlines.push(outbox,outboxExpiry,chat);
@@ -350,6 +364,7 @@ export class ChannelRoom extends DurableObject<Env> {
           ...(socket.speech?{lastAudioAt:socket.speech.lastAudioAt,roundId:socket.speech.roundId,epoch:socket.speech.epoch}:{})};
         game.mic='listening';break;
       }
+      case 'restart-take': game.restartTake(a.takeId); break;
       case 'skip': game.end('skipped');break;
       case 'pause': game.pause(); break;
       case 'resume': if (this.pilot() && (!pilot.chatConnected || !this.leaseValid())) throw new Error('stream_not_ready');game.resume(); break;
@@ -378,7 +393,7 @@ export class ChannelRoom extends DurableObject<Env> {
     if (previous) return previous.fingerprint === hash
       ? {status:200,body:JSON.parse(previous.body)}
       : {status:409,body:{ok:false,code:'id_conflict',revision:this.revision,generation:this.generation}};
-    const acceptsOlderRevision=this.pilot() && !['start','settings','revoke-connections'].includes(command.action.type);
+    const acceptsOlderRevision=this.pilot() && !['start','settings','restart-take','revoke-connections'].includes(command.action.type);
     if (command.generation !== this.generation || ((command.action.type === 'fixture-chat' || acceptsOlderRevision)
       ? command.expectedRevision > this.revision : command.expectedRevision !== this.revision))
       return {status:409,body:{ok:false,code:'stale_revision',revision:this.revision,generation:this.generation}};
@@ -745,6 +760,8 @@ export class ChannelRoom extends DurableObject<Env> {
     if(path!=='/internal/twitch-chat') return json({error:'Not found.'},404);
     const event=eventSchema.parse(data);
     if(!this.game) return json({ok:true,ignored:true});
+    if(event.kind==='message' && this.game.data.settings.recordingMode && this.game.data.recordingTake &&
+      event.at <= (this.game.data.recordingTake.startedAt??0)) return json({ok:true,ignored:true,reason:'previous_take'});
     const command=(event.text??'').trim().toLowerCase();
     const botCommand=event.kind==='message' && /^!bait (help|score|top|who)$/.test(command);
     const modCommand=event.kind==='message' && /^!bait (start|pause|resume)$/.test(command) && this.game.data.settings.modCommands &&

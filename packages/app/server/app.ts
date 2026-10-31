@@ -824,6 +824,12 @@ export async function createBait(
     }
     res.json({ armed: microphoneReady(game) });
   });
+  app.post('/api/recording/restart', protect, (req, res) => {
+    const { takeId } = z.object({ takeId: z.string().uuid() }).strict().parse(req.body);
+    const game = gameFor(res);
+    game.restartTake(takeId);
+    res.json(studio(game));
+  });
   app.post('/api/studio/settings', protect, (req, res) => {
     const game = gameFor(res);
     game.update(req.body);

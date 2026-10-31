@@ -341,6 +341,17 @@ test('bot authorization is owner/CSRF gated and global send reservations are dur
     const cooldown = await f.request('/__fixture/state').then((r) => r.json()) as any;
     assert.equal(cooldown.queue.filter((q: any) => q.key === 'command').length, 1);
     assert.equal(Object.keys(cooldown.commandCooldowns).length, 2);
+    const generationBeforeReset = cooldown.channels['123'].botGeneration ?? 0;
+    await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: 'recording-reset', safeView, event: {type:'recording-reset'} }));
+    const reset = await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(reset.queue.length,0);
+    assert.equal(reset.channels['123'].botGeneration,generationBeforeReset+1);
+    await f.request('/__fixture/event', jsonPost({channelId:'123',eventId:'new-take-round',safeView,event:{type:'start'}}));
+    assert.equal((await f.request('/__fixture/state').then(r=>r.json()) as any).queue.length,1);
+    await f.request('/__fixture/event', jsonPost({channelId:'123',eventId:'recording-reset',safeView,event:{type:'recording-reset'}}));
+    const retriedReset=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(retriedReset.queue.length,1,'A retried reset marker cannot clear new take announcements.');
+    assert.equal(retriedReset.channels['123'].botGeneration,generationBeforeReset+1);
     await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: 'disabled', safeView: { ...safeView, settings: { ...safeView.settings, chatBot: false } }, event: { type: 'bot-settings' } }));
     assert.equal((await f.request('/__fixture/state').then((r) => r.json()) as any).queue.length, 0);
   } finally { await f.mf.dispose(); }
