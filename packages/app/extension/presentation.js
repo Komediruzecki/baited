@@ -101,7 +101,10 @@ export const proofWords = Object.freeze([
   'pomegranate',
   'marionette',
 ]);
-const artWords = new Set(proofWords);
+// Artwork for prepared recording rounds, without expanding the normal deck.
+export const recordingArtWords = Object.freeze(['bait']);
+export const illustratedWords = Object.freeze([...proofWords, ...recordingArtWords]);
+const artWords = new Set(illustratedWords);
 
 export function cardArtFile(word) {
   if (typeof word !== 'string' || !artWords.has(word.toLowerCase())) return null;

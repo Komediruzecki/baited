@@ -100,6 +100,8 @@ export const proofWords: readonly [
   'pomegranate',
   'marionette',
 ];
+export const recordingArtWords: readonly ['bait'];
+export const illustratedWords: readonly (typeof proofWords[number] | typeof recordingArtWords[number])[];
 export function cardArtFile(word?: string): string | null;
 export function cardArtPath(value: unknown, allowPreview?: boolean): string | null;
 export function cardArtSource(value: unknown, apiOrigin?: string, allowPreview?: boolean): string | null;

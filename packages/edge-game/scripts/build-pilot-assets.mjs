@@ -3,7 +3,7 @@ import { mkdir, open, readdir, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { proofWords, streakFlameFiles } from '../../app/extension/presentation.js';
+import { illustratedWords, proofWords, streakFlameFiles } from '../../app/extension/presentation.js';
 
 const edge = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const app = resolve(edge, '../app');
@@ -16,7 +16,7 @@ const publicAssets = [
   ...streakFlameFiles.map((file) => `brand/${file}`),
   'fonts/inter-latin.woff2', 'fonts/intertight-latin.woff2', 'fonts/russo-one.ttf', 'fonts/baited-pixel.ttf',
   'card-lab/backs/back-prism.webp',
-  ...proofWords.map((word) => `cards/proofs/${word}.png`),
+  ...illustratedWords.map((word) => `cards/proofs/${word}.png`),
 ];
 
 async function copyFile(source, target) {
@@ -50,7 +50,7 @@ export async function buildPilotAssets() {
   for (const file of await readdir(license)) {
     if ((await stat(resolve(license, file))).isFile()) await copyFile(resolve(license, file), resolve(output, 'licenses/moonshine', file));
   }
-  const receipt = { output, cards: proofWords.length, modelDownloadOrigin: 'https://download.moonshine.ai',
+  const receipt = { output, cards: proofWords.length, illustrations: illustratedWords.length, modelDownloadOrigin: 'https://download.moonshine.ai',
     runtime: '@moonshine-ai/moonshine-wasm@0.1.5', providerResourcesCreated: false };
   const { output: _output, ...publicReceipt } = receipt;
   await writeFile(resolve(output, 'pilot-assets.json'), `${JSON.stringify(publicReceipt, null, 2)}\n`);

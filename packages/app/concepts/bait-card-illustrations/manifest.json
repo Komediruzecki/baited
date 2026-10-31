@@ -1,5 +1,5 @@
 {
-  "status": "candidates; no runtime artwork selected",
+  "status": "bait-lure selected for the recording BAIT card; other concepts retained",
   "provider": "built-in ChatGPT image_gen",
   "date": "2026-10-31",
   "images": [
@@ -53,5 +53,11 @@
     "Lure and bomb use transparent backgrounds and have opaque foreground pixels.",
     "Logo candidate retains a soft violet glow and partially translucent highlights; inspect on the final card background before use.",
     "Main Baited wordmark and existing card catalogue remain unchanged."
+  ],
+  "selected": "bait-lure",
+  "selectedAt": "2026-10-31",
+  "runtimeCopies": [
+    "public/cards/proofs/bait.png",
+    "extension/assets/card-bait.png"
   ]
 }
