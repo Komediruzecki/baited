@@ -1,0 +1,88 @@
+.speech-lab { min-height: 100vh; background: #160d30; color: var(--light); padding: 24px; }
+.speech-lab-header, .speech-lab-main { max-width: 1180px; margin: 0 auto; }
+.speech-lab-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.speech-lab-brand { display: flex; align-items: center; }
+.speech-lab-brand .product-brand { width: 104px; color: #c9a8ff; }
+.speech-lab-title { margin: 48px 0 28px; max-width: 700px; }
+.speech-lab-kicker { color: var(--accent); font-weight: 650; margin-bottom: 10px; }
+.speech-lab-title h1 { font-size: 2.5rem; line-height: 1.13; letter-spacing: -.025em; margin-bottom: 14px; }
+.speech-lab-title > p:last-child { color: #c9bfd9; font-size: 1.1rem; max-width: 62ch; }
+.speech-lab-workspace { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr); gap: 24px; align-items: start; }
+.speech-lab-input, .speech-lab-progress { min-width: 0; background: var(--surface); border: 1px solid #51425e; border-radius: 18px; padding: 26px; box-shadow: 0 3px 0 #0b0617; }
+.speech-lab-section-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.speech-lab h2 { font-size: 1.45rem; line-height: 1.25; }
+.speech-lab h3 { font-size: 1.1rem; line-height: 1.35; }
+.speech-lab-section-title > span { color: #c9bfd9; font-size: .85rem; text-align: right; }
+.speech-lab-input > p, .speech-lab-results > p { max-width: 70ch; color: #c9bfd9; }
+.speech-lab-record-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 14px; margin: 24px 0; }
+.speech-lab label { display: grid; gap: 8px; font-weight: 600; font-size: .95rem; }
+.speech-lab input:not([type=file]), .speech-lab select { width: 100%; min-height: 46px; border: 1px solid #777080; border-radius: 8px; background: #151218; color: var(--light); padding: 10px 12px; }
+.speech-lab select { padding-right: 32px; }
+.speech-lab input::placeholder { color: #bfb4cb; }
+.speech-lab input:disabled, .speech-lab select:disabled { opacity: .6; }
+.speech-lab-file { padding-top: 22px; border-top: 1px solid #51425e; }
+.speech-lab-file input { display: block; width: 100%; margin: 10px 0; color: #c9bfd9; overflow: hidden; }
+.speech-lab-file input::file-selector-button { color: var(--light); background: #38313f; border: 1px solid #777080; border-radius: 8px; padding: 11px 14px; margin-right: 12px; font: inherit; cursor: pointer; }
+.speech-lab-file input::file-selector-button:hover { background: #4a3c58; }
+.speech-lab-note { color: #c9bfd9; font-size: .88rem; line-height: 1.6; }
+.speech-lab-preview { padding: 18px 0 0; }
+.speech-lab-preview > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.speech-lab-preview strong { overflow-wrap: anywhere; }
+.speech-lab-preview audio { display: block; width: 100%; margin-top: 12px; }
+.speech-lab-options { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+.speech-lab-run-label { grid-column: 1 / -1; }
+.speech-lab-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+.speech-lab-text-button { background: transparent; color: #d5b5ff; padding: 8px 0; min-height: 44px; text-align: left; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.speech-lab-text-button:hover:not(:disabled) { color: white; }
+.speech-lab-recording { padding: 16px; margin-bottom: 18px; border: 1px solid #9f72d4; border-radius: 10px; }
+.speech-lab-recording > div:first-child { display: flex; gap: 16px; align-items: center; justify-content: space-between; }
+.speech-lab-recording meter { width: 110px; height: 14px; accent-color: var(--accent); }
+.speech-lab-status { display: grid; grid-template-columns: 10px minmax(0,1fr); gap: 12px; align-items: center; }
+.speech-lab-status h2 { font-size: 1.2rem; }
+.speech-lab-status > p, .speech-lab-status > progress, .speech-lab-status > button { grid-column: 1 / -1; }
+.speech-lab-status > p { color: #c9bfd9; overflow-wrap: anywhere; }
+.speech-lab-status[data-error=true] > p { color: #ffc0ba; }
+.speech-lab-status-dot { width: 9px; height: 9px; border-radius: 50%; background: #a397b4; }
+.speech-lab-status-dot.is-working { background: #c49aff; }
+.speech-lab-status progress { width: 100%; height: 8px; accent-color: #a970f6; }
+.speech-lab-models { list-style: none; padding: 0; margin: 26px 0 20px; }
+.speech-lab-models li { padding: 18px 0; border-top: 1px solid #51425e; }
+.speech-lab-models li > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.speech-lab-models li span { color: #c9bfd9; font-size: .82rem; text-align: right; }
+.speech-lab-models li[data-current=true] h3 { color: #d5b5ff; }
+.speech-lab-models li > p { color: #c9bfd9; font-size: .88rem; margin-top: 8px; }
+.speech-lab-progress > p + p { margin-top: 18px; }
+.speech-lab-results { margin-top: 40px; }
+.speech-lab-result-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; margin-top: 24px; }
+.speech-lab-result { min-width: 0; background: #1f1b27; padding: 24px; border-top: 2px solid #8c60bc; }
+.speech-lab-result header { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; }
+.speech-lab-result header span, .speech-lab-result-label { color: #c9bfd9; font-size: .85rem; }
+.speech-lab-result-label { margin-top: 8px; overflow-wrap: anywhere; }
+.speech-lab-transcript { font-size: 1.18rem; margin: 22px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.speech-lab-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0 10px; }
+.speech-lab-metrics dt { color: #c9bfd9; font-size: .82rem; }
+.speech-lab-metrics dd { margin: 5px 0 0; font-weight: 600; }
+.speech-lab details { margin-top: 18px; }
+.speech-lab summary { cursor: pointer; color: #d5b5ff; padding: 12px 0; min-height: 44px; }
+.speech-lab pre { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; line-height: 1.5; }
+.speech-lab-empty { padding: 26px 0; margin-top: 18px; border-block: 1px solid #51425e; }
+.speech-lab-footer { margin: 32px 0 16px; max-width: 76ch; color: #c9bfd9; font-size: .88rem; }
+.speech-lab-footer details p { margin-top: 12px; }
+.speech-lab-footer a { display: inline-block; margin-top: 12px; color: #d5b5ff; text-decoration: underline; }
+@media (max-width: 850px) {
+  .speech-lab-workspace { grid-template-columns: 1fr; }
+  .speech-lab-title { margin-top: 32px; }
+  .speech-lab-title h1 { font-size: 2rem; }
+}
+@media (max-width: 540px) {
+  .speech-lab { padding: 16px; }
+  .speech-lab-header .button { min-height: 44px; padding: 10px 12px; }
+  .speech-lab-input, .speech-lab-progress { padding: 20px; border-radius: 14px; }
+  .speech-lab-options, .speech-lab-result-grid { grid-template-columns: 1fr; }
+  .speech-lab-section-title { align-items: flex-start; flex-wrap: wrap; }
+  .speech-lab-section-title > span { text-align: left; }
+  .speech-lab-record-controls { align-items: stretch; }
+  .speech-lab-record-controls > label, .speech-lab-record-controls > button { flex: 1 1 160px; }
+  .speech-lab-actions > .button { flex: 1 1 150px; white-space: normal; }
+  .speech-lab-result { padding: 20px; }
+}

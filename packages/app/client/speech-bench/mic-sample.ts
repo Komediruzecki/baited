@@ -1,5 +1,5 @@
 const SAMPLE_RATE = 16000;
-const MAX_SECONDS = 5;
+const MAX_SECONDS = 15;
 const SETUP_TIMEOUT_MS = 15000;
 const DRAIN_TIMEOUT_MS = 250;
 
@@ -41,10 +41,11 @@ export class MicrophoneSample {
   constructor(
     private onLevel?: (level: number) => void,
     private dependencies: MicrophoneSampleDependencies = browser,
+    private onProgress?: (seconds: number) => void,
   ) {}
 
   /** Call directly inside the mic button handler, before awaiting model loading. */
-  capture(maxSeconds = MAX_SECONDS): Promise<Float32Array> {
+  capture(maxSeconds = 5): Promise<Float32Array> {
     if (this.active) return this.active.promise;
     if (!Number.isFinite(maxSeconds) || maxSeconds <= 0)
       return Promise.reject(new Error('Choose a microphone sample longer than zero seconds.'));
@@ -72,7 +73,7 @@ export class MicrophoneSample {
       const activation = context.resume().then(() => {
         resumed = true;
         changed();
-      }, () => { this.fail(capture, new Error('Your browser could not start microphone audio. Click Test mic again.')); });
+      }, () => { this.fail(capture, new Error('Your browser could not start microphone audio. Start a new recording.')); });
       const media = this.dependencies.getUserMedia({
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false,
@@ -105,7 +106,7 @@ export class MicrophoneSample {
       const context = capture.context!;
       await context.audioWorklet.addModule('/pcm-worklet.js');
       if (this.active !== capture) return;
-      if (context.state !== 'running') throw new Error('Your browser paused microphone audio. Click Test mic again.');
+      if (context.state !== 'running') throw new Error('Your browser paused microphone audio. Start a new recording.');
       const worklet = this.dependencies.createWorklet(context);
       capture.worklet = worklet;
       capture.source = context.createMediaStreamSource(capture.stream!);
@@ -131,6 +132,7 @@ export class MicrophoneSample {
             energy += sample * sample;
           }
           if (!capture.draining) this.level(count ? Math.min(1, Math.sqrt(energy / count) * 5) : 0);
+          this.progress(capture.used / SAMPLE_RATE);
           if (capture.used === capture.samples.length) { this.complete(capture); return; }
         }
         if (event.data.flushed && capture.draining) this.complete(capture);
@@ -141,6 +143,7 @@ export class MicrophoneSample {
       clearTimeout(capture.timer);
       capture.timer = setTimeout(() => { if (this.active === capture) this.finish(); }, capture.samples.length / SAMPLE_RATE * 1000);
       worklet.port.postMessage({ enabled: true, generation: capture.generation });
+      this.progress(0);
     } catch (error) { this.fail(capture, this.openError(error)); }
   }
 
@@ -209,6 +212,10 @@ export class MicrophoneSample {
 
   private level(value: number) {
     try { this.onLevel?.(value); } catch { /* UI observers must not keep a device open. */ }
+  }
+
+  private progress(seconds: number) {
+    try { this.onProgress?.(seconds); } catch { /* Observers must not retain the device. */ }
   }
 
   private openError(error: unknown): Error {

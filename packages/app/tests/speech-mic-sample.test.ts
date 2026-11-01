@@ -107,12 +107,12 @@ test('finish releases the device immediately and retains the worklet tail as nor
   assert.equal(env.levels.at(-1), 0);
 });
 
-test('oversized duration and packet overflow never exceed five seconds or 80,000 samples', async (t) => {
+test('oversized duration and packet overflow never exceed fifteen seconds or 240,000 samples', async (t) => {
   const env = browser(t), active = await env.start(100);
-  for (let index = 0; index < 40; index++) active.worklet.packet(new Int16Array(2048).fill(8192));
+  for (let index = 0; index < 120; index++) active.worklet.packet(new Int16Array(2048).fill(8192));
   const sample = await active.promise;
-  assert.equal(sample.length, 80000);
-  assert.equal(sample[79999], .25);
+  assert.equal(sample.length, 240000);
+  assert.equal(sample[239999], .25);
   assert.equal(active.track.stops, 1);
   assert.equal(active.context.closeCalls, 1);
   assert.equal(active.worklet.port.onmessage, null);
@@ -123,6 +123,18 @@ test('a shorter requested duration bounds both sample count and capture time', a
   active.worklet.packet(new Int16Array(2048).fill(1));
   assert.equal((await active.promise).length, 1600);
   assert.equal(active.track.stops, 1);
+});
+
+test('a requested fifteen-second comparison stays open after five seconds', async (t) => {
+  const env = browser(t), active = await env.start(15);
+  void active.promise.catch(() => {});
+  active.worklet.packet([10, 20]);
+  t.mock.timers.tick(5000);
+  assert.equal(active.track.stops, 0, 'a longer phrase must not be truncated at the old five-second cap');
+  t.mock.timers.tick(10000);
+  assert.equal(active.track.stops, 1);
+  t.mock.timers.tick(250);
+  assert.equal((await active.promise).length, 2);
 });
 
 test('wall deadline releases the microphone even when worklet packets stop', async (t) => {

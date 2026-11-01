@@ -41,7 +41,7 @@ export class WhisperBench {
       pending.resolve(data.result);
     };
     worker.onerror = () => {
-      if (this.worker === worker) this.close(new Error('Whisper stopped unexpectedly. Load it again to retry.'));
+      if (this.worker === worker) this.close(new Error('Whisper stopped unexpectedly. Run Whisper again to retry.'));
     };
     await this.request('load', {}, this.timeouts.load);
     if (this.worker !== worker) throw new Error('Whisper loading was cancelled.');
@@ -75,7 +75,7 @@ export class WhisperBench {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         if (this.worker === worker && this.pending.has(id)) {
-          this.close(new Error(`Whisper ${type === 'load' ? 'loading' : 'recognition'} timed out. Its worker was stopped. Try a shorter clip or reload the model.`));
+          this.close(new Error(`Whisper ${type === 'load' ? 'loading' : 'recognition'} timed out. Its worker was stopped. Try a shorter clip or run Whisper again.`));
         }
       }, timeout);
       this.pending.set(id, { resolve, reject, timer });

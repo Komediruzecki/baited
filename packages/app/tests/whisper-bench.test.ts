@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { WhisperBench, type BenchWorker } from '../client/speech-bench/whisper-client.js';
 import { verifyWhisperManifest } from '../client/speech-bench/manifest.js';
 import { ONNX_VERSION, TRANSFORMERS_VERSION, WHISPER_MODEL, WHISPER_REVISION } from '../client/speech-bench/whisper-client.js';
-import { decodeBenchAudio, inspectBenchWav, pcmFingerprint } from '../client/speech-bench/audio.js';
+import { decodeBenchAudio, inspectBenchWav, pcmFingerprint, previewWav } from '../client/speech-bench/audio.js';
 import { allowedSpeechAssetRequest } from '../client/speech-bench/asset-policy.js';
 
 class FakeWorker implements BenchWorker {
@@ -107,6 +107,16 @@ test('PCM fingerprint compares the decoded samples, including typed-array offset
   assert.notEqual(pcmFingerprint(pcm), pcmFingerprint(new Float32Array([.1, .2, .4])));
 });
 
+test('listening preview is a bounded playable WAV without changing the model input samples', async () => {
+  const pcm = new Float32Array(16000); pcm.set([-2, -.5, 0, .5, 2]);
+  const fingerprint = pcmFingerprint(pcm);
+  const preview = previewWav(pcm), bytes = await preview.arrayBuffer();
+  assert.equal(preview.type, 'audio/wav');
+  assert.deepEqual(inspectBenchWav(bytes), { duration: 1, channels: 1, sampleRate: 16000 });
+  assert.deepEqual([...new Int16Array(bytes, 44, 5)], [-32768, -16384, 0, 16384, 32767]);
+  assert.equal(pcmFingerprint(pcm), fingerprint);
+});
+
 function wav(seconds = 1, channels = 1, sampleRate = 8000, bits = 16, encoding = 1) {
   const blockAlign = channels * bits / 8, size = seconds * sampleRate * blockAlign;
   const buffer = new ArrayBuffer(44 + size), view = new DataView(buffer);
@@ -129,6 +139,8 @@ test('WAV preflight bounds channels, sample rate and duration before any browser
   // Node has no OfflineAudioContext. Rejection here proves validation precedes creating the decoder.
   await assert.rejects(decodeBenchAudio(new File([wav(61)], 'long.wav'), 60), /up to one minute/);
   await assert.rejects(decodeBenchAudio(new File(['compressed input'], 'clip.mp3')), /uncompressed PCM or float WAV/);
+  await assert.rejects(decodeBenchAudio({ size: 25 * 1024 * 1024 + 1,
+    arrayBuffer() { throw new Error('Oversized files must not be read.'); } } as unknown as File), /25 MB/);
 });
 
 test('WAV preflight rejects misleading frame metadata and incomplete payloads', () => {
