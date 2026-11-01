@@ -98,6 +98,52 @@ test('local catches stop before reveal and leave score, history and awards uncha
   assert.equal(f.game.transcript(f.transcript(), 'confirm'), false);
 });
 
+test('a revealed pending catch cannot become an escape through an unused guess, even after rejection', () => {
+  const f = fixture();
+  f.game.update({ ...f.game.data.settings, callBait: true });
+  f.game.begin();
+  const { id, epoch } = f.game.round!;
+  assert.equal(f.game.round!.guessEnabled, true);
+  assert.equal(f.game.round!.guessUsed, false);
+  const before = { ...f.game.score };
+
+  f.game.transcript(f.transcript(), 'confirm');
+  const revealed = f.game.view('studio');
+  assert.equal(revealed.phase, 'cooldown');
+  assert.equal(revealed.result?.outcome, 'review');
+  const learnedWord = revealed.result!.word!;
+  assert.ok(learnedWord, 'The attempted guess comes from the word Studio has just revealed.');
+  assert.throws(() => f.game.guess(id, epoch, learnedWord), /Only the current live word can be guessed/);
+  assert.equal(f.game.result?.outcome, 'review');
+  assert.equal(f.game.round!.guessUsed, false, 'Refusing the late guess does not spend a guess.');
+  assert.deepEqual(f.game.score, before);
+  assert.deepEqual(f.game.data.history, []);
+
+  f.game.decideCatch(id, 'reject');
+  assert.equal(f.game.result?.outcome, 'overturned');
+  assert.deepEqual(f.game.score, { ...before, played: before.played + 1 });
+  const rejectedHistory = structuredClone(f.game.data.history);
+  assert.deepEqual(rejectedHistory.map(result => ({ id: result.id, outcome: result.outcome })),
+    [{ id, outcome: 'overturned' }]);
+  assert.throws(() => f.game.guess(id, epoch, learnedWord), /Only the current live word can be guessed/);
+  assert.equal(f.game.result?.outcome, 'overturned');
+  assert.deepEqual(f.game.score, { ...before, played: before.played + 1 });
+  assert.deepEqual(f.game.data.history, rejectedHistory);
+
+  f.advance(f.game.data.settings.cooldown * 1000);
+  f.game.begin();
+  const next = f.game.round!;
+  assert.notEqual(next.id, id);
+  assert.notEqual(next.word, learnedWord, 'Rejecting the catch requires a fresh secret word.');
+  assert.throws(() => f.game.guess(id, epoch, learnedWord), /Only the current live word can be guessed/);
+  assert.equal(next.guessUsed, false, 'A stale request cannot consume the next word’s guess.');
+  assert.deepEqual(f.game.guess(next.id, next.epoch, next.word), { correct: true, bonus: 0 });
+  assert.equal(f.game.result?.outcome, 'escaped');
+  assert.equal(f.game.result?.reason, 'guess');
+  assert.deepEqual(f.game.data.history.slice(1), rejectedHistory);
+  assert.deepEqual(f.game.score, { ...before, played: before.played + 2 });
+});
+
 test('rejecting a local catch preserves the previous streak and requires a fresh word', () => {
   const f = fixture();
   f.game.begin();
