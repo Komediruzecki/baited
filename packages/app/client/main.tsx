@@ -99,6 +99,7 @@ import './solo-target.css';
 import { TranscriptPreview } from './TranscriptPreview';
 import { VoiceGuessControl } from './VoiceGuessControl';
 import { dispatchVoiceGuess, VoiceGuessSession, type VoiceGuessContext, type VoiceGuessDraft, type VoiceGuessSnapshot } from './voice-guess';
+import { emptyVoiceGuessSnapshot, VoiceGuessContextGate, voiceGuessActionContext, type VoiceGuessEligibility } from './voice-guess-context';
 import { readVoiceGuessPreference, saveVoiceGuessPreference } from './voice-guess-preference';
 import {
   canPreviewTranscript,
@@ -215,6 +216,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const voiceManualGuess = useRef(false);
   voiceManualGuess.current = modal === 'guess';
   const voiceSession = useRef(new VoiceGuessSession());
+  const voiceContextGate = useRef(new VoiceGuessContextGate());
   const [restartTakeId, setRestartTakeId] = useState<string | null>(null);
   const [cardsDirty, setCardsDirty] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
@@ -234,25 +236,28 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     offset = useRef(0);
   const now = useNow();
   const clearVoice = useCallback((message = '') => {
+    voiceContextGate.current.clear();
     voiceSession.current.clear();
     setVoicePending(voiceSession.current.snapshot());
     setVoiceMessage(message);
     setVoiceAnnouncement('');
   }, []);
-  const voiceContext = useCallback((s: Studio | null): VoiceGuessContext | null => {
-    const owner = capture.current, round = s?.room.round;
-    if (!voiceEnabledRef.current || voiceOffline.current || voiceRecovering.current || voiceManualGuess.current ||
-      !owner?.lease.active || !owner.microphone.enabled ||
-      !s || s.room.phase !== 'active' || !round?.guessEnabled || round.guessUsed) return null;
-    return { roundId: round.id, epoch: round.epoch, leaseId: owner.lease.id, takeId: s.room.recording?.takeId ?? '' };
+  const voiceEligibility = useCallback((s: Studio | null): VoiceGuessEligibility => {
+    const owner = capture.current;
+    return { room: s?.room ?? null, serverNow: Date.now() + offset.current, leaseId: owner?.lease.id ?? null,
+      enabled: voiceEnabledRef.current, offline: voiceOffline.current, recovering: voiceRecovering.current,
+      manualGuess: voiceManualGuess.current, leaseActive: !!owner?.lease.active, microphoneEnabled: !!owner?.microphone.enabled };
   }, []);
+  const voiceContext = useCallback((s: Studio | null): VoiceGuessContext | null =>
+    voiceGuessActionContext(voiceEligibility(s)), [voiceEligibility]);
   const receive = useCallback((s: Studio) => {
     offset.current = s.room.serverTime - Date.now();
     currentStudio.current = s;
-    voiceSession.current.setContext(voiceContext(s));
-    setVoicePending(voiceSession.current.snapshot());
+    const permission = voiceContextGate.current.update(voiceEligibility(s));
+    voiceSession.current.setContext(permission.context);
+    setVoicePending(permission.canAct ? voiceSession.current.snapshot() : emptyVoiceGuessSnapshot());
     setStudio(s);
-  }, [voiceContext]);
+  }, [voiceEligibility]);
   const shareVoiceDraft = useCallback(async (draft: VoiceGuessDraft) => {
     setVoiceAnnouncement('Asking Baity to share this guess…');
     try {
@@ -302,14 +307,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       // Finals spoken while this request was pending still need command
       // protection, but must not leave a second draft to submit afterward.
       if (sameRound()) {
-        voiceSession.current.clear();
-        setVoicePending(voiceSession.current.snapshot());
+        const permission = voiceContextGate.current.update(voiceEligibility(currentStudio.current));
+        if (!permission.context || permission.canAct) voiceSession.current.clear();
+        setVoicePending(permission.canAct ? voiceSession.current.snapshot() : emptyVoiceGuessSnapshot());
         setVoiceAnnouncement('');
       }
       voiceInFlight.current = false;
       setVoiceBusy(false);
     }
-  }, [clearVoice, receive, session.csrf, voiceContext]);
+  }, [clearVoice, receive, session.csrf, voiceContext, voiceEligibility]);
   const pauseForMicrophone = useCallback(
     async (owner: Capture, message?: string, refresh = true) => {
       owner.microphone.stop();
@@ -372,6 +378,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       .catch((e) => setError(e.message));
     return () => {
       transcriptBuffer.current.setEnabled(false);
+      voiceContextGate.current.clear();
       voiceSession.current.setContext(null);
       const owner = capture.current;
       capture.current = null;
@@ -380,6 +387,21 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     };
   }, [receive]);
   const g = studio?.room;
+  useEffect(() => {
+    if (g?.phase !== 'settling' || g.round?.settleUntil == null) return;
+    const round = g.round, settleUntil = g.round.settleUntil, owner = capture.current, takeId = g.recording?.takeId ?? '';
+    const timer = setTimeout(() => {
+      const current = currentStudio.current?.room;
+      if (capture.current !== owner || current?.phase !== 'settling' || current.round?.id !== round.id ||
+        current.round.epoch !== round.epoch || current.round.settleUntil !== settleUntil ||
+        (current.recording?.takeId ?? '') !== takeId) return;
+      voiceContextGate.current.clear();
+      voiceSession.current.setContext(null);
+      setVoicePending(emptyVoiceGuessSnapshot());
+      setVoiceAnnouncement('');
+    }, Math.max(0, settleUntil - (Date.now() + offset.current)));
+    return () => clearTimeout(timer);
+  }, [g?.phase, g?.round?.id, g?.round?.epoch, g?.round?.settleUntil, g?.recording?.takeId]);
   useEffect(() => {
     if (!voicePending.expiresAt) return;
     const timeout = setTimeout(() => {
@@ -537,7 +559,18 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
         (status) => {
           if (capture.current === owner) {
             setMicStatus(status);
-            if (status !== 'listening') { voiceSession.current.setContext(null); clearVoice(); }
+            if (status === 'listening') {
+              const permission = voiceContextGate.current.update(voiceEligibility(currentStudio.current));
+              voiceSession.current.setContext(permission.context);
+              setVoicePending(permission.canAct ? voiceSession.current.snapshot() : emptyVoiceGuessSnapshot());
+            }
+            if (status !== 'listening') {
+              const permission = voiceContextGate.current.update(voiceEligibility(currentStudio.current));
+              if (status === 'settling' && permission.context && !permission.canAct) {
+                voiceSession.current.setContext(permission.context);
+                setVoicePending(emptyVoiceGuessSnapshot());
+              } else { voiceSession.current.setContext(null); clearVoice(); }
+            }
           }
         },
         (value) => {
@@ -560,17 +593,21 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
         },
         (line, segment) => {
           if (capture.current !== owner) return false;
-          const context = voiceContext(currentStudio.current);
+          const permission = voiceContextGate.current.update(voiceEligibility(currentStudio.current));
+          const context = permission.context;
           if (!context || segment !== `${context.roundId}:${context.epoch}`) {
+            voiceContextGate.current.clear();
             voiceSession.current.setContext(null);
             return false;
           }
           voiceSession.current.setContext(context);
           const result = voiceSession.current.receive(line);
-          setVoicePending(voiceSession.current.snapshot());
+          setVoicePending(permission.canAct ? voiceSession.current.snapshot() : emptyVoiceGuessSnapshot());
           // Unrecognized speech can clear a stale draft or a split-command
           // prefix while still passing through ordinary word detection.
           if (!result.consumed) return false;
+          // Drain-time commands are protected speech, never a late draft or guess.
+          if (!permission.canAct) return true;
           // Keep recognizing command wording while a guess is in flight, so
           // repeats cannot become catches or start a second public/scoring request.
           if (voiceInFlight.current) {

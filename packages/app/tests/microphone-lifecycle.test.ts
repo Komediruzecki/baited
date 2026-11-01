@@ -3,7 +3,9 @@ import { test, type TestContext } from 'node:test';
 import { Microphone } from '../client/microphone';
 import type { MoonshineLine } from '../client/moonshine';
 import { VoiceGuessSession } from '../client/voice-guess';
+import { VoiceGuessContextGate, type VoiceGuessEligibility } from '../client/voice-guess-context';
 import { localTranscript } from '../server/local-speech';
+import { fixture } from './fixtures';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -113,11 +115,12 @@ function browser(t: TestContext, options: { holdModel?: boolean; resumeError?: E
   });
   const create = (provider: 'deepgram' | 'moonshine' = 'deepgram',
     onTranscript?: (line: MoonshineLine, segment: string) => void,
-    consumeFinal?: (line: MoonshineLine, segment: string) => boolean) => {
+    consumeFinal?: (line: MoonshineLine, segment: string) => boolean,
+    onStatus?: (status: string) => void) => {
     const statuses: string[] = [];
     const levels: number[] = [];
     const errors: string[] = [];
-    const microphone = new Microphone((value) => statuses.push(value), (value) => levels.push(value),
+    const microphone = new Microphone((value) => { statuses.push(value); onStatus?.(value); }, (value) => levels.push(value),
       (value) => errors.push(value), provider, onTranscript, consumeFinal);
     microphones.push(microphone);
     return { microphone, statuses, levels, errors };
@@ -173,6 +176,58 @@ test('Moonshine commands never reach scoring and do not leave gaps in final sequ
   env.workers[0].line(line('ordinary-2', 'Just keep talking'));
   assert.equal(JSON.parse(env.sockets[0].sent[1]).sequence, 2);
   assert.ok(previews.includes(command.text), 'commands remain visible in the local transcript');
+  assert.deepEqual(errors, []);
+});
+
+for (const split of [false, true]) test(`${split ? 'split' : 'whole'} calling final during settling stays protected without late actions`, async (t) => {
+  const env = browser(t), voice = new VoiceGuessSession(), gate = new VoiceGuessContextGate(), f = fixture();
+  f.game.data.settings.duration = 30; f.game.data.settings.callBait = true;
+  f.game.begin(); f.game.mic = 'listening'; f.game.round!.word = 'bait';
+  const round = f.game.round!, firstAudioAt = f.now(), actions: string[] = [];
+  const eligibility = (): VoiceGuessEligibility => ({ room: f.game.view('studio'), serverNow: f.now(),
+    leaseId: 'capture', enabled: true, microphoneEnabled: true, leaseActive: true,
+    offline: false, recovering: false, manualGuess: false });
+  const sync = () => { const permission = gate.update(eligibility()); voice.setContext(permission.context); return permission; };
+  const { microphone, errors, statuses } = env.create('moonshine', undefined, (line, segment) => {
+    const permission = sync();
+    if (!permission.context || segment !== `${permission.context.roundId}:${permission.context.epoch}`) return false;
+    const result = voice.receive(line, f.now());
+    if (permission.canAct) {
+      if (result.prepared) actions.push('share');
+      if (result.submit) actions.push('submit');
+    }
+    return result.consumed;
+  }, (status) => {
+    if (status === 'listening') sync();
+    else if (status !== 'settling' || !sync().context) { gate.clear(); voice.setContext(null); }
+  });
+  const enabling = microphone.enable(); env.requests[0].resolve(env.stream().value);
+  assert.equal(await enabling, true);
+  microphone.connect(round.id, round.epoch, 'csrf', 'capture');
+  await env.sockets[0].status('listening');
+  const line = (id: string, text: string): MoonshineLine => ({ id, text, isComplete: true,
+    startTime: 29, duration: 1, words: text.split(/\s+/).map(text => ({ text, start: 29.1, end: 29.9, confidence: 1 })),
+    isUpdated: true, isNew: true, hasTextChanged: true, haveSpeakersChanged: false,
+    lastTranscriptionLatencyMs: 0, speakerSpans: [],
+  });
+  f.advance(round.endsAt - f.now() - 500);
+  if (split) env.workers[0].line(line('prefix', 'I am calling the'));
+  f.advance(600); f.game.tick();
+  assert.equal(f.game.phase, 'settling');
+  sync(); // The Studio snapshot arrives before the microphone status changes.
+  microphone.suspend();
+  assert.equal(statuses.at(-1), 'settling');
+  env.workers[0].line(line('command', split ? 'bait fish lock in' : 'I am calling the bait fish lock in'));
+  assert.deepEqual(actions, [], 'Neither a public draft nor a scoring request is dispatched after the buzzer.');
+  assert.deepEqual(env.sockets[0].sent, [], 'The calling phrase never becomes catch evidence.');
+  env.workers[0].line(line('ordinary', 'You will never bait me'));
+  const wire = JSON.parse(env.sockets[0].sent[0]);
+  assert.equal(wire.sequence, 1, 'Consuming the delayed command does not create a sequence gap.');
+  const transcript = localTranscript(wire, { roundId: round.id, epoch: round.epoch,
+    firstAudioAt, audioSeconds: 30, lastSequence: 0 }, f.now());
+  assert.ok(transcript);
+  assert.equal(f.game.transcript(transcript), true, 'Ordinary BAIT captured before the buzzer still counts.');
+  assert.equal(f.game.result?.outcome, 'caught');
   assert.deepEqual(errors, []);
 });
 
