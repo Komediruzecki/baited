@@ -1,6 +1,6 @@
 # Baited error handling
 
-The app and landing use the Baited wordmark, existing pixel bomb, purple background and authored Baity copy for page-level failures. The illustration settles once on entry; reduced-motion users get a still page.
+The app and landing use the Baited wordmark, centered 404 or exclamation mark, purple background and authored Baity copy for page-level failures. The large status mark settles once on entry; reduced-motion users get a still page.
 
 | Failure | What the user sees | Recovery |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ Microphone, gameplay, form-validation and live-connection controls retain their 
 - Real HTML navigation receives the branded document while preserving its HTTP status. API/service routes retain JSON, including when a caller asks for HTML.
 - Unknown Node app routes no longer turn into Studio. Vite handles its module/static requests, then an exact route list controls the app fallback. Missing scripts and service routes return 404 rather than HTML 200.
 - Cloudflare's static assets have a generated `404.html` and `404-page` handling. The Worker-first route list stays narrow; this adds no blanket Worker invocation for every image, font or page miss.
-- Pilot assets explicitly include the stylesheet, fonts, logo and bomb. The landing build adds its own standalone 404 and uses existing landing artwork.
+- Pilot assets explicitly include the stylesheet, fonts and logo. The landing build adds its own standalone 404 and uses existing landing artwork.
 - No exception stack, supplied URL, query, OAuth code or overlay capability is interpolated into the error page. Response cookies, rate-limit headers and HEAD behavior are preserved.
 - Standalone error documents need no JavaScript. Their CSP permits only local styles, images and fonts. React's error boundary covers render/lazy-component failures; session loading has its own recovery state.
 

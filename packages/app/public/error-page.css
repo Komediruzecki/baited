@@ -7,20 +7,17 @@
 .baited-error-overlay h1 { font: 600 15px/1.4 'Baited Error Inter', Inter, system-ui, sans-serif; margin: 10px 0 4px; color: #fffdf7; }
 .baited-error-overlay p { margin: 0; color: #ded4e9; }
 .baited-error-document { margin: 0; background: #1d0b45; }
-.baited-error { --error-paper: #fffdf7; box-sizing: border-box; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(260px, .9fr) minmax(0, 1fr); align-content: center; align-items: center; gap: 48px; min-height: 100svh; padding: 120px max(32px, calc((100vw - 1080px) / 2)) 72px; overflow: clip; color: var(--error-paper); background: radial-gradient(ellipse at 18% 43%, #6634b3 0, #3a1680 35%, #1d0b45 76%); font: 400 16px/1.6 'Baited Error Inter', Inter, system-ui, sans-serif; }
+.baited-error { --error-paper: #fffdf7; box-sizing: border-box; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; justify-items: center; gap: 8px; text-align: center; min-height: 100svh; padding: 130px 32px 72px; overflow: clip; color: var(--error-paper); background: radial-gradient(ellipse at 18% 43%, #6634b3 0, #3a1680 35%, #1d0b45 76%); font: 400 16px/1.6 'Baited Error Inter', Inter, system-ui, sans-serif; }
 .baited-error *, .baited-error *::before, .baited-error *::after { box-sizing: border-box; }
-.baited-error__brand { position: absolute; top: 32px; left: max(32px, calc((100vw - 1080px) / 2)); display: block; width: 142px; padding: 10px 0; }
+.baited-error__brand { position: absolute; top: 32px; left: 50%; transform: translateX(-50%); display: block; width: 142px; padding: 10px 0; }
 .baited-error__brand img { display: block; width: 100%; height: auto; }
-.baited-error__scene { position: relative; display: grid; place-items: center; aspect-ratio: 1; min-width: 0; }
-.baited-error__orbit { position: absolute; inset: 8% 3%; border: 1px solid #b684f766; transform: rotate(-13deg); border-radius: 42% 42% 8% 8%; }
-.baited-error__orbit::after { content: ''; position: absolute; inset: 12px; border: 1px solid #c9a8ff33; border-radius: inherit; }
-.baited-error__mark { position: absolute; top: 5%; left: 50%; transform: translateX(-50%); font: 400 clamp(100px, 15vw, 172px)/1 'Baited Error Display', Impact, sans-serif; letter-spacing: -.04em; color: #c9a8ff; opacity: .3; white-space: nowrap; }
-.baited-error__bomb { position: relative; display: block; width: min(54%, 210px); height: auto; margin-top: 38px; image-rendering: pixelated; filter: drop-shadow(8px 14px 0 #150a3055); transform: rotate(-9deg); animation: baited-error-settle 550ms cubic-bezier(.16, 1, .3, 1) both; }
-.baited-error__copy { min-width: 0; padding: 20px 0; }
+.baited-error__scene { display: grid; place-items: center; width: min(100%, 360px); height: 180px; min-width: 0; }
+.baited-error__mark { display: block; font: 400 clamp(120px, 16vw, 176px)/1 'Baited Error Display', Impact, sans-serif; letter-spacing: -.04em; color: #c9a8ff; opacity: .6; white-space: nowrap; animation: baited-error-settle 550ms cubic-bezier(.16, 1, .3, 1) both; }
+.baited-error__copy { min-width: 0; width: min(100%, 640px); padding: 20px 0; }
 .baited-error__speaker { margin: 0 0 10px; color: #d9c5fa; font-size: 14px; font-weight: 600; }
-.baited-error h1 { margin: 0; max-width: 13ch; color: var(--error-paper); font: 400 clamp(32px, 4.3vw, 56px)/1.08 'Baited Error Display', Impact, sans-serif; letter-spacing: -.03em; text-wrap: balance; }
-.baited-error__detail { margin: 22px 0 0; max-width: 40ch; color: #e0d3f2; font-size: 17px; line-height: 1.65; }
-.baited-error__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 30px; }
+.baited-error h1 { margin: 0 auto; max-width: 20ch; color: var(--error-paper); font: 400 clamp(32px, 4.3vw, 56px)/1.08 'Baited Error Display', Impact, sans-serif; letter-spacing: -.03em; text-wrap: balance; }
+.baited-error__detail { margin: 22px auto 0; max-width: 40ch; color: #e0d3f2; font-size: 17px; line-height: 1.65; }
+.baited-error__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 24px; margin-top: 30px; }
 .baited-error__primary, .baited-error__secondary { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; text-decoration: none; font: 650 15px/1.3 'Baited Error Inter', Inter, system-ui, sans-serif; cursor: pointer; }
 .baited-error__primary { gap: 24px; padding: 13px 18px; border: 1px solid #fffdf7; border-radius: 7px; background: #fffdf7; color: #211035; box-shadow: 0 4px 0 #150a30; transition: transform 160ms ease, box-shadow 160ms ease; }
 .baited-error__primary span { font-size: 22px; line-height: 1; }
@@ -32,13 +29,12 @@
 .baited-error__code { margin: 38px 0 0; color: #c9b6e3; font-size: 12px; }
 .baited-error__code span { margin: 0 9px; opacity: .6; }
 .baited-error__status { color: #e0d3f2; font-size: 14px; margin: 14px 0 0; }
-@keyframes baited-error-settle { from { transform: translateY(-10px) rotate(-13deg); } to { transform: translateY(0) rotate(-9deg); } }
+@keyframes baited-error-settle { from { transform: translateY(-8px); opacity: .3; } to { transform: translateY(0); opacity: .6; } }
 @media (max-width: 640px) {
   .baited-error { grid-template-columns: minmax(0, 1fr); gap: 0; align-content: start; padding: 102px 24px 36px; }
-  .baited-error__brand { top: 22px; left: 24px; width: 122px; }
-  .baited-error__scene { width: min(100%, 260px); justify-self: center; }
+  .baited-error__brand { top: 22px; width: 122px; }
+  .baited-error__scene { width: min(100%, 260px); height: 150px; }
   .baited-error__mark { font-size: 120px; }
-  .baited-error__bomb { width: 48%; margin-top: 26px; }
   .baited-error__copy { padding-top: 28px; }
   .baited-error h1 { max-width: 15ch; font-size: clamp(30px, 9vw, 40px); }
   .baited-error__detail { font-size: 16px; margin-top: 16px; }
@@ -46,7 +42,7 @@
   .baited-error__code { margin-top: 28px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .baited-error__bomb { animation: none; }
+  .baited-error__mark { animation: none; }
   .baited-error__primary { transition: none; }
   .baited-error__primary:hover, .baited-error__primary:active { transform: none; }
 }
@@ -54,5 +50,5 @@
   .baited-error { background: Canvas; color: CanvasText; }
   .baited-error h1, .baited-error__detail, .baited-error__speaker, .baited-error__code { color: CanvasText; }
   .baited-error__primary { border: 1px solid ButtonText; box-shadow: none; }
-  .baited-error__mark, .baited-error__orbit { display: none; }
+  .baited-error__mark { color: CanvasText; opacity: 1; animation: none; }
 }

@@ -44,7 +44,7 @@ test('standalone error HTML has recovery without JavaScript or sensitive dynamic
   assert.match(html, /href="\/error-page.css"/);
   assert.doesNotMatch(html, /<script|<style|onclick|location\.reload|callback\?|stack|token/i);
   assert.match(renderErrorDocument('missing', 'landing'), /href="\/"/);
-  assert.match(renderErrorDocument('missing', 'landing'), /assets\/bait-bomb-logo.png/);
+  assert.doesNotMatch(renderErrorDocument('missing', 'landing'), /bomb|__orbit/);
 });
 
 test('HTTP failures retain distinct user guidance instead of being labelled missing pages', () => {

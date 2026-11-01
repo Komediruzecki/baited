@@ -65,13 +65,12 @@ export function renderErrorDocument(kind = 'missing', surface = 'app', overlay =
   const landing = surface === 'landing';
   const home = landing ? '/' : '/studio';
   const logo = landing ? '/assets/brand/baited-pixel-white.svg' : '/brand/baited-pixel-white.svg';
-  const bomb = landing ? '/assets/bait-bomb-logo.png' : '/brand/bait-bomb.png';
   const action = landing ? 'Back to Baited' : 'Back to Studio';
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><meta name="color-scheme" content="dark"><title>${escapeHtml(copy.code)} · Baited</title><link rel="stylesheet" href="/error-page.css"></head>
 <body class="baited-error-document"><main class="baited-error" aria-labelledby="error-title">
 <a class="baited-error__brand" href="${home}" aria-label="Baited home"><img src="${logo}" alt="Baited" width="185" height="50"></a>
-<div class="baited-error__scene" aria-hidden="true"><span class="baited-error__orbit"></span><span class="baited-error__mark">${escapeHtml(copy.code === '404' ? '404' : '!')}</span><img class="baited-error__bomb" src="${bomb}" alt="" width="153" height="167"></div>
+<div class="baited-error__scene" aria-hidden="true"><span class="baited-error__mark">${escapeHtml(copy.code === '404' ? '404' : '!')}</span></div>
 <div class="baited-error__copy"><p class="baited-error__speaker">Baity says</p><h1 id="error-title">${escapeHtml(copy.title)}</h1><p class="baited-error__detail">${escapeHtml(copy.detail)}</p><div class="baited-error__actions"><a class="baited-error__primary" href="${home}">${action}<span aria-hidden="true">↗</span></a><a class="baited-error__secondary" href="mailto:hello@irchiinnuss.com">Get help</a></div><p class="baited-error__code">${escapeHtml(copy.code)} <span aria-hidden="true">/</span> Baited</p></div>
 </main></body></html>`;
 }

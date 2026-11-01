@@ -9,7 +9,7 @@ export default defineConfig({
     host: '127.0.0.1',
     fs: {
       strict: true,
-      allow: ['client', 'shared', 'public', 'node_modules', 'index.html'].map((p) => resolve(p)),
+      allow: ['client', 'shared', 'public', 'node_modules', 'index.html', 'extension/assets/back-prism.webp'].map((p) => resolve(p)),
       deny: ['.env', '.env.*', '**/data/**', '**/*.pem', '**/*.key', '**/.git/**'],
     },
   },

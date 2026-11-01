@@ -14,7 +14,7 @@ const output = resolve(edge, 'dist/pilot-assets');
 const runtime = dirname(requireApp.resolve('@moonshine-ai/moonshine-wasm/moonshine.mjs'));
 const publicAssets = [
   'pcm-worklet.js', 'moonshine-worker.js', 'brand/baited-pixel-white.svg',
-  'error-page.css', 'brand/bait-bomb.png',
+  'error-page.css',
   ...streakFlameFiles.map((file) => `brand/${file}`),
   'fonts/inter-latin.woff2', 'fonts/intertight-latin.woff2', 'fonts/russo-one.ttf', 'fonts/baited-pixel.ttf',
   'card-lab/backs/back-prism.webp',
