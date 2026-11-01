@@ -1,10 +1,10 @@
 # Assets and source
 
-[`Komediruzecki/baited/packages/landing`](https://github.com/Komediruzecki/baited/tree/feat/baited-workspace/packages/landing) is the canonical runtime landing, including every asset it serves. It was imported from `disjoint-colliders/packages/bait` at [`87bfc5d96bd63c39b30d39c8d7d245bd7252b578`](https://github.com/Komediruzecki/disjoint-colliders/tree/87bfc5d96bd63c39b30d39c8d7d245bd7252b578/packages/bait). [IMPORT-MANIFEST.json](IMPORT-MANIFEST.json) records the original file hashes and Git blobs; approved artwork, fonts and videos are preserved byte-for-byte by this migration. The hero film was later rendered again without yellow, then with the original BAITED wordmark replacing its earlier bomb identity; see “Staged hero film”. Hostname allowlists, redirects and HTML canonical metadata were subsequently updated for `baited.maff.app` and `dev.baited.maff.app`; their integration hashes are recorded separately.
+[`Komediruzecki/baited/packages/landing`](https://github.com/Komediruzecki/baited/tree/main/packages/landing) is the canonical runtime landing, including every asset it serves. It was imported from a private upstream snapshot at revision `87bfc5d96bd63c39b30d39c8d7d245bd7252b578`. [IMPORT-MANIFEST.json](IMPORT-MANIFEST.json) records the original file hashes and Git blobs; approved artwork, fonts and videos are preserved byte-for-byte by this migration. The hero film was later rendered again without yellow, then with the original BAITED wordmark replacing its earlier bomb identity; see “Staged hero film”. Hostname allowlists, redirects and HTML canonical metadata were subsequently updated for `baited.maff.app` and `dev.baited.maff.app`; their integration hashes are recorded separately.
 
 The original landing grew from [`packages/app/concepts/bait-v2`](../app/concepts/bait-v2), introduced in the game repository at `d8732aa` with the BAIT v2 local mockup and hero film. That concept directory now preserves design and renderer history; do not synchronize it over this package. Raw HyperFrames sources remain in the private game package. The finished hero films, posters, chapter frames, captions and the island image are tracked here.
 
-The upstream repository's MIT license is preserved verbatim in [LICENSE.disjoint-colliders](LICENSE.disjoint-colliders), including its copyright notice. Specific font licenses and the artwork provenance below remain separate; the imported repository license is not a new license grant for every referenced or generated asset.
+The upstream repository's MIT license is preserved verbatim in [LICENSE.upstream](LICENSE.upstream), including its copyright notice. Specific font licenses and the artwork provenance below remain separate; the imported repository license is not a new license grant for every referenced or generated asset.
 
 ## Cards and identity
 
@@ -37,7 +37,7 @@ The earlier A/B/C proofs were generated with an image model. B (hook in the T) w
 
 Every interface icon is original pixel art drawn for this landing on a small grid (arrows, chat bubble, play, pause, sound and microphone), one SVG path per icon with square pixels. One reference site informed the pixel buttons, the pixel curtain and the floating navigation, and another the centred phone hero and the viewfinder corners around the film; no code, image or icon was copied from either. The footer credit now uses the same Inter type as its navigation. The original Irchiinnuss assets remain preserved for future use:
 
-- `site/assets/irchiinnuss-wordmark.svg`: originally `disjoint-colliders/packages/brand/wordmarks/irchiinnuss-wordmark.svg`; the copied SVG is self-contained.
+- `site/assets/irchiinnuss-wordmark.svg`: originally the upstream brand wordmark; the copied SVG is self-contained.
 - `site/assets/irchiinnuss-mark.svg`: preserved from the previous landing package, currently unused by v2.
 
 ## Hero film: the trailer

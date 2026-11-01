@@ -1,6 +1,6 @@
 # BAITED identity preview — 26 October 2026
 
-> Historical design and verification record from disjoint-colliders revision `87bfc5d96bd63c39b30d39c8d7d245bd7252b578`. The maintained landing now lives in `Komediruzecki/baited/packages/landing`; see [the package README](../README.md) for current commands and deployment status. Prior verification and release statements below refer to the recorded source revision, not this migration.
+> Historical design and verification record from private upstream revision `87bfc5d96bd63c39b30d39c8d7d245bd7252b578`. The maintained landing now lives in `Komediruzecki/baited/packages/landing`; see [the package README](../README.md) for current commands and deployment status. Prior verification and release statements below refer to the recorded source revision, not this migration.
 
 
 ## Direction and source

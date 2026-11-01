@@ -1,55 +1,64 @@
 # Judge walkthrough
 
-## Current access
+Baited gives Twitch viewers a secret word and asks them to make the streamer say it through ordinary conversation. This guide offers a self-run local test and explains what is needed for hosted Twitch access.
 
-Use the [feat/bait-preview candidate branch](https://github.com/Komediruzecki/bait/tree/feat/bait-preview), with authorized access to the private repository. The imported `main` branch preserves the original package. Verify the candidate's final pushed revision before judging.
+## Access and tested scope
 
-The repository runs locally with the README commands. The local demo is free and needs no credentials. An externally accessible live Twitch deployment has not yet been configured. The project owner must add the tested HTTPS URL and Twitch channel here before submission; no placeholder URL should be submitted as a working demo.
+The source repository is [Komediruzecki/baited](https://github.com/Komediruzecki/baited). Use the submitted revision identified by the team. If it is private, repository access must be granted before cloning; this document does not establish that an invitation has been accepted.
 
-The operator should provide the configured speech service and hosting free of charge to judges, with a broadcaster available to enable their microphone. Judges should not need to buy a provider plan or receive client secrets.
+The [Cloudflare pilot Studio](https://pilot-baited.maff.app/studio) is running for two invited streamer channels. The project owner has tested live play on desktop and iOS. Each channel has a limit of 100 distinct participants per round and 100 concurrent viewer connections. The pilot uses Moonshine and the built-in 100-card deck.
 
-## Local core test, about two minutes
+The pilot URL does not automatically authorize a judge's Twitch account or a new channel. The native Extension remains in **Hosted Test**, so testing its real Twitch views requires configured tester access plus installation and activation on an allowed channel. Arrange that session with the project team before relying on it for judging. The Extension is not offered as a publicly installable directory release.
 
-1. Install with `pnpm install --frozen-lockfile`. For this improvement checkout, build and start the isolated compiled preview using [local-preview.md](local-preview.md); open its verified URL. A normal development checkout can use `pnpm dev` at `http://localhost:3000`.
-2. Select **Try the local demo**. Start a round.
-3. Open the viewer-room link in a second tab. The word appears there and stays absent from the studio.
-4. In the studio’s Demo controls, send chat under a test chatter name. The unique participant count increases. Repeated messages under the same name do not create extra participants.
-5. Send a simulated final transcript containing the viewer’s word. Studio and viewer reveal the result and record one community win.
-6. Reverse the detection and verify the win and streak are restored. The round stays closed.
-7. In Stream setup, preview the OBS URL. It receives read-only game state. After cooldown, start another round and confirm its target stays absent from OBS.
+The local demo below needs no credentials or paid service. It exercises the actual game with fixture chat and optional physical microphone recognition; it does not prove a Twitch connection on the judge's device. A separate Extension workbench shows the real panel/config frontend with local fixtures. These routes make the game inspectable without handing judges broadcaster secrets.
 
-This demo uses simulated Twitch and speech inputs. Live integration checks are listed below.
+## Run the local demo
 
-## Clues, awards and missions
+Use Node 24 and pnpm 10.34.3. From the repository root:
 
-The [quick rules](quick-rules.md) teach the core game in three steps. For the extra modes:
+```sh
+pnpm install --frozen-lockfile
+pnpm --filter @baited/app build
+pnpm preview:local
+```
 
-1. In Game settings, select Medium or Hard, Three-word mission, and Call the bait. Set a five-minute session timer for this check.
-2. Start the mission. The viewer sees one target and two or four forbidden clues. The studio and OBS show the clock and progress without that information.
-3. Send a simulated forbidden-clue hint, then a clean hint under the same test chatter. The round continues. Submit the exact target through the simulated transcript field.
-4. In You baited me, check that the first hint is flagged and the clean hint can be selected. Pick it. Public views show the name with “Streamer’s pick.” The award does not add another community win.
-5. After cooldown, the second target starts on the same clock even with automatic rounds off. Repeat until three words are landed. The mission completes and its time freezes.
-6. Reverse the third win before the next word starts. Progress returns to two of three and a fresh target replaces the revealed one.
-7. On a live word, submit a wrong private guess: the attempt is consumed and the clock gains fifteen seconds. On another word, submit the correct guess: the streamer escapes the word and mission. Guess text does not appear in public views.
+Open [http://127.0.0.1:3318](http://127.0.0.1:3318). The fixed-port preview stops after three hours or **Ctrl+C**. Rebuild after source changes. [Setup details](GETTING_STARTED.md) cover cloning and troubleshooting the separate live configuration.
 
-Hints are retained only within the documented review limits; private guess text is not retained. See [mechanics.md](mechanics.md).
+1. Choose **Try the local demo**, then start a round in Studio.
+2. Open the viewer-room link from **Stream setup** in another tab. The viewer sees the word; Studio keeps it hidden during the round.
+3. Use **Demo controls** to send chat under a test chatter name. Reusing the same name does not create another participant.
+4. Send a simulated final transcript containing the target. Check the catch/result and shared score. If a review is pending, confirm it.
+5. Reverse the confirmed catch. The score and streak are corrected; the revealed round stays closed.
+6. Open the OBS preview from **Stream setup**. It is read-only. Start another word after cooldown and confirm that its active target is absent from OBS.
 
-## Real Twitch acceptance, after configuration
+For a physical microphone check, turn on the microphone and wait for Moonshine to become ready. Start a fresh round after cooldown, open **Solo test → Reveal secret word**, then say the target in a sentence. A detected catch stops the round and has a 15-second rejection window before automatic confirmation. This is a device-specific recognition check, not an accuracy benchmark. Use headphones.
 
-Use a streamer account and a different viewer account. Keep keys in Proton Pass and inject them with the reference-only configuration in [deployment-runbook.md](deployment-runbook.md). The current local preview intentionally has no live keys.
+## Try Call the bait
 
-1. Complete Twitch authorization and wait for a connected status. Before arming the microphone, confirm a real round cannot start. Enable the physical microphone through the consent flow, then confirm it can start.
-2. Copy the public viewer URL to the second account. Add the read-only OBS source to the live scene.
-3. Start a round. Send a subtle Twitch chat message and verify participation increments. Check that repeated chat does not multiply one person’s participation.
-4. Have the streamer say a substring or plural of the target first; it must not win. Then say the exact target clearly. Confirm one shared victory on all three views.
-5. Reverse a deliberate incorrect result; verify score correction and a new target next round.
-6. Pause/resume and verify no speech during the pause can trigger the resumed round.
-7. Temporarily interrupt network access, restore it, and verify EventSub reconnects. Reload a viewer page and verify the same authoritative timer and score.
-8. Test `!skip` with the configured number of distinct viewers. Do not give multiple votes to one account.
-9. Revoke access in Twitch connection settings and confirm the studio session stops being authorized. Reconnect to continue.
-10. Speak a normal long sentence with the target near its end. Confirm unrelated low-confidence words do not alone discard a clear target. Record misses and provider latency rather than describing one successful utterance as an accuracy benchmark.
-11. Say the target just before zero and separately after zero. The server may wait up to 1.5 seconds for a final result from pre-deadline speech; post-deadline speech must not win. Record what actually happens.
-12. Disable or unplug the microphone and verify live play pauses, including with automatic rounds enabled. Re-enable and resume. Close or sign out of the owning studio and confirm a stale session cannot keep authorizing the microphone.
-13. Open a second studio tab. Confirm it cannot keep the first tab's capture authorized after that capture is stopped. Reconnect the real capture and verify it requires its own readiness lease rather than a delayed renewal reviving it.
+Enable **Call the bait** in Game settings before starting a fresh word. It permits one guess per word.
 
-Record the date, browser, account/channel, observed outcomes and any failures in `validation.md`. Keep a short live capture. Do not mark these steps passed from fixture tests alone.
+- Submit a wrong typed guess. The guess is used and chat gains 15 seconds.
+- On a different word, submit the correct guess to escape. Keep optional Baity chaos off for this basic rules check.
+- On another fresh word, enable **Voice guesses** and the microphone. Say **“I am calling the bait, banana, lock in”**, replacing banana with the demo target. A recognized combined command submits without requiring pauses. Leave off the lock phrase to inspect the draft first; it expires after 15 seconds.
+
+Speech recognition can miss a command. Once the guess is used, saying the target still counts. Once a possible catch reveals a word, it cannot be converted into an escape, even if the catch is rejected. Voice drafts may be announced when the bot is connected and announcements are enabled; typed guesses do not request public draft announcements.
+
+## Inspect the native views
+
+Run in a second terminal from the repository root:
+
+```sh
+pnpm preview:extension
+```
+
+Open [http://127.0.0.1:3322](http://127.0.0.1:3322). Compare viewer and broadcaster fixtures, phone/panel sizes, active rounds and results. This fixed-port preview stops after three hours or **Ctrl+C** and does not authorize or install anything on Twitch.
+
+## Arrange a hosted Twitch session
+
+Before the session, the team should confirm the judge's required access, an allowed broadcaster, the active Extension version and a free testing window. Use a separate viewer account and keep the viewer card out of the broadcast scene.
+
+During the session, check real chat participation, the secret card, the OBS clock and a catch from the broadcaster's physical microphone. Try pause/resume and a new word after the result. Record device/browser and observed behavior; successful fixture tests do not establish those live outcomes. Do not paste keys or broadcaster tokens into a judging form.
+
+Moonshine processes English audio locally. Only final transcript text and timing reach the game server. [Speech Lab](https://pilot-baited.maff.app/speech-lab) is a separate local-audio comparison tool. Whisper there cannot replace Studio's recognizer or score a round.
+
+The submission must provide the access needed for free testing through judging. A video, reachable Studio page or private repository URL alone is not proof of that access. [Hackathon requirements](hackathon-requirements.md) records the current deadline and freeze instructions.
