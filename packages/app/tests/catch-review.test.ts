@@ -117,7 +117,7 @@ test('a revealed pending catch cannot become an escape through an unused guess, 
   assert.equal(f.game.result?.outcome, 'review');
   assert.equal(f.game.round!.guessUsed, false, 'Refusing the late guess does not spend a guess.');
   assert.deepEqual(f.game.score, before);
-  assert.deepEqual(f.game.data.history, []);
+  assert.equal(f.game.data.history.length, 0);
 
   f.game.decideCatch(id, 'reject');
   assert.equal(f.game.result?.outcome, 'overturned');
