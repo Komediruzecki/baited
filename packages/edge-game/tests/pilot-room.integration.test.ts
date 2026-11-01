@@ -33,6 +33,7 @@ interface FixtureStub {
   voiceDraftCurrentFixture(ref:Record<string,unknown>):Promise<boolean>;
   operatorFixture(enabled:boolean,revision:number,fail?:boolean):Promise<{status:number;body:unknown}>;
   bootstrapFixture(): Promise<number>;
+  enableBotRepliesFixture(channelId?: string, login?: string): Promise<number>;
   inspectFixture(): Promise<Inspection>;
   reconcileAtFixture(at: number): Promise<Inspection>;
   chatFixture(event: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }>;
@@ -115,12 +116,16 @@ before(async () => {
             if(this.failNextSchedule) {this.failNextSchedule=false;throw new Error('fixture_audio_alarm_failure');}
             return super.schedule(...args);
           }
-          async bootstrapFixture() {
+          async bootstrapFixture(channelId='123',login='komediruzecki7') {
             this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS fixture_lease_writes(id INTEGER PRIMARY KEY,n INTEGER NOT NULL); INSERT OR IGNORE INTO fixture_lease_writes VALUES(1,0)');
             this.ctx.storage.sql.exec("CREATE TRIGGER IF NOT EXISTS fixture_count_lease_writes AFTER UPDATE ON pilot_state WHEN json_extract(OLD.body,'$.lease.expiresAt') < json_extract(NEW.body,'$.lease.expiresAt') BEGIN UPDATE fixture_lease_writes SET n=n+1 WHERE id=1; END");
             return (await this.fetch(new Request('https://room.internal/internal/control', {
-              method:'POST', body:JSON.stringify({channelId:'123', login:'komediruzecki7', type:'connection', status:'connected',connectionRevision:1})
+              method:'POST', body:JSON.stringify({channelId, login, type:'connection', status:'connected',connectionRevision:1})
             }))).status;
+          }
+          async enableBotRepliesFixture(channelId='123',login='komediruzecki7') {
+            const status=await this.bootstrapFixture(channelId,login);
+            this.game.data.settings.chatBot=true;return status;
           }
           async inspectFixture() {
             const self = this;
@@ -1551,6 +1556,33 @@ test('pilot canonicalizes public bot commands and aliases without losing replies
       assert.equal((await stub.inspectFixture()).phase,'idle','A public command cannot start gameplay.');
     } finally {await mf.dispose();}
   }
+});
+
+test('Room public reply cooldowns open at 15 seconds per channel and user without crossing channels', {timeout:15_000}, async () => {
+  const { mf, stub } = await runtime();
+  try {
+    assert.equal(await stub.enableBotRepliesFixture(), 200);
+    const namespace = await mf.getDurableObjectNamespace('ROOMS');
+    const other = namespace.get(namespace.idFromName('channel:456')) as unknown as FixtureStub;
+    assert.equal(await other.enableBotRepliesFixture('456', 'lakeeko'), 200);
+    const base = Date.now() + 1000;
+    const post = async (room: FixtureStub, channelId: string, at: number, userId: string, text: string) => {
+      await room.freezeAtFixture(at);
+      return room.chatFixture({ eventId: randomUUID(), messageId: randomUUID(), channelId, at,
+        kind: 'message', userId, name: 'viewer', text });
+    };
+    const accepted = (result: { status: number; body: Record<string, unknown> }) => {
+      assert.equal(result.status, 200); assert.equal(result.body.ignored, undefined);
+    };
+    accepted(await post(stub, '123', base, '555', '!bait help'));
+    const sameUser = await post(stub, '123', base + 14_999, '555', '!bait score');
+    assert.equal(sameUser.body.reason, 'no_change');
+    const otherUser = await post(stub, '123', base + 14_999, '556', '!bait who');
+    assert.equal(otherUser.body.reason, 'no_change');
+    accepted(await post(other, '456', base + 14_999, '555', '!bait help'));
+    accepted(await post(stub, '123', base + 15_000, '555', '!bait score'));
+    accepted(await post(stub, '123', base + 30_000, '556', '!bait who'));
+  } finally { await mf.dispose(); }
 });
 
 test('chat-command cooldowns preserve outbox capacity for a round event', {timeout:15_000}, async () => {

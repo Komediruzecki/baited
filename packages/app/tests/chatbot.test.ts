@@ -397,6 +397,28 @@ test('demo rooms preview posts in the studio with Twitch pacing and newest-wins 
   assert.ok(recent().every((post) => !matches(post.text, f.game.round!.word)));
 });
 
+test('public reply cooldowns open at 15 seconds per command and chatter, independently per room', async (t) => {
+  const store = await tempStore(t);
+  let now = 3_000_000;
+  const bot = new ChatBot({ config: loadConfig({}), store, ready: () => null, clock: () => now });
+  const first = new Game(saved({ id: 'cooldown-first', mode: 'demo' }), () => now);
+  const second = new Game(saved({ id: 'cooldown-second', owner: '456', channel: 'second', mode: 'demo' }), () => now);
+  bot.chat(first, message('!bait help', { userId: 'same-viewer' }));
+  assert.equal(bot.status(first).recent.length, 1);
+  now += 14_999;
+  bot.chat(first, message('!bait score', { userId: 'same-viewer' }));
+  bot.chat(first, message('!bait help', { userId: 'other-viewer' }));
+  assert.equal(bot.status(first).recent.length, 1, 'Neither cycling commands nor changing user bypasses its gate.');
+  bot.chat(second, message('!bait help', { userId: 'same-viewer' }));
+  assert.equal(bot.status(second).recent.length, 1, 'A different room has its own gates.');
+  now++;
+  bot.chat(first, message('!bait score', { userId: 'same-viewer' }));
+  assert.equal(bot.status(first).recent.length, 2, 'The same user can ask another command at exactly 15 seconds.');
+  bot.chat(first, message('!bait help', { userId: 'other-viewer' }));
+  now += LIMITS.channelGap; bot.tick(first);
+  assert.equal(bot.status(first).recent.length, 3, 'Another user can repeat the original command at the same boundary.');
+});
+
 test('one chatter cycling commands gets one answer, and replies never crowd out announcements', async (t) => {
   const store = await tempStore(t);
   let now = 3_000_000;
@@ -430,9 +452,13 @@ test('one chatter cycling commands gets one answer, and replies never crowd out 
   step();
   assert.equal(recent().length, LIMITS.channelCount);
   assert.match(recent()[0].text, /^(back on|unpaused)\b/i);
-  // The cycler can ask again once their own cooldown has passed.
+  // The cycler can ask again after 15 seconds, but the unchanged rolling
+  // reply budget can still make that accepted request wait for a send slot.
+  const previous = recent()[0];
   now += LIMITS.chatterCooldown;
   bot.chat(f.game, message('!bait score', { userId: 'cycler' }));
+  step();
+  assert.equal(recent()[0], previous, 'A shorter command cooldown must not bypass the public send budget.');
   step();
   assert.match(recent()[0].text, /^(chat's record|scoreboard): /);
 });

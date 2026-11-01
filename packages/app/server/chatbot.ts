@@ -9,6 +9,7 @@ import { botKey, CHANNEL_BOT_SCOPE, type ChatMessage } from './twitch.js';
 import { voiceDraftCurrent, voiceDraftText, voiceDraftWord, VOICE_DRAFT_TTL, type VoiceDraftRef, type VoiceDraftState } from './voice-draft.js';
 import {
   badgeAnnouncement,
+  BOT_REPLY_COOLDOWN_MS,
   eventAnnouncement,
   finalAnnouncement,
   halfwayAnnouncement,
@@ -44,8 +45,8 @@ export const LIMITS = Object.freeze({
   channelReplyCount: 3,
   globalReserve: 3,
   recent: 8,
-  commandCooldown: 20000,
-  chatterCooldown: 30000,
+  commandCooldown: BOT_REPLY_COOLDOWN_MS,
+  chatterCooldown: BOT_REPLY_COOLDOWN_MS,
   forbiddenPause: 60000,
 });
 const MAX_LENGTH = 500;

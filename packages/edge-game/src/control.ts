@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { eventAnnouncement } from '../../app/server/chat-copy.js';
+import { BOT_REPLY_COOLDOWN_MS, eventAnnouncement } from '../../app/server/chat-copy.js';
 import { botReplyText } from './chat-commands.js';
 import type { GameView } from '../../app/shared/types.js';
 import { allowedLogins, cookieValue, decryptValue, encryptValue, maximumChannels, oauthCookie, OAUTH_COOKIE, publicOrigin,
@@ -920,8 +920,8 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       if (Object.hasOwn(commands, command) && ID.test(input.event.userId) && !this.data.commandCooldowns[channelKey] && !this.data.commandCooldowns[userKey] &&
         Object.keys(this.data.commandCooldowns).length < 1024) {
         announcement = { key: 'command', ttl: 10_000, text: commands[command](view) };
-        this.data.commandCooldowns[channelKey] = Date.now() + 20_000;
-        this.data.commandCooldowns[userKey] = Date.now() + 30_000;
+        this.data.commandCooldowns[channelKey] = Date.now() + BOT_REPLY_COOLDOWN_MS;
+        this.data.commandCooldowns[userKey] = Date.now() + BOT_REPLY_COOLDOWN_MS;
       }
     } else if (input.event.type !== 'bot-settings') announcement = eventAnnouncement(view, input.event);
     // Cooldown-ignored commands do not consume announcement receipt capacity or
