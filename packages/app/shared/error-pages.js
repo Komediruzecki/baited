@@ -51,7 +51,7 @@ export function isDocumentNavigation(request) {
 export function isKnownAppPath(pathname, edge = false) {
   // Exact shapes only. A mistyped nested route must not silently become Studio.
   if (pathname === '/index.html') return true;
-  if (/^\/(?:studio(?:\/(?:setup|settings))?|privacy)?\/?$/.test(pathname)) return true;
+  if (/^\/(?:studio(?:\/(?:setup|settings))?|privacy|speech-lab)?\/?$/.test(pathname)) return true;
   if (/^\/(?:overlay|play)\/[a-zA-Z0-9_-]{1,128}\/?$/.test(pathname)) {
     return !edge || /^\/(?:overlay|play)\/[1-9]\d{0,24}\/?$/.test(pathname);
   }

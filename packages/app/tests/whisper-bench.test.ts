@@ -10,7 +10,7 @@ class FakeWorker implements BenchWorker {
   onmessage: BenchWorker['onmessage'] = null;
   onerror: BenchWorker['onerror'] = null;
   terminated = false;
-  messages: Array<{ id: number; type: string; audio?: Float32Array; language?: string }> = [];
+  messages: Array<{ id: number; type: string; audio?: Float32Array; language?: string; wordTimestamps?: boolean }> = [];
   postMessage(value: unknown) { this.messages.push(value as typeof this.messages[number]); }
   terminate() { this.terminated = true; }
   reply(result?: unknown) {
@@ -165,4 +165,18 @@ test('only the pinned manifest is accepted before loading the runtime', async ()
   const response = (value: unknown) => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   await verifyWhisperManifest(response(manifest));
   await assert.rejects(verifyWhisperManifest(response({ ...manifest, revision: 'main' })), /do not match this bench version/);
+});
+
+
+test('word timestamp comparison preserves the model output without invented confidence', async () => {
+  const { bench, workers } = setup();
+  const load = bench.load(); workers[0].reply(); await load;
+  const pending = bench.transcribe(new Float32Array(16000), 'en', { wordTimestamps: true });
+  assert.equal(workers[0].messages.at(-1)?.wordTimestamps, true);
+  const result = { text: 'bait', inferenceMs: 1900, audioSeconds: 1,
+    chunks: [{ text: 'bait', timestamp: [.2, .7] as [number, number] }] };
+  workers[0].reply(result);
+  assert.deepEqual(await pending, result);
+  assert.equal('confidence' in result.chunks[0], false);
+  bench.close();
 });

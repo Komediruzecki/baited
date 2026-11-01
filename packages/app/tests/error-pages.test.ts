@@ -33,7 +33,7 @@ test('only exact app destinations are recognized and pilot keeps its smaller rou
     assert.equal(isKnownAppPath(path), false, path);
   }
   assert.equal(isKnownAppPath('/overlay/123', true), true);
-  for (const path of ['/studio/cards', '/card-lab', '/speech-lab', '/product-review', '/overlay/abc']) assert.equal(isKnownAppPath(path, true), false, path);
+  for (const path of ['/studio/cards', '/card-lab', '/product-review', '/overlay/abc']) assert.equal(isKnownAppPath(path, true), false, path);
 });
 
 test('standalone error HTML has recovery without JavaScript or sensitive dynamic values', () => {
@@ -93,4 +93,11 @@ test('OAuth429 and503 keep wait guidance rather than asking for a fresh connecti
     assert.ok(html.includes(title));
     assert.doesNotMatch(html, /start a fresh connection|never-echo|private cause/);
   }
+});
+
+
+test('pilot admits only the exact non-scoring speech comparison route', () => {
+  assert.equal(isKnownAppPath('/speech-lab', true), true);
+  assert.equal(isKnownAppPath('/speech-lab/', true), true);
+  assert.equal(isKnownAppPath('/speech-lab/extra', true), false);
 });

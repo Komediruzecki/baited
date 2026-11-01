@@ -5,12 +5,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { illustratedWords, proofWords, streakFlameFiles } from '../../app/extension/presentation.js';
 import { renderErrorDocument } from '../../app/shared/error-pages.js';
+import { packageWhisperAssets } from '../../app/scripts/speech-bench/production-assets.mjs';
 
 const edge = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const app = resolve(edge, '../app');
 const requireApp = createRequire(resolve(app, 'package.json'));
 const marker = '.baited-pilot-assets';
-const output = resolve(edge, 'dist/pilot-assets');
+const output = resolve(process.env.BAITED_PILOT_ASSETS_OUT || resolve(edge, 'dist/pilot-assets'));
 const runtime = dirname(requireApp.resolve('@moonshine-ai/moonshine-wasm/moonshine.mjs'));
 const publicAssets = [
   'pcm-worklet.js', 'moonshine-worker.js', 'brand/baited-pixel-white.svg',
@@ -53,8 +54,9 @@ export async function buildPilotAssets() {
   for (const file of await readdir(license)) {
     if ((await stat(resolve(license, file))).isFile()) await copyFile(resolve(license, file), resolve(output, 'licenses/moonshine', file));
   }
+  const whisper = await packageWhisperAssets(process.env.BAITED_SPEECH_ASSET_DIR, output);
   const receipt = { output, cards: proofWords.length, illustrations: illustratedWords.length, modelDownloadOrigin: 'https://download.moonshine.ai',
-    runtime: '@moonshine-ai/moonshine-wasm@0.1.5', providerResourcesCreated: false };
+    runtime: '@moonshine-ai/moonshine-wasm@0.1.5', whisper, providerResourcesCreated: false };
   const { output: _output, ...publicReceipt } = receipt;
   await writeFile(resolve(output, 'pilot-assets.json'), `${JSON.stringify(publicReceipt, null, 2)}\n`);
   return receipt;

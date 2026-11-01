@@ -16,6 +16,7 @@ export default { async fetch(request) {
     PILOT_OAUTH_LIMITER: { limit: async () => ({ success: true }) },
     ASSETS: { fetch: async (asset) => {
       if (request.headers.get('x-fixture-outage') === '1') throw new Error('private asset details');
+      if (new URL(asset.url).pathname.endsWith('.js')) return new Response('// fixture', { headers: { 'content-type': 'text/javascript' } });
       return new URL(asset.url).pathname === '/index.html'
         ? new Response('<h1>Studio fixture</h1>', { headers: { 'content-type': 'text/html' } })
         : new Response('Raw asset miss', { status: 404 });
@@ -44,6 +45,17 @@ test('pilot gateway brands navigation errors, preserves API JSON, and safely rec
     const studio = await get('/studio');
     assert.equal(studio.status, 200);
     assert.equal(await studio.text(), '<h1>Studio fixture</h1>');
+    const speechLab = await get('/speech-lab');
+    assert.equal(speechLab.status, 200);
+    for (const path of ['/assets/whisper-worker-Fixture123.js', '/moonshine-worker.js', '/assets/studio.js']) {
+      const script = await get(path);
+      assert.equal(script.status, 200);
+      const csp = script.headers.get('content-security-policy')!;
+      const directives = new Map(csp.split(';').map((item) => { const [key, ...values] = item.trim().split(/\s+/); return [key, values]; }));
+      assert.deepEqual(directives.get('connect-src'), path.includes('whisper-worker-') ? ["'self'"] : ["'self'", 'https://download.moonshine.ai']);
+      assert.equal(directives.get('script-src')?.includes("'unsafe-eval'"), path === '/moonshine-worker.js');
+      await script.arrayBuffer();
+    }
     for (const path of ['/mistyped', '/studio/mistyped']) {
       const missing = await get(path);
       assert.equal(missing.status, 404);

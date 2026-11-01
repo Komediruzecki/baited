@@ -4,7 +4,9 @@ export const WHISPER_REVISION = '5332fcc35e32a33b86612b9a57a89be7906102b1';
 export const TRANSFORMERS_VERSION = '4.3.1';
 export const ONNX_VERSION = '1.31.0-dev.20260914-8d85527a0';
 export const WHISPER_MAX_SECONDS = 60;
-export type WhisperResult = { text: string; inferenceMs: number; audioSeconds: number };
+export type WhisperWord = { text: string; timestamp: [number, number] };
+export type WhisperResult = { text: string; inferenceMs: number; audioSeconds: number; chunks?: WhisperWord[] };
+export type WhisperOptions = { wordTimestamps?: boolean };
 
 /** Narrow interface keeps the cancellation contract testable without browser/model downloads. */
 export interface BenchWorker {
@@ -46,7 +48,7 @@ export class WhisperBench {
     this.ready = true;
   }
 
-  async transcribe(pcm: Float32Array, language: WhisperLanguage): Promise<WhisperResult> {
+  async transcribe(pcm: Float32Array, language: WhisperLanguage, options: WhisperOptions = {}): Promise<WhisperResult> {
     if (!this.ready) throw new Error('Load Whisper before running the comparison.');
     if (this.pending.size) throw new Error('Whisper is already working.');
     if (!pcm.length || pcm.length > 16000 * WHISPER_MAX_SECONDS || pcm.some((v) => !Number.isFinite(v))) {
@@ -54,7 +56,7 @@ export class WhisperBench {
     }
     if (language !== 'en' && language !== 'hr') throw new Error('Choose English or Croatian.');
     const copy = pcm.slice();
-    return this.request('transcribe', { audio: copy, language }, this.timeouts.transcribe, [copy.buffer]) as Promise<WhisperResult>;
+    return this.request('transcribe', { audio: copy, language, wordTimestamps: options.wordTimestamps === true }, this.timeouts.transcribe, [copy.buffer]) as Promise<WhisperResult>;
   }
 
   close(reason = new Error('Whisper stopped. Load it again to continue.')): void {

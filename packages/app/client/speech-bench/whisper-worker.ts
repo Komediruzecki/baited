@@ -1,24 +1,17 @@
 /// <reference lib="webworker" />
 import { WHISPER_MAX_SECONDS, WHISPER_MODEL, WHISPER_REVISION } from './whisper-client';
 import { verifyWhisperManifest } from './manifest';
-import { allowedSpeechAssetRequest, SPEECH_ASSET_PREFIX } from './asset-policy';
+import { SPEECH_ASSET_PREFIX } from './asset-policy';
+import { createWhisperAssetFetch } from './asset-fetch';
 
 declare const self: DedicatedWorkerGlobalScope;
 const ASSETS = SPEECH_ASSET_PREFIX;
-type Recognizer = (audio: Float32Array, options: object) => Promise<{ text: string }>;
+type Recognizer = (audio: Float32Array, options: object) => Promise<{ text: string; chunks?: unknown[] }>;
 let recognizer: Recognizer | undefined;
 let busy = false;
 
-// Defence in depth: even a library fallback cannot upload audio or fetch an off-origin model.
+// Installed before loading Transformers. Model fetches can only read pinned local assets.
 const fetchLocal = self.fetch.bind(self);
-self.fetch = (input, init) => {
-  const url = new URL(input instanceof Request ? input.url : String(input), self.location.origin);
-  const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
-  if (!allowedSpeechAssetRequest(url.href, method, self.location.origin)) {
-    return Promise.reject(new Error('Speech bench only reads its same-origin model assets.'));
-  }
-  return fetchLocal(input, init);
-};
 
 self.onmessage = async ({ data }) => {
   const { id, type } = data;
@@ -26,6 +19,7 @@ self.onmessage = async ({ data }) => {
   busy = true;
   try {
     if (type === 'load') {
+      self.fetch = await createWhisperAssetFetch(fetchLocal, self.location.origin);
       await verifyWhisperManifest(await fetch(`${ASSETS}manifest.json`));
       const moduleUrl = `${ASSETS}runtime/transformers.min.js`;
       const { env, pipeline } = await import(/* @vite-ignore */ moduleUrl);
@@ -55,10 +49,11 @@ self.onmessage = async ({ data }) => {
       const start = performance.now();
       const output = await recognizer(data.audio, {
         language: data.language, task: 'transcribe', chunk_length_s: 30, stride_length_s: 5,
-        return_timestamps: false,
+        return_timestamps: data.wordTimestamps === true ? 'word' : false,
       });
       self.postMessage({ id, type: 'done', result: { text: output.text.trim(), inferenceMs: performance.now() - start,
-        audioSeconds: data.audio.length / 16000 } });
+        audioSeconds: data.audio.length / 16000,
+        ...(data.wordTimestamps === true ? { chunks: output.chunks ?? [] } : {}) } });
     } else throw new Error('Unknown speech bench request.');
   } catch (error) {
     self.postMessage({ id, type: 'error', message: error instanceof Error ? error.message : 'Whisper could not complete the comparison.' });

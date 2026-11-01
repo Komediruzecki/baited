@@ -39,9 +39,10 @@ async function assets(request:Request,env:Env) {
   headers.set("cross-origin-opener-policy","same-origin");headers.set("cross-origin-embedder-policy","require-corp");
   // Only the pinned Moonshine worker needs Emscripten dynamic JS binding.
   const moonshine=url.pathname==="/moonshine-worker.js" || url.pathname==="/moonshine/runtime-0.1.5-csp1/moonshine.mjs";
+  const whisper=/^\/assets\/whisper-worker-[A-Za-z0-9_-]+\.js$/.test(url.pathname);
   const quote=String.fromCharCode(39);
   const self=quote+"self"+quote;
-  headers.set("content-security-policy",`default-src ${self}; script-src ${self} ${quote}wasm-unsafe-eval${quote}${moonshine?` ${quote}unsafe-eval${quote}`:""}; style-src ${self} ${quote}unsafe-inline${quote}; img-src ${self} data: blob:; media-src ${self} blob:; connect-src ${self} https://download.moonshine.ai; worker-src ${self} blob:; font-src ${self}; frame-ancestors ${quote}none${quote}; base-uri ${quote}none${quote}; form-action ${self} https://id.twitch.tv; object-src ${quote}none${quote}`);
+  headers.set("content-security-policy",`default-src ${self}; script-src ${self} ${quote}wasm-unsafe-eval${quote}${moonshine?` ${quote}unsafe-eval${quote}`:""}; style-src ${self} ${quote}unsafe-inline${quote}; img-src ${self} data: blob:; media-src ${self} blob:; connect-src ${self}${whisper?"":" https://download.moonshine.ai"}; worker-src ${self} blob:; font-src ${self}; frame-ancestors ${quote}none${quote}; base-uri ${quote}none${quote}; form-action ${self} https://id.twitch.tv; object-src ${quote}none${quote}`);
   if(spa) headers.set("cache-control","private, no-store");
   return withErrorDocument(request,new Response(response.body,{status:response.status,headers}));
 }
