@@ -1819,6 +1819,82 @@ test('a deferred recording reset is an outbox barrier without blocking gameplay 
 });
 
 
+test('stale voice drafts cannot replace the current draft or spend the next round announcement budget', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(await stub.clockFixture());
+    let snap=await state(mf);
+    await send(mf,{type:'settings',settings:{...snap.room.settings,callBait:true,recordingMode:true}},snap.revision);
+    const ws=await start(mf);
+    snap=await state(mf);
+    const oldRound=snap.room.round!;
+    await send(mf,{type:'restart-take',takeId:snap.room.recording!.takeId},snap.revision);
+    snap=await state(mf);await send(mf,{type:'start'},snap.revision);
+    snap=await state(mf);
+    const oldEpoch=snap.room.round!;
+    assert.notEqual(oldEpoch.id,oldRound.id);
+    await send(mf,{type:'pause',roundId:oldEpoch.id,epoch:oldEpoch.epoch},snap.revision);
+    snap=await state(mf);
+    await send(mf,{type:'resume',roundId:oldEpoch.id,epoch:snap.room.round!.epoch},snap.revision);
+    snap=await state(mf);
+    const current=snap.room.round!;
+    assert.notEqual(current.epoch,oldEpoch.epoch);
+    const draftId=randomUUID();
+    const draft:Extract<Command['action'],{type:'voice-guess-draft'}>={type:'voice-guess-draft',
+      roundId:current.id,epoch:current.epoch,text:'fish',draftId,expiresAt:await stub.clockFixture()+15000};
+    await send(mf,draft,snap.revision);
+    const before=await state(mf),queued=(await stub.inspectFixture()).outbox;
+    // Isolate the round guard from the epoch guard, then exercise a stale epoch
+    // on the current round. Either fence must reject without the other helping.
+    for(const stale of [{id:oldRound.id,epoch:current.epoch},oldEpoch]) {
+      // More than the per-minute draft allowance: refusals must not spend it.
+      for(let attempt=0;attempt<4;attempt++) {
+        const response=await mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',
+          headers:{origin:ORIGIN,authorization:`Bearer ${await fixtureToken(mf)}`,'content-type':'application/json'},
+          body:JSON.stringify({id:randomUUID(),generation:before.generation,expectedRevision:before.revision,
+            action:{...draft,roundId:stale.id,epoch:stale.epoch,draftId:randomUUID(),text:'banana'}})});
+        assert.equal(response.status,409);
+        assert.equal((await response.json() as Receipt).code,'action_unavailable');
+      }
+    }
+    const after=await state(mf);
+    assert.equal(after.revision,before.revision,'A refused draft must not create a new room revision.');
+    assert.deepEqual(after.room,before.room,'Stale draft text must not change the current round or score.');
+    assert.equal((await stub.inspectFixture()).outbox,queued,'A stale draft must not enqueue an announcement.');
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),true,'The current draft must remain eligible.');
+    for(let accepted=0;accepted<2;accepted++)
+      await send(mf,{...draft,draftId:randomUUID()},(await state(mf)).revision);
+    assert.equal((await state(mf)).room.round!.guessUsed,false);
+    ws.close();
+  } finally {await mf.dispose();}
+});
+
+test('an older revision guess remains valid after an advisory voice draft commits first', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(await stub.clockFixture());
+    let snap=await state(mf);
+    await send(mf,{type:'settings',settings:{...snap.room.settings,callBait:true}},snap.revision);
+    const ws=await start(mf);
+    snap=await state(mf);
+    const round=snap.room.round!,target=(await state(mf,'viewer')).room.round!.target!;
+    const draftId=randomUUID();
+    const posted=await send(mf,{type:'voice-guess-draft',roundId:round.id,epoch:round.epoch,text:target,
+      draftId,expiresAt:await stub.clockFixture()+15000},snap.revision);
+    assert.equal(posted.revision,snap.revision+1);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),true);
+    const locked=await send(mf,{type:'guess',roundId:round.id,epoch:round.epoch,text:target},snap.revision);
+    assert.equal(locked.revision,posted.revision+1,'The guess uses the revision captured before its draft committed.');
+    const result=await state(mf);
+    assert.equal(result.room.result?.outcome,'escaped');
+    assert.equal(result.room.result?.reason,'guess');
+    assert.equal(result.room.round!.guessUsed,true);
+    assert.deepEqual(result.room.score,{wins:0,played:1,streak:0,best:0});
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),false);
+    ws.close();
+  } finally {await mf.dispose();}
+});
+
 test('voice drafts require the owner microphone and stay fenced to the latest live round', async () => {
   const {mf,stub}=await runtime();
   try {
