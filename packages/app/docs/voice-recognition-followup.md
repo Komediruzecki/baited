@@ -16,7 +16,7 @@ The current Moonshine adapter emits completed lines only (`decode_incomplete_lin
 
 Baity's chat connection is optional for dictation. Posting the draft publicly still requires the bot and announcements to be available. Optional Baity chaos is a separate game rule; disable it for the scoring regression test.
 
-The command window lasts 15 seconds. `Uh`, `Um` and `Okay` do not become guesses or renew that window. A wake phrase alone asks for explicit calling intent; only then does Studio show **Listening for your guess**. Cancel is available during the waiting state as well as after a draft appears. A separate lock-in is still required.
+The command window lasts 15 seconds. Up to three filler words, such as `Uh, okay`, do not become guesses or renew that window. Clipped `Calling the bait`, `I'll call the bait` and the observed `bake` transcription are accepted as explicit intent. Once intent is armed, a single-word answer or `It's banana` can prepare the draft. Ordinary narrative speech remains ordinary speech. A wake phrase alone asks for explicit calling intent; only then does Studio show **Listening for your guess**. Cancel is available during the waiting state as well as after a draft appears. A separate lock-in is still required.
 
 ## Local comparison results, 1 November 2026
 
@@ -29,7 +29,7 @@ The five-second sample was taken from the user-supplied recording `2026-10-31_22
 
 These are functional smoke measurements, not controlled performance or accuracy estimates. OBS load, CPU contention and OS cache state were not controlled; RAM was not measured. Moonshine replays in real time, so its five-second replay duration is not comparable to Whisper's file-processing time. The sample supports keeping Moonshine as the live default and fixing the parser independently. It does not establish either model's general accuracy.
 
-Cancellation during load and transcription left no worker running and no late results. Strict worker CSP worked without adding JavaScript `unsafe-eval` to Whisper. Existing Moonshine policy was unchanged. Only same-origin static GET requests were used for Whisper; the audio file did not leave the browser. Chromium's routed test reported Vite HMR connection warnings; speech inference completed. Firefox completed without browser errors.
+Cancellation during load and transcription left no worker running and no late results. The browser test harness injected a production-equivalent CSP and proved that Whisper worked without JavaScript `unsafe-eval`. Normal Node development previews do not send that CSP, so this is harness evidence, not a claim that the dev server enforces it. The worker's fetch guard and same-origin asset policy also remained active. Existing Moonshine policy was unchanged. Only same-origin static GET requests were used for Whisper; the audio file did not leave the browser. Chromium's routed test reported Vite HMR connection warnings; speech inference completed. Firefox completed without browser errors.
 
 ## Model choice
 
@@ -54,9 +54,15 @@ Croatian cards and Croatian speech are separate features. Whisper Tiny multiling
 
 ## Run the local comparison
 
-The page is `/speech-lab`. Moonshine remains available in built local previews. Whisper is a development-only option and accepts clips up to 60 seconds. English and Croatian are selectable for file transcription; this does not wire Croatian commands into live gameplay.
+The page is `/speech-lab`. Moonshine remains available in built local previews. Whisper is a development-only option and accepts clips up to 60 seconds; Moonshine accepts up to five minutes. Both now require uncompressed PCM or 32-bit float WAV, mono or stereo, 8–96 kHz, up to 25 MB. Before creating the browser decoder, the bench checks the RIFF payload length, encoding, channel count, sample rate, frame alignment and duration. Compressed recordings and malformed or oversized inputs are rejected before full audio decoding. This bounds the admitted PCM input; peak browser/model memory is still unmeasured. English and Croatian are selectable for Whisper file transcription; this does not wire Croatian commands into live gameplay.
 
-Assets are prepared explicitly outside the repository. The committed `scripts/speech-bench/asset-lock.json` pins each model/runtime file by URL, size and SHA-256. Preparation and development-server startup validate the lock. Browser model/WASM caches are disabled, and the local asset route uses `Cache-Control: no-store`. OS filesystem caching may still affect timings.
+For another recording format, make a short 16 kHz mono PCM WAV first. Replace the paths and start time; `0:a:0` selects the first audio track, so choose the separate microphone track when the recording has one. This command does not overwrite an existing output without asking:
+
+```sh
+ffmpeg -ss 00:00:00 -i /absolute/path/to/recording.mkv -t 20 -map 0:a:0 -vn -ac 1 -ar 16000 -c:a pcm_s16le /absolute/path/to/voice-clip.wav
+```
+
+Assets are prepared explicitly outside the repository. The committed `scripts/speech-bench/asset-lock.json` pins each model/runtime file by URL, size and SHA-256. Preparation and development-server startup validate the lock. Every GET/HEAD rechecks the requested file's size and hash, then serves those exact checked bytes; the manifest is pinned to its validated startup contents. A modified file fails closed until the assets are repaired. Browser model/WASM caches are disabled, and the local asset route uses `Cache-Control: no-store`. OS filesystem caching may still affect timings.
 
 For this workstation, the existing prepared directory is:
 
@@ -64,10 +70,12 @@ For this workstation, the existing prepared directory is:
 /run/media/maff/Game_Shared/agent-out-live/baited/2026-11-01/064744be67ec4ecbbb0717757063eedd/scratch/whisper-assets
 ```
 
-To prepare a new directory, reserve a registered `agent-out` run first, then run `python3 packages/app/scripts/prepare-speech-bench.py --output /absolute/registered/run/scratch/whisper-assets --download`. Set `BAITED_SPEECH_ASSET_DIR` to it when starting the development server. The asset middleware deliberately accepts only prepared registered output directories. It is a developer bench, not a portable end-user installation flow.
+To prepare a new directory, reserve a registered `agent-out` run first, then run `python3 packages/app/scripts/prepare-speech-bench.py --output /absolute/registered/run/scratch/whisper-assets --download`. Set `BAITED_SPEECH_ASSET_DIR` to it when starting the development server. The asset middleware deliberately accepts only prepared registered output directories on this Linux workstation. URL names are independent of filesystem separators, and containment uses native path operations, but the preparation/root policy is not a Windows server installation flow.
+
+For Windows Firefox acceptance, use the Linux-hosted LAN preview and choose a WAV on the Windows machine. The file is decoded and transcribed in that Windows browser without uploading it. That device test, including OBS idle and active runs, has not yet been completed. The existing headless Linux Firefox result does not establish Windows, hardware microphone or live-stream reliability.
 
 1. Choose an engine and load it.
-2. Choose a consented local audio file. Set the language and record the actual OBS/device state in the label.
+2. Choose a consented local WAV. Set the language and record the actual OBS/device state in the label.
 3. Run the comparison and inspect/export the result.
 4. Stop and unload. Switch engines and repeat on the same file.
 5. Label recognition mistakes by listening to the original audio, then compare the command outcomes. Do not use one model's transcript as the ground truth for the other.

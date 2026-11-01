@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { WhisperBench, type BenchWorker } from '../client/speech-bench/whisper-client.js';
 import { verifyWhisperManifest } from '../client/speech-bench/manifest.js';
 import { ONNX_VERSION, TRANSFORMERS_VERSION, WHISPER_MODEL, WHISPER_REVISION } from '../client/speech-bench/whisper-client.js';
-import { pcmFingerprint } from '../client/speech-bench/audio.js';
+import { decodeBenchAudio, inspectBenchWav, pcmFingerprint } from '../client/speech-bench/audio.js';
 import { allowedSpeechAssetRequest } from '../client/speech-bench/asset-policy.js';
 
 class FakeWorker implements BenchWorker {
@@ -105,6 +105,37 @@ test('PCM fingerprint compares the decoded samples, including typed-array offset
   assert.equal(pcmFingerprint(pcm), pcmFingerprint(pcm.slice()));
   assert.equal(pcmFingerprint(pcm.subarray(1)), pcmFingerprint(new Float32Array([.2, .3])));
   assert.notEqual(pcmFingerprint(pcm), pcmFingerprint(new Float32Array([.1, .2, .4])));
+});
+
+function wav(seconds = 1, channels = 1, sampleRate = 8000, bits = 16, encoding = 1) {
+  const blockAlign = channels * bits / 8, size = seconds * sampleRate * blockAlign;
+  const buffer = new ArrayBuffer(44 + size), view = new DataView(buffer);
+  const tag = (offset: number, value: string) => [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
+  tag(0, 'RIFF'); view.setUint32(4, buffer.byteLength - 8, true); tag(8, 'WAVE'); tag(12, 'fmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, encoding, true); view.setUint16(22, channels, true);
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true); view.setUint16(34, bits, true); tag(36, 'data'); view.setUint32(40, size, true);
+  return buffer;
+}
+
+test('WAV preflight bounds channels, sample rate and duration before any browser decode', async () => {
+  assert.deepEqual(inspectBenchWav(wav(1, 2, 48000, 32, 3), 60), { duration: 1, channels: 2, sampleRate: 48000 });
+  assert.equal(inspectBenchWav(wav(60), 60).duration, 60);
+  assert.throws(() => inspectBenchWav(wav(61), 60), /up to one minute/);
+  assert.throws(() => inspectBenchWav(wav(301)), /up to five minutes/);
+  for (const bytes of [wav(1, 8), wav(1, 1, 192000), wav(1, 1, 8000, 16, 6), new TextEncoder().encode('not a WAV').buffer]) {
+    assert.throws(() => inspectBenchWav(bytes), /uncompressed PCM or float WAV/);
+  }
+  // Node has no OfflineAudioContext. Rejection here proves validation precedes creating the decoder.
+  await assert.rejects(decodeBenchAudio(new File([wav(61)], 'long.wav'), 60), /up to one minute/);
+  await assert.rejects(decodeBenchAudio(new File(['compressed input'], 'clip.mp3')), /uncompressed PCM or float WAV/);
+});
+
+test('WAV preflight rejects misleading frame metadata and incomplete payloads', () => {
+  const badAlignment = wav(); new DataView(badAlignment).setUint16(32, 1, true);
+  const badRate = wav(); new DataView(badRate).setUint32(28, 1, true);
+  const truncated = wav().slice(0, -2); new DataView(truncated).setUint32(4, truncated.byteLength - 8, true);
+  for (const bytes of [badAlignment, badRate, truncated]) assert.throws(() => inspectBenchWav(bytes), /WAV/);
 });
 
 test('worker request policy permits model reads only, rejecting uploads and off-origin fallback', () => {

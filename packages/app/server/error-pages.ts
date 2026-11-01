@@ -1,5 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
-import { errorKindForStatus, isDocumentNavigation, isKnownAppPath, renderErrorDocument, type ErrorKind } from '../shared/error-pages.js';
+import { errorKindForDocument, isDocumentNavigation, isKnownAppPath, renderErrorDocument, type ErrorKind } from '../shared/error-pages.js';
+
+/** Only recognized transient HTTP failures override a document's generic fallback status. */
+export function documentFailureStatus(error: unknown, fallback = 500): number {
+  const failure = error as { status?: unknown; statusCode?: unknown } | null;
+  const status = failure?.status ?? failure?.statusCode;
+  return status === 429 || status === 503 ? status : fallback;
+}
 
 export function sendErrorDocument(req: Request, res: Response, status: number, kind?: ErrorKind): boolean {
   if (!['GET', 'HEAD'].includes(req.method)) return false;
@@ -12,7 +19,7 @@ export function sendErrorDocument(req: Request, res: Response, status: number, k
   const request = new globalThis.Request(new URL(req.path, 'https://baited.invalid'), { method: req.method, headers });
   if (!isDocumentNavigation(request)) return false;
   res.status(status).type('html').set('Cache-Control', 'no-store').set('X-Robots-Tag', 'noindex, nofollow').vary('Accept');
-  res.send(req.method === 'HEAD' ? '' : renderErrorDocument(kind ?? errorKindForStatus(status), 'app', /^\/overlay(?:\/|$)/.test(req.path)));
+  res.send(req.method === 'HEAD' ? '' : renderErrorDocument(kind ?? errorKindForDocument(req.path, status), 'app', /^\/overlay(?:\/|$)/.test(req.path)));
   return true;
 }
 
@@ -42,5 +49,5 @@ export function appDocumentFallback({ template, transform }: {
 /** Place after static/Vite middleware so failures there also have a safe HTML response. */
 export function terminalError(_error: unknown, req: Request, res: Response, next: NextFunction) {
   if (res.headersSent) { next(_error); return; }
-  if (!sendErrorDocument(req, res, 500)) res.status(500).json({ error: 'Baited could not complete this request. Try again shortly.' });
+  if (!sendErrorDocument(req, res, documentFailureStatus(_error))) res.status(500).json({ error: 'Baited could not complete this request. Try again shortly.' });
 }

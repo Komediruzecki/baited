@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { localSpeechBenchAssets, resolveSpeechAsset, verifySpeechAssets } from '../scripts/speech-bench/assets.js';
+import { createSpeechAssetReader, localSpeechBenchAssets, resolveSpeechAsset, verifySpeechAssets } from '../scripts/speech-bench/assets.js';
 import assetLock from '../scripts/speech-bench/asset-lock.json';
 
 test('speech assets are dev-serve only, never a build copy plugin', () => {
@@ -46,6 +46,29 @@ test('startup validation rejects missing, oversized and mis-sized manifest entri
     assert.throws(() => verifySpeechAssets(root, expected), /wrong size or is missing/);
     writeFileSync(manifest, JSON.stringify({ ...expected, files: [{ ...expected.files[0], bytes: 99_999_999 }] }));
     assert.throws(() => verifySpeechAssets(root, expected), /manifest metadata does not match/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('each served response rejects same-size changes, resized files and a changed manifest after startup', () => {
+  const root = mkdtempSync(join(tmpdir(), 'baited-response-test-'));
+  try {
+    mkdirSync(join(root, 'runtime'));
+    const content = 'export const checked = 1;';
+    const expected = { ...assetLock, files: [{ ...assetLock.files[0], bytes: content.length,
+      sha256: createHash('sha256').update(content).digest('hex') }] };
+    const runtime = join(root, 'runtime/transformers.min.js'), manifest = join(root, 'manifest.json');
+    writeFileSync(runtime, content); writeFileSync(manifest, JSON.stringify(expected));
+    const read = createSpeechAssetReader(root, expected);
+    const verified = read('/speech-bench-assets/runtime/transformers.min.js')!;
+    writeFileSync(runtime, content.replace('1', '2'));
+    assert.throws(() => read('/speech-bench-assets/runtime/transformers.min.js'), /checksum changed/);
+    assert.equal(verified.bytes.toString(), content, 'already verified response bytes cannot change with the file');
+    writeFileSync(runtime, content + ' ');
+    assert.throws(() => read('/speech-bench-assets/runtime/transformers.min.js'), /size changed/);
+    writeFileSync(runtime, content);
+    writeFileSync(manifest, JSON.stringify(expected).replace('tiny', 'tino'));
+    assert.throws(() => read('/speech-bench-assets/manifest.json'), /checksum changed/);
+    assert.equal(read('/speech-bench-assets/runtime/not-listed.js'), null);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 

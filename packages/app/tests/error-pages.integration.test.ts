@@ -3,12 +3,15 @@ import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import test from 'node:test';
 import express from 'express';
-import { appDocumentFallback, terminalError, unknownDocument } from '../server/error-pages.js';
+import { appDocumentFallback, terminalError, unknownDocument, sendErrorDocument } from '../server/error-pages.js';
 
 test('Express navigation errors keep HTTP status while APIs keep JSON and OBS keeps transparency', async () => {
   const app = express();
   app.get('/api/missing', (_req, res) => res.status(404).json({ error: 'Route not found.' }));
   app.get('/studio', () => { throw new Error('private failure with internal detail'); });
+  app.get('/auth/twitch/limited', () => { throw Object.assign(new Error('private rate cause'), { status: 429 }); });
+  app.get('/auth/twitch/unavailable', () => { throw Object.assign(new Error('private provider cause'), { statusCode: 503 }); });
+  app.get('/auth/twitch/expired', (req, res) => { sendErrorDocument(req, res, 400); });
   app.use(unknownDocument);
   app.use((_req, res) => res.status(404).json({ error: 'Route not found.' }));
   app.use(terminalError);
@@ -33,6 +36,14 @@ test('Express navigation errors keep HTTP status while APIs keep JSON and OBS ke
     const asset = await fetch(origin + '/missing.js', { headers: { accept: 'text/html' } });
     assert.equal(asset.status, 404);
     assert.doesNotMatch(asset.headers.get('content-type')!, /text\/html/);
+    for (const [path, status, title] of [['limited', 429, 'One beat at a time.'], ['unavailable', 503, 'A little out of fuel.'], ['expired', 400, 'Let’s reconnect.']] as const) {
+      const response = await fetch(`${origin}/auth/twitch/${path}`, { headers: { accept: 'text/html' } });
+      assert.equal(response.status, status);
+      const html = await response.text();
+      assert.ok(html.includes(title));
+      if (status !== 400) assert.doesNotMatch(html, /start a fresh connection/);
+      assert.doesNotMatch(html, /private rate cause|private provider cause/);
+    }
   } finally {
     server.closeAllConnections();
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));

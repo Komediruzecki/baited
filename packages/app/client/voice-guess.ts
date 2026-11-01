@@ -9,20 +9,24 @@ export type VoiceGuessResult = { consumed: boolean; submit?: VoiceGuessDraft; pr
 const key = (context: VoiceGuessContext) => JSON.stringify(context);
 const words = (text: string) => text.normalize('NFKC').toLocaleLowerCase('en-US')
   .match(/[\p{L}\p{N}]+(?:['’][\p{L}]+)?/gu) ?? [];
-const phrase = (text: string) => words(text).join(' ').replace(/i['’]m/g, 'i am');
+const phrase = (text: string) => words(text).join(' ')
+  .replace(/\b(?:i['’]m|im)\b/g, 'i am').replace(/\bi['’]ll\b/g, 'i will');
 // Moonshine has transcribed "Baity bot" as "Baity bought" in live play.
 // Keep aliases anchored and finite: this is not a general bot/bought replacement.
 const wake = /^(?:(?:okay|ok|hey|alright)\s+)?(?:baity\s?(?:bot|bought)|bait bot|baity)\b\s*/;
 // The observed baby/Betty aliases only count when immediately followed by
 // explicit calling intent. A casual greeting must not shield ordinary speech.
-const observedWake = /^(?:hey baby(?: bro)?|hail betty but|ah bait but)\s+(?=(?:i am calling|i call|call) the (?:bait|bake)(?:\s|$))/;
-const call = /^(?:i am calling|i call|call) the (?:bait|bake)(?:\s+|$)/;
+const callSource = '(?:i am calling|i will call|i call|call|calling) the (?:bait|bake)(?:\\s+|$)';
+const observedWake = new RegExp(`^(?:hey baby(?: bro)?|hail betty but|ah bait but)\\s+(?=${callSource})`);
+const call = new RegExp(`^${callSource}`);
 const guess = /^the bait is ([\p{L}\p{N}]+(?:['’][\p{L}]+)?)$/u;
 const unfinishedGuess = /^(?:the|the bait|the bait is)$/;
 const guessIntent = /^the bait is(?:\s|$)/;
 const oneWord = /^([\p{L}\p{N}]+(?:['’][\p{L}]+)?)$/u;
-const hesitation = /^(?:um|uh|ah|er|hmm|okay|ok|so|well)$/;
-const hesitationPrefix = /^(?:um|uh|ah|er|hmm|okay|ok|so|well) (.+)$/;
+const simpleGuess = /^(?:it['’]s|it is) ([\p{L}\p{N}]+(?:['’][\p{L}]+)?)$/u;
+const hesitationWord = '(?:um|uh|ah|er|hmm|okay|ok|so|well)';
+const hesitation = new RegExp(`^${hesitationWord}(?: ${hesitationWord}){0,2}$`);
+const hesitationPrefix = new RegExp(`^(?:${hesitationWord} ){1,2}(.+)$`);
 const lock = /^(?:lock in|locked in|locking|locking in|i am locking in|i am locked in)$/;
 const cancel = /^(?:cancel|cancel guess|cancel the bait|never mind)$/;
 
@@ -52,6 +56,16 @@ export class VoiceGuessSession {
 
   expire(now: number) {
     if (this.expiresAt && now >= this.expiresAt) this.clear();
+  }
+
+  // Timers can fire just before their deadline. Expire the captured deadline,
+  // but never let an older callback discard a newer guess. Wake-only expiry
+  // has no guess to announce to the streamer.
+  expireScheduled(deadline: number, now = Date.now()): boolean {
+    if (!deadline || deadline !== this.expiresAt) return false;
+    const expiredGuess = !!this.draft || this.acceptsBareGuess;
+    this.expire(Math.max(now, deadline));
+    return expiredGuess;
   }
 
   take(now = Date.now()): VoiceGuessDraft | null {
@@ -102,7 +116,7 @@ export class VoiceGuessSession {
     if ((this.draft || this.awaitingWord) && cancel.test(rest)) {
       this.clear(); handled = true;
     } else if (this.awaitingWord && lock.test(rest)) {
-      // No confident word is ready. Consume the confirmation without losing
+      // No draft is ready. Consume the confirmation without losing
       // the retry window or guessing that the command itself was the word.
       this.remember(line.id);
       return { consumed: true, uncertain: true };
@@ -123,7 +137,8 @@ export class VoiceGuessSession {
       const combined = /^(.*?) (?:i am locking in|i am locked in|locked in|locking in|lock in|locking)$/.exec(spokenGuess);
       const stated = guess.exec(spokenGuess) ?? (combined ? guess.exec(combined[1]) : null)
         ?? ((this.acceptsBareGuess || calling) && !unfinishedGuess.test(spokenGuess)
-          ? oneWord.exec(combined ? combined[1] : spokenGuess) : null);
+          ? oneWord.exec(combined ? combined[1] : spokenGuess)
+            ?? simpleGuess.exec(combined ? combined[1] : spokenGuess) : null);
       if (stated && stated[1].length <= 40) {
         this.draft = { word: stated[1], context: { ...this.context }, expiresAt: now + VOICE_GUESS_TTL_MS };
         prepared = this.draft;
@@ -162,9 +177,10 @@ export class VoiceGuessSession {
       return { consumed: true, uncertain: true };
     }
     if (!line.words.length || line.words.some(word => !Number.isFinite(word.confidence) || word.confidence < .8)) {
-      // Never prepare, post or submit an uncertain guess. Keep the command's
-      // bounded retry window instead of letting the next attempt become a catch.
-      // In particular, retries must not extend an existing deadline.
+      // Defensive for missing/low confidence from a provider. Moonshine 0.1.5
+      // reports constant 1, so this gate cannot establish recognition accuracy.
+      // The visible draft and separate lock-in are the user's actual safeguard.
+      // Retain a bounded retry window without posting/submitting or extending it.
       const retryPrefix = prepared || submit ? '' : this.pendingGuessPrefix;
       const retryBareGuess = !!prepared || !!submit || this.acceptsBareGuess;
       const canRetry = !!prepared || !!submit || this.awaitingWord;

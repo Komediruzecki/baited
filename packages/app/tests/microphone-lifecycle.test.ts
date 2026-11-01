@@ -243,6 +243,13 @@ for (const [name, command, target] of [
   ['combined baby and bait transcription', ["Hey, baby, I'm calling the bait.", 'Bait.'], 'bait'],
   ['recorded ah bait but transcription', ["Ah, bait, but I'm calling the bait.", 'Banana.'], 'banana'],
   ['separate filler finals', ["I'm calling the bait.", 'Uh.', 'Okay.', 'Banana.'], 'banana'],
+  ['two filler finals', ["I'm calling the bait.", 'Okay, so.', 'Uh, okay.', 'Banana.'], 'banana'],
+  ['three filler final', ["I'm calling the bait.", 'Um, okay, so.', 'Banana.'], 'banana'],
+  ['two filler prefix', ["I'm calling the bait.", 'Uh, okay, banana.'], 'banana'],
+  ['clipped call', ['Calling the bait.', 'Bait.'], 'bait'],
+  ['future explicit call', ["I'll call the bait.", 'Banana.'], 'banana'],
+  ['missing apostrophe call', ['Im calling the bait.', 'Banana.'], 'banana'],
+  ['contraction guess', ["I'm calling the bait.", "It's banana."], 'banana'],
   ['one filler prefix', ["I'm calling the bait.", 'Um, banana.'], 'banana'],
   ['calling now', ["I'm calling the bait now.", 'Banana.'], 'banana'],
   ['calling right now', ["I'm calling the bait right now.", 'Banana.'], 'banana'],
@@ -282,7 +289,7 @@ for (const [name, command, target] of [
     env.workers[0].line(line('lock', 'Locked in'));
     assert.deepEqual(submitted, [target]);
     const sent = env.sockets[0].sent.map(value => JSON.parse(value));
-    for (const filler of command.filter(text => text === 'Uh.' || text === 'Okay.')) {
+    for (const filler of command.filter(text => ['Uh.', 'Okay.', 'Okay, so.', 'Uh, okay.', 'Um, okay, so.'].includes(text))) {
       assert.ok(sent.some(value => value.line.text === filler), 'Ordinary fillers remain scoring speech.');
     }
     assert.ok(sent.every(value => !value.line.text.toLowerCase().includes(target)),

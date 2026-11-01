@@ -1,4 +1,4 @@
-import { sendErrorDocument } from './error-pages.js';
+import { documentFailureStatus, sendErrorDocument } from './error-pages.js';
 import express from 'express';
 import helmet from 'helmet';
 import { createServer, type IncomingMessage } from 'node:http';
@@ -1045,7 +1045,7 @@ export async function createBait(
       res.status(401).json({ error: error.message });
       return;
     }
-    if (sendErrorDocument(req, res, error instanceof ZodError ? 400 : 500)) return;
+    if (sendErrorDocument(req, res, documentFailureStatus(error, error instanceof ZodError ? 400 : 500))) return;
     const status = error instanceof ZodError ? 400 : 400;
     res.status(status).json({
       error:

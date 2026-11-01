@@ -69,8 +69,8 @@ test('OBS failures use a compact transparent surface, never the full page illust
 test('document error responses retain status and auth cookies without leaking the original error', async () => {
   for (const method of ['GET', 'HEAD']) {
     const request = new Request('https://baited.invalid/auth/twitch/callback?code=private-code', { method, headers: { accept: 'text/html' } });
-    const response = withErrorDocument(request, new Response('private-provider-error', { status: 503, headers: { 'set-cookie': 'pending=; Max-Age=0; HttpOnly', 'retry-after': '30', 'content-length': '22' } }));
-    assert.equal(response.status, 503);
+    const response = withErrorDocument(request, new Response('private-provider-error', { status: 400, headers: { 'set-cookie': 'pending=; Max-Age=0; HttpOnly', 'retry-after': '30', 'content-length': '22' } }));
+    assert.equal(response.status, 400);
     assert.equal(response.headers.get('set-cookie'), 'pending=; Max-Age=0; HttpOnly');
     assert.equal(response.headers.get('retry-after'), '30');
     assert.equal(response.headers.get('content-length'), null);
@@ -81,4 +81,16 @@ test('document error responses retain status and auth cookies without leaking th
   }
   const json = new Response('{"error":"not found"}', { status: 404 });
   assert.equal(withErrorDocument(new Request('https://baited.invalid/api/missing', { headers: { accept: 'text/html' } }), json), json);
+});
+
+test('OAuth429 and503 keep wait guidance rather than asking for a fresh connection', async () => {
+  for (const [status, title] of [[429, 'One beat at a time.'], [503, 'A little out of fuel.']] as const) {
+    const response = withErrorDocument(new Request('https://baited.invalid/auth/twitch/callback?code=never-echo', { headers: { accept: 'text/html' } }), new Response('private cause', { status, headers: { 'retry-after': '60', 'set-cookie': 'pending=; Max-Age=0' } }));
+    assert.equal(response.status, status);
+    assert.equal(response.headers.get('retry-after'), '60');
+    assert.equal(response.headers.get('set-cookie'), 'pending=; Max-Age=0');
+    const html = await response.text();
+    assert.ok(html.includes(title));
+    assert.doesNotMatch(html, /start a fresh connection|never-echo|private cause/);
+  }
 });

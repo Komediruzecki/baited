@@ -73,7 +73,7 @@ export function SpeechLab() {
     try {
       setStatus('Reading local audio');
       if (decoded.current?.file !== file) {
-        const audio = await decodeBenchAudio(file);
+        const audio = await decodeBenchAudio(file, provider === 'whisper' ? WHISPER_MAX_SECONDS : 300);
         check(); decoded.current = { file, audio };
       }
       const { pcm, fingerprint } = decoded.current.audio;
@@ -158,8 +158,8 @@ export function SpeechLab() {
       </> : <p>English Tiny Streaming. About 84 MB plus the runtime on first load. Model files come from the existing Moonshine delivery path; your audio stays here.</p>}
       <div><button type="button" onClick={() => void load()} disabled={loading || running}>{ready ? 'Reload model' : `Load ${provider === 'whisper' ? 'Whisper' : 'Moonshine'}`}</button></div>
       <label>Run label <input aria-label="Run label" value={label} onChange={(event) => setLabel(event.target.value)} disabled={running} /></label>
-      <label>Local audio <input aria-label="Local audio" type="file" accept="audio/*" disabled={running} onChange={(event) => { setFile(event.target.files?.[0] ?? null); decoded.current = null; }} /></label>
-      <small>Up to 25 MB and {provider === 'whisper' ? 'one minute' : 'five minutes'}. Start with a 10–20 second voice clip. Keep this tab visible while measuring.</small>
+      <label>Local WAV <input aria-label="Local audio" type="file" accept=".wav,audio/wav,audio/x-wav" disabled={running} onChange={(event) => { setFile(event.target.files?.[0] ?? null); decoded.current = null; }} /></label>
+      <small>Uncompressed WAV, mono or stereo, up to 25 MB and {provider === 'whisper' ? 'one minute' : 'five minutes'}. Convert other formats to WAV first. Start with a 10–20 second voice clip. Keep this tab visible while measuring.</small>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <button type="button" onClick={() => void run()} disabled={!ready || !file || running || loading}>Run comparison</button>
         <button type="button" onClick={() => stop()} disabled={!loading && !running && !ready}>Stop and unload</button>

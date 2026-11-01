@@ -61,7 +61,8 @@ test('pilot gateway brands navigation errors, preserves API JSON, and safely rec
     assert.equal(callback.status, 503);
     assert.match(callback.headers.get('set-cookie')!, /Max-Age=0/);
     const auth = await callback.text();
-    assert.match(auth, /start a fresh connection/);
+    assert.match(auth, /A little out of fuel/);
+    assert.doesNotMatch(auth, /start a fresh connection/);
     assert.doesNotMatch(auth, /private-code|private provider details/);
     const api = await get('/api/session');
     assert.equal(api.status, 503);

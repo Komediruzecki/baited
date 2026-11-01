@@ -22,6 +22,11 @@ export function errorKindForStatus(status) {
   return status === 503 ? 'unavailable' : 'server';
 }
 
+/** An expired/denied sign-in needs a fresh connection; capacity/outage errors need a wait. */
+export function errorKindForDocument(pathname, status) {
+  return pathname.startsWith('/auth/') && [400, 401, 403].includes(status) ? 'auth' : errorKindForStatus(status);
+}
+
 /** Known service states get precise guidance; arbitrary exception text never reaches the page. */
 export function sessionErrorKind(failure) {
   if (['The pilot is stopped.', 'The pilot is stopped. Try again when the test reopens.'].includes(failure?.message)) return 'stopped';
@@ -78,7 +83,7 @@ export function renderErrorDocument(kind = 'missing', surface = 'app', overlay =
 /** Keep response status, cookies and rate-limit headers; only replace a document's error body. */
 export function withErrorDocument(request, response, surface = 'app') {
   if (response.status < 400 || !isDocumentNavigation(request)) return response;
-  const kind = new URL(request.url).pathname.startsWith('/auth/') ? 'auth' : errorKindForStatus(response.status);
+  const kind = errorKindForDocument(new URL(request.url).pathname, response.status);
   const headers = new Headers(response.headers);
   for (const name of ['content-length', 'content-encoding', 'etag']) headers.delete(name);
   headers.set('content-type', 'text/html; charset=utf-8');

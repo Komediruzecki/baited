@@ -375,9 +375,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   useEffect(() => {
     if (!voicePending.expiresAt) return;
     const timeout = setTimeout(() => {
-      voiceSession.current.expire(Date.now());
+      const expiredGuess = voiceSession.current.expireScheduled(voicePending.expiresAt);
       setVoicePending(voiceSession.current.snapshot());
-      setVoiceMessage('Voice guess expired. Say it again when you are ready.');
+      if (expiredGuess) setVoiceMessage('Voice guess expired. Say it again when you are ready.');
     }, Math.max(0, voicePending.expiresAt - Date.now()));
     return () => clearTimeout(timeout);
   }, [voicePending.expiresAt]);
@@ -721,7 +721,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           )}
           {tab === 'studio' && studio.deck?.problem && <div className="error-banner" role="alert">
             <Card size={18} /><span>{studio.deck.problem}</span>
-            <Button className="secondary" onClick={() => selectTab('cards')}>Choose a deck</Button>
+            {!isEdgeRuntime() && <Button className="secondary" onClick={() => selectTab('cards')}>Choose a deck</Button>}
           </div>}
           {notice && (
             <div className={cx('error-banner', notice.ok && 'info-banner')} role="status">

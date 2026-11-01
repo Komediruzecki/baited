@@ -460,3 +460,103 @@ test('ordinary speech, cancel, expiry and context changes clear bare-guess permi
     assert.equal(voice.receive(final('Banana'), 300).consumed, false, ending);
   }
 });
+
+
+test('up to three filler-only finals preserve the original intent deadline, while longer speech clears it', () => {
+  for (const filler of ['Okay, so.', 'Uh, okay.', 'Um, okay, so.']) {
+    const voice = session();
+    voice.receive(final("I'm calling the bait"), 100);
+    assert.equal(voice.receive(final(filler), 200).consumed, false, filler);
+    assert.equal(voice.snapshot(201).draft, null);
+    assert.equal(voice.snapshot(201).acceptsBareGuess, true, filler);
+    assert.equal(voice.snapshot(201).expiresAt, 100 + VOICE_GUESS_TTL_MS);
+    assert.equal(voice.receive(final('Banana'), 300).prepared?.word, 'banana');
+    assert.equal(voice.receive(final('Lock in'), 400).submit?.word, 'banana');
+  }
+  const voice = session();
+  voice.receive(final("I'm calling the bait"), 100);
+  assert.equal(voice.receive(final('Um okay so well'), 200).consumed, false);
+  assert.equal(voice.snapshot(201).acceptsBareGuess, false);
+  assert.equal(voice.receive(final('Banana'), 300).consumed, false);
+});
+
+test('up to two leading fillers are stripped only before one armed guess, not a narrative', () => {
+  for (const text of ['Uh, okay, banana.', 'Okay, so, banana.']) {
+    const voice = session();
+    assert.equal(voice.receive(final(text), 100).consumed, false);
+    voice.receive(final('Hey Baity'), 200);
+    assert.equal(voice.receive(final(text), 300).consumed, false);
+    voice.receive(final("I'm calling the bait"), 400);
+    assert.equal(voice.receive(final(text), 500).prepared?.word, 'banana', text);
+    assert.equal(voice.receive(final('Lock in'), 600).submit?.word, 'banana');
+  }
+  for (const text of ['Um okay so banana', 'Okay so I saw a banana', 'Okay so banana is yellow']) {
+    const voice = session(); voice.receive(final("I'm calling the bait"), 100);
+    assert.equal(voice.receive(final(text), 200).consumed, false, text);
+    assert.equal(voice.snapshot(201).acceptsBareGuess, false);
+  }
+});
+
+test('finite clipped and explicit call aliases arm a guess without matching narratives', () => {
+  for (const intent of ['Calling the bait', "I'll call the bait", 'I’ll call the bait',
+    'Im calling the bait', 'I will call the bait', 'Hey Baity calling the bait',
+    "Ah bait but I'll call the bait"]) {
+    const voice = session();
+    assert.equal(voice.receive(final(intent, { isComplete: false }), 100).consumed, false);
+    assert.equal(voice.receive(final(intent), 200).consumed, true, intent);
+    assert.equal(voice.snapshot(201).acceptsBareGuess, true, intent);
+    assert.equal(voice.receive(final('Bait'), 300).prepared?.word, 'bait', intent);
+    assert.equal(voice.receive(final('Lock in'), 400).submit?.word, 'bait', intent);
+    const expired = session(); expired.receive(final(intent), 100);
+    assert.equal(expired.receive(final('Banana'), 100 + VOICE_GUESS_TTL_MS).consumed, false);
+    assert.equal(new VoiceGuessSession().receive(final(intent), 100).consumed, false);
+  }
+  for (const text of ['I was calling the bait', 'Someone is calling the bait', 'I might call the bait',
+    "Yesterday I'll call the bait", 'Calling my friend', 'Im calling the bakery',
+    'Hey baby calling a friend', 'Ah bait but I might call the bait']) {
+    assert.equal(session().receive(final(text), 100).consumed, false, text);
+  }
+});
+
+test('it is or its contraction can introduce one word only after explicit intent', () => {
+  for (const text of ["It's banana", 'It’s banana', 'It is banana', "It's banana lock in"]) {
+    const voice = session();
+    assert.equal(voice.receive(final(text), 100).consumed, false);
+    voice.receive(final('Hey Baity'), 200);
+    assert.equal(voice.receive(final(text), 300).consumed, false, 'Wake alone does not arm a guess.');
+    voice.receive(final("I'm calling the bait"), 400);
+    const result = voice.receive(final(text), 500);
+    assert.equal(result.prepared?.word, 'banana', text);
+    assert.equal(result.submit, undefined);
+    assert.equal(voice.receive(final('Lock in'), 600).submit?.word, 'banana');
+  }
+  for (const text of ["It's a banana", 'It is banana bread', 'It was banana', "It's banana and ghost"]) {
+    const voice = session(); voice.receive(final("I'm calling the bait"), 100);
+    assert.equal(voice.receive(final(text), 200).consumed, false, text);
+    assert.equal(voice.snapshot(201).acceptsBareGuess, false);
+  }
+});
+
+test('scheduled expiry clamps an early callback and does not announce wake-only expiration or clear newer state', () => {
+  const voice = session();
+  voice.receive(final("I'm calling the bait"), 100);
+  const deadline = voice.snapshot(101).expiresAt;
+  assert.equal(voice.expireScheduled(deadline, deadline - 1), true);
+  assert.equal(voice.snapshot(deadline - 1).awaitingWord, false);
+  assert.equal(voice.receive(final('Banana'), deadline).consumed, false);
+  voice.receive(final('Hey Baity'), 20_000);
+  assert.equal(voice.expireScheduled(20_000 + VOICE_GUESS_TTL_MS, 20_001), false,
+    'Wake-only expiry is silent.');
+  assert.equal(voice.snapshot(20_001).awaitingWord, false);
+  voice.receive(final("I'm calling the bait"), 40_000);
+  const oldDeadline = voice.snapshot(40_001).expiresAt;
+  voice.receive(final('Banana'), 40_100);
+  assert.equal(voice.expireScheduled(oldDeadline, oldDeadline), false,
+    'A stale timer cannot clear a later draft.');
+  const draftDeadline = voice.snapshot(oldDeadline).expiresAt;
+  assert.equal(voice.snapshot(oldDeadline).draft?.word, 'banana');
+  assert.equal(voice.expireScheduled(draftDeadline, draftDeadline - 1), true);
+  assert.equal(voice.snapshot(draftDeadline - 1).draft, null);
+  assert.equal(voice.receive(final('Lock in'), draftDeadline).submit, undefined);
+  assert.equal(voice.expireScheduled(0, draftDeadline), false);
+});

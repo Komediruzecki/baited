@@ -63,6 +63,7 @@ for (const width of [320, 390, 768, 1440]) {
 
 test('a new settled card resolves from pixels once and respects reduced motion', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/?spread-debug#cards')
   await expect.poll(() => page.evaluate(() => !!window.__baitedSpread)).toBe(true)
   await page.evaluate(() => {
@@ -70,24 +71,55 @@ test('a new settled card resolves from pixels once and respects reduced motion',
     const wipe = ScrollTrigger.getAll().find(trigger => trigger.trigger?.matches('.site-footer') && trigger.vars.onUpdate)
     scrollTo({ top: (pin.start + wipe.start) / 2, behavior: 'instant' })
     window.__pixelProof = []
+    // Observe the card requested by ArrowRight, not an initial reveal that can
+    // finish between the key press and the next card's spring settling in CI.
+    const items = [...document.querySelectorAll('.deck-card-item')]
+    window.__pixelProofTarget = items[(items.findIndex(item => item.classList.contains('is-front')) + 1) % items.length]
     new MutationObserver(() => {
-      const art = document.querySelector('.deck-card-item.is-front .card-art')
+      const next = window.__pixelProofTarget
+      const art = next.classList.contains('is-front') && next.querySelector('.card-art')
       if (art?.classList.contains('is-resolving')) window.__pixelProof.push([art.querySelector('canvas').width, art.classList.contains('is-swapped')])
     }).observe(document.querySelector('#deck-hand'), { subtree: true, attributes: true, attributeFilter: ['class', 'width'] })
   })
   await expect(page.locator('#deck-hand')).toHaveClass(/is-live/)
   await page.locator('#deck-hand').focus()
   await page.locator('#deck-hand').press('ArrowRight')
-  await expect.poll(() => page.evaluate(() => window.__pixelProof.length)).toBeGreaterThan(0)
+  await expect.poll(() => page.evaluate(() =>
+    window.__pixelProof.some(([, swapped]) => !swapped) && window.__pixelProof.some(([, swapped]) => swapped)
+  )).toBe(true)
   await expect(page.locator('.card-art.is-resolving')).toHaveCount(0)
   await expect(page.locator('.deck-card-item.is-front .card-art.is-pixelated')).toHaveCount(0)
   const sampled = await page.evaluate(() => window.__pixelProof)
   expect(sampled.every(([width]) => width === 32)).toBe(true)
   expect(sampled.some(([, swapped]) => !swapped) && sampled.some(([, swapped]) => swapped)).toBe(true)
+  const firstWord = await page.locator('.deck-card-item.is-front .card-word').textContent()
+  await page.evaluate(() => {
+    // emulateMedia returns when the preference is set, not when its change
+    // listeners and GSAP's breakpoint refresh have finished. Wait for that
+    // event and the following paint before issuing another deck command.
+    window.__pixelMediaReady = new Promise(resolve => {
+      matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      }, { once: true })
+    })
+  })
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.evaluate(() => { window.__pixelProof.length = 0 })
+  await page.evaluate(() => window.__pixelMediaReady)
+  await expect(page.locator('.deck-card-item.is-front .card-word')).toHaveText(firstWord)
+  const nextWord = await page.evaluate(() => {
+    window.__pixelProof.length = 0
+    const items = [...document.querySelectorAll('.deck-card-item')]
+    window.__pixelProofTarget = items[(items.findIndex(item => item.classList.contains('is-front')) + 1) % items.length]
+    return window.__pixelProofTarget.querySelector('.card-word').textContent
+  })
   await page.locator('#deck-hand').press('ArrowRight')
-  await expect(page.locator('.deck-card-item.is-front .card-word')).toHaveText('MONOCLE')
+  await expect(page.locator('.deck-card-item.is-front .card-word')).toHaveText(nextWord)
+  await expect.poll(() => page.evaluate(() => !window.__baitedSpread.moving)).toBe(true)
+  await expect.poll(() => page.locator('.deck-card-item.is-front .card-art img')
+    .evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true)
+  // Let any reveal scheduled by settling/image load reach its first paint.
+  // The observer remains attached, so even a completed animation is detected.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   await expect(page.locator('.card-art.is-resolving')).toHaveCount(0)
   expect(await page.evaluate(() => window.__pixelProof)).toEqual([])
 })
