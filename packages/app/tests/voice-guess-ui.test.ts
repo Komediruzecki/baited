@@ -33,6 +33,14 @@ const render = (pending: VoiceGuessSnapshot) => renderToStaticMarkup(React.creat
   onToggle() {}, onLock() {}, onCancel() {},
 }));
 
+test('the control offers one-utterance lock-in and optional draft review without forced pauses', () => {
+  const html = render(session().snapshot(100));
+  assert.match(html, /I’m calling the bait, fish, lock in/);
+  assert.match(html, /No pauses needed/);
+  assert.match(html, /Leave off <q>lock in<\/q> to check the draft first/);
+  assert.doesNotMatch(html, /Wait for|wait for the listening/);
+});
+
 test('wake-only state asks for intent rather than promising that a bare target is safe', () => {
   const voice = session(); voice.receive(line('Hey Baity'), 100);
   const html = render(voice.snapshot(101));

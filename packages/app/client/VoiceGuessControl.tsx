@@ -16,7 +16,7 @@ export function VoiceGuessControl({ enabled, ready, pending, seconds, busy, mess
     </button>
     {!enabled && <p className="voice-guess__off">Voice guesses are off. Type your guess, or switch this on before saying it. Saying the word can still give chat a win.</p>}
     {enabled && <div className="voice-guess__body">
-      <p>Say <q>I’m calling the bait.</q> Wait for <q>Listening for your guess</q>, then say your word. Check the draft and say <q>lock in.</q></p>
+      <p>Say <q>I’m calling the bait, fish, lock in.</q> Use your guess in place of <q>fish.</q> No pauses needed. Leave off <q>lock in</q> to check the draft first.</p>
       <small>With Baity connected and announcements on, your draft can appear in chat. Voice guesses still work without the bot. Your stream hears your voice.</small>
       {!ready && !busy && <p className="voice-guess__status" role="status">Ready during a live round with your microphone on and Call the bait available.</p>}
       {pending.awaitingWord && <>
@@ -29,7 +29,7 @@ export function VoiceGuessControl({ enabled, ready, pending, seconds, busy, mess
       </>}
       {pending.draft && <div className="voice-guess__draft">
         <div className="voice-guess__word" role="status"><span>Your guess</span><strong>{pending.draft.word}</strong></div>
-        <small>Say <q>lock in</q> within {seconds}s. To change it, say <q>I’m calling the bait</q> again, then wait for the listening message before saying the new word.</small>
+        <small>Say <q>lock in</q> within {seconds}s. To change it, say <q>I’m calling the bait</q> again with the new word. Say <q>cancel</q> to drop this guess.</small>
         {announcement && <small role="status">{announcement}</small>}
         <div className="voice-guess__actions">
           <Button type="button" className="primary" disabled={!ready || busy} onClick={onLock}>Lock in</Button>

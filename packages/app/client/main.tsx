@@ -98,7 +98,7 @@ import { canRevealSoloTarget, SoloTarget } from './SoloTarget';
 import './solo-target.css';
 import { TranscriptPreview } from './TranscriptPreview';
 import { VoiceGuessControl } from './VoiceGuessControl';
-import { VoiceGuessSession, type VoiceGuessContext, type VoiceGuessDraft, type VoiceGuessSnapshot } from './voice-guess';
+import { dispatchVoiceGuess, VoiceGuessSession, type VoiceGuessContext, type VoiceGuessDraft, type VoiceGuessSnapshot } from './voice-guess';
 import { readVoiceGuessPreference, saveVoiceGuessPreference } from './voice-guess-preference';
 import {
   canPreviewTranscript,
@@ -271,8 +271,9 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     }
   }, [session.csrf]);
   const submitVoice = useCallback(async (draft: VoiceGuessDraft) => {
+    if (voiceInFlight.current) return;
     const context = voiceContext(currentStudio.current);
-    if (voiceInFlight.current || !context || JSON.stringify(context) !== JSON.stringify(draft.context) || Date.now() >= draft.expiresAt) {
+    if (!context || JSON.stringify(context) !== JSON.stringify(draft.context) || Date.now() >= draft.expiresAt) {
       clearVoice('That guess expired. Say it again during the current round.');
       return;
     }
@@ -563,10 +564,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           // Unrecognized speech can clear a stale draft or a split-command
           // prefix while still passing through ordinary word detection.
           if (!result.consumed) return false;
-          setVoiceMessage(result.uncertain ? 'That command was unclear. Please repeat it or type your guess.'
-            : result.confirmSeparately ? 'Check the word, pause, then say “lock in” once more.' : '');
-          if (result.prepared) void shareVoiceDraft(result.prepared);
-          if (result.submit) void submitVoice(result.submit);
+          // Keep recognizing command wording while a guess is in flight, so
+          // repeats cannot become catches or start a second public/scoring request.
+          if (voiceInFlight.current) {
+            voiceSession.current.clear();
+            setVoicePending(voiceSession.current.snapshot());
+            return true;
+          }
+          setVoiceMessage(result.uncertain ? 'That command was unclear. Please repeat it or type your guess.' : '');
+          dispatchVoiceGuess(result, { busy: voiceInFlight.current, share: shareVoiceDraft, submit: submitVoice });
           return true;
         },
       ),
