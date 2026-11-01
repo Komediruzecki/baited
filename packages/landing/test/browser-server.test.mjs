@@ -7,6 +7,24 @@ import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { browserServerOptions, runBrowserServer, serverDiagnostic } from '../scripts/browser-server.mjs'
 
+async function processState(pid, read = readFile) {
+  return read(`/proc/${pid}/stat`, 'utf8')
+    .then(stat => stat.slice(stat.lastIndexOf(')') + 2, stat.lastIndexOf(')') + 3))
+    // Linux can report ESRCH when the process exits after the stat file opens.
+    .catch(error => { if (!['ENOENT', 'ESRCH'].includes(error.code)) throw error; return null })
+}
+
+test('process-state checks tolerate an exited process but preserve running states and other errors', async () => {
+  for (const code of ['ENOENT', 'ESRCH']) {
+    assert.equal(await processState(123, async () => { throw Object.assign(new Error('gone'), { code }) }), null)
+  }
+  assert.equal(await processState(123, async () => '123 (test process) R 1 2 3'), 'R')
+  assert.equal(await processState(123, async () => '123 (test process) Z 1 2 3'), 'Z')
+  for (const code of ['EACCES', 'EIO']) {
+    await assert.rejects(processState(123, async () => { throw Object.assign(new Error('unreadable'), { code }) }), { code })
+  }
+})
+
 test('preview options retain strict CI defaults and validate explicit local limits', () => {
   const defaults = browserServerOptions()
   const after = flag => defaults.args[defaults.args.indexOf(flag) + 1]
@@ -107,8 +125,7 @@ for (const { name, parentResists, inheritOutput } of [
     supervisor.kill('SIGTERM')
     assert.deepEqual(await closed, { code: parentResists ? 137 : 0, signal: null })
     for (const pid of Object.values(pids)) {
-      const state = await readFile(`/proc/${pid}/stat`, 'utf8').then(stat => stat.slice(stat.lastIndexOf(')') + 2, stat.lastIndexOf(')') + 3))
-        .catch(error => { if (error.code !== 'ENOENT') throw error; return null })
+      const state = await processState(pid)
       assert.ok(state === null || state === 'Z', `test descendant ${pid} must no longer be running`)
     }
   } finally {
