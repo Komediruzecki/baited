@@ -55,6 +55,13 @@ export async function buildPilotAssets() {
     if ((await stat(resolve(license, file))).isFile()) await copyFile(resolve(license, file), resolve(output, 'licenses/moonshine', file));
   }
   const whisper = await packageWhisperAssets(process.env.BAITED_SPEECH_ASSET_DIR, output);
+  if (whisper.available) {
+    const notices = resolve(app, 'licenses/speech-bench');
+    for (const file of await readdir(notices)) {
+      if ((await stat(resolve(notices, file))).isFile())
+        await copyFile(resolve(notices, file), resolve(output, 'licenses/speech-bench', file));
+    }
+  }
   const receipt = { output, cards: proofWords.length, illustrations: illustratedWords.length, modelDownloadOrigin: 'https://download.moonshine.ai',
     runtime: '@moonshine-ai/moonshine-wasm@0.1.5', whisper, providerResourcesCreated: false };
   const { output: _output, ...publicReceipt } = receipt;

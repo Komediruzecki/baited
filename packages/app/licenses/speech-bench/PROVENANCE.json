@@ -1,0 +1,89 @@
+{
+  "checkedAt": "2026-11-01",
+  "files": [
+    {
+      "file": "LICENSE-Transformers-Apache-2.0.txt",
+      "source": "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/LICENSE",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "copy": "verbatim upstream file"
+    },
+    {
+      "file": "LICENSE-ONNX-Runtime-MIT.txt",
+      "source": "https://raw.githubusercontent.com/microsoft/onnxruntime/8d85527a010e294a26b274749f74294b2a32cec5/LICENSE",
+      "bytes": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+      "copy": "verbatim upstream file"
+    },
+    {
+      "file": "THIRD-PARTY-NOTICES-ONNX-Runtime.txt",
+      "source": "https://raw.githubusercontent.com/microsoft/onnxruntime/8d85527a010e294a26b274749f74294b2a32cec5/ThirdPartyNotices.txt",
+      "bytes": 338088,
+      "sha256": "143764b952fdb1a7c69ce653bfba74a7744d6a8a573bfb73e235fba356c83de3",
+      "copy": "verbatim upstream file"
+    },
+    {
+      "file": "LICENSE-Whisper-MIT.txt",
+      "source": "https://raw.githubusercontent.com/openai/whisper/6e3be77e1a105e59086e3e21ff5f609fd6fa89a5/LICENSE",
+      "bytes": 1063,
+      "sha256": "b5d65a59060e68c4ff940e1eddfa6f94b2d68fdf58ed7f4dd57721c997e35e9d",
+      "copy": "verbatim upstream file"
+    },
+    {
+      "file": "LICENSE-Jinja-MIT.txt",
+      "source": "https://cdn.jsdelivr.net/npm/@huggingface/jinja@0.5.10/LICENSE",
+      "bytes": 1069,
+      "sha256": "d6e7b19451c1b3d1d66353bb4b1274138953b3bfd9ae60c56e77b1f548796982",
+      "copy": "verbatim upstream file"
+    },
+    {
+      "file": "LICENSE-Tokenizers-Apache-2.0.txt",
+      "source": "https://cdn.jsdelivr.net/npm/@huggingface/tokenizers@0.2.0/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "copy": "verbatim upstream file"
+    },
+    {
+      "file": "TRANSFORMERS-BUNDLED-NOTICE.txt",
+      "source": "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/dist/transformers.js",
+      "bytes": 250,
+      "sha256": "99d5daaf08a71b5ca7da4d3de38c674f9d8de19a0838234c75c32c5e3b61626f",
+      "copy": "verbatim complete bundled license comment from unminified upstream distribution, plus trailing newline"
+    }
+  ],
+  "components": {
+    "transformers": {
+      "package": "@huggingface/transformers",
+      "version": "4.3.1",
+      "gitCommit": "511bb61a7c46b73e33f1af3fb308fbd1afe98c02",
+      "packageSource": "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/package.json",
+      "sourceLock": "https://raw.githubusercontent.com/huggingface/transformers.js/511bb61a7c46b73e33f1af3fb308fbd1afe98c02/pnpm-lock.yaml",
+      "bundledDependencies": {
+        "@huggingface/jinja": "0.5.10",
+        "@huggingface/tokenizers": "0.2.0"
+      },
+      "minifierSource": "https://raw.githubusercontent.com/huggingface/transformers.js/511bb61a7c46b73e33f1af3fb308fbd1afe98c02/packages/transformers/scripts/build/buildAll.mjs",
+      "unminifiedBundleSha256": "3e9a4ce35946bc8094c297023acfbe6051ad24c1c480a180f80c0c2f632c5ef5",
+      "separateNoticeFileInNpmPackage": false
+    },
+    "onnxruntime": {
+      "package": "onnxruntime-web",
+      "version": "1.31.0-dev.20260914-8d85527a0",
+      "gitCommit": "8d85527a010e294a26b274749f74294b2a32cec5",
+      "packageSource": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.0-dev.20260914-8d85527a0/package.json",
+      "licenseOrNoticeFilesInNpmPackage": false
+    },
+    "model": {
+      "repository": "Xenova/whisper-tiny",
+      "revision": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+      "licenseMetadata": "apache-2.0",
+      "modelCard": "https://huggingface.co/Xenova/whisper-tiny/raw/5332fcc35e32a33b86612b9a57a89be7906102b1/README.md",
+      "tree": "https://huggingface.co/api/models/Xenova/whisper-tiny/tree/5332fcc35e32a33b86612b9a57a89be7906102b1",
+      "separateLicenseOrNoticeFileInPinnedRoot": false,
+      "baseModel": "openai/whisper-tiny",
+      "originalLicense": "LICENSE-Whisper-MIT.txt"
+    }
+  },
+  "assetIntegritySource": "../../scripts/speech-bench/asset-lock.json",
+  "distributionNotes": "The complete upstream ONNX third-party notice file covers upstream builds generally; retaining it does not assert that every listed optional backend is present in the shipped WASM. Original prepared assets and their lock were not modified."
+}

@@ -5,7 +5,7 @@ Moonshine remains the live game recognizer. Whisper is an experimental compariso
 ## Try a phrase
 
 1. Pause the game and turn off Studio's microphone. Keep the comparison tab visible.
-2. Open `/speech-lab`, select **Whisper Tiny**, and load it. Each load reads about 59 MB of model and runtime files from the same host.
+2. Open `/speech-lab`, select **Whisper Tiny**, and load it. About 59 MB of model and runtime files are served from the same host. Model reads bypass the browser cache; runtime module imports may use it.
 3. Choose English or Croatian, then select **Test microphone (5 seconds)**. Approve microphone access if prompted.
 4. Say one short phrase. Recording stops after five seconds; **Finish sample** stops it earlier. The microphone closes before transcription starts.
 5. Compare the returned text with what you said. Test once with OBS idle and once while OBS records. Note the OBS state in the run label.
@@ -43,6 +43,6 @@ pnpm --dir packages/edge-game build:pilot-assets
 
 Use an existing prepared directory under registered agent output. The builder does not download a model or read credentials. It validates each source against the checked-in lock. Files above Cloudflare's 25 MiB per-asset limit are split into transport chunks; the browser validates each chunk and the complete reconstructed file. The original assets are not modified.
 
-Without `BAITED_SPEECH_ASSET_DIR`, the build ships an unavailable marker and no Whisper model. Deployment must point Wrangler's asset directory at the resulting build, using the established pilot deployment procedure. Never upload the model inside the Twitch Extension ZIP.
+Without `BAITED_SPEECH_ASSET_DIR`, the build ships an unavailable marker and no Whisper model. An enabled build also copies the complete model/runtime license notices to `/licenses/speech-bench/`, linked from Speech bench. Deployment must point Wrangler's asset directory at the resulting build, using the established pilot deployment procedure. Never upload the model inside the Twitch Extension ZIP.
 
-The Whisper worker accepts only pinned, same-origin asset reads. Its production CSP restricts connections to the same origin. The comparison makes no game API calls and creates no game session. The Twitch Extension ZIP is unaffected by these hosted Studio and diagnostic changes.
+The Whisper worker's fetch adapter accepts only pinned, same-origin asset reads and verifies their hashes. Runtime JavaScript modules load through same-origin imports; their hashes are checked at build time, not by that fetch adapter. The worker's production CSP restricts connections to the same origin. The comparison makes no game API calls and creates no game session. The Twitch Extension ZIP is unaffected by these hosted Studio and diagnostic changes.

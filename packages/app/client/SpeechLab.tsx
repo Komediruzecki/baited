@@ -115,7 +115,7 @@ export function SpeechLab() {
           ...common, format: 'baited-whisper-file-benchmark-v1', package: `@huggingface/transformers@${TRANSFORMERS_VERSION}`,
           onnxRuntime: ONNX_VERSION, model: WHISPER_MODEL, revision: WHISPER_REVISION,
           dtype: 'q8', device: 'wasm', threads: 1, language, task: 'transcribe',
-          cachePolicy: 'Browser model cache and WASM cache disabled; all prepared assets served with Cache-Control: no-store. OS filesystem cache may still affect timings.',
+          cachePolicy: 'Model and binary fetches request cache: no-store; browser model and WASM caches are disabled. Runtime module imports use normal browser caching. All files are checksum-verified at build time; fetched files are also verified in the browser, while imported runtime modules rely on same-origin delivery.',
           inferenceMs: output.inferenceMs, processingToAudioRatio: output.inferenceMs / (pcm.length / 16),
           transcript: output.text,
           processingMetric: 'Whole-file transcription, 30-second chunks with 5-second stride. This is not streaming latency and cannot be compared with Moonshine final-line lag.',
@@ -167,6 +167,10 @@ export function SpeechLab() {
       const pcm = await recorder.capture(5);
       if (!valid()) return;
       micSample.current = null; setRecordingMic(false);
+      if (pcm.length === 0) {
+        setStatus('No audio captured. Whisper is still ready; start another microphone sample when you are ready.');
+        return;
+      }
       setStatus('Microphone released. Whisper is transcribing your sample on this computer.');
       const output = await worker.transcribe(pcm, language, { wordTimestamps: true });
       if (!valid()) return;
@@ -205,7 +209,8 @@ export function SpeechLab() {
         <option value="moonshine">Moonshine Tiny · live-speed replay</option>{whisperAvailable && <option value="whisper">Whisper Tiny · experimental comparison</option>}
       </select></label>
       {provider === 'whisper' ? <>
-        <p>Multilingual Tiny, q8, one WASM thread. About 59 MB of prepared same-origin model and runtime files. Each load reads those files again; browser caching is disabled. Recognition stops after three minutes if it gets stuck. This comparison does not replace Moonshine in Studio.</p>
+        <p>Multilingual Tiny, q8, one WASM thread. About 59 MB of model and runtime files served from this site. Model reads bypass the browser cache; runtime modules may be cached. Recognition stops after three minutes if it gets stuck. This comparison does not replace Moonshine in Studio.</p>
+        <a href="/licenses/speech-bench/DISTRIBUTION-NOTICES.md">Model and runtime licenses</a>
         <label>Recording language <select aria-label="Recording language" value={language} onChange={(event) => setLanguage(event.target.value as WhisperLanguage)} disabled={running}>
           <option value="en">English</option><option value="hr">Croatian</option>
         </select></label>
