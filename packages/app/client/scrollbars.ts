@@ -22,6 +22,7 @@ export const SCROLLERS = [
   '.cl-editions',
   '.cl-clue-preview',
   '.product-review__canvas',
+  '.speech-lab pre',
 ];
 
 type Axis = 'x' | 'y';
