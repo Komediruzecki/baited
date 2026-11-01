@@ -11,6 +11,8 @@ The owner chose two behaviors:
 
 Voice guesses are opt-in. Typed guesses remain available and do not acquire public draft announcements. The stream microphone can broadcast spoken commands regardless of what the bot posts.
 
+**Prepared, not yet deployed:** the 15-second pilot chat reply cooldown and final-speech command protection described below are local changes awaiting release. Confirm deployment before relying on them during a recording take.
+
 ## Interaction
 
 1. Enable Voice guesses in Studio and turn on the microphone. The round must be live and its one guess must still be available.
@@ -28,9 +30,13 @@ These are supported transcripts, not a guarantee that the microphone will recogn
 
 After the guess is used, Studio says: **“You already used your guess for this word. Voice guesses return with the next word. Saying the target still counts.”** Calling wording no longer protects speech for that word. The same applies when Voice guesses are off or the command is otherwise ineligible.
 
+The prepared final-speech protection retains an existing command-recognition context for the same round and microphone capture during the settling drain. A recognized command final can stay excluded from catch detection during that drain, but cannot post a new public draft or submit a late guess. The protection ends at the existing settling deadline or when its eligibility or capture context changes. Ordinary target speech captured before the buzzer still reaches the normal scoring checks. Finish your guess before the buzzer; the drain does not extend the guessing window.
+
 Public draft announcements are capped at three per round and six per minute, share Baity's existing send budget, and expire with the original draft deadline. “Asked Baity to share this guess” acknowledges a request, not a confirmed chat post. Cancel stops local lock-in; it does not retract an already requested or posted Twitch message, or speech on the stream.
 
-Baity’s **`!bait` chat reply cooldowns** limit chat replies. They do not govern voice commands or the authenticated server guess action. The one-guess-per-word rule still applies even when a chat reply is ready again.
+The prepared pilot gives Baity’s **`!bait` command replies a 15-second cooldown per channel and a 15-second cooldown per chatter within that channel**. Both must have expired before another reply is eligible. Commands share those cooldowns, so switching from help to score or using another chatter does not bypass the channel wait. Another channel has independent cooldowns, including for the same chatter. Baity’s shared send budget is unchanged, so an eligible reply is not a promise of immediate delivery.
+
+These cooldowns limit chat replies. They do not delay a spoken lock-in or govern the authenticated server guess action. A voice guess can still be locked while Baity is cooling down or offline, subject to the active-round deadline and the one-guess-per-word rule. Optional public draft announcements keep their separate limits and still share the bot’s send budget.
 
 ## If a possible catch appears
 
@@ -54,6 +60,7 @@ The calling phrase contains **bait**. Recognized command words must be intercept
 
 - Combined and split command phrases, one-word limit, capitalization and punctuation.
 - Command handling before catch scoring, including the target BAIT.
+- Previously eligible command finals during settling are excluded from catch detection without a late public draft or guess; ordinary target speech captured before the buzzer still scores.
 - Negative phrases and normal speech still forwarded unchanged.
 - Combined lock-in without an intermediate public draft; separate explicit lock after a reviewed draft.
 - Expiry, cancellation, duplicate finals and repeated lock-in while a request is pending.
@@ -62,6 +69,7 @@ The calling phrase contains **bait**. Recognized command words must be intercept
 - A pending catch stops play before reveal and cannot be converted into an escape.
 - Draft invalidation after pause, round change, Restart take, microphone loss, disconnect and lease change.
 - Server authorization, round/epoch fencing, idempotency and existing bot budgets.
+- Pilot chat reply cooldowns remain closed at 14.999 seconds and reopen at 15 seconds, independently across channels; spoken lock-in does not wait for them.
 - No draft posting from viewers or OBS overlays; no secret-target comparison in draft announcements.
 - No stale queued draft after a round ends or the take resets.
 - Public draft wording and privacy copy agree; typed private guesses retain their behavior.
