@@ -15,6 +15,7 @@ const output = resolve(process.env.BAITED_PILOT_ASSETS_OUT || resolve(edge, 'dis
 const runtime = dirname(requireApp.resolve('@moonshine-ai/moonshine-wasm/moonshine.mjs'));
 const publicAssets = [
   'pcm-worklet.js', 'moonshine-worker.js', 'brand/baited-pixel-white.svg',
+  'brand/baited-favicon.png', 'brand/baited-favicon.svg',
   'error-page.css',
   ...streakFlameFiles.map((file) => `brand/${file}`),
   'fonts/inter-latin.woff2', 'fonts/intertight-latin.woff2', 'fonts/russo-one.ttf', 'fonts/baited-pixel.ttf',
