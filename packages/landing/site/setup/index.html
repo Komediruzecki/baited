@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Set up Baited's invited Twitch pilot: connect Studio, check your microphone, add the OBS overlay and help viewers find their secret card." />
+    <title>Set up your first round · Baited</title>
+    <link rel="canonical" href="https://baited.maff.app/setup/" />
+    <meta property="og:url" content="https://baited.maff.app/setup/" />
+    <link rel="icon" href="/assets/brand/baited-favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/assets/russo-one.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/assets/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/setup/setup.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#guide">Skip to the setup guide</a>
+    <header class="guide-header">
+      <a href="/" class="guide-logo" aria-label="Baited home"><img src="/assets/brand/baited-pixel-violet.svg" alt="" width="370" height="100" /></a>
+      <a class="guide-button guide-button--small" href="https://pilot-baited.maff.app/studio">Open Studio <span aria-hidden="true">↗</span></a>
+    </header>
+    <main id="guide">
+      <div class="guide-intro">
+        <p class="guide-kicker">Twitch Hosted Test · Invited accounts</p>
+        <h1>Set the stage.<br /><span>Then take the bait.</span></h1>
+        <p class="guide-lead">Your controls stay in Studio. Chat gets the secret card on Twitch. Here’s how to put both sides together.</p>
+      </div>
+      <div class="guide-layout">
+        <nav class="guide-nav" aria-label="Setup steps">
+          <a href="#access"><span>01</span> Pilot access</a>
+          <a href="#microphone"><span>02</span> Your microphone</a>
+          <a href="#settings"><span>03</span> Game settings</a>
+          <a href="#overlays"><span>04</span> Stream setup</a>
+          <a href="#first-round"><span>05</span> A first round</a>
+          <a href="#speech-lab"><span>06</span> Speech Lab</a>
+          <a href="#card-maker"><span>07</span> Card Maker</a>
+        </nav>
+        <div class="guide-steps">
+          <section class="guide-step" id="access" aria-labelledby="access-title">
+            <p class="guide-step__number">01 / BEFORE YOU GO LIVE</p>
+            <h2 id="access-title">Make sure you’re invited.</h2>
+            <p>Baited is in <strong>Twitch Hosted Test</strong>, not the public Extension directory. Your streaming channel needs pilot access, and each viewer testing the secret card needs Twitch testing access. Signing into Studio does not add either account to the test.</p>
+            <p>Already invited? <a href="https://pilot-baited.maff.app/studio">Open Studio</a>, choose <strong>Connect Twitch</strong> and sign in as the channel you’ll stream from. Review Twitch’s permissions and return to Studio.</p>
+            <p class="guide-note">Need an invite? Email <a href="mailto:hello@irchiinnuss.com?subject=Baited%20pilot%20access">hello@irchiinnuss.com</a> with your Twitch username and whether you’ll stream or join chat. Please don’t send a password, API key or stream key.</p>
+          </section>
+          <section class="guide-step" id="microphone" aria-labelledby="microphone-title">
+            <p class="guide-step__number">02 / LET BAITED HEAR YOU</p>
+            <h2 id="microphone-title">One mic. Your usual voice.</h2>
+            <p>In Studio, choose <strong>Enable microphone</strong> and allow the browser to use your mic. Wait for the model to finish loading and check the input meter. Moonshine checks speech on your computer; it starts recognizing words when a round is active.</p>
+            <p>Keep Studio open and your computer awake. Headphones stop game audio and other voices from bleeding into the mic. If the microphone stops, pause and use Studio’s recovery message to reconnect it before continuing.</p>
+            <p class="guide-note">Play this pilot in English. You can open <strong>What your mic heard</strong> to inspect completed phrases, but keep that transcript out of your stream capture.</p>
+          </section>
+          <section class="guide-step" id="settings" aria-labelledby="settings-title">
+            <p class="guide-step__number">03 / PICK YOUR RULES</p>
+            <h2 id="settings-title">Start simple. Add trouble later.</h2>
+            <p>Open <strong>Game settings</strong>. Choose the difficulty, round length and votes needed to skip. Save your changes. For a first test, two minutes and Easy gives everyone room to find their rhythm.</p>
+            <dl class="guide-rules">
+              <div><dt>Automatic rounds</dt><dd>Starts the next round after the cooldown. Turn it off when you need a break between takes.</dd></div>
+              <div><dt>Call the bait</dt><dd>Gives the streamer one guess per word. A typed guess stays private. A correct guess escapes the round; a wrong guess gives chat 15 extra seconds. Keep Baity chaos off for a straightforward first game.</dd></div>
+              <div><dt>Voice guesses</dt><dd>With Call the bait enabled, switch Voice guesses on by the microphone. Say “Baity bot, the bait is fish,” then “lock in.” Check the draft before locking it. Baity can announce your unconfirmed voice guess in chat. You can still use the typed guess box.</dd></div>
+              <div><dt>Catch confirmation</dt><dd>A detected catch confirms after 15 seconds unless you reject it. You can reverse a mistaken win afterward.</dd></div>
+            </dl>
+          </section>
+          <section class="guide-step" id="overlays" aria-labelledby="overlays-title">
+            <p class="guide-step__number">04 / TWO DIFFERENT OVERLAYS</p>
+            <h2 id="overlays-title">OBS shows the round.<br />Twitch holds the secret.</h2>
+            <div class="guide-surfaces">
+              <article><span class="guide-surface-label">Your stream recording</span><h3>OBS Browser Source</h3><p>In <strong>Stream setup</strong>, copy your OBS overlay URL. In OBS, add a <strong>Browser Source</strong>, paste it and set its size to <strong>1920 × 1080</strong>. The transparent overlay shows round information without giving away the active word.</p></article>
+              <article><span class="guide-surface-label">Each viewer’s Twitch player</span><h3>Baited Extension</h3><p>In your Twitch Creator Dashboard, open <strong>Extensions</strong>. Install the invited Baited test version and activate it as an <strong>Overlay</strong>. Viewers open Baited on your channel; your broadcaster account sees the hidden side.</p></article>
+            </div>
+            <p class="guide-note">The viewer’s secret card is not a second OBS source. Twitch adds it on each viewer’s screen, so it does not appear in your OBS recording. If you need footage of that view, record a separate viewer’s Twitch screen.</p>
+            <details><summary>My viewer can’t see the card.</summary><p>Check that they’re signed into the invited Twitch account. On the channel, open the Extensions control and accept the test disclosure, shown as <strong>Accept test extension</strong> in our desktop and mobile tests. Reload if needed. If Baited is still absent, check the testing allowlist and the channel’s active Extension version with the pilot organizer.</p><p><a href="https://dev.twitch.tv/docs/extensions/life-cycle/#twitch-cdn--hosted-test">How Twitch Hosted Test access works</a></p></details>
+          </section>
+          <section class="guide-step" id="first-round" aria-labelledby="round-title">
+            <p class="guide-step__number">05 / CHAT, YOU’RE UP</p>
+            <h2 id="round-title">Give them something to work with.</h2>
+            <p>Check that Studio shows chat connected and your microphone ready, then choose <strong>Start round</strong>. Ask a viewer to confirm that their card appears. They can send ordinary chat clues, while keeping the target word and its off-limits clues out of chat.</p>
+            <p>Talk about your game, a story or a question from chat. Your job is to keep talking without saying the secret word. Chat can use <code>!skip</code> to vote for another card.</p>
+            <details><summary>Bring Baity into chat.</summary><p>Use <strong>Add Baity, the chat bot</strong> in Stream setup and follow any permission request. Turn <strong>Announce rounds in chat</strong> on in Game settings and save. Baity announces rounds and results without revealing the active target.</p><p>Try <code>!bait help</code>, <code>!bait score</code>, <code>!bait top</code> or <code>!bait who</code>. Leave at least 15 seconds between commands in the channel. Voice guesses and locking in do not wait for that chat-reply cooldown.</p></details>
+          </section>
+          <section class="guide-step" id="speech-lab" aria-labelledby="speech-title">
+            <p class="guide-step__number">06 / TEST YOUR OWN VOICE</p>
+            <h2 id="speech-title">Same clip. Two sets of ears.</h2>
+            <p>Pause your round and disable Studio’s microphone, then <a href="https://pilot-baited.maff.app/speech-lab">open Speech Lab</a>. Record a short clip or choose a WAV, listen back, then select Moonshine, Whisper or both for comparison. You can download the recording and results to share a troublesome phrase.</p>
+            <p>Try the words and commands you actually use, with OBS running as it would during a stream. Compare the returned words with what you said, not just the speed.</p>
+            <p class="guide-note"><strong>Moonshine remains the live game model.</strong> The model selector chooses a Speech Lab test, not your Studio recognizer. Whisper is a comparison here. No audio uploads or game commands are sent by the lab.</p>
+          </section>
+          <section class="guide-step" id="card-maker" aria-labelledby="cards-title">
+            <p class="guide-step__number">07 / MAKE IT YOUR COMMUNITY’S</p>
+            <h2 id="cards-title">Words with a backstory.</h2>
+            <p>The Card Maker lets you write a target word and off-limits clues, then draw pixel art or add an image. Preview the card as chat will see it and build a pack around your community’s jokes.</p>
+            <p class="guide-note">The current Cloudflare pilot uses the built-in deck. Card Maker is available in the local app; it is not enabled for hosted pilot games yet. The walkthrough shows that local workflow separately.</p>
+            <a class="guide-button" href="https://pilot-baited.maff.app/studio">Open pilot Studio <span aria-hidden="true">↗</span></a>
+          </section>
+        </div>
+      </div>
+    </main>
+    <footer class="guide-footer"><a href="/">Bait them.</a><nav aria-label="Footer navigation"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:hello@irchiinnuss.com">Contact</a></nav></footer>
+  </body>
+</html>

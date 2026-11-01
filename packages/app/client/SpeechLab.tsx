@@ -97,7 +97,7 @@ export function SpeechLab() {
   return <div className="speech-lab">
     <header className="speech-lab-header"><a className="speech-lab-brand" href="/studio" aria-label="Baited Studio">{productBrand}</a><a className="button secondary" href="/studio">Back to Studio</a></header>
     <main className="speech-lab-main">
-      <div className="speech-lab-title"><p className="speech-lab-kicker">Speech lab</p><h1>Record once. Compare the words.</h1><p>Give Moonshine and Whisper the same clip. Listen back, compare the words they return, then try again.</p></div>
+      <div className="speech-lab-title"><p className="speech-lab-kicker">Speech lab</p><h1>Record once. Compare the words.</h1><p>Give Moonshine and Whisper the same clip. Listen back, compare the words they return, then try again.</p><p className="speech-lab-scope"><strong>For comparison.</strong> Choose a model below to test its accuracy. Studio keeps using Moonshine for live rounds.</p></div>
       <div className="speech-lab-workspace">
         <section className="speech-lab-input" aria-labelledby="speech-lab-clip-title">
           <div className="speech-lab-section-title"><h2 id="speech-lab-clip-title">Your clip</h2><span>{state.clip ? `${seconds(clipSeconds)} · kept in this tab` : 'Microphone or WAV'}</span></div>

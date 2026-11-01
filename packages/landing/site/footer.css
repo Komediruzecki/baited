@@ -74,6 +74,53 @@
   height: 100%;
 }
 
+/* Pilot access stays with the final invitation, without interrupting the deck's scroll transition. */
+.footer-pilot {
+  display: grid;
+  gap: 14px;
+  max-width: 640px;
+  padding-bottom: clamp(12px, 2vw, 24px);
+}
+.footer-pilot__status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #c9a8ff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.footer-pilot__status > span {
+  width: 8px;
+  height: 8px;
+  border: 2px solid currentColor;
+  box-shadow: 3px 3px 0 rgb(201 168 255 / 25%);
+}
+.footer-pilot__copy {
+  max-width: 55ch;
+  color: var(--footer-soft);
+  font-size: clamp(16px, 1.3vw, 19px);
+  line-height: 1.55;
+}
+.footer-pilot__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.footer-pilot__links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  text-decoration: underline;
+  text-decoration-color: var(--footer-line);
+  text-underline-offset: 5px;
+}
+.footer-pilot__links a:hover { text-decoration-color: currentColor; }
+
 /* The one divider: the circle sits on it, and the bar runs under it up to the circle. */
 .footer-rule {
   --circle: clamp(124px, 13vw, 200px);
@@ -271,6 +318,7 @@
   .footer-title {
     font-size: clamp(40px, 12.5vw, 64px);
   }
+  .footer-pilot { padding-bottom: 10px; }
   .footer-rule {
     --circle: 108px;
     --circle-right: 0px;

@@ -71,9 +71,34 @@ test('legacy aliases still reject writes and unknown environments before redirec
 })
 
 test('document canonical links use the new production origin', async () => {
-  for (const [file, path] of [['index.html', '/'], ['terms/index.html', '/terms'], ['privacy/index.html', '/privacy']]) {
+  for (const [file, path] of [['index.html', '/'], ['terms/index.html', '/terms'], ['privacy/index.html', '/privacy'], ['setup/index.html', '/setup/']]) {
     const html = await readFile(new URL(`../site/${file}`, import.meta.url), 'utf8')
     assert.equal(html.match(/<link rel="canonical" href="([^"]+)"/)[1], productionOrigin + path)
+  }
+})
+
+test('the pilot guide and its stylesheet reach the assets binding with the landing security policy', async () => {
+  for (const { ENVIRONMENT, origin } of environments) {
+    for (const method of ['GET', 'HEAD']) {
+      for (const [path, type] of [['/setup', 'text/html'], ['/setup/', 'text/html'], ['/setup/setup.css', 'text/css']]) {
+        const url = `${origin}${path}?from=studio`
+        let calls = 0
+        const response = await worker.fetch(new Request(url, { method }), {
+          ENVIRONMENT,
+          ASSETS: { fetch: async request => {
+            calls += 1
+            assert.equal(request.url, url, 'the binding receives the original path and query')
+            assert.equal(request.method, method)
+            return new Response('Setup guide asset', { headers: { 'Content-Type': type } })
+          } },
+        })
+        assert.equal(calls, 1)
+        assert.equal(response.status, 200)
+        assert.equal(response.headers.get('content-type'), type)
+        assert.equal(await response.text(), method === 'HEAD' ? '' : 'Setup guide asset')
+        assertHeaders(response, ENVIRONMENT === 'prod')
+      }
+    }
   }
 })
 
