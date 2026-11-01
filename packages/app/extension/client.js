@@ -63,7 +63,8 @@ export function readState(value) {
     const resultValue = r.result;
     if (!object(resultValue) || !string(resultValue.id) || !string(resultValue.word) || !outcomes.has(resultValue.outcome)) throw new Error('Invalid result.');
     if (resultValue.confirmAt !== undefined && !(Number.isSafeInteger(resultValue.confirmAt) && resultValue.confirmAt > 0)) throw new Error('Invalid catch deadline.');
-    if (resultValue.reason !== undefined && !['guess', 'timer'].includes(resultValue.reason)) throw new Error('Invalid result.');
+    if (resultValue.reason !== undefined && !['guess', 'timer', 'baity-chaos'].includes(resultValue.reason)) throw new Error('Invalid result.');
+    if (resultValue.reason === 'baity-chaos' && !['caught', 'overturned'].includes(resultValue.outcome)) throw new Error('Invalid result.');
     // Stays self-contained for the LAN harness; screens ignore counts that are not a tier.
     if (resultValue.milestone !== undefined && !(count(resultValue.milestone) && resultValue.milestone >= 2)) throw new Error('Invalid result.');
     if (resultValue.newBadge !== undefined && typeof resultValue.newBadge !== 'boolean') throw new Error('Invalid result.');

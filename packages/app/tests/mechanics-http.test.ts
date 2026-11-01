@@ -33,6 +33,20 @@ test('HTTP mission, private guesses and manual awards enforce ownership and clue
     cookie = login.headers.get('set-cookie')!.split(';')[0],
     csrf = (await login.json()).csrf;
   let studio = (await (await call('/api/studio', undefined, '', cookie)).json()) as Studio;
+  await t.test('Baity session reset requires the owner, CSRF, allowed origin and a current session ID', async () => {
+    const sessionId = studio.room.chaosSession!.id;
+    const body = { sessionId }, path = '/api/studio/chaos/reset';
+    assert.equal((await call(path, body)).status, 401);
+    assert.equal((await call(path, body, 'wrong', cookie)).status, 403);
+    assert.equal((await call(path, body, csrf, cookie, 'https://unrelated.example')).status, 403);
+    const before = studio.room.score;
+    const response = await call(path, body, csrf, cookie);
+    assert.equal(response.status, 200);
+    studio = await response.json() as Studio;
+    assert.notEqual(studio.room.chaosSession!.id, sessionId);
+    assert.deepEqual(studio.room.score, before);
+    assert.equal((await call(path, body, csrf, cookie)).status, 400);
+  });
   studio = await (
     await call(
       '/api/studio/settings',
@@ -50,6 +64,7 @@ test('HTTP mission, private guesses and manual awards enforce ownership and clue
   const viewer = (await (await call(viewerPath)).json()) as GameView;
   const roundId = studio.room.round!.id,
     epoch = studio.room.round!.epoch;
+  assert.equal((await call('/api/studio/chaos/reset', { sessionId: studio.room.chaosSession!.id }, csrf, cookie)).status, 400);
 
   await t.test('public projections expose one card only to viewers', async () => {
     const overlay = (await (await call(overlayPath)).json()) as GameView;
@@ -60,6 +75,8 @@ test('HTTP mission, private guesses and manual awards enforce ownership and clue
     assert.equal(studio.room.round!.forbiddenClues, undefined);
     assert.equal(overlay.round!.forbiddenClues, undefined);
     assert.equal(studio.awardBoard, null);
+    assert.equal(viewer.chaosSession, undefined);
+    assert.equal(overlay.chaosSession, undefined);
     assert.ok(!('candidates' in viewer));
   });
   await t.test(

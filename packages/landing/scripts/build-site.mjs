@@ -7,6 +7,7 @@ import { installPresentedDeck } from './presented-deck.mjs'
 import { installRibbon } from './ribbon.mjs'
 import { buildCardPreviews } from './card-previews.mjs'
 import { installPublicSamples } from './public-samples.mjs'
+import { installErrorPages } from './error-pages.mjs'
 
 const landingRoot = fileURLToPath(new URL('..', import.meta.url))
 const appRoot = resolve(landingRoot, '../app')
@@ -177,6 +178,7 @@ async function buildSiteLocked(environment, destination) {
   const source = resolve(landingRoot, 'site')
   await stageAndPublishSite({ environment, source, destination, excludedRoots: ['cards', 'card-expansion.js'], build: async stagingSite => {
     await installPublicSamples({ source, stagingSite })
+    await installErrorPages(stagingSite)
     if (environment === 'dev') {
       const labRoot = resolve(stagingSite, 'card-lab')
       const result = spawnSync(process.execPath, [

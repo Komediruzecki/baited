@@ -50,7 +50,9 @@ import { ResultCard } from './ResultCard';
 import { CardBack } from './CardBack';
 import { CatchDecision } from './CatchDecision';
 import { ObsHud } from './ObsHud';
-import { nextStreakTier, streakMilestone } from '../extension/presentation.js';
+import { BaityChaosRule, BaityChaosSettings } from './BaityChaos';
+import './baity-chaos.css';
+import { baityChaosCopy, nextStreakTier, streakMilestone } from '../extension/presentation.js';
 import { CutCard } from './CutCard';
 import { StreakBadge, StreakBadges, StreakCelebration, StreakCount, StreakRow } from './streak';
 import { SoundControls } from './SoundControls';
@@ -58,6 +60,8 @@ import { microphoneReady, MicrophoneLease, microphoneLeaseMessage } from './safe
 import { MicrophoneFeedback } from './microphone-feedback';
 import { StudioQuickControls, type QuickSetting } from './StudioQuickControls';
 import { StudioLogo } from './StudioLogo';
+import { AppErrorBoundary, ErrorScreen } from './ErrorScreen';
+import { isKnownAppPath, sessionErrorKind, type ErrorKind } from '../shared/error-pages.js';
 import { useSmoothScroll } from './smooth-scroll';
 import 'lenis/dist/lenis.css';
 import './style.css';
@@ -93,6 +97,10 @@ import './refinement.css';
 import { canRevealSoloTarget, SoloTarget } from './SoloTarget';
 import './solo-target.css';
 import { TranscriptPreview } from './TranscriptPreview';
+import { VoiceGuessControl } from './VoiceGuessControl';
+import { dispatchVoiceGuess, VoiceGuessSession, type VoiceGuessContext, type VoiceGuessDraft, type VoiceGuessSnapshot } from './voice-guess';
+import { emptyVoiceGuessSnapshot, VoiceGuessContextGate, voiceGuessActionContext, type VoiceGuessEligibility } from './voice-guess-context';
+import { readVoiceGuessPreference, saveVoiceGuessPreference } from './voice-guess-preference';
 import {
   canPreviewTranscript,
   TranscriptPreviewBuffer,
@@ -195,6 +203,21 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [micIssue, setMicIssue] = useState(''),
     [micRecovering, setMicRecovering] = useState(false);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
+  const voicePreferenceOwner = session.user ? `${session.user.mode}:${session.user.name}` : '';
+  const [voiceEnabled, setVoiceEnabled] = useState(() => readVoiceGuessPreference(voicePreferenceOwner));
+  const [voicePending, setVoicePending] = useState<VoiceGuessSnapshot>({ draft: null, awaitingWord: false, acceptsBareGuess: false, expiresAt: 0 });
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceMessage, setVoiceMessage] = useState('');
+  const [voiceAnnouncement, setVoiceAnnouncement] = useState('');
+  const voiceEnabledRef = useRef(voiceEnabled);
+  const voiceOffline = useRef(false);
+  const voiceRecovering = useRef(false);
+  const voiceInFlight = useRef(false);
+  const voiceManualGuess = useRef(false);
+  voiceManualGuess.current = modal === 'guess';
+  const voiceSession = useRef(new VoiceGuessSession());
+  const voiceContextGate = useRef(new VoiceGuessContextGate());
+  const [restartTakeId, setRestartTakeId] = useState<string | null>(null);
   const [cardsDirty, setCardsDirty] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
   const [leaveCards, setLeaveCards] = useState<(() => void) | null>(null);
@@ -212,15 +235,94 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     currentStudio = useRef<Studio | null>(null),
     offset = useRef(0);
   const now = useNow();
+  const clearVoice = useCallback((message = '') => {
+    voiceContextGate.current.clear();
+    voiceSession.current.clear();
+    setVoicePending(voiceSession.current.snapshot());
+    setVoiceMessage(message);
+    setVoiceAnnouncement('');
+  }, []);
+  const voiceEligibility = useCallback((s: Studio | null): VoiceGuessEligibility => {
+    const owner = capture.current;
+    return { room: s?.room ?? null, serverNow: Date.now() + offset.current, leaseId: owner?.lease.id ?? null,
+      enabled: voiceEnabledRef.current, offline: voiceOffline.current, recovering: voiceRecovering.current,
+      manualGuess: voiceManualGuess.current, leaseActive: !!owner?.lease.active, microphoneEnabled: !!owner?.microphone.enabled };
+  }, []);
+  const voiceContext = useCallback((s: Studio | null): VoiceGuessContext | null =>
+    voiceGuessActionContext(voiceEligibility(s)), [voiceEligibility]);
   const receive = useCallback((s: Studio) => {
     offset.current = s.room.serverTime - Date.now();
     currentStudio.current = s;
+    const permission = voiceContextGate.current.update(voiceEligibility(s));
+    voiceSession.current.setContext(permission.context);
+    setVoicePending(permission.canAct ? voiceSession.current.snapshot() : emptyVoiceGuessSnapshot());
     setStudio(s);
-  }, []);
+  }, [voiceEligibility]);
+  const shareVoiceDraft = useCallback(async (draft: VoiceGuessDraft) => {
+    setVoiceAnnouncement('Asking Baity to share this guess…');
+    try {
+      const reply = await request<{ status: 'requested' | 'unavailable' }>(
+        '/api/studio/voice-guess-draft',
+        { roundId: draft.context.roundId, epoch: draft.context.epoch, word: draft.word, draftId: crypto.randomUUID(),
+          expiresAt: draft.expiresAt + offset.current },
+        session.csrf,
+      );
+      if (voiceSession.current.snapshot().draft !== draft) return;
+      setVoiceAnnouncement(reply.status === 'requested' ? 'Asked Baity to share this guess.'
+        : 'Baity is unavailable. Your voice guess is still ready.');
+    } catch {
+      if (voiceSession.current.snapshot().draft === draft)
+        setVoiceAnnouncement('Could not confirm Baity received the draft. You can still lock in.');
+    }
+  }, [session.csrf]);
+  const submitVoice = useCallback(async (draft: VoiceGuessDraft) => {
+    if (voiceInFlight.current) return;
+    const context = voiceContext(currentStudio.current);
+    if (!context || JSON.stringify(context) !== JSON.stringify(draft.context) || Date.now() >= draft.expiresAt) {
+      clearVoice('That guess expired. Say it again during the current round.');
+      return;
+    }
+    voiceInFlight.current = true;
+    setVoiceBusy(true);
+    setVoiceMessage('');
+    const sameRound = () => {
+      const current = currentStudio.current;
+      return current?.room.round?.id === draft.context.roundId && current.room.round.epoch === draft.context.epoch &&
+        (current.room.recording?.takeId ?? '') === draft.context.takeId && capture.current?.lease.id === draft.context.leaseId;
+    };
+    try {
+      const reply = await request<{ correct: boolean; intervened?: boolean; bonus: number; studio: Studio }>(
+        '/api/studio/guess',
+        { roundId: draft.context.roundId, epoch: draft.context.epoch, word: draft.word },
+        session.csrf,
+      );
+      // A late scoring response must not repaint a newer round or recording take.
+      if (!sameRound()) return;
+      if (reply.studio.room.serverTime >= (currentStudio.current?.room.serverTime ?? 0)) receive(reply.studio);
+      setVoiceMessage(reply.intervened ? 'Correct guess. Baity gave chat the win.' : reply.correct ? 'Bait called. You escaped.' : `Not the word. Chat gets ${reply.bonus} extra seconds.`);
+    } catch (error) {
+      // Never retry a scoring action automatically: the server may have accepted it.
+      if (sameRound()) setVoiceMessage((error as Error).message || 'Could not check the guess. Check the round before trying again.');
+    } finally {
+      // Finals spoken while this request was pending still need command
+      // protection, but must not leave a second draft to submit afterward.
+      if (sameRound()) {
+        const permission = voiceContextGate.current.update(voiceEligibility(currentStudio.current));
+        if (!permission.context || permission.canAct) voiceSession.current.clear();
+        setVoicePending(permission.canAct ? voiceSession.current.snapshot() : emptyVoiceGuessSnapshot());
+        setVoiceAnnouncement('');
+      }
+      voiceInFlight.current = false;
+      setVoiceBusy(false);
+    }
+  }, [clearVoice, receive, session.csrf, voiceContext, voiceEligibility]);
   const pauseForMicrophone = useCallback(
     async (owner: Capture, message?: string, refresh = true) => {
       owner.microphone.stop();
       if (capture.current === owner) {
+        voiceRecovering.current = false;
+        voiceSession.current.setContext(null);
+        clearVoice();
         setConsent(false);
         setMicRecovering(false);
         if (message) { setMicIssue(message); setError(message); }
@@ -240,12 +342,15 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
         }
       }
     },
-    [receive],
+    [receive, clearVoice],
   );
   const connectionError = useCallback(
     (lost: boolean) => {
       setOffline(lost);
+      voiceOffline.current = lost;
       if (lost) {
+        voiceSession.current.setContext(null);
+        clearVoice();
         setTranscriptLines(transcriptBuffer.current.setEnabled(false));
         setTranscriptEnabled(false);
         if (capture.current?.lease.active) void pauseForMicrophone(capture.current,
@@ -258,18 +363,23 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           .catch(() => {});
       }
     },
-    [reload, pauseForMicrophone],
+    [reload, pauseForMicrophone, clearVoice],
   );
   useLive('/api/studio/events', receive, connectionError);
   const refreshDeck = useCallback(() => {
     void request<Studio>('/api/studio').then(receive).catch((e) => setError(e.message));
   }, [receive]);
   useEffect(() => {
+    if (!voicePending.draft) setVoiceAnnouncement('');
+  }, [voicePending.draft]);
+  useEffect(() => {
     void request<Studio>('/api/studio')
       .then(receive)
       .catch((e) => setError(e.message));
     return () => {
       transcriptBuffer.current.setEnabled(false);
+      voiceContextGate.current.clear();
+      voiceSession.current.setContext(null);
       const owner = capture.current;
       capture.current = null;
       owner?.microphone.stop();
@@ -277,6 +387,30 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     };
   }, [receive]);
   const g = studio?.room;
+  useEffect(() => {
+    if (g?.phase !== 'settling' || g.round?.settleUntil == null) return;
+    const round = g.round, settleUntil = g.round.settleUntil, owner = capture.current, takeId = g.recording?.takeId ?? '';
+    const timer = setTimeout(() => {
+      const current = currentStudio.current?.room;
+      if (capture.current !== owner || current?.phase !== 'settling' || current.round?.id !== round.id ||
+        current.round.epoch !== round.epoch || current.round.settleUntil !== settleUntil ||
+        (current.recording?.takeId ?? '') !== takeId) return;
+      voiceContextGate.current.clear();
+      voiceSession.current.setContext(null);
+      setVoicePending(emptyVoiceGuessSnapshot());
+      setVoiceAnnouncement('');
+    }, Math.max(0, settleUntil - (Date.now() + offset.current)));
+    return () => clearTimeout(timer);
+  }, [g?.phase, g?.round?.id, g?.round?.epoch, g?.round?.settleUntil, g?.recording?.takeId]);
+  useEffect(() => {
+    if (!voicePending.expiresAt) return;
+    const timeout = setTimeout(() => {
+      const expiredGuess = voiceSession.current.expireScheduled(voicePending.expiresAt);
+      setVoicePending(voiceSession.current.snapshot());
+      if (expiredGuess) setVoiceMessage('Voice guess expired. Say it again when you are ready.');
+    }, Math.max(0, voicePending.expiresAt - Date.now()));
+    return () => clearTimeout(timeout);
+  }, [voicePending.expiresAt]);
   useEffect(() => {
     const owner = capture.current;
     if (!consent || !g || !session.csrf || !owner?.lease.active) return;
@@ -336,6 +470,30 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       setBusy(false);
     }
   };
+  const restartTake = async () => {
+    if (!restartTakeId || busy || offline) return;
+    clearVoice();
+    setBusy(true);
+    setError('');
+    try {
+      receive(await request<Studio>('/api/recording/restart', { takeId: restartTakeId }, session.csrf));
+      setTranscriptLines(transcriptBuffer.current.clear());
+      setRestartTakeId(null);
+    } catch (e) {
+      setError((e as Error).message);
+      setRestartTakeId(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const resetChaos = async () => {
+    const game = currentStudio.current?.room;
+    if (!game?.chaosSession || busy || offline || ['active', 'paused', 'settling'].includes(game.phase) || game.result?.outcome === 'review')
+      throw new Error('Finish the round and reconnect before resetting the allowance.');
+    setBusy(true);
+    try { receive(await request<Studio>('/api/studio/chaos/reset', { sessionId: game.chaosSession.id }, session.csrf)); }
+    finally { setBusy(false); }
+  };
   const save = async (settings: Settings) => {
     setBusy(true);
     try {
@@ -362,6 +520,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const stopMic = () => {
     setMicIssue('');
     setMicRecovering(false);
+    voiceRecovering.current = false;
     if (capture.current) void pauseForMicrophone(capture.current);
   };
   const enableMic = async () => {
@@ -376,8 +535,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     setError('');
     setMicIssue('');
     setMicRecovering(false);
+    voiceRecovering.current = false;
     setConsent(false);
     setTranscriptLines(transcriptBuffer.current.clear());
+    voiceSession.current.setContext(null);
+    clearVoice();
     const previous = capture.current;
     const previousCancelled = previous
       ? previous.lease.cancel().catch(() => {})
@@ -385,13 +547,31 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     previous?.microphone.stop();
     const lease = new MicrophoneLease(crypto.randomUUID(), (body, signal) =>
       request('/api/studio/microphone', body, session.csrf, signal),
-      { onRecovery: (recovering) => { if (capture.current?.lease === lease) setMicRecovering(recovering); } },
+      { onRecovery: (recovering) => { if (capture.current?.lease === lease) {
+        setMicRecovering(recovering);
+        voiceRecovering.current = recovering;
+        if (recovering) { voiceSession.current.setContext(null); clearVoice(); }
+      } } },
     );
     const owner: Capture = {
       lease,
       microphone: new Microphone(
         (status) => {
-          if (capture.current === owner) setMicStatus(status);
+          if (capture.current === owner) {
+            setMicStatus(status);
+            if (status === 'listening') {
+              const permission = voiceContextGate.current.update(voiceEligibility(currentStudio.current));
+              voiceSession.current.setContext(permission.context);
+              setVoicePending(permission.canAct ? voiceSession.current.snapshot() : emptyVoiceGuessSnapshot());
+            }
+            if (status !== 'listening') {
+              const permission = voiceContextGate.current.update(voiceEligibility(currentStudio.current));
+              if (status === 'settling' && permission.context && !permission.canAct) {
+                voiceSession.current.setContext(permission.context);
+                setVoicePending(emptyVoiceGuessSnapshot());
+              } else { voiceSession.current.setContext(null); clearVoice(); }
+            }
+          }
         },
         (value) => {
           if (capture.current === owner) setLevel(value);
@@ -410,6 +590,32 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             return;
           const lines = transcriptBuffer.current.receive(line, segment);
           if (lines) setTranscriptLines(lines);
+        },
+        (line, segment) => {
+          if (capture.current !== owner) return false;
+          const permission = voiceContextGate.current.update(voiceEligibility(currentStudio.current));
+          const context = permission.context;
+          if (!context || segment !== `${context.roundId}:${context.epoch}`) {
+            voiceContextGate.current.clear();
+            voiceSession.current.setContext(null);
+            return false;
+          }
+          voiceSession.current.setContext(context);
+          const result = voiceSession.current.receive(line);
+          setVoicePending(permission.canAct ? voiceSession.current.snapshot() : emptyVoiceGuessSnapshot());
+          // Unrecognized speech can clear a stale draft or a split-command
+          // prefix while still passing through ordinary word detection.
+          if (!result.consumed) return false;
+          // Drain-time commands are protected speech, never a late draft or guess.
+          if (!permission.canAct) return true;
+          // Keep recognizing command wording while a guess is in flight, so
+          // repeats cannot become catches or start a second public/scoring request.
+          if (voiceInFlight.current) {
+            return true;
+          }
+          setVoiceMessage(result.uncertain ? 'That command was unclear. Please repeat it or type your guess.' : '');
+          dispatchVoiceGuess(result, { busy: voiceInFlight.current, share: shareVoiceDraft, submit: submitVoice });
+          return true;
         },
       ),
     };
@@ -446,6 +652,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
         <p>{error || 'Opening your studio…'}</p>
       </div>
     );
+  const roundDifficulty = g.round?.difficulty ?? (g.recording && g.recording.roundsStarted < 3 ? 'easy' : g.settings.difficulty);
   const active = g.phase === 'active',
     settling = g.phase === 'settling',
     paused = g.phase === 'paused',
@@ -562,7 +769,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           )}
           {tab === 'studio' && studio.deck?.problem && <div className="error-banner" role="alert">
             <Card size={18} /><span>{studio.deck.problem}</span>
-            <Button className="secondary" onClick={() => selectTab('cards')}>Choose a deck</Button>
+            {!isEdgeRuntime() && <Button className="secondary" onClick={() => selectTab('cards')}>Choose a deck</Button>}
           </div>}
           {notice && (
             <div className={cx('error-banner', notice.ok && 'info-banner')} role="status">
@@ -576,6 +783,12 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           )}
           {tab === 'studio' && (
             <>
+              {g.recording && <section className="recording-take" aria-label="Recording take">
+                <div><strong>Recording take</strong><span>{g.recording.roundsStarted <= 3
+                  ? `${g.recording.roundsStarted} of 3 prepared rounds started. Normal play follows.`
+                  : 'Prepared opening complete. Normal play continues.'}</span></div>
+                <Button className="secondary" disabled={busy || offline} onClick={() => setRestartTakeId(g.recording!.takeId)}>Restart take</Button>
+              </section>}
               {!offline && <MissionStatus game={g} now={now} offset={offset.current} />}
               <div className="studio-grid">
                 <section
@@ -597,7 +810,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           ? `Round ${String(g.round.number).padStart(2, '0')}`
                           : 'Next round'}
                     </span>
-                    <span className="desk-difficulty">{g.round?.difficulty ?? g.settings.difficulty}</span>
+                    <span className="desk-difficulty">{roundDifficulty}</span>
                     <Tag tone={active ? 'lime' : paused || pendingCatch ? 'amber' : 'muted'}>
                       <span className="dot" />
                       {active
@@ -642,7 +855,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                             : active || paused || settling
                               ? fmt(ms)
                               : fmt(
-                                  (g.settings.mission === 'three'
+                                  (g.settings.mission === 'three' && !(g.recording && g.recording.roundsStarted < 3)
                                     ? g.settings.missionDuration
                                     : g.settings.duration) * 1000,
                                 )}
@@ -689,7 +902,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                           <Play size={16} fill="currentColor" />
                           {cool && next > 0
                             ? `Next round in ${fmt(next)}`
-                            : g.settings.mission === 'three'
+                            : g.settings.mission === 'three' && !(g.recording && g.recording.roundsStarted < 3)
                               ? 'Start mission'
                               : 'Start round'}
                         </Button>
@@ -717,6 +930,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         </>
                       )}
                     </div>
+                    <BaityChaosRule game={g} />
                     {!active && !paused && !pendingCatch && !readyToBegin && <p className="start-reason" role="status">{studio.deck?.problem ? 'Choose a playable deck before starting the next round.' : modelLoading ? 'Waiting for the speech model.' : 'Connect chat and turn on your microphone to start.'}</p>}
                   </div>
                   <div
@@ -789,7 +1003,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                                 <Button
                                   className="secondary"
                                   disabled={!active || busy || offline}
-                                  onClick={() => setModal('guess')}
+                                  onClick={() => { voiceManualGuess.current = true; clearVoice(); setModal('guess'); }}
                                 >
                                   <Target size={16} />
                                   Call the bait
@@ -848,7 +1062,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   </div>
                   <div className="mission-footer">
                     <span className="round-difficulty">
-                      {g.round?.difficulty ?? g.settings.difficulty}
+                      {roundDifficulty}
                     </span>
                     <span className="round-totals">
                       <span>
@@ -971,6 +1185,33 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                     )}
                   {studio.speechProvider === 'moonshine' &&
                     canPreviewTranscript(g.mode, session.authenticated) && (
+                      <VoiceGuessControl
+                        enabled={voiceEnabled}
+                        ready={!!voiceContext(studio)}
+                        guessUsed={g.round?.guessUsed ?? false}
+                        pending={voicePending}
+                        seconds={Math.max(0, Math.ceil((voicePending.expiresAt - now) / 1000))}
+                        busy={voiceBusy}
+                        message={voiceMessage}
+                        announcement={voiceAnnouncement}
+                        onToggle={() => {
+                          const enabled = !voiceEnabledRef.current;
+                          voiceEnabledRef.current = enabled;
+                          setVoiceEnabled(enabled);
+                          voiceSession.current.setContext(null);
+                          const saved = saveVoiceGuessPreference(voicePreferenceOwner, enabled);
+                          clearVoice(saved ? '' : 'This browser could not remember the setting. Check Voice guesses after reloading.');
+                        }}
+                        onLock={() => {
+                          const draft = voiceSession.current.take();
+                          setVoicePending(voiceSession.current.snapshot());
+                          if (draft) void submitVoice(draft);
+                        }}
+                        onCancel={() => clearVoice('Guess canceled.')}
+                      />
+                    )}
+                  {studio.speechProvider === 'moonshine' &&
+                    canPreviewTranscript(g.mode, session.authenticated) && (
                       <TranscriptPreview
                         enabled={transcriptEnabled}
                         lines={transcriptLines}
@@ -1025,7 +1266,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                   </section>
                 </div>
               </div>
-              {studio.awardBoard && (
+              {studio.awardBoard && g.result?.reason !== 'baity-chaos' && (
                 <AwardReview
                   key={studio.awardBoard.roundId}
                   board={studio.awardBoard}
@@ -1084,6 +1325,14 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           <Button className="primary" onClick={() => setLeaveCards(null)}>Keep editing</Button>
         </div>
       </Modal>}
+      {restartTakeId && <Modal title="Restart this take?" onClose={() => { if (!busy) setRestartTakeId(null); }}>
+        <p>This ends the current round and returns this channel to round zero. The take’s scores and streak start over, ready for the same three opening cards.</p>
+        <p className="muted">Twitch connections, microphone permission and saved history stay intact. Viewers will see the waiting card until you start again.</p>
+        <div className="modal-actions">
+          <Button className="text" disabled={busy} onClick={() => setRestartTakeId(null)}>Keep this take</Button>
+          <Button className="primary" disabled={busy || offline} onClick={() => void restartTake()}>{busy ? 'Restarting…' : 'Restart take'}</Button>
+        </div>
+      </Modal>}
       {modal && (
         <Modal
           title={
@@ -1109,7 +1358,10 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             <SettingsForm
               settings={g.settings}
               chatBot={studio.chatBot}
-              busy={busy || settling}
+              busy={busy || settling || offline}
+              chaosSession={g.chaosSession}
+              onResetChaos={resetChaos}
+              recordingLocked={active || paused || pendingCatch || settling}
               onSave={save}
             />
           ) : modal === 'how' ? (
@@ -1120,6 +1372,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               game={g}
               csrf={session.csrf!}
               offline={offline}
+              voicePaused={voiceEnabled}
               onReceive={receive}
               onClose={() => setModal('')}
             />
@@ -1226,6 +1479,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   );
 }
 function ResultRow({ result: r }: { result: GameView['history'][number] }) {
+  const chaos = baityChaosCopy(r);
   return (
     <div className="result-row">
       <span className={cx('result-icon', r.outcome === 'caught' && 'win')}>
@@ -1234,9 +1488,10 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
       <strong>{r.word}</strong>
       <span className="result-time">{r.outcome === 'caught' ? `${r.elapsed}s` : '—'}</span>
       <Tag tone={r.outcome === 'caught' ? 'lime' : 'muted'}>
-        {r.reason === 'guess' ? 'Bait called' : outcomeLabel[r.outcome]}
+        {chaos ? chaos[0] : r.reason === 'guess' ? 'Bait called' : outcomeLabel[r.outcome]}
       </Tag>
-      {r.award && (
+      {chaos && <span className="result-chaos-note">{chaos[1]}</span>}
+      {r.award && !chaos && (
         <span className="result-award">
           <Check size={12} />
           <span>Streamer’s pick: @{r.award.name}</span>
@@ -1248,8 +1503,8 @@ function ResultRow({ result: r }: { result: GameView['history'][number] }) {
 function chatBotHint(bot: ChatBotStatus) {
   const what =
     isEdgeRuntime()
-      ? 'Baity posts round starts, results and game events. Never the word while a round is live.'
-      : 'Baity posts round starts, halfway, the last 10 seconds and results, and gets louder every round chat loses. Never the word while a round is live.';
+      ? 'Baity posts round starts, results and game events. Round announcements keep the secret word out of chat.'
+      : 'Baity posts round starts, halfway, the last 10 seconds and results, and gets louder every round chat loses. Round announcements keep the secret word out of chat.';
   if (bot.mode === 'demo') return `${what} In this demo, posts appear under Demo controls.`;
   if (bot.mode === 'unconfigured') return `${what} This server has no bot account yet, so nothing is posted.`;
   if (bot.mode === 'unauthorized')
@@ -1261,11 +1516,17 @@ function SettingsForm({
   settings,
   chatBot,
   busy,
+  recordingLocked,
+  chaosSession,
+  onResetChaos,
   onSave,
 }: {
   settings: Settings;
   chatBot: ChatBotStatus;
   busy: boolean;
+  recordingLocked: boolean;
+  chaosSession?: GameView['chaosSession'];
+  onResetChaos: () => Promise<void>;
   onSave: (s: Settings) => void;
 }) {
   const [s, set] = useState(settings);
@@ -1280,6 +1541,13 @@ function SettingsForm({
         Clue rules and guessing apply to the next word. Changing the format takes effect after the
         current mission.
       </p>
+      <label className="toggle-row">
+        <span><strong>Recording take</strong><small>{recordingLocked
+          ? 'End the current round before changing recording mode.'
+          : 'Three prepared opening cards, then normal random play. Opening rounds use easy rules, one word and Call the bait.'}</small></span>
+        <input type="checkbox" role="switch" checked={s.recordingMode ?? false} disabled={busy || recordingLocked}
+          onChange={(e) => set({ ...s, recordingMode: e.target.checked })} />
+      </label>
       <label className="field-label">Game format</label>
       <div className="segmented" role="group" aria-label="Game format">
         {(['single', 'three'] as const).map((mission) => (
@@ -1392,6 +1660,9 @@ function SettingsForm({
           onChange={(e) => set({ ...s, callBait: e.target.checked })}
         />
       </label>
+      <BaityChaosSettings enabled={s.baityChaos ?? false} callBait={s.callBait}
+        session={chaosSession} locked={recordingLocked} busy={busy}
+        onChange={(enabled) => set({ ...s, baityChaos: enabled })} onReset={onResetChaos} />
       <p className="field-label">Baity, the chat bot</p>
       <label className="toggle-row">
         <span>
@@ -1844,7 +2115,8 @@ function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
                 : bot.channelAllowed
                   ? `${bot.name} posts in your chat with Twitch’s Chat Bot badge. Turn announcements on in Game settings.`
                   : `Allow ${bot.name} to post in your chat. Twitch asks you once; baited keeps reading chat as before.`}{' '}
-          It never posts the word while a round is live, because you read your chat too.
+          Round announcements keep the secret word out of chat. With Voice guesses enabled,
+          Baity can also share your unconfirmed guess.
         </p>
         {game.mode === 'twitch' && bot.mode === 'twitch' && !bot.channelAllowed && (
           <AllowBotButton phase={game.phase} />
@@ -1940,11 +2212,13 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     </div>;
   const playing = active || paused || settling;
   const visibleWord = stale ? undefined : playing ? g.round?.target : finished ? g.result?.word : undefined;
+  const chaos = baityChaosCopy(g.result);
   const heading = stale ? 'Reconnecting.'
     : pendingCatch ? 'Catch pending.'
     : settling ? 'Checking final words.'
     : paused ? 'Round paused.'
     : active ? 'Make them say it.'
+    : chaos && finished ? chaos[0]
     : g.mission?.status === 'complete' ? 'Chat cleared the mission.'
     : g.mission?.status === 'failed' ? 'Time ran out.'
     : g.result?.reason === 'guess' && finished ? 'The streamer called it.'
@@ -1955,6 +2229,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
     : settling ? 'Only words spoken before the buzzer count.'
     : paused ? 'The clock and listening are stopped.'
     : active ? 'Don’t type it.'
+    : chaos && finished ? chaos[1]
     : g.mission?.status === 'complete' ? 'All three words landed before the timer.'
     : g.mission?.status === 'failed' ? `${g.mission.completed} of 3 words landed. Those wins still count.`
     : g.result?.reason === 'guess' && finished ? 'The private guess was right. The streamer escaped.'
@@ -1980,7 +2255,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
               chip={active && !stale ? `Round ${g.round?.number}` : stateLabel}
               level={playing && g.round ? { easy: 1, medium: 2, hard: 3 }[g.round.difficulty] : null}
               clues={playing && !stale ? g.round?.forbiddenClues ?? [] : null}
-              note={!playing ? (won ? 'Chat wins' : pendingCatch ? 'Not scored yet' : 'Round complete') : null}
+              note={!playing ? (chaos && won ? 'Correct guess. Chat wins.' : won ? 'Chat wins' : pendingCatch ? 'Not scored yet' : 'Round complete') : null}
               question={playing && !stale ? g.round?.example : null}
               progress={playing && g.round ? ms / g.round.duration : null}
               urgent={active && !stale && ms <= 15000}
@@ -1989,7 +2264,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             {!stale && <ForbiddenClueCard game={g} rulesOnly />}
           </section> : <div className="viewer-card-waiting"><div className="viewer-back"><CardBack /></div><p>{stale ? 'Waiting for updates.' : 'The word is coming.'}</p>{stale && <span className="viewer-stale-clock" aria-label="Timer unavailable while reconnecting">—:—</span>}</div>}
         </div>
-        {!stale && <PublicAward award={g.history[0]?.award} />}
+        {!stale && g.history[0]?.reason !== 'baity-chaos' && <PublicAward award={g.history[0]?.award} />}
       </div>
       <aside className="viewer-support" aria-label="Round status and how to play">
         <div className="viewer-state"><h1>{heading}</h1><p>{detail}</p>
@@ -2004,10 +2279,11 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
             </p>
           )}
         </div>
+        {!stale && <BaityChaosRule game={g} />}
         <ul className="viewer-playbook">
           <li><MessageSquare size={20} /><span>Steer the conversation.</span></li>
           <li><NoChat size={20} /><span>Keep the word and clues out of chat.</span></li>
-          <li><Mic size={20} /><span>Only the streamer’s voice counts.</span></li>
+          <li><Mic size={20} /><span>{g.round?.baityChaos ? 'Baity chaos is on for this round.' : 'Only the streamer’s voice counts.'}</span></li>
         </ul>
         {!stale && g.score.streak >= 2 && (
           <div className="viewer-streak">
@@ -2109,15 +2385,24 @@ function Privacy() {
           account run by this server’s operator posts as Baity: round starts, timer reminders,
           results, scores and the streamer’s award pick in Twitch chat. It names chatters only in that award,
           in the top-baiters list the room already shows, and when replying to their own command.
-          It never posts a word while its round is live, and it
-          does not store what it posts beyond the last few messages shown in the streamer’s
-          studio, which are kept in memory only.
+          It does not reveal the secret target during a live round. If you opt into Voice guesses,
+          it can share your unconfirmed spoken guess, which may happen to be the target.
         </p>
         <h2>Private guesses</h2>
         <p>
           Call the bait sends a typed guess to this server. The guess text is not retained or
           broadcast. A correct guess ends the word and reveals its target. An incorrect guess shares
           only the fifteen-second time bonus.
+        </p>
+        <h2>Voice guesses</h2>
+        <p>
+          Voice guesses are off until you enable them in Studio. Moonshine recognizes a small set
+          of commands locally and holds a draft for up to 15 seconds. You must say “lock in” or
+          press the button to submit it. When Baity is available, a separate request asks it to
+          share the unconfirmed draft in Twitch chat. Draft text can stay in a delivery queue for
+          up to 15 seconds, and is not added to lifetime game history. A message posted to Twitch
+          remains subject to Twitch’s chat and retention controls. Your stream may also broadcast
+          the spoken command through its microphone.
         </p>
         <h2>Session cookies and access</h2>
         <p>
@@ -2138,30 +2423,31 @@ function Privacy() {
           streamer who opens it. OBS links provide read-only game information. Keep studio sessions
           and server credentials private.
         </p>
-        <p className="muted">Updated October 27, 2026.</p>
+        <p className="muted">Updated October 31, 2026.</p>
       </main>
     </div>
   );
 }
 function App() {
   const [session, setSession] = useState<SessionInfo | null>(null),
-    [error, setError] = useState(''),
+    [error, setError] = useState<ErrorKind | null>(null),
     [retrying, setRetrying] = useState(false);
   const sessionLoader = useRef<ReturnType<typeof createRuntimeSessionLoader<SessionInfo>> | null>(null);
   const path = location.pathname.split('/').filter(Boolean),
     reload = useCallback(() => { sessionLoader.current?.reload(); }, []);
   useEffect(() => {
-    if (path[0] === 'speech-lab') return;
+    if (!isKnownAppPath(location.pathname) || path[0] === 'speech-lab') return;
     const loader = createRuntimeSessionLoader<SessionInfo>({
       load: (signal) => request<SessionInfo>('/api/session', undefined, undefined, signal),
       automatic: ['overlay', 'play'].includes(path[0]),
-      onSession: (value) => { setSession(value); setError(''); setRetrying(false); },
-      onError: (failure, scheduled) => { setError(failure.message); setRetrying(scheduled); },
+      onSession: (value) => { setSession(value); setError(null); setRetrying(false); },
+      onError: (failure, scheduled) => { setError(sessionErrorKind(failure)); setRetrying(scheduled); },
     });
     sessionLoader.current = loader;
     loader.reload();
     return () => { loader.destroy(); if (sessionLoader.current === loader) sessionLoader.current = null; };
   }, [reload]);
+  if (!isKnownAppPath(location.pathname, Boolean(session) && isEdgeRuntime())) return <ErrorScreen />;
   if (path[0] === 'privacy' && session) return <Privacy />;
   if (path[0] === 'speech-lab') return <SpeechLab />;
   if (path[0] === 'about' && session) return <Landing session={session} reload={reload} />;
@@ -2169,14 +2455,7 @@ function App() {
     return <main className="public-error"><h1>Join the game on Twitch.</h1><p>Open the Baited panel or player Extension on the streamer’s channel to see your card.</p><p>The pilot keeps secret cards inside Twitch, where the streamer and viewers have separate views.</p><a href="https://www.twitch.tv">Open Twitch</a></main>;
   if (session && ['play', 'overlay'].includes(path[0]) && path[1])
     return <PublicRoom id={path[1]} overlay={path[0] === 'overlay'} />;
-  if (error)
-    return (
-      <div className="loading">
-        <p role="alert">{error}</p>
-        {retrying && <p role="status">Reconnecting automatically…</p>}
-        <Button onClick={reload}>Try again</Button>
-      </div>
-    );
+  if (error) return <ErrorScreen kind={error} onRetry={reload} retrying={retrying} />;
   if (!session)
     return (
       <div className="loading">
@@ -2198,4 +2477,4 @@ function App() {
     <Landing session={session} reload={reload} />
   );
 }
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(<AppErrorBoundary><App /></AppErrorBoundary>);

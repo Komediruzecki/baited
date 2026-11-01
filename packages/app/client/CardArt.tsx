@@ -1,17 +1,16 @@
 import React from 'react';
-import { cardArtSource, proofWords } from '../extension/presentation.js';
+import { cardArtFile, cardArtSource, proofWords } from '../extension/presentation.js';
 export { proofWords } from '../extension/presentation.js';
 
 // This is an art catalogue, never a round selector. Only render a target received
 // from the viewer response, or a public result after the server has settled it.
 export type ProofWord = (typeof proofWords)[number];
-const available = new Set<string>(proofWords);
 
 export function CardArt({ word, artUrl, artPreview = false, className = '' }: {
   word?: string; artUrl?: string; artPreview?: boolean; className?: string;
 }) {
   const uploaded = cardArtSource(artUrl, undefined, artPreview);
-  const src = uploaded ?? (word && available.has(word.toLowerCase())
+  const src = uploaded ?? (word && cardArtFile(word)
     ? `${import.meta.env?.BASE_URL ?? '/'}cards/proofs/${word.toLowerCase()}.png` : null);
   if (!src) return null;
   return (

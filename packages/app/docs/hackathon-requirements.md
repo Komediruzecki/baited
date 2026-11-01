@@ -1,52 +1,40 @@
 # Hackathon requirements
 
-Checked against the official TwitchCon hackathon pages on Devpost on 25 October 2026. This is a working checklist, not proof that either entrant has registered, agreed to the rules or submitted BAIT. The authenticated form remains unverified because the connector requires reauthentication.
+Checked on **1 November 2026** against the [Codex x TwitchCon official rules](https://twitchcon-codex.devpost.com/rules) and the organizer's [30 October announcement](https://twitchcon-codex.devpost.com/updates/47341-final-weekend-make-your-project-come-alive). This checklist does not establish registration, accepted team invitations, judge access or submission status.
 
-## A two-person team is allowed
+## Required entry
 
-The official rules admit “Teams of Eligible Individuals”; the event FAQ states no maximum team size. Maff and Paolo can therefore enter together if each independently meets the rules. Choose one representative, invite the other through Manage Team, and verify that the invitation is accepted before final submission.
+The rules require an interactive Twitch project built with Codex during the submission period. Entrants must check their eligibility and rights to submitted material. The entry needs:
 
-Each entrant must meet the age requirement, including being at least 18 and having reached the age of majority where they live, and satisfy the residence and conflict-of-interest restrictions. Croatia is not named in the published country exclusion list. That observation does not establish either person's complete eligibility, and the teammate's residence is not assumed. The event is for eligible individuals and their teams, rather than organization entrants. Read the full eligibility section before making any account declaration.
+- A working project and a description of its features and use of Codex.
+- The main build thread's Codex session ID.
+- A GitHub, GitLab or Bitbucket repository containing source, assets and run instructions. A private repository must be on GitHub or GitLab and shared with `testing@devpost.com`.
+- A YouTube video showing the project running on Twitch and actual Codex build work.
+- English materials, or English translations, and free testing access through the judging period.
 
-The two-person team does not need a two-streamer mode. One person can stream while the other plays through the viewer page and Twitch chat. The [team checklist](team-and-release-checklist.md) proposes the remaining work split.
+These requirements come from the [official rules](https://twitchcon-codex.devpost.com/rules). The formal video guidance is under three minutes; the [30 October announcement](https://twitchcon-codex.devpost.com/updates/47341-final-weekend-make-your-project-come-alive) states a three-minute maximum and allows an unlisted video. Private videos are unsuitable. Keep the final cut under three minutes and verify that it plays while signed out.
 
-## What the entry needs
+## Dates and freeze
 
-The official requirements call for:
-
-- A project built with the event's AI coding agent during the submission period, plus a description of what it does and how that agent was used. Standard libraries and templates are permitted; the entrants still need to establish the provenance of this project and its assets.
-- The coding-agent session ID where most of the build happened. The supplied package's original ID is the current candidate, subject to owner confirmation. This later improvement chat is additional evidence, not a replacement history. See [build provenance](build-provenance.md).
-- A working Twitch experience. Chat, overlay and API integrations are eligible approaches; a published Twitch Extension is not required. Runtime AI is not required merely because a coding agent was used to build the project.
-- A source repository on GitHub, GitLab or Bitbucket, containing the code, required assets and run instructions. Public access is optional. A private GitHub or GitLab repository must be shared with `testing@devpost.com`; the requirements do not offer private Bitbucket as that alternative.
-- A YouTube demonstration shorter than three minutes that shows the project working on Twitch and actual build work with the coding agent. The FAQ permits an unlisted video. A private or inaccessible video is unsuitable.
-- English submission materials or an English translation, plus whatever access is needed to test the entry free of charge. The judges may rely on the video; that does not make an inaccessible demo or missing repository acceptable.
-
-The owner-authorized private [GitHub repository](https://github.com/Komediruzecki/bait) now exists. Its final pushed revision and judge access still need verification; no collaborator invitation is implied. There is no published service or final video yet. The local [submission draft](../devpost-submission.md) distinguishes the verified repository URL from the remaining placeholders. Do not paste placeholders into a final form. The rules permit multiple entries if they are substantially different; this packet describes BAIT only.
-
-The four equally weighted judging areas are innovation, community impact, implementation including use of the coding agent, and design/watchability. A clean, understandable live round and authentic build evidence address these more directly than another untested mode.
-
-## Dates and the published conflict
-
-All local times below use Europe/Zagreb, including its October daylight-saving change.
-
-| Milestone | Zagreb time |
+| Milestone | Time |
 | --- | --- |
-| Submission period opens | 23 October 2026 at 19:00 |
-| Team's proposed internal review | 1 November 2026 |
-| Submission deadline | **2 November 2026 at 23:00** |
-| Judging in the formal rules | 5 November at 18:00 through 16 November at 02:00 |
-| Judging on the schedule page | 3 November at 18:00 through 7 November at 02:00 |
+| Submission deadline | **2 November 2026, 14:00 Pacific / 22:00 UTC / 23:00 Europe/Zagreb** |
+| Formal judging period ends | 15 November, 17:00 Pacific / 16 November, 01:00 UTC / 02:00 Europe/Zagreb |
 
-The stated deadline is 14:00 Pacific Standard Time on 2 November, which is 22:00 UTC and 23:00 Zagreb. The FAQ's 21:00 UTC conversion is inconsistent. The formal rules and the event's schedule page also disagree on judging dates. Keep the submitted version and free judge access available through the later formal endpoint, 16 November at 02:00 Zagreb, and seek organizer clarification if that discrepancy affects the plan. Check the event's updates page again before submission.
+The formal rules prohibit changing the submission after the deadline, apart from limited organizer-approved corrections. The [30 October announcement](https://twitchcon-codex.devpost.com/updates/47341-final-weekend-make-your-project-come-alive) adds: **“Don’t change your repo, video or links until winners are announced.”** It directs continued development into a copy of the repository. Preserve the submitted repository and its linked artifacts; a tag does not make subsequent changes to that same repository compliant with this instruction.
 
-## Twitch Extension status
+GitHub archiving is optional enforcement, not an event requirement. [Archiving makes a repository read-only](https://docs.github.com/en/repositories/archiving-a-github-repository/archiving-repositories), including its permissions. Finish the submitted revision and confirm judge access before choosing to archive; archiving does not grant access to a private repository.
 
-BAIT currently uses a companion viewer page and OBS browser source. Do not call it an approved or published Twitch Extension. The event FAQ warns that judges cannot install an unreviewed Extension and quotes a review lead time of 5–14 days. [Twitch's own lifecycle documentation](https://dev.twitch.tv/docs/extensions/life-cycle/) gives an 8–14-day review window and says resubmission returns an extension to the review queue. Those are different estimates, not an approval promise. A new Extension review is unnecessary for demonstrating BAIT's existing integration.
+## Baited access checklist
 
-## Final entry sequence
+The project is in [Komediruzecki/baited](https://github.com/Komediruzecki/baited). Repository publication remains an owner decision. If it stays private for submission, verify the required judge access rather than treating the URL as sufficient.
 
-1. Publish the approved source and deploy the approved build with the selected hosting and provider configuration.
-2. Finish the real Twitch, physical microphone, second-device and OBS rehearsal, then record and upload the approved video. Verify the repository, YouTube and live links while signed out or using the expected judge access.
-3. Confirm both people's eligibility, accepted team invitation, source rights and original main build session.
-4. Inspect the actual authenticated form, fill its required fields from the reviewed draft, and resolve any additional questions.
-5. After the owners authorize the final entry, submit and verify that the event displays Submitted. Saving a draft does not complete entry.
+The Cloudflare pilot has been tested live by the project owner on desktop and iOS, but it permits only two invited streamer channels. Its native Extension remains in Hosted Test. A judge is not automatically an allowed streamer or Extension tester. Arrange access or a hosted session, and provide the [credential-free local walkthrough](judge-walkthrough.md) as a self-run inspection path. Do not describe the Extension as approved for public installation.
+
+Before the deadline:
+
+1. Confirm the final source revision, licenses, required assets and runnable setup instructions. Preserve the recorded [build provenance](build-provenance.md).
+2. Verify repository and hosted testing access from the judge's expected account, without sharing secrets. Keep access available through formal judging.
+3. Check the final video, live links, Codex session ID and team invitations.
+4. Submit the reviewed entry and verify **Submitted** on Devpost. A saved draft is not an entry, as the organizer's [final-weekend checklist](https://twitchcon-codex.devpost.com/updates/47341-final-weekend-make-your-project-come-alive) makes clear.
+5. Freeze the submitted repository, video and links at the deadline. Continue later work in a separate copy.

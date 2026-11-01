@@ -1,7 +1,7 @@
 # BAIT Sound Lab
 
 The procedural audio engine and selected recipes come from the owner's private
-`Komediruzecki/disjoint-colliders` repository, commit
+private upstream repository, commit
 `490d9fe050966cce7a680a411df77341df941fdd`, under
 `packages/minigames/src/games/keys/audio/`. The source was inspected on
 2026-10-25. The published reference is <https://keys.maff.app/sounds/>.

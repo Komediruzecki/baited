@@ -30,8 +30,10 @@ interface Inspection {
   sockets: {role:string;sessionId?:string;expiresAt:number;generation:number;readyState:number}[];
 }
 interface FixtureStub {
+  voiceDraftCurrentFixture(ref:Record<string,unknown>):Promise<boolean>;
   operatorFixture(enabled:boolean,revision:number,fail?:boolean):Promise<{status:number;body:unknown}>;
   bootstrapFixture(): Promise<number>;
+  enableBotRepliesFixture(channelId?: string, login?: string): Promise<number>;
   inspectFixture(): Promise<Inspection>;
   reconcileAtFixture(at: number): Promise<Inspection>;
   chatFixture(event: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }>;
@@ -73,6 +75,7 @@ before(async () => {
           admissionStatus = 200;
           deliveryStatus = 200;
           deliveries = 0;
+          deliveredEvents = [];
           heldRole = null;
           authorizeWaiting = 0;
           authorizeGate = null;
@@ -81,6 +84,7 @@ before(async () => {
           admissionStatusFixture(status) { this.admissionStatus = status; }
           deliveryFixture(status) { this.deliveryStatus = status; }
           deliveredFixture() { return this.deliveries; }
+          deliveredEventsFixture() { return this.deliveredEvents; }
           holdAuthorizeFixture(role) {
             this.heldRole=role;
             this.authorizeGate=new Promise(resolve=>{this.releaseAuthorize=resolve;});
@@ -94,11 +98,16 @@ before(async () => {
               if(this.heldRole===body.role) {this.authorizeWaiting++;await this.authorizeGate;this.authorizeWaiting--;}
               return Response.json({allowed: this.allowed && body.channelId === '123', login: 'komediruzecki7'}, {status:this.admissionStatus});
             }
-            if (path === '/internal/room-event') { this.deliveries++; return Response.json({ok: this.deliveryStatus === 200}, {status:this.deliveryStatus}); }
+            if (path === '/internal/room-event') { this.deliveries++; const body=await request.json(); this.deliveredEvents.push({type:body.event?.type,status:this.deliveryStatus,...(body.event?.type==='chat-command'?{command:body.event.command}:{})}); return Response.json({ok: this.deliveryStatus === 200}, {status:this.deliveryStatus}); }
             return new Response('No external provider in this fixture.', {status: 503});
           }
         }
         export class ChannelRoom extends BaseRoom {
+          async voiceDraftCurrentFixture(ref) {
+            const response=await this.fetch(new Request('https://room.internal/internal/voice-draft-current',{method:'POST',headers:{'content-type':'application/json'},
+              body:JSON.stringify({channelId:'123',ref:{...this.pilotState.voiceDraft?.latest,...ref}})}));
+            return response.ok && (await response.json()).current===true;
+          }
           failNextSchedule=false;
           interleaveNextSchedule=undefined;
           async schedule(...args) {
@@ -107,12 +116,16 @@ before(async () => {
             if(this.failNextSchedule) {this.failNextSchedule=false;throw new Error('fixture_audio_alarm_failure');}
             return super.schedule(...args);
           }
-          async bootstrapFixture() {
+          async bootstrapFixture(channelId='123',login='komediruzecki7') {
             this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS fixture_lease_writes(id INTEGER PRIMARY KEY,n INTEGER NOT NULL); INSERT OR IGNORE INTO fixture_lease_writes VALUES(1,0)');
             this.ctx.storage.sql.exec("CREATE TRIGGER IF NOT EXISTS fixture_count_lease_writes AFTER UPDATE ON pilot_state WHEN json_extract(OLD.body,'$.lease.expiresAt') < json_extract(NEW.body,'$.lease.expiresAt') BEGIN UPDATE fixture_lease_writes SET n=n+1 WHERE id=1; END");
             return (await this.fetch(new Request('https://room.internal/internal/control', {
-              method:'POST', body:JSON.stringify({channelId:'123', login:'komediruzecki7', type:'connection', status:'connected',connectionRevision:1})
+              method:'POST', body:JSON.stringify({channelId, login, type:'connection', status:'connected',connectionRevision:1})
             }))).status;
+          }
+          async enableBotRepliesFixture(channelId='123',login='komediruzecki7') {
+            const status=await this.bootstrapFixture(channelId,login);
+            this.game.data.settings.chatBot=true;return status;
           }
           async inspectFixture() {
             const self = this;
@@ -1518,6 +1531,60 @@ test('anonymous Extension viewers cannot fill pilot socket seats', {timeout:15_0
   } finally {await mf.dispose();}
 });
 
+test('pilot canonicalizes public bot commands and aliases without losing replies while idle', {timeout:20_000}, async () => {
+  const cases = [
+    ['!bait help', 'help'], ['!bait score', 'score'], ['!bait top', 'top'], ['!bait who', 'who'],
+    ['!bait streak', 'streak'], ['!bait rules', 'help'], ['!bait baity', 'who'], ['  !BAIT  \t SCORE  ', 'score'],
+  ] as const;
+  for (const [text, command] of cases) {
+    const {mf,stub}=await runtime();
+    try {
+      const now=Date.now()+30_000;
+      await stub.freezeAtFixture(now);
+      const initial=await state(mf);
+      await send(mf,{type:'settings',settings:{...initial.room.settings,chatBot:true}},initial.revision);
+      const response=await stub.chatFixture({eventId:randomUUID(),channelId:'123',at:now,kind:'message',
+        messageId:randomUUID(),userId:'555',name:'viewer',text});
+      assert.equal(response.status,200,text);
+      assert.equal(response.body.ignored,undefined,text);
+      await stub.flushOutboxAtFixture(now);
+      const namespace=await mf.getDurableObjectNamespace('CONTROL');
+      const control=namespace.get(namespace.idFromName('control-v1')) as unknown as {
+        deliveredEventsFixture():Promise<{type:string;status:number;command?:string}[]>;
+      };
+      assert.equal((await control.deliveredEventsFixture()).find(event=>event.type==='chat-command')?.command,command,text);
+      assert.equal((await stub.inspectFixture()).phase,'idle','A public command cannot start gameplay.');
+    } finally {await mf.dispose();}
+  }
+});
+
+test('Room public reply cooldowns open at 15 seconds per channel and user without crossing channels', {timeout:15_000}, async () => {
+  const { mf, stub } = await runtime();
+  try {
+    assert.equal(await stub.enableBotRepliesFixture(), 200);
+    const namespace = await mf.getDurableObjectNamespace('ROOMS');
+    const other = namespace.get(namespace.idFromName('channel:456')) as unknown as FixtureStub;
+    assert.equal(await other.enableBotRepliesFixture('456', 'lakeeko'), 200);
+    const base = Date.now() + 1000;
+    const post = async (room: FixtureStub, channelId: string, at: number, userId: string, text: string) => {
+      await room.freezeAtFixture(at);
+      return room.chatFixture({ eventId: randomUUID(), messageId: randomUUID(), channelId, at,
+        kind: 'message', userId, name: 'viewer', text });
+    };
+    const accepted = (result: { status: number; body: Record<string, unknown> }) => {
+      assert.equal(result.status, 200); assert.equal(result.body.ignored, undefined);
+    };
+    accepted(await post(stub, '123', base, '555', '!bait help'));
+    const sameUser = await post(stub, '123', base + 14_999, '555', '!bait score');
+    assert.equal(sameUser.body.reason, 'no_change');
+    const otherUser = await post(stub, '123', base + 14_999, '556', '!bait who');
+    assert.equal(otherUser.body.reason, 'no_change');
+    accepted(await post(other, '456', base + 14_999, '555', '!bait help'));
+    accepted(await post(stub, '123', base + 15_000, '555', '!bait score'));
+    accepted(await post(stub, '123', base + 30_000, '556', '!bait who'));
+  } finally { await mf.dispose(); }
+});
+
 test('chat-command cooldowns preserve outbox capacity for a round event', {timeout:15_000}, async () => {
   const {mf,stub}=await runtime();
   try {
@@ -1632,5 +1699,239 @@ test('operator uninitialized room rejects a stale enable after a higher failed s
     assert.equal((await stub.operatorFixture(false,3)).status,200);
     assert.equal((await stub.operatorFixture(true,4)).status,200);
     assert.equal(await stub.bootstrapFixture(),200);
+  } finally {await mf.dispose();}
+});
+
+test('recording take restart is owner-only, revision-fenced and keeps the microphone while dropping stale round inputs', {timeout:15_000}, async () => {
+  const {mf, stub} = await runtime();
+  try {
+    let snapshot = await state(mf);
+    await send(mf, {type:'settings',settings:{...snapshot.room.settings,recordingMode:true,difficulty:'hard',mission:'three',callBait:false}}, snapshot.revision);
+    await start(mf);
+    snapshot = await state(mf);
+    const takeId = snapshot.room.recording!.takeId;
+    const before = await stub.inspectFixture();
+    assert.equal((await state(mf,'viewer')).room.round!.target,'banana');
+    assert.equal(snapshot.room.round!.target,undefined);
+    assert.equal(snapshot.room.round!.difficulty,'easy');
+    assert.equal(snapshot.room.round!.guessEnabled,true);
+    assert.equal(snapshot.room.mission,null);
+    const sendRaw = async (role:Parameters<typeof token>[0], action:Command['action'], revision:number) => {
+      const response = await mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',headers:{origin:ORIGIN,
+        authorization:`Bearer ${await fixtureToken(mf,role)}`,'content-type':'application/json'},
+        body:JSON.stringify({id:randomUUID(),generation:1,expectedRevision:revision,action})});
+      return {status:response.status,body:await response.json() as Receipt};
+    };
+    for (const role of ['viewer','overlay','broadcaster'] as const) {
+      const rejected=await sendRaw(role,{type:'restart-take',takeId},snapshot.revision);
+      assert.equal(rejected.status,403);
+    }
+    await send(mf,{type:'pause',roundId:before.round!.id,epoch:before.round!.epoch},snapshot.revision);
+    const stale=await sendRaw('studio',{type:'restart-take',takeId},snapshot.revision);
+    assert.equal(stale.status,409); assert.equal(stale.body.code,'stale_revision');
+    snapshot=await state(mf);
+    await send(mf,{type:'restart-take',takeId},snapshot.revision);
+    const reset=await state(mf), inspect=await stub.inspectFixture();
+    assert.equal(reset.room.phase,'idle'); assert.equal(reset.room.round,null); assert.equal(reset.room.nextAt,null);
+    assert.deepEqual(reset.room.score,{wins:0,played:0,streak:0,best:0});
+    assert.notEqual(reset.room.recording!.takeId,takeId);
+    assert.deepEqual(inspect.lease,before.lease); assert.equal(inspect.mic,'listening');
+    const duplicate=await sendRaw('studio',{type:'restart-take',takeId},reset.revision);
+    assert.equal(duplicate.status,409); assert.equal(duplicate.body.code,'action_unavailable');
+    await send(mf,{type:'start'},reset.revision);
+    const fresh=await state(mf);
+    assert.equal(fresh.room.round!.number,1);
+    assert.notEqual(fresh.room.round!.id,before.round!.id);
+    assert.equal((await state(mf,'viewer')).room.round!.target,'banana');
+    const oldGuess=await sendRaw('studio',{type:'guess',roundId:before.round!.id,epoch:before.round!.epoch,text:'banana'},fresh.revision);
+    assert.equal(oldGuess.status,409);
+    await stub.ownerMessageAtFixture(await stub.clockFixture(),{type:'speech-audio',leaseId:before.lease!.id,
+      roundId:before.round!.id,epoch:before.round!.epoch,samples:512});
+    const recovered=await stub.recoverFixture();
+    assert.equal(recovered.round!.id,fresh.room.round!.id);
+    assert.equal(recovered.mic,'listening'); assert.equal(recovered.history,0);
+    assert.equal((await state(mf)).room.recording!.takeId,reset.room.recording!.takeId);
+  } finally {await mf.dispose();}
+});
+
+
+test('recording reset ignores delayed EventSub moderator commands from the previous take', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    let snapshot=await state(mf);
+    await send(mf,{type:'settings',settings:{...snapshot.room.settings,recordingMode:true,modCommands:true}},snapshot.revision);
+    await start(mf);
+    const at=await stub.clockFixture();
+    await stub.freezeAtFixture(at+1000);
+    snapshot=await state(mf);
+    await send(mf,{type:'restart-take',takeId:snapshot.room.recording!.takeId},snapshot.revision);
+    const event={eventId:randomUUID(),messageId:randomUUID(),channelId:'123',userId:'456',name:'Moderator',badges:['moderator'],kind:'message',text:'!bait start',at};
+    const ignored=await stub.chatFixture(event);
+    assert.equal(ignored.status,200); assert.equal(ignored.body.reason,'previous_take');
+    assert.equal((await state(mf)).room.phase,'idle');
+    await stub.freezeAtFixture(at+1001);
+    const fresh=await stub.chatFixture({...event,eventId:randomUUID(),messageId:randomUUID(),at:at+1001});
+    assert.equal(fresh.status,200);
+    assert.equal((await state(mf)).room.phase,'active');
+    assert.equal((await state(mf,'viewer')).room.round!.target,'banana');
+  } finally {await mf.dispose();}
+});
+
+
+test('a deferred recording reset is an outbox barrier without blocking gameplay or spinning alarms', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const namespace=await mf.getDurableObjectNamespace('CONTROL');
+    const control=namespace.get(namespace.idFromName('control-v1')) as unknown as {
+      deliveryFixture(status:number):Promise<void>;
+      deliveredEventsFixture():Promise<{type:string;status:number}[]>;
+    };
+    const at=Date.now()+30_000;
+    await stub.freezeAtFixture(at);
+    await control.deliveryFixture(503);
+    let snapshot=await state(mf);
+    await send(mf,{type:'settings',settings:{...snapshot.room.settings,recordingMode:true}},snapshot.revision);
+    await stub.flushOutboxAtFixture(at);
+    assert.deepEqual(await control.deliveredEventsFixture(),[{type:'recording-reset',status:503}]);
+    // Gameplay commands remain available while announcements wait for Control.
+    await start(mf);
+    snapshot=await state(mf);
+    assert.equal(snapshot.room.phase,'active');
+    assert.equal((await state(mf,'viewer')).room.round!.target,'banana');
+    await send(mf,{type:'pause',roundId:snapshot.room.round!.id,epoch:snapshot.room.round!.epoch},snapshot.revision);
+    await control.deliveryFixture(200);
+    const blocked=await stub.flushOutboxAtFixture(at+1);
+    assert.equal(blocked.phase,'paused'); assert.ok(blocked.outbox>=3);
+    assert.equal(blocked.alarm,at+15_000,'Due events behind the reset must not schedule immediate repeated alarms.');
+    assert.deepEqual(await control.deliveredEventsFixture(),[{type:'recording-reset',status:503}]);
+    await stub.flushOutboxAtFixture(at+15_000);
+    assert.deepEqual(await control.deliveredEventsFixture(),[
+      {type:'recording-reset',status:503},{type:'recording-reset',status:200},
+    ]);
+    const drained=await stub.flushOutboxAtFixture(at+15_001);
+    const events=await control.deliveredEventsFixture();
+    assert.deepEqual(events.slice(2),[
+      {type:'bot-settings',status:200},{type:'start',status:200},{type:'pause',status:200},
+    ]);
+    assert.equal(drained.outbox,0);
+    assert.equal(drained.phase,'paused');
+  } finally {await mf.dispose();}
+});
+
+
+test('stale voice drafts cannot replace the current draft or spend the next round announcement budget', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(await stub.clockFixture());
+    let snap=await state(mf);
+    await send(mf,{type:'settings',settings:{...snap.room.settings,callBait:true,recordingMode:true}},snap.revision);
+    const ws=await start(mf);
+    snap=await state(mf);
+    const oldRound=snap.room.round!;
+    await send(mf,{type:'restart-take',takeId:snap.room.recording!.takeId},snap.revision);
+    snap=await state(mf);await send(mf,{type:'start'},snap.revision);
+    snap=await state(mf);
+    const oldEpoch=snap.room.round!;
+    assert.notEqual(oldEpoch.id,oldRound.id);
+    await send(mf,{type:'pause',roundId:oldEpoch.id,epoch:oldEpoch.epoch},snap.revision);
+    snap=await state(mf);
+    await send(mf,{type:'resume',roundId:oldEpoch.id,epoch:snap.room.round!.epoch},snap.revision);
+    snap=await state(mf);
+    const current=snap.room.round!;
+    assert.notEqual(current.epoch,oldEpoch.epoch);
+    const draftId=randomUUID();
+    const draft:Extract<Command['action'],{type:'voice-guess-draft'}>={type:'voice-guess-draft',
+      roundId:current.id,epoch:current.epoch,text:'fish',draftId,expiresAt:await stub.clockFixture()+15000};
+    await send(mf,draft,snap.revision);
+    const before=await state(mf),queued=(await stub.inspectFixture()).outbox;
+    // Isolate the round guard from the epoch guard, then exercise a stale epoch
+    // on the current round. Either fence must reject without the other helping.
+    for(const stale of [{id:oldRound.id,epoch:current.epoch},oldEpoch]) {
+      // More than the per-minute draft allowance: refusals must not spend it.
+      for(let attempt=0;attempt<4;attempt++) {
+        const response=await mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',
+          headers:{origin:ORIGIN,authorization:`Bearer ${await fixtureToken(mf)}`,'content-type':'application/json'},
+          body:JSON.stringify({id:randomUUID(),generation:before.generation,expectedRevision:before.revision,
+            action:{...draft,roundId:stale.id,epoch:stale.epoch,draftId:randomUUID(),text:'banana'}})});
+        assert.equal(response.status,409);
+        assert.equal((await response.json() as Receipt).code,'action_unavailable');
+      }
+    }
+    const after=await state(mf);
+    assert.equal(after.revision,before.revision,'A refused draft must not create a new room revision.');
+    assert.deepEqual(after.room,before.room,'Stale draft text must not change the current round or score.');
+    assert.equal((await stub.inspectFixture()).outbox,queued,'A stale draft must not enqueue an announcement.');
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),true,'The current draft must remain eligible.');
+    for(let accepted=0;accepted<2;accepted++)
+      await send(mf,{...draft,draftId:randomUUID()},(await state(mf)).revision);
+    assert.equal((await state(mf)).room.round!.guessUsed,false);
+    ws.close();
+  } finally {await mf.dispose();}
+});
+
+test('an older revision guess remains valid after an advisory voice draft commits first', {timeout:15_000}, async () => {
+  const {mf,stub}=await runtime();
+  try {
+    await stub.freezeAtFixture(await stub.clockFixture());
+    let snap=await state(mf);
+    await send(mf,{type:'settings',settings:{...snap.room.settings,callBait:true}},snap.revision);
+    const ws=await start(mf);
+    snap=await state(mf);
+    const round=snap.room.round!,target=(await state(mf,'viewer')).room.round!.target!;
+    const draftId=randomUUID();
+    const posted=await send(mf,{type:'voice-guess-draft',roundId:round.id,epoch:round.epoch,text:target,
+      draftId,expiresAt:await stub.clockFixture()+15000},snap.revision);
+    assert.equal(posted.revision,snap.revision+1);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),true);
+    const locked=await send(mf,{type:'guess',roundId:round.id,epoch:round.epoch,text:target},snap.revision);
+    assert.equal(locked.revision,posted.revision+1,'The guess uses the revision captured before its draft committed.');
+    const result=await state(mf);
+    assert.equal(result.room.result?.outcome,'escaped');
+    assert.equal(result.room.result?.reason,'guess');
+    assert.equal(result.room.round!.guessUsed,true);
+    assert.deepEqual(result.room.score,{wins:0,played:1,streak:0,best:0});
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),false);
+    ws.close();
+  } finally {await mf.dispose();}
+});
+
+test('voice drafts require the owner microphone and stay fenced to the latest live round', async () => {
+  const {mf,stub}=await runtime();
+  try {
+    const ws=await connectedStudio(mf);let snap=await state(mf);
+    await send(mf,{type:'settings',settings:{...snap.room.settings,callBait:true}},snap.revision);
+    snap=await state(mf);await send(mf,{type:'microphone',armed:true,leaseId:randomUUID()},snap.revision);
+    snap=await state(mf);await send(mf,{type:'start'},snap.revision);snap=await state(mf);
+    const r=snap.room.round!,draftId=randomUUID();
+    const action:Command['action']={type:'voice-guess-draft',roundId:r.id,epoch:r.epoch,text:'banana',draftId,expiresAt:await stub.clockFixture()+15000};
+    const attempt=async(action:Command['action'],role:Parameters<typeof token>[0]='studio')=>mf.dispatchFetch(await endpoint(mf,'commands'),{method:'POST',
+      headers:{origin:ORIGIN,authorization:`Bearer ${await fixtureToken(mf,role)}`,'content-type':'application/json'},
+      body:JSON.stringify({id:randomUUID(),generation:1,expectedRevision:(await state(mf)).revision,action})});
+    assert.equal((await attempt(action,'viewer')).status,403);
+    assert.equal((await attempt({...action,epoch:r.epoch+1})).status,409);
+    assert.equal((await attempt({...action,text:'two words'})).status,409);
+    assert.equal((await attempt({...action,expiresAt:await stub.clockFixture()-1})).status,409);
+    assert.equal((await attempt({...action,expiresAt:await stub.clockFixture()+60000})).status,409);
+    assert.equal((await attempt(action)).status,200);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),true);
+    const queued=(await stub.inspectFixture()).outbox;
+    assert.equal((await attempt({...action,text:'different'})).status,200);
+    assert.equal((await stub.inspectFixture()).outbox,queued,'Same draft UUID cannot enqueue again.');
+    const newer=randomUUID();assert.equal((await attempt({...action,draftId:newer,text:'fish'})).status,200);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId}),false);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId:newer}),true);
+    await send(mf,{type:'pause',roundId:r.id,epoch:r.epoch},(await state(mf)).revision);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId:newer}),false);
+    assert.equal((await attempt({...action,draftId:randomUUID()})).status,409);
+    let paused=await state(mf);
+    await send(mf,{type:'resume',roundId:r.id,epoch:paused.room.round!.epoch},paused.revision);
+    paused=await state(mf);
+    const third={...action,epoch:paused.room.round!.epoch,draftId:randomUUID()};
+    assert.equal((await attempt(third)).status,200);
+    assert.equal((await attempt({...third,draftId:randomUUID()})).status,409,'Three draft limit survives an epoch change.');
+    await send(mf,{type:'guess',roundId:r.id,epoch:third.epoch,text:'nottherealword'},(await state(mf)).revision);
+    assert.equal(await stub.voiceDraftCurrentFixture({draftId:third.draftId}),false,'Lock-in retires an unpublished draft.');
+    assert.equal((await state(mf)).room.history.some(row=>JSON.stringify(row).includes('banana')),false);
+    ws.close();
   } finally {await mf.dispose();}
 });

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "import_kind": "tracked-files snapshot; unrelated source repository history is not imported",
-  "source_repository": "https://github.com/Komediruzecki/disjoint-colliders",
+  "source_repository": "private upstream snapshot (source identity retained privately)",
   "source_revision": "87bfc5d96bd63c39b30d39c8d7d245bd7252b578",
   "source_directory": "packages/review-host",
   "destination_directory": "packages/review-host",
@@ -11,7 +11,7 @@
   "hash_scope": "source_sha256 records exact bytes imported before package-name and documentation integration changes. Approved site assets and runtime source remain unchanged.",
   "upstream_license": {
     "source_path": "LICENSE",
-    "destination_path": "LICENSE.disjoint-colliders",
+    "destination_path": "LICENSE.upstream",
     "source_sha256": "1ae49cbaf00f18132c5c9c6ff5a2f0910496bfb2613f4ddec6dec5560b33ea26"
   },
   "files": [

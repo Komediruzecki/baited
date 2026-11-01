@@ -15,7 +15,7 @@ function snapshot(phase: SoundSnapshot['phase'] = 'idle', roundId: string | null
     round: roundId ? {
       id: roundId, number: 1, duration: 60, remaining: 30, endsAt: 1000,
       settleUntil: null, epoch: 1, difficulty: 'easy', guessEnabled: false,
-      guessUsed: false, wrongGuessBonus: 0,
+      guessUsed: false, baityChaos: false, wrongGuessBonus: 0,
     } : null,
     result: outcome ? { id: 'result-a', number: 1, word: 'banana', outcome, elapsed: 30, participants: 2, at: 1000 } : null,
   };

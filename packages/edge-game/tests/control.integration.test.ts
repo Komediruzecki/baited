@@ -7,6 +7,7 @@ import test from 'node:test';
 import { build } from 'esbuild';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { Game, defaults } from '@baited/game-core';
+import { helpText, scoreText, streakText, topText, whoText } from '../../app/server/chat-copy.js';
 
 const ORIGIN = 'https://pilot.test';
 const WEBHOOK_SECRET = 'public-fixture-webhook-secret-not-a-credential';
@@ -27,6 +28,9 @@ export class FixtureControl extends TwitchControl {
   async fetch(request) {
     await this.ready;
     const url=new URL(request.url);
+    if (url.pathname==='/__fixture/clock') {
+      const at=Number(url.searchParams.get('at'));Date.now=()=>at;return Response.json({at});
+    }
     if (url.pathname==='/__fixture/overlay-hold') {
       this.overlayBody=await request.text();
       const body=new ReadableStream({start:controller=>{this.overlayStream=controller;controller.enqueue(new TextEncoder().encode('{'));}});
@@ -136,16 +140,17 @@ export class FixtureControl extends TwitchControl {
   }
 }
 export class FixtureRoom extends DurableObject {
-  failControl=false;holdPath='';releaseRoom=null;
+  failControl=false;holdPath='';releaseRoom=null;draftCurrent=true;
   async fetch(request) {
     const url=new URL(request.url);const calls=await this.ctx.storage.get('calls')||[];
     if(url.pathname==='/__fixture/calls') return Response.json(calls);
-    if(url.pathname==='/__fixture/config') {this.failControl=url.searchParams.get('fail')==='true';this.holdPath=url.searchParams.get('hold')||'';return Response.json({ok:true});}
+    if(url.pathname==='/__fixture/config') {this.failControl=url.searchParams.get('fail')==='true';this.holdPath=url.searchParams.get('hold')||'';this.draftCurrent=url.searchParams.get('draft')!=='stale';return Response.json({ok:true});}
     if(url.pathname==='/__fixture/release') {this.releaseRoom?.();this.releaseRoom=null;return Response.json({ok:true});}
     if(url.pathname==='/__fixture/connection') return Response.json({connected:await this.ctx.storage.get('connected')||false});
     const body=await request.json();calls.push({path:url.pathname,body});await this.ctx.storage.put('calls',calls);
     if(this.holdPath===url.pathname){this.holdPath='';await new Promise(resolve=>{this.releaseRoom=resolve});}
     if(url.pathname==='/internal/control' && this.failControl)return new Response(null,{status:503});
+    if(url.pathname==='/internal/voice-draft-current') return Response.json({current:this.draftCurrent});
     if(body.type==='connection' && body.connectionRevision>(await this.ctx.storage.get('connectionRevision')||0))
       await this.ctx.storage.put({connected:body.status==='connected',connectionRevision:body.connectionRevision});
     if(body.text==='fixture-retry' && calls.filter(c=>c.body.eventId===body.eventId).length===1) return new Response(null,{status:503});
@@ -341,9 +346,84 @@ test('bot authorization is owner/CSRF gated and global send reservations are dur
     const cooldown = await f.request('/__fixture/state').then((r) => r.json()) as any;
     assert.equal(cooldown.queue.filter((q: any) => q.key === 'command').length, 1);
     assert.equal(Object.keys(cooldown.commandCooldowns).length, 2);
+    const generationBeforeReset = cooldown.channels['123'].botGeneration ?? 0;
+    await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: 'recording-reset', safeView, event: {type:'recording-reset'} }));
+    const reset = await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(reset.queue.length,0);
+    assert.equal(reset.channels['123'].botGeneration,generationBeforeReset+1);
+    await f.request('/__fixture/event', jsonPost({channelId:'123',eventId:'new-take-round',safeView,event:{type:'start'}}));
+    assert.equal((await f.request('/__fixture/state').then(r=>r.json()) as any).queue.length,1);
+    await f.request('/__fixture/event', jsonPost({channelId:'123',eventId:'recording-reset',safeView,event:{type:'recording-reset'}}));
+    const retriedReset=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(retriedReset.queue.length,1,'A retried reset marker cannot clear new take announcements.');
+    assert.equal(retriedReset.channels['123'].botGeneration,generationBeforeReset+1);
     await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: 'disabled', safeView: { ...safeView, settings: { ...safeView.settings, chatBot: false } }, event: { type: 'bot-settings' } }));
     assert.equal((await f.request('/__fixture/state').then((r) => r.json()) as any).queue.length, 0);
   } finally { await f.mf.dispose(); }
+});
+
+test('Control public reply cooldowns open at 15 seconds per channel and user without crossing channels', {timeout:15_000}, async () => {
+  const f = await fixture();
+  try {
+    const { cookie } = await login(f);
+    await login(f, 'lakeeko');
+    const bootstrap = await f.request('/api/edge/session', { headers: { cookie } }).then(r => r.json()) as any;
+    const botStart = await f.request('/api/bot/authorize', jsonPost({}, { cookie, 'x-csrf-token': bootstrap.csrf }));
+    const botUrl = new URL((await botStart.json() as any).url);
+    assert.equal((await f.request(`/auth/twitch/callback?state=${botUrl.searchParams.get('state')}&code=bot`, { headers: { cookie: cookies(botStart) } })).status, 302);
+    const game = new Game({ id: 'cooldown-room', owner: '123', channel: 'komediruzecki7', mode: 'demo', overlayKey: 'unused',
+      settings: { ...defaults, chatBot: true }, history: [], priorWins: 0, priorPlayed: 0, priorBest: 0, leaders: {} });
+    const safeView = game.view('overlay'), base = Date.now() + 1000;
+    const clock = (at: number) => f.request(`/__fixture/clock?at=${at}`);
+    const post = async (eventId: string, channelId = '123', userId = '555', command = 'help') => {
+      assert.equal((await f.request('/__fixture/event', jsonPost({ channelId, eventId, safeView,
+        event: { type: 'chat-command', command, userId } }))).status, 200);
+    };
+    const state = () => f.request('/__fixture/state').then(r => r.json()) as Promise<any>;
+    await clock(base); await post('first');
+    let current = await state();
+    assert.equal(current.commandCooldowns['channel:123'], base + 15_000);
+    assert.equal(current.commandCooldowns['user:123:555'], base + 15_000);
+    await clock(base + 14_999);
+    await post('same-user', '123', '555', 'score');
+    await post('other-user', '123', '556', 'who');
+    current = await state();
+    assert.equal(current.commandCooldowns['channel:123'], base + 15_000);
+    assert.equal(current.commandCooldowns['user:123:556'], undefined);
+    await post('other-channel', '456');
+    current = await state();
+    assert.equal(current.commandCooldowns['channel:456'], base + 29_999);
+    assert.equal(current.commandCooldowns['user:456:555'], base + 29_999);
+    await clock(base + 15_000); await post('same-user-boundary', '123', '555', 'score');
+    current = await state();
+    assert.equal(current.commandCooldowns['channel:123'], base + 30_000);
+    assert.equal(current.commandCooldowns['user:123:555'], base + 30_000);
+    await clock(base + 30_000); await post('other-user-boundary', '123', '556', 'who');
+    current = await state();
+    assert.equal(current.commandCooldowns['user:123:556'], base + 45_000);
+  } finally { await f.mf.dispose(); }
+});
+
+test('pilot queues a reply for every advertised public bot command', {timeout:20_000}, async () => {
+  for (const [command, text] of Object.entries({help:helpText,score:scoreText,streak:streakText,top:topText,who:whoText})) {
+    const f=await fixture();
+    try {
+      const {cookie}=await login(f);
+      const bootstrap=await f.request('/api/edge/session',{headers:{cookie}}).then(r=>r.json()) as any;
+      const botStart=await f.request('/api/bot/authorize',jsonPost({},{cookie,'x-csrf-token':bootstrap.csrf}));
+      const botUrl=new URL((await botStart.json() as any).url);
+      assert.equal((await f.request(`/auth/twitch/callback?state=${botUrl.searchParams.get('state')}&code=bot`,{headers:{cookie:cookies(botStart)}})).status,302);
+      const game=new Game({id:'fixture-room',owner:'123',channel:'komediruzecki7',mode:'demo',overlayKey:'unused',
+        settings:{...defaults,chatBot:true},history:[],priorWins:0,priorPlayed:0,priorBest:0,leaders:{}});
+      const safeView=game.view('overlay');
+      const response=await f.request('/__fixture/event',jsonPost({channelId:'123',eventId:`reply-${command}`,safeView,
+        event:{type:'chat-command',command,userId:'555'}}));
+      assert.equal(response.status,200,command);
+      const state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+      assert.equal(state.queue.find((q:any)=>q.key==='command')?.text,text(safeView),command);
+      assert.equal(Object.keys(state.commandCooldowns).length,2,'Channel and user cooldowns still apply.');
+    } finally {await f.mf.dispose();}
+  }
 });
 
 test('credentials, sessions, webhook retry and replay receipts survive control eviction', async () => {
@@ -826,4 +906,45 @@ test('operator newer stop wins while a room enable acknowledgement is delayed',a
     assert.equal(result.enabled,false);assert.equal(result.revision,3);assert.equal(result.status,'stopped');
     assert.equal((await f.request('/auth/twitch')).status,503);
   } finally {await f.request('/__fixture/room-release/123').catch(()=>{});await enabling?.catch(()=>{});await f.mf.dispose();}
+});
+
+
+test('voice draft delivery preserves the explicit guess, retires stale work and never retries a send', async () => {
+  const f=await fixture({EDGE_BOT_MESSAGES_PER_30_SECONDS:'15'});
+  try {
+    const {cookie}=await login(f);const bootstrap=await f.request('/api/edge/session',{headers:{cookie}}).then(r=>r.json()) as any;
+    const botStart=await f.request('/api/bot/authorize',jsonPost({},{cookie,'x-csrf-token':bootstrap.csrf}));
+    const botUrl=new URL((await botStart.json() as any).url);
+    assert.equal((await f.request(`/auth/twitch/callback?state=${botUrl.searchParams.get('state')}&code=bot`,{headers:{cookie:cookies(botStart)}})).status,302);
+    const game=new Game({id:'fixture',owner:'123',channel:'komediruzecki7',mode:'demo',overlayKey:'unused',settings:{...defaults,chatBot:true,callBait:true},history:[],priorWins:0,priorPlayed:0,priorBest:0,leaders:{}});
+    game.start();const safeView=game.view('viewer'),r=safeView.round!;
+    const draft=(word:string)=>({type:'voice-guess-draft',word,roundId:r.id,epoch:r.epoch,draftId:crypto.randomUUID(),expiresAt:Date.now()+15000});
+    const post=async(id:string,event:unknown)=>f.request('/__fixture/event',jsonPost({channelId:'123',eventId:id,safeView,event}));
+    const exact=draft(r.target!);
+    assert.equal((await post('exact',exact)).status,200);
+    await post('exact',exact);
+    let state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(state.queue.length,1);
+    assert.equal(state.queue[0].text,`komediruzecki7's unconfirmed guess: ${r.target!.toLowerCase()}. Waiting for lock in.`);
+    assert.equal(state.queue[0].expiresAt,exact.expiresAt);
+    await f.request('/__fixture/flush');
+    state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(state.receipts.filter((r:any)=>r.status==='sent').length,1);
+    assert.equal(game.round!.guessUsed,false);
+    assert.equal((await post('invalid',draft('two words'))).status,400);
+    assert.equal((await post('expired',{...draft('banana'),expiresAt:Date.now()-1})).status,400);
+    assert.equal((await post('stale',draft('fish'))).status,200);
+    await f.request('/__fixture/room-config/123?draft=stale');
+    await f.request('/__fixture/flush');
+    state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(state.receipts.filter((r:any)=>r.status==='sent').length,1,'A retired Room draft never reaches Twitch.');
+    assert.equal(state.receipts.filter((r:any)=>r.status==='dropped').length,1);
+    await f.request('/__fixture/room-config/123');
+    await f.request('/__fixture/drop');
+    await post('dropped',draft('ghost'));await f.request('/__fixture/flush');
+    state=await f.request('/__fixture/state').then(r=>r.json()) as any;
+    assert.equal(state.queue.length,0,'A provider failure cannot put a spoken draft back in the queue.');
+    const receipts=state.receipts.length;await f.request('/__fixture/flush');
+    assert.equal((await f.request('/__fixture/state').then(r=>r.json()) as any).receipts.length,receipts);
+  } finally {await f.mf.dispose();}
 });

@@ -4,7 +4,7 @@ import { Button } from './ui';
 import { ChevronDown, RotateCcw } from './icons';
 import { PublicAward } from './mechanics';
 import { StreakFlame } from './streak';
-import { streakMilestone, wordSize } from '../extension/presentation.js';
+import { baityChaosCopy, streakMilestone, wordSize } from '../extension/presentation.js';
 
 export function CatchDecision({
   result,
@@ -23,6 +23,7 @@ export function CatchDecision({
 }) {
   const decision = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const chaos = baityChaosCopy(result);
   const pending = result.outcome === 'review';
   const autoConfirm = pending && Number.isFinite(result.confirmAt);
   const seconds = autoConfirm ? Math.max(0, Math.ceil((result.confirmAt! - now) / 1000)) : null;
@@ -46,7 +47,7 @@ export function CatchDecision({
     <div className="studio-result__decision" ref={decision}>
       <div className="studio-result__message" role="status" aria-live="polite" aria-atomic="true">
         <h2 ref={heading} tabIndex={-1}>
-          {pending
+          {chaos ? chaos[0] : pending
             ? autoConfirm ? 'Catch heard.' : 'Did you say it?'
             : result.outcome === 'caught'
               ? 'Chat got you.'
@@ -60,7 +61,7 @@ export function CatchDecision({
           {result.word}
         </p>
         <p>
-          {pending
+          {chaos ? chaos[1] : pending
             ? autoConfirm
               ? 'Chat gets the win automatically. Reject it if Moonshine misheard; the next round gets a new word.'
               : 'Yes gives chat the win. No ends this round, and the next round gets a new word.'
@@ -97,16 +98,16 @@ export function CatchDecision({
       )}
       {result.outcome === 'caught' && (
         <button className="undo-button" disabled={disabled} onClick={onReverse}>
-          <RotateCcw size={13} /> Wrong detection? Reverse win
+          <RotateCcw size={13} /> {chaos ? 'Reverse Baity’s win' : 'Wrong detection? Reverse win'}
         </button>
       )}
-      {result.outcome === 'caught' && hasAward && (
+      {result.outcome === 'caught' && !chaos && hasAward && (
         <a href="#award-review" className="text-button">
           {result.award ? 'Change the award' : 'Choose “You baited me” award'}
           <ChevronDown size={16} />
         </a>
       )}
-      <PublicAward award={result.award} />
+      {!chaos && <PublicAward award={result.award} />}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { documentFailureStatus, sendErrorDocument } from './error-pages.js';
 import express from 'express';
 import helmet from 'helmet';
 import { createServer, type IncomingMessage } from 'node:http';
@@ -492,12 +493,12 @@ export async function createBait(
     returnTo?: 'cards',
   ) {
     if (!limiter.hit(`oauth:${req.ip}`, 20)) {
-      res.status(429).send('Try again shortly.');
+      if (!sendErrorDocument(req, res, 429, 'limited')) res.status(429).send('Try again shortly.');
       return;
     }
     for (const [id, p] of pendingOAuth) if (p.expires < Date.now()) pendingOAuth.delete(id);
     if (pendingOAuth.size > 1000) {
-      res.status(503).send('Try again shortly.');
+      if (!sendErrorDocument(req, res, 503, 'unavailable')) res.status(503).send('Try again shortly.');
       return;
     }
     // The flow is readable from the state itself, so a callback whose pending entry was lost
@@ -824,10 +825,30 @@ export async function createBait(
     }
     res.json({ armed: microphoneReady(game) });
   });
+  app.post('/api/recording/restart', protect, (req, res) => {
+    const { takeId } = z.object({ takeId: z.string().uuid() }).strict().parse(req.body);
+    const game = gameFor(res);
+    game.restartTake(takeId);
+    res.json(studio(game));
+  });
   app.post('/api/studio/settings', protect, (req, res) => {
     const game = gameFor(res);
     game.update(req.body);
     res.json(studio(game));
+  });
+  app.post('/api/studio/chaos/reset', protect, (req, res) => {
+    const { sessionId } = z.object({ sessionId: z.string().uuid() }).strict().parse(req.body);
+    const game = gameFor(res);
+    game.restartChaosSession(sessionId);
+    res.json(studio(game));
+  });
+  app.post('/api/studio/voice-guess-draft', protect, (req, res) => {
+    const body=z.object({roundId:z.string().uuid(),epoch:z.number().int().positive(),word:z.string().min(1).max(80),draftId:z.string().uuid(),expiresAt:z.number().int().positive()}).strict().parse(req.body);
+    const game=gameFor(res),session=res.locals.session as Session,lease=microphoneLeases.get(game.data.id);
+    if(!lease || lease.session.id!==session.id || !microphoneReady(game)) {
+      res.status(409).json({error:'Enable the microphone in this Studio before sharing a voice guess.'});return;
+    }
+    res.json(bot.voiceGuessDraft(game,body.roundId,body.epoch,body.word,body.draftId,body.expiresAt));
   });
   app.post('/api/studio/guess', protect, (req, res) => {
     const body = z
@@ -1024,6 +1045,7 @@ export async function createBait(
       res.status(401).json({ error: error.message });
       return;
     }
+    if (sendErrorDocument(req, res, documentFailureStatus(error, error instanceof ZodError ? 400 : 500))) return;
     const status = error instanceof ZodError ? 400 : 400;
     res.status(status).json({
       error:

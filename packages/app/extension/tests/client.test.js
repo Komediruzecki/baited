@@ -64,6 +64,20 @@ test('pending catch deadline is validated without client-side score confirmation
   }
 });
 
+test('Baity chaos is a decided result reason, never an unconfirmed catch', () => {
+  const value = state();
+  for (const outcome of ['caught', 'overturned']) {
+    value.room.result = { id: 'gift-one', word: 'Pineapple', outcome, reason: 'baity-chaos' };
+    assert.equal(readState(value).room.result.reason, 'baity-chaos');
+  }
+  for (const outcome of ['review', 'escaped', 'ended', 'skipped']) {
+    value.room.result = { id: 'gift-one', word: 'Pineapple', outcome, reason: 'baity-chaos' };
+    assert.throws(() => readState(value), /Invalid result/);
+  }
+  value.room.result = { id: 'gift-one', word: 'Pineapple', outcome: 'caught', reason: 'client-awarded-win' };
+  assert.throws(() => readState(value), /Invalid result/);
+});
+
 test('native image resolution ignores untrusted destination URLs and accepts the configured backend only', () => {
   const previous = globalThis.window;
   globalThis.window = { BAITED_EXTENSION_CONFIG: config };

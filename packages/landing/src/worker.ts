@@ -1,3 +1,4 @@
+import { withErrorDocument } from '../../app/shared/error-pages.js'
 import { serveReviewHost } from '@irchiinnuss/review-host'
 
 interface Env {
@@ -81,28 +82,33 @@ export default {
           ? DEVELOPMENT_ORIGIN
           : null
     let response: Response
-    if (env.ENVIRONMENT !== 'dev' && !isProduction && !legacyOrigin) {
-      response = new Response('Not found.', { status: 404 })
-    } else if (request.method !== 'GET' && request.method !== 'HEAD') {
-      response = new Response('Method not allowed.', { status: 405, headers: { Allow: 'GET, HEAD' } })
-    } else if (legacyOrigin) {
-      response = new Response(null, { status: 308, headers: { Location: redirectLocation(url, legacyOrigin) } })
-    } else if (!isProduction) {
-      response = await serveReviewHost(request, PRODUCTION_HOST, () => env.ASSETS.fetch(request))
-    } else if (isUnpublishedPath(url.pathname)) {
-      response = new Response('Not found.', { status: 404 })
-    } else if (url.pathname === '/robots.txt') {
-      response = new Response(`User-agent: *\nAllow: /\n\nSitemap: ${PRODUCTION_ORIGIN}/sitemap.xml\n`, {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      })
-    } else if (url.pathname === '/sitemap.xml') {
-      response = new Response(
-        `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${PRODUCTION_ORIGIN}/</loc></url></urlset>\n`,
-        { headers: { 'Content-Type': 'application/xml; charset=utf-8' } }
-      )
-    } else {
-      response = await env.ASSETS.fetch(request)
+    try {
+      if (env.ENVIRONMENT !== 'dev' && !isProduction && !legacyOrigin) {
+        response = new Response('Not found.', { status: 404 })
+      } else if (request.method !== 'GET' && request.method !== 'HEAD') {
+        response = new Response('Method not allowed.', { status: 405, headers: { Allow: 'GET, HEAD' } })
+      } else if (legacyOrigin) {
+        response = new Response(null, { status: 308, headers: { Location: redirectLocation(url, legacyOrigin) } })
+      } else if (!isProduction) {
+        response = await serveReviewHost(request, PRODUCTION_HOST, () => env.ASSETS.fetch(request))
+      } else if (isUnpublishedPath(url.pathname)) {
+        response = new Response('Not found.', { status: 404 })
+      } else if (url.pathname === '/robots.txt') {
+        response = new Response(`User-agent: *\nAllow: /\n\nSitemap: ${PRODUCTION_ORIGIN}/sitemap.xml\n`, {
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        })
+      } else if (url.pathname === '/sitemap.xml') {
+        response = new Response(
+          `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${PRODUCTION_ORIGIN}/</loc></url></urlset>\n`,
+          { headers: { 'Content-Type': 'application/xml; charset=utf-8' } }
+        )
+      } else {
+        response = await env.ASSETS.fetch(request)
+      }
+    } catch {
+      response = new Response('Baited is temporarily unavailable.', { status: 503 })
     }
+    if (env.ENVIRONMENT === 'dev' || isProduction) response = withErrorDocument(request, response, 'landing')
     response = await withRange(request, response)
 
     const headers = new Headers(response.headers)

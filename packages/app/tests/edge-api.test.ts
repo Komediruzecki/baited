@@ -5,10 +5,11 @@ import { authorizeEdgeBot, canAuthorizeEdgeBot, isEdgeRuntime, request } from '.
 test('edge chat controls use the session CSRF endpoint and bot sign-in verifies its destination', async () => {
   const previous = { fetch: globalThis.fetch, location: Object.getOwnPropertyDescriptor(globalThis, 'location'), socket: globalThis.WebSocket };
   const calls: { path: string; body?: unknown; csrf: string | null }[] = [];
-  let revision = 1, canAuthorize = true, redirect = 'https://id.twitch.tv/oauth2/authorize?client_id=fixture';
+  let revision = 1, canAuthorize = true, botAuthorized=false, redirect = 'https://id.twitch.tv/oauth2/authorize?client_id=fixture';
+  let roundResult: {id:string;reason:string;outcome:string} | undefined;
   const frames: unknown[] = [];
   const state = () => ({ type: 'snapshot', protocol: 1, revision, generation: 1,
-    room: { serverTime: Date.now(), phase: 'idle', score: {}, settings: {}, connection: { status: 'connected' } } });
+    room: { result: roundResult, serverTime: Date.now(), phase: 'idle', score: {}, settings: {chatBot:true}, connection: { status: 'connected' } } });
   class Socket {
     readyState = 1; bufferedAmount = 0;
     onmessage: ((event: { data: string }) => void) | null = null;
@@ -28,10 +29,11 @@ test('edge chat controls use the session CSRF endpoint and bot sign-in verifies 
     calls.push({ path, body: init?.body ? JSON.parse(String(init.body)) : undefined, csrf: new Headers(init?.headers).get('x-csrf-token') });
     if (path === '/api/session') return Response.json({ runtime: 'edge', authenticated: true });
     if (path === '/api/edge/session') return Response.json({ channelId: '123', token: 'signed.fixture.token',
-      tokenExpiresAt: Date.now() + 300000, csrf: 'fixture-csrf', bot: { configured: true, authorized: false, channelAllowed: true, canAuthorize } });
+      tokenExpiresAt: Date.now() + 300000, csrf: 'fixture-csrf', bot: { configured: true, authorized: botAuthorized, channelAllowed: true, canAuthorize } });
     if (path === '/api/edge/chat') { revision++; return Response.json({ ok: true }); }
     if (path === '/v1/rooms/123/state') return Response.json({ error: 'Same-origin GET has no Origin.' }, { status: 403 });
     if (path === '/api/bot/authorize') return Response.json({ url: redirect });
+    if (path === '/v1/rooms/123/commands') { revision++; return Response.json({ok:true,revision,generation:1,snapshot:state()}); }
     if (path === '/api/logout') return Response.json({ ok: true });
     return Response.json({ error: 'Unexpected request.' }, { status: 404 });
   };
@@ -46,16 +48,43 @@ test('edge chat controls use the session CSRF endpoint and bot sign-in verifies 
     assert.equal(calls.filter((call) => call.path.endsWith('/state')).length, 0);
     assert.deepEqual(frames, ['resync', 'resync']);
     assert.ok(calls.every((call) => !call.path.endsWith('/commands')));
+    const takeId = crypto.randomUUID();
+    await request('/api/recording/restart', { takeId });
+    const resetCall = calls.find(call => call.path.endsWith('/commands'))!;
+    assert.deepEqual((resetCall.body as {action:unknown}).action, {type:'restart-take', takeId});
+    assert.equal((resetCall.body as {expectedRevision:number}).expectedRevision, 3);
+    assert.equal(calls.some(call => call.path === '/api/recording/restart'), false);
+    const draft={roundId:crypto.randomUUID(),epoch:1,word:'banana',draftId:crypto.randomUUID(),expiresAt:Date.now()+15000};
+    assert.equal((await request<{status:string}>('/api/studio/voice-guess-draft',draft)).status,'unavailable');
+    assert.equal(calls.filter(call=>call.path.endsWith('/commands')).length,1,'Unavailable bot does not submit anything.');
     assert.equal(canAuthorizeEdgeBot(), true);
     assert.match(await authorizeEdgeBot(), /^https:\/\/id\.twitch\.tv\/oauth2\/authorize/);
     assert.equal(calls.at(-1)?.csrf, 'fixture-csrf');
     redirect = 'https://untrusted.test/authorize';
     await assert.rejects(authorizeEdgeBot(), /could not be verified/);
     await request('/api/logout', {});
+    botAuthorized=true;
     canAuthorize = false;
     await request('/api/studio');
+    assert.deepEqual(await request('/api/studio/voice-guess-draft',draft),{status:'requested'});
+    const draftCall=[...calls].reverse().find(call=>call.path.endsWith('/commands'))!;
+    assert.deepEqual((draftCall.body as {action:unknown}).action,{type:'voice-guess-draft',roundId:draft.roundId,epoch:1,text:'banana',draftId:draft.draftId,expiresAt:draft.expiresAt});
     assert.equal(canAuthorizeEdgeBot(), false);
     await assert.rejects(authorizeEdgeBot(), /operator connects/);
+    await request('/api/studio/chaos/reset', {sessionId:'chaos-session'});
+    const chaosReset = calls.filter(call => call.path.endsWith('/commands')).at(-1)!;
+    assert.deepEqual((chaosReset.body as {action:unknown}).action, {type:'reset-chaos-session',sessionId:'chaos-session'});
+    assert.equal(calls.some(call=>call.path==='/api/studio/chaos/reset'), false);
+    roundResult={id:draft.roundId,reason:'baity-chaos',outcome:'caught'};
+    const gifted = await request<{correct:boolean;intervened?:boolean;bonus:number}>('/api/studio/guess', draft);
+    assert.equal(gifted.correct,true); assert.equal(gifted.intervened,true); assert.equal(gifted.bonus,0);
+    roundResult={id:draft.roundId,reason:'guess',outcome:'escaped'};
+    const escaped = await request<{correct:boolean;intervened?:boolean}>('/api/studio/guess', draft);
+    assert.equal(escaped.correct,true); assert.equal(escaped.intervened,undefined);
+    roundResult={id:'older-round',reason:'baity-chaos',outcome:'caught'};
+    const stale = await request<{correct:boolean;intervened?:boolean}>('/api/studio/guess', draft);
+    assert.equal(stale.correct,false); assert.equal(stale.intervened,undefined);
+
   } finally {
     await request('/api/logout', {});
     globalThis.fetch = previous.fetch; globalThis.WebSocket = previous.socket;

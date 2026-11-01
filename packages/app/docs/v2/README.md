@@ -18,7 +18,7 @@ The plans are proposals, not claims of shipped capabilities. Existing game funct
 
 The study lives in `concepts/bait-v2/` on a private feature branch. Paolo's sources, the existing game and both hosted landing domains remain unchanged. The 18 approved card images and bomb are reused. No bulk card generation or gameplay expansion belongs to this mockup.
 
-The next owner decision is whether to polish or integrate this direction. Integration into disjoint-colliders, deployment, tags and Extension submission are separate steps.
+The next owner decision is whether to polish or integrate this direction. Integration into the maintained landing package, deployment, tags and Extension submission are separate steps.
 
 The current study includes the staged film, the 18-card hand, a local hint-writing toy and responsive layouts. It has no live Twitch, microphone or OBS connection. The [verification record](verification.md) separates completed checks from remaining acceptance work and records differences from the original proposal.
 

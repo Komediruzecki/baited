@@ -1,5 +1,7 @@
+import type { BotReplyCommand } from './chat-commands.js';
 import type { GameView } from '../../app/shared/types.js';
 import type { GameEvent } from '../../app/server/game.js';
+import type { VoiceDraftRef } from '../../app/server/voice-draft.js';
 
 /** Secrets are Worker bindings, never checked-in configuration values. */
 export interface ControlEnv {
@@ -82,7 +84,8 @@ export interface TwitchChatEvent {
 export interface RoomAnnouncement {
   channelId: string;
   eventId: string;
-  event: GameEvent | { type: 'chat-command'; command: 'help' | 'score' | 'top' | 'who'; userId: string } | { type: 'bot-settings' };
+  event: GameEvent | { type: 'chat-command'; command: BotReplyCommand; userId: string } | { type: 'bot-settings' }
+    | ({ type: 'voice-guess-draft'; word: string } & VoiceDraftRef);
   safeView: GameView;
 }
 export interface QueuedMessage {
@@ -91,6 +94,7 @@ export interface QueuedMessage {
   key: string;
   text: string;
   expiresAt: number;
+  voiceDraft?: VoiceDraftRef;
 }
 export interface BotReceipt {
   id: string;

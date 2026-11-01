@@ -1,5 +1,5 @@
 import { Moonshine, type MoonshineLine } from './moonshine';
-import { LocalFinalSequence } from './local-final-sequence';
+import { LocalFinalSequence, validLocalFinal } from './local-final-sequence';
 import type { SpeechProvider } from '../shared/types';
 import { edgeSpeechSocket } from './api';
 import type { SpeechSocket } from './edge-transport';
@@ -22,6 +22,7 @@ export class Microphone {
   private local: Moonshine | undefined;
   private samples = 0;
   private finals = new LocalFinalSequence();
+  private consumedFinalIds = new Set<string>();
   private draining = false;
   private drainTimer: ReturnType<typeof setTimeout> | undefined;
   private transcriptSegment = '';
@@ -31,6 +32,8 @@ export class Microphone {
     private onError: (error: string) => void,
     private provider: SpeechProvider = 'moonshine',
     private onTranscript?: (line: MoonshineLine, segment: string) => void,
+    /** Only exact, opted-in voice commands may be consumed before scoring. */
+    private consumeFinal?: (line: MoonshineLine, segment: string) => boolean,
   ) {}
   get enabled() {
     return this.captureReady && !this.cancelled && this.context?.state === 'running'
@@ -106,7 +109,13 @@ export class Microphone {
         this.local = new Moonshine((line) => {
           if (!this.owns(capture) || this.socket?.readyState !== WebSocket.OPEN) return;
           try {
-            const final = this.finals.next(line);
+            const consumed = validLocalFinal(line) && (this.consumedFinalIds.has(line.id) || this.consumeFinal?.(line, this.transcriptSegment));
+            if (consumed) {
+              this.consumedFinalIds.add(line.id);
+              if (this.consumedFinalIds.size > 128) this.consumedFinalIds.delete(this.consumedFinalIds.values().next().value!);
+            }
+            // Consumed commands must not increment the server's contiguous sequence.
+            const final = consumed ? null : this.finals.next(line);
             if (final) this.socket.send(JSON.stringify(final));
             this.onTranscript?.(line, this.transcriptSegment);
           } catch {
@@ -221,6 +230,7 @@ export class Microphone {
     this.suspended = false;
     this.samples = 0;
     this.finals.reset();
+    this.consumedFinalIds.clear();
     this.transcriptSegment = `${round}:${epoch}`;
     this.onStatus('connecting');
     let socket: WebSocket | SpeechSocket;

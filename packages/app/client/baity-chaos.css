@@ -1,0 +1,21 @@
+.baity-chaos-rule {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-inline-start: 3px solid var(--purple, #9146ff);
+  color: var(--muted, #bcb4cb);
+  font-size: 12px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.baity-chaos-rule strong { color: var(--text, #f7f3ff); }
+.baity-chaos-rule--compact { margin: 8px 0; padding: 0 10px; font-size: 11px; }
+.baity-chaos-settings { margin-top: 8px; }
+.baity-chaos-settings__hint { margin: 10px 4px; font-size: 13px; }
+.baity-chaos-session { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; padding: 14px 4px 8px; }
+.baity-chaos-session > div { flex: 1 1 240px; min-width: 0; }
+.baity-chaos-session strong { font-size: 13px; }
+.baity-chaos-session p, .baity-chaos-feedback { margin: 5px 0 0; font-size: 12px; color: var(--muted, #bcb4cb); line-height: 1.5; }
+.baity-chaos-session > .button { flex: 0 1 auto; white-space: normal; }
+@media (max-width: 480px) { .baity-chaos-session > .button { width: 100%; } }
+
+.studio-shell .result-chaos-note { grid-column: 2 / -1; color: var(--b-muted); font-size: 11px; line-height: 1.5; }

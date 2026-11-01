@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import type { AwardBoard, GameView, Leader, Studio } from '../shared/types';
 import { request } from './api';
+import { BaityChaosRule } from './BaityChaos';
 import { Button } from './ui';
 import { Check, Eye, ShieldCheck, Target, Timer, Trophy } from './icons';
 
@@ -70,12 +71,14 @@ export function GuessForm({
   game,
   csrf,
   offline,
+  voicePaused = false,
   onReceive,
   onClose,
 }: {
   game: GameView;
   csrf: string;
   offline: boolean;
+  voicePaused?: boolean;
   onReceive: (studio: Studio) => void;
   onClose: () => void;
 }) {
@@ -109,9 +112,11 @@ export function GuessForm({
       }}
     >
       <p>
-        Guess the secret word without saying it aloud. Get it right and you escape
+        Guess the secret word without saying it aloud. {round?.baityChaos ? 'A correct guess normally lets you escape' : 'Get it right and you escape'}
         {game.mission ? ' the mission' : ''}. Get it wrong and chat gets 15 extra seconds.
       </p>
+      <BaityChaosRule game={game} />
+      {voicePaused && <p className="muted">Type here. Voice guesses resume when you close this box.</p>}
       <label>
         Your one-word guess
         <input
@@ -129,8 +134,8 @@ export function GuessForm({
       <div className="notice">
         <ShieldCheck size={20} />
         <p>
-          One guess per word. Only the outcome is shared. An incorrect guess is never saved or shown
-          to chat.
+          One guess per word. Guesses typed here stay private; only the outcome is shared.
+          If you enable Voice guesses, Baity can post those spoken drafts in chat.
         </p>
       </div>
       {!available && (

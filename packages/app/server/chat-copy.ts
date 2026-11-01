@@ -28,6 +28,8 @@ export type ChatCommand =
   | 'pause'
   | 'resume';
 export const MOD_COMMANDS: ReadonlySet<ChatCommand> = new Set(['start', 'pause', 'resume']);
+/** Public command reply gates; independent of the bot's Twitch send budgets. */
+export const BOT_REPLY_COOLDOWN_MS = 15_000;
 const named: Record<string, ChatCommand> = {
   help: 'help',
   rules: 'help',
@@ -95,7 +97,10 @@ function finished(view: GameView, streakBefore: number): Announcement | null {
   let text: string;
   if (result.outcome === 'caught') {
     // A win reads the run from before it, so a comeback sounds like one.
-    text = line(view, 'caught', moodOf(losingRun(view, true)), values);
+    const calledWord = result.word?.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 120).toUpperCase();
+    text = result.reason === 'baity-chaos'
+      ? `You called ${calledWord || 'it'} correctly. But I'm saving chat's streak. Chat wins this one.`
+      : line(view, 'caught', moodOf(losingRun(view, true)), values);
     if (view.score.streak > 1) text += after(text, line(view, 'caught_streak_suffix', 0, { streak: view.score.streak }));
     if (mission)
       text += after(
@@ -105,7 +110,9 @@ function finished(view: GameView, streakBefore: number): Announcement | null {
           : line(view, 'mission_progress_suffix', 0, { completed: mission.completed }),
       );
   } else if (result.outcome === 'overturned') {
-    text = line(view, 'overturned', moodOf(losingRun(view)));
+    text = result.reason === 'baity-chaos'
+      ? "Baity's gifted win was removed. The streamer guessed correctly."
+      : line(view, 'overturned', moodOf(losingRun(view)));
   } else {
     // A loss reads the run including itself.
     const slot: Slot =
@@ -140,6 +147,7 @@ export function eventAnnouncement(view: GameView, event: GameEvent): Announcemen
   const round = view.round;
   const mood = moodOf(losingRun(view));
   switch (event.type) {
+    case 'recording-reset': return null;
     case 'start': {
       if (!round) return null;
       const time = clock(round.remaining);
@@ -176,7 +184,9 @@ export function eventAnnouncement(view: GameView, event: GameEvent): Announcemen
     case 'finish':
       return finished(view, event.streakBefore);
     case 'reverse':
-      return { key: 'result', ttl: 30000, text: line(view, 'reversed', mood, { streak: view.score.streak }) };
+      return { key: 'result', ttl: 30000, text: view.result?.reason === 'baity-chaos'
+        ? `My gift to chat was reversed. The streamer guessed correctly. Chat's streak is back to ${view.score.streak}.`
+        : line(view, 'reversed', mood, { streak: view.score.streak }) };
     case 'wrong-guess':
       return round
         ? { key: 'guess', ttl: 20000, text: line(view, 'wrong_guess', mood, { bonus: round.wrongGuessBonus }) }

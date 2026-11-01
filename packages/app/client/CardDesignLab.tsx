@@ -5,6 +5,7 @@ import { CardArt } from './CardArt';
 import { PixelRevealArt } from './PixelRevealArt';
 import { GlassField, GlassLens, type GlassSize } from './CardGlass';
 import { ClueRow } from './CardClues';
+import { CardCopyReview, cardCopyLabels, type CopyLocale } from './CardCopyReview';
 import { SoundControls } from './SoundControls';
 import { contexts, editions, exactClues, generic, hasPixelReveal, isEdition, isOpenEdition, parseCompared, parsePicks, usesTableLayout, reviewDeck, stateLabel, states, type CardState, type Context, type Edition, type Picks, type ReviewEntry } from './card-lab-model';
 import { backs, finishes, logoModes, finishHost, backShowsLogo, type FinishId, type BackId, type LogoMode } from './card-finish-catalogue';
@@ -24,9 +25,9 @@ function PixelSymbol({ type }: { type: 'chat' | 'clock' | 'help' }) {
     : type === 'clock' ? 'M3 0h3v1H3zM4 1h1v1H4zM2 2h5v1H2zM1 3h1v1H1zM4 3h1v2H4zM7 3h1v1H7zM0 4h1v3H0zM8 4h1v3H8zM5 5h1v1H5zM1 7h1v1H1zM7 7h1v1H7zM2 8h5v1H2z'
       : 'M2 0h5v1H2zM1 1h1v2H1zM7 1h1v3H7zM5 4h2v1H5zM4 5h1v2H4zM4 8h1v1H4z'} /></svg>;
 }
-function Pips({ difficulty }: { difficulty: string }) {
+function Pips({ difficulty, label }: { difficulty: string; label?: string }) {
   const count = difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3;
-  return <span className="cl-pips" role="img" aria-label={`${difficulty} difficulty`}>{[1, 2, 3].map(index => <i key={index} data-filled={index <= count} />)}</span>;
+  return <span className="cl-pips" role="img" aria-label={label ?? `${difficulty} difficulty`}>{[1, 2, 3].map(index => <i key={index} data-filled={index <= count} />)}</span>;
 }
 
 function FinishLayer({ finish, size }: { finish: FinishId; size: GlassSize }) {
@@ -38,8 +39,8 @@ function BackLayers({ back, logo, fan = false }: { back: BackId; logo: LogoMode;
   const asset = backs.find(item => item.id === back)!.asset;
   return <>{asset && <img className={fan ? 'cl-fan__art' : 'cl-card__back-art'} src={asset} alt="" decoding="async" loading="lazy" />}{backShowsLogo(back, logo) && <span className={fan ? 'cl-fan__mark' : 'cl-card__back-mark'}><span className="baited-glyph" aria-hidden="true" /></span>}</>;
 }
-type CardProps = { edition: Edition; entry: ReviewEntry; state: CardState; time: number; back: boolean; large?: boolean; compact?: boolean; wide?: boolean; labels: boolean; alwaysWord: boolean; whiteWord: boolean; round: number; mission: boolean; crisp: boolean; reducedMotion: boolean; finish: FinishId; backStyle: BackId; logo: LogoMode; bend?: boolean; clueTreatment?: ClueTreatmentId };
-function EditionCard({ edition, entry, state, time, back, large, compact, wide, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion, finish, backStyle, logo, bend = true, clueTreatment = 'baseline' }: CardProps) {
+type CardProps = { edition: Edition; entry: ReviewEntry; state: CardState; time: number; back: boolean; large?: boolean; compact?: boolean; wide?: boolean; labels: boolean; alwaysWord: boolean; whiteWord: boolean; round: number; mission: boolean; crisp: boolean; reducedMotion: boolean; finish: FinishId; backStyle: BackId; logo: LogoMode; bend?: boolean; clueTreatment?: ClueTreatmentId; displayWord?: string; copyLocale?: CopyLocale };
+function EditionCard({ edition, entry, state, time, back, large, compact, wide, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion, finish, backStyle, logo, bend = true, clueTreatment = 'baseline', displayWord, copyLocale }: CardProps) {
   const [revealed, setRevealed] = useState(false);
   const [legend, setLegend] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,7 +59,9 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
   const showLabels = labels || legend;
   const elapsedState = !['live', 'urgent', 'paused'].includes(state);
   const urgent = state === 'urgent' || (!elapsedState && time <= 15);
-  const word = entry.word.toUpperCase();
+  const word = (displayWord ?? entry.word).toUpperCase();
+  const translatedLabels = copyLocale ? cardCopyLabels[copyLocale] : undefined;
+  const translatedDifficulty = translatedLabels?.[entry.difficulty === 'hard' ? 'hard' : entry.difficulty === 'medium' ? 'medium' : 'easy'];
   useEffect(() => {
     setRevealed(false);
     return () => { if (hideTimer.current) clearTimeout(hideTimer.current); if (tiltFrame.current) cancelAnimationFrame(tiltFrame.current); };
@@ -78,11 +81,11 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
   const resetTilt = () => { if (tiltFrame.current) cancelAnimationFrame(tiltFrame.current); card.current?.style.setProperty('--tilt-x', '0deg'); card.current?.style.setProperty('--tilt-y', '0deg'); };
   const effectiveTime = state === 'urgent' ? Math.min(time, 15) : time;
   const clockLabel = state === 'reconnecting' ? '—:—' : elapsedState ? stateLabel(state) : clock(effectiveTime);
-  const rail = <header className="cl-card__rail"><span>{picture ? 'Experiment' : `Round ${String(round).padStart(2, '0')}`}</span><Pips difficulty={entry.difficulty} /></header>;
+  const rail = <header className="cl-card__rail"><span>{picture ? 'Experiment' : `${translatedLabels?.round ?? 'Round'} ${String(round).padStart(2, '0')}`}</span><Pips difficulty={entry.difficulty} label={translatedDifficulty} /></header>;
   const foilPlate = effective === 'foil' && activeFinish !== 'stock';
   const size: GlassSize = compact ? 'xs' : large ? 'l' : 's';
   return <article ref={card} className="cl-card" data-edition={effective} data-layout={layout} data-art-frame={isOpenEdition(effective) ? 'open' : 'framed'} data-size={size} data-face={faceDown ? 'back' : 'front'} data-state={state} data-crisp={crisp} data-urgent={urgent || undefined} data-host={host} data-finish={activeFinish} data-back={backStyle} data-logo={logo} data-clue={layout === 'table' ? clueTreatment : undefined}
-    aria-label={faceDown ? 'Face-down Baited card' : picture && !showWord ? `Picture experiment. ${word.length} letters. ${entry.difficulty}.` : `${word}. ${entry.difficulty}.${clues.length ? ` Keep out of chat: ${clues.join(', ')}.` : ' Only this word is off limits.'}`}
+    aria-label={faceDown ? 'Face-down Baited card' : picture && !showWord ? `Picture experiment. ${word.length} letters. ${entry.difficulty}.` : `${word}. ${translatedDifficulty ?? entry.difficulty}. ${clues.length ? `${translatedLabels?.keepOutOfChat ?? 'Keep out of chat'}: ${clues.join(', ')}.` : translatedLabels?.onlyThisWord ?? 'Only this word is off limits.'}`}
     style={{ '--chars': Math.max(word.length, 1), '--word-ink': whiteWord ? '#fffdf7' : entry.ink, '--clock-left': `${Math.max(0, Math.min(1, effectiveTime / 120)) * 100}%` } as React.CSSProperties}
     onPointerMove={tilt} onPointerLeave={resetTilt} onPointerCancel={resetTilt} onPointerUp={resetTilt}>
     <div className="cl-card__cut" aria-hidden="true">{host === 'slab' && !faceDown && <FinishLayer finish={activeFinish} size={size} />}</div><div className="cl-card__foil" aria-hidden="true" />
@@ -102,7 +105,7 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
           {Array.from(word).map((letter, index) => <span className="cl-card__tile" key={index}>{showWord ? letter : ''}</span>)}
         </button> : <h2 className="cl-card__word">{word}</h2>}
         {picture && <><p className="cl-card__hold">{alwaysWord ? 'Word stays visible for this review.' : 'Hold the tiles to read. Enter toggles.'}</p><span className="cl-sr" aria-live="polite">{showWord ? word : ''}</span></>}
-        {layout === 'table' ? <ClueRow clues={clues} treatment={clueTreatment} /> : clues.length > 0 ? <div className="cl-card__restrictions">
+        {layout === 'table' ? <ClueRow clues={clues} treatment={clueTreatment} labels={translatedLabels} /> : clues.length > 0 ? <div className="cl-card__restrictions">
           {iconLabels ? <span className="cl-card__clue-label"><PixelSymbol type="chat" /><span className={showLabels ? '' : 'cl-sr'}>Keep out of chat</span></span> : <p className="cl-card__clue-label">Keep out of chat</p>}
           <ul className="cl-card__clues" data-count={clues.length} aria-label="Keep out of chat">{clues.map(clue => <li key={clue}>{clue}</li>)}</ul>
         </div> : <p className="cl-card__easy">Only this word is off limits.</p>}
@@ -112,7 +115,7 @@ function EditionCard({ edition, entry, state, time, back, large, compact, wide, 
       {foilPlate && rail}
       <footer className="cl-card__foot">
         {iconLabels ? <PixelSymbol type="clock" /> : <span className="cl-card__signature"><span className="baited-glyph" aria-hidden="true" /></span>}
-        <span className="cl-card__clock" aria-label={elapsedState ? clockLabel : `${clockLabel} remaining`}>{clockLabel}</span>
+        <span className="cl-card__clock" aria-label={elapsedState ? clockLabel : translatedLabels ? `${translatedLabels.timeLeft}: ${clockLabel}` : `${clockLabel} remaining`}>{clockLabel}</span>
         {layout === 'glance' && <button className="cl-card__legend" type="button" aria-label={legend ? 'Hide icon labels' : 'Show icon labels'} aria-pressed={legend} onClick={() => setLegend(value => !value)}><PixelSymbol type="help" /></button>}
       </footer>
       {mission && <span className="cl-card__mission">Word 2 of 3 · example mission</span>}
@@ -174,7 +177,7 @@ function SurfaceGallery({ cardProps, choice, select, prefer, replay, motion }: {
 export default function CardDesignLab({ session, standalone = false }: { session: SessionInfo; standalone?: boolean }) {
   const [initial] = useState(() => new URLSearchParams(location.search));
   const [surfaces, setSurfaces] = useState<SurfaceReview>(() => { let saved = parseSurfaceReview(JSON.stringify({ version: 1, finish: 'glass', back: 'mosaic', logo: 'designed' })); try { const stored = localStorage.getItem(CARD_SURFACE_STORAGE_KEY); if (stored) saved = parseSurfaceReview(stored); } catch { /* Storage may be unavailable. */ } return { ...saved, ...parseSurfaceUrl(initial, saved) }; });
-  const [view, setView] = useState<SurfaceView | 'clues'>(() => initial.get('view') === 'clues' ? 'clues' : parseSurfaceUrl(initial).view);
+  const [view, setView] = useState<SurfaceView | 'clues' | 'copy'>(() => initial.get('view') === 'copy' ? 'copy' : initial.get('view') === 'clues' ? 'clues' : parseSurfaceUrl(initial).view);
   const [clueReview, setClueReview] = useState<ClueReview>(() => { let saved = parseClueReview(null); try { saved = parseClueReview(localStorage.getItem(CARD_CLUE_STORAGE_KEY)); } catch { /* Storage may be unavailable. */ } return { ...saved, selected: parseClueUrl(initial, saved.selected) }; });
   const [clueStatus, setClueStatus] = useState('Choose a style to compare. Your existing picks stay saved.');
   const [clueNote, setClueNote] = useState('');
@@ -250,15 +253,15 @@ export default function CardDesignLab({ session, standalone = false }: { session
   const props: CardProps = { edition, entry, state, time, back, labels, alwaysWord, whiteWord, round, mission, crisp, reducedMotion: motion, finish: surfaces.finish, backStyle: surfaces.back, logo: surfaces.logo, bend, clueTreatment: clueReview.selected };
   if (!allowed) return <main className="card-lab"><div className="cl-closed">{productBrand}<h1>Card lab is local.</h1><p>Open the local preview without Twitch credentials to compare editions. The game never reads these examples.</p><a href="/">Back to Baited</a></div></main>;
   return <main className="card-lab">
-    <header className="cl-top"><a href="/" aria-label={standalone ? 'Baited website' : 'Baited Studio'}>{productBrand}</a><nav aria-label="Card lab tools"><button type="button" aria-pressed={view === 'stage'} onClick={() => setView('stage')}>Stage</button><button type="button" aria-pressed={view === 'gallery'} onClick={() => setView('gallery')}>Gallery</button><button type="button" aria-pressed={view === 'clues'} onClick={() => setView('clues')}>Clue styles</button>{view === 'stage' && <><button type="button" aria-pressed={compare} onClick={() => setCompare(value => !value)}>Compare</button><button type="button" aria-pressed={back} onClick={() => setBack(value => !value)}>{back ? 'Show front' : 'Show back'}</button></>}<button type="button" onClick={() => setReplay(value => value + 1)}>Replay deal</button><a href="#cl-picks">Your picks</a></nav><a className="cl-product-link" href={standalone ? '/' : '/product-review'}>{standalone ? 'Back to Baited' : 'Product screens'}</a></header>
+    <header className="cl-top"><a href="/" aria-label={standalone ? 'Baited website' : 'Baited Studio'}>{productBrand}</a><nav aria-label="Card lab tools"><button type="button" aria-pressed={view === 'stage'} onClick={() => setView('stage')}>Stage</button><button type="button" aria-pressed={view === 'gallery'} onClick={() => setView('gallery')}>Gallery</button><button type="button" aria-pressed={view === 'copy'} onClick={() => setView('copy')}>Questions & language</button><button type="button" aria-pressed={view === 'clues'} onClick={() => setView('clues')}>Clue styles</button>{view === 'stage' && <><button type="button" aria-pressed={compare} onClick={() => setCompare(value => !value)}>Compare</button><button type="button" aria-pressed={back} onClick={() => setBack(value => !value)}>{back ? 'Show front' : 'Show back'}</button></>}<button type="button" onClick={() => setReplay(value => value + 1)}>Replay deal</button><a href="#cl-picks">Your picks</a></nav><a className="cl-product-link" href={standalone ? '/' : '/product-review'}>{standalone ? 'Back to Baited' : 'Product screens'}</a></header>
     <div className="cl-intro"><div><h1>Card lab</h1><p>Same word, different cards. Pick the one chat should hold.</p></div><p className="cl-local-note">{standalone ? 'Design review. Synthetic rounds.' : 'Local only. Synthetic rounds.'}<br />Nothing here reads or changes a live game.</p></div>
     <div className="cl-workspace">
-      <aside className="cl-controls">
+      <aside className="cl-controls" hidden={view === 'copy'}>
         <fieldset className="cl-editions"><legend>Edition</legend>{editions.map((item, index) => <label className="cl-edition-option" key={item.id} data-selected={edition === item.id}><input type="radio" name="edition" value={item.id} checked={edition === item.id} onChange={() => setEdition(item.id)} /><span className="cl-edition-number">{String(index).padStart(2, '0')}</span><span><strong>{item.name}{item.id === 'table-reveal' && <small>Selected direction</small>}</strong><span>{item.note}</span></span></label>)}</fieldset>
         <SurfaceSelectors choice={surfaces} change={changeSurface} />
         <fieldset className="cl-clue-selector"><legend>Forbidden-word style</legend>{clueTreatments.map(item => <label key={item.id}><input type="radio" name="clue-style" value={item.id} checked={clueReview.selected === item.id} onChange={() => selectClue(item.id)} /><span>{item.name}{item.id === 'rail' && <small>Proposal</small>}{item.id === 'baseline' && <small>Current</small>}</span></label>)}{!usesTableLayout(edition) && edition !== 'wide' && <p>Clue styles apply to Table, Cut Reveal and Cut Open. Other editions keep their own clue rows.</p>}<button type="button" onClick={() => setView('clues')}>Compare clue styles</button></fieldset>
         <details className="cl-inspector" open><summary>Word and state</summary><div className="cl-control-fields">
-          <label>Word pool<select value={pool} onChange={event => { const next = event.target.value; setPool(next); if (next !== 'all' && entry.difficulty !== next) chooseWord(reviewDeck.find(item => item.difficulty === next)!.word); }}><option value="all">All 78 words</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
+          <label>Word pool<select value={pool} onChange={event => { const next = event.target.value; setPool(next); if (next !== 'all' && entry.difficulty !== next) chooseWord(reviewDeck.find(item => item.difficulty === next)!.word); }}><option value="all">All {reviewDeck.length} words</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
           <label>Word<select value={word} onChange={event => chooseWord(event.target.value)}>{available.map(item => <option value={item.word} key={item.word}>{item.word}</option>)}{entry.synthetic && <option value={generic.word}>{generic.word} · synthetic</option>}</select></label>
           <div className="cl-word-actions"><button type="button" onClick={() => step(-1)} aria-label="Previous word">←</button><button type="button" onClick={() => chooseWord(available[Math.floor(Math.random() * available.length)].word)}>Random word</button><button type="button" onClick={() => step(1)} aria-label="Next word">→</button></div>
           <label>Synthetic state<select value={state} onChange={event => { const next = event.target.value as CardState; setState(next); if (next === 'urgent') setTime(12); }}>{states.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
@@ -304,6 +307,7 @@ export default function CardDesignLab({ session, standalone = false }: { session
         <p className="cl-clue-status" role="status">{clueStatus}</p>
         <label className="cl-clue-note">Note for {clueTreatments.find(item => item.id === clueReview.selected)!.name}<textarea maxLength={1000} value={clueNote} onChange={event => setClueNote(event.target.value)} /></label><button type="button" onClick={() => preferClue(clueReview.selected, true)}>Save clue style with note</button>
       </section>}
+      {view === 'copy' && <CardCopyReview word={word} onWord={chooseWord} renderCard={(copyEntry, displayWord, copyLocale) => <EditionCard {...props} entry={copyEntry} displayWord={displayWord} copyLocale={copyLocale} edition="cut-open" state="live" back={false} time={120} round={1} mission={false} finish="glass" backStyle="prism" clueTreatment="rail" reducedMotion={true} />} />}
       {view === 'gallery' && <section className="cl-gallery-area" aria-label="All card materials"><SurfaceGallery cardProps={props} choice={surfaces} select={patch => { changeSurface(patch); if ('finish' in patch && finishHost(edition) === 'own') setEdition('table'); setCompare(false); setBack('back' in patch); setView('stage'); requestAnimationFrame(() => stage.current?.focus()); }} prefer={preferSurface} replay={replay} motion={motion} /></section>}
     </div>
     <section className="cl-picks" id="cl-picks"><div><h2>Your picks</h2><p>No card edition is applied to the game here.</p></div><div className="cl-picks-content">

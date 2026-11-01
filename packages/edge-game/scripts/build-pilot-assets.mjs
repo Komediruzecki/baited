@@ -3,20 +3,24 @@ import { mkdir, open, readdir, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { proofWords, streakFlameFiles } from '../../app/extension/presentation.js';
+import { illustratedWords, proofWords, streakFlameFiles } from '../../app/extension/presentation.js';
+import { renderErrorDocument } from '../../app/shared/error-pages.js';
+import { packageWhisperAssets } from '../../app/scripts/speech-bench/production-assets.mjs';
 
 const edge = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const app = resolve(edge, '../app');
 const requireApp = createRequire(resolve(app, 'package.json'));
 const marker = '.baited-pilot-assets';
-const output = resolve(edge, 'dist/pilot-assets');
+const output = resolve(process.env.BAITED_PILOT_ASSETS_OUT || resolve(edge, 'dist/pilot-assets'));
 const runtime = dirname(requireApp.resolve('@moonshine-ai/moonshine-wasm/moonshine.mjs'));
 const publicAssets = [
   'pcm-worklet.js', 'moonshine-worker.js', 'brand/baited-pixel-white.svg',
+  'brand/baited-favicon.png', 'brand/baited-favicon.svg',
+  'error-page.css',
   ...streakFlameFiles.map((file) => `brand/${file}`),
   'fonts/inter-latin.woff2', 'fonts/intertight-latin.woff2', 'fonts/russo-one.ttf', 'fonts/baited-pixel.ttf',
   'card-lab/backs/back-prism.webp',
-  ...proofWords.map((word) => `cards/proofs/${word}.png`),
+  ...illustratedWords.map((word) => `cards/proofs/${word}.png`),
 ];
 
 async function copyFile(source, target) {
@@ -42,6 +46,7 @@ export async function buildPilotAssets() {
     build: { outDir: output, emptyOutDir: true, sourcemap: false } });
   await writeFile(resolve(output, marker), 'Baited edge pilot frontend build. Safe to replace with this script.\n');
   for (const file of publicAssets) await copyFile(resolve(app, 'public', file), resolve(output, file));
+  await writeFile(resolve(output, '404.html'), renderErrorDocument('missing'));
   for (const file of await readdir(runtime)) {
     if (!/\.(?:js|mjs|wasm)$/.test(file)) continue;
     await copyFile(resolve(runtime, file), resolve(output, 'moonshine/runtime-0.1.5-csp1', file));
@@ -50,8 +55,16 @@ export async function buildPilotAssets() {
   for (const file of await readdir(license)) {
     if ((await stat(resolve(license, file))).isFile()) await copyFile(resolve(license, file), resolve(output, 'licenses/moonshine', file));
   }
-  const receipt = { output, cards: proofWords.length, modelDownloadOrigin: 'https://download.moonshine.ai',
-    runtime: '@moonshine-ai/moonshine-wasm@0.1.5', providerResourcesCreated: false };
+  const whisper = await packageWhisperAssets(process.env.BAITED_SPEECH_ASSET_DIR, output);
+  if (whisper.available) {
+    const notices = resolve(app, 'licenses/speech-bench');
+    for (const file of await readdir(notices)) {
+      if ((await stat(resolve(notices, file))).isFile())
+        await copyFile(resolve(notices, file), resolve(output, 'licenses/speech-bench', file));
+    }
+  }
+  const receipt = { output, cards: proofWords.length, illustrations: illustratedWords.length, modelDownloadOrigin: 'https://download.moonshine.ai',
+    runtime: '@moonshine-ai/moonshine-wasm@0.1.5', whisper, providerResourcesCreated: false };
   const { output: _output, ...publicReceipt } = receipt;
   await writeFile(resolve(output, 'pilot-assets.json'), `${JSON.stringify(publicReceipt, null, 2)}\n`);
   return receipt;

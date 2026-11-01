@@ -25,7 +25,7 @@ Real Twitch installation, physical microphone recognition, OBS compositing, remo
 
 ## Design authority and review brief
 
-The visual authority is the approved landing in `/home/maff/foss/worktrees/disjoint-colliders/bait-dev-landing/packages/bait/site`, released as `bait-v1.1.0`. Carry forward charcoal playing cards, violet `#9146FF`, restrained pale yellow `#FFFC79`, Russo One for the brand and card words, and Inter for controls. Use the existing approved bomb. The approved BAITED B asset supplies the wordmark; this work does not replace it or commission a new identity.
+The visual authority is the approved landing in `packages/landing/site`, released as `bait-v1.1.0`. Carry forward charcoal playing cards, violet `#9146FF`, restrained pale yellow `#FFFC79`, Russo One for the brand and card words, and Inter for controls. Use the existing approved bomb. The approved BAITED B asset supplies the wordmark; this work does not replace it or commission a new identity.
 
 Each screen has a different job:
 

@@ -1,17 +1,29 @@
 // Same-origin, dedicated inference worker. No microphone, game state, or target words here.
-import { Transcriber, ModelArch, AssetDownloader, loadMoonshineModule } from '/moonshine/runtime-0.1.5-csp1/index.js';
 
 let transcriber;
 let stream;
 let generation = 0;
 let samples = 0;
 const send = (message) => self.postMessage(message);
+let stage = 'bootstrap';
+function entering(next) { stage = next; send({ type: 'stage', stage }); }
+entering('bootstrap');
 
 self.onmessage = async ({ data }) => {
   const { id, type } = data;
   try {
     if (type === 'load') {
       if (!transcriber) {
+        // Import inside the handler so module/SDK failures become useful errors, not a silent worker crash.
+        // Only load the speech modules; the aggregate index also imports unrelated voice-generation modules.
+        entering('importing-sdk');
+        const [{ Transcriber }, { ModelArch }, { AssetDownloader }, { loadMoonshineModule }] = await Promise.all([
+          import('/moonshine/runtime-0.1.5-csp1/transcriber.js'),
+          import('/moonshine/runtime-0.1.5-csp1/enums.js'),
+          import('/moonshine/runtime-0.1.5-csp1/asset-downloader.js'),
+          import('/moonshine/runtime-0.1.5-csp1/module.js'),
+        ]);
+        entering('loading-runtime');
         const module = await loadMoonshineModule();
         const manifest = JSON.parse(module.sttDependencies('en', String(ModelArch.TinyStreaming), false));
         const group = manifest.groups[0];
@@ -22,12 +34,16 @@ self.onmessage = async ({ data }) => {
             url: `${group.base_url}/decoder_kv_with_attention.ort`, size: 32515016 });
         }
         const downloader = new AssetDownloader({ onProgress: (loaded, total) => send({ type: 'progress', loaded, total }) });
+        entering('downloading-model');
         const files = await downloader.downloadManifest(JSON.stringify(manifest));
+        entering('initializing-model');
         transcriber = await Transcriber.load({ files, module, modelArch: ModelArch.TinyStreaming,
           options: { word_timestamps: 'true', decode_incomplete_lines: 'false', log_output_text: 'false' } });
         send({ type: 'model', revision: group.base_url, bytes: group.files.reduce((n, f) => n + f.size, 0) });
+        entering('ready');
       }
     } else if (type === 'start') {
+      entering('starting');
       stream?.close();
       generation = data.generation;
       samples = 0;
@@ -35,6 +51,7 @@ self.onmessage = async ({ data }) => {
       const own = generation;
       stream.addListener({ onLineCompleted: ({ line }) => send({ type: 'line', generation: own, line, audioSeconds: samples / 16000 }) });
       stream.start();
+      entering('transcribing');
     } else if (type === 'audio') {
       if (!stream || data.generation !== generation) return;
       const audio = new Float32Array(data.buffer);
@@ -44,6 +61,7 @@ self.onmessage = async ({ data }) => {
       stream.transcribe();
       send({ type: 'pass', generation, samples: audio.length, ms: performance.now() - started });
     } else if (type === 'finish') {
+      entering('finishing');
       if (stream && data.generation === generation) {
         const started = performance.now();
         stream.stop();
@@ -58,6 +76,6 @@ self.onmessage = async ({ data }) => {
     }
     if (id) send({ type: 'reply', id });
   } catch (error) {
-    send({ type: 'error', id, generation, message: error instanceof Error ? error.message : 'Moonshine could not transcribe this audio.' });
+    send({ type: 'error', id, generation, stage, message: error instanceof Error ? error.message : 'Moonshine could not transcribe this audio.' });
   }
 };

@@ -1,4 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
+import { BOT_REPLY_COOLDOWN_MS, MOD_COMMANDS, parseCommand } from '../../app/server/chat-copy.js';
+import { isBotReplyCommand, type BotReplyCommand } from './chat-commands.js';
 import { Game, defaults, type GameEvent } from '@baited/game-core';
 import { authenticateRequest, identityIsCurrent, type AuthIdentity, type AuthEnv } from './auth.js';
 import { serveApprovedArt, type ApprovedArt } from './art.js';
@@ -9,13 +11,14 @@ import { localTranscript, progressSchema } from '../../app/shared/local-speech.j
 import { z } from 'zod';
 import type { ControlEnv } from './control-types.js';
 import { internalFetch } from './internal-fetch.js';
+import { voiceDraftCurrent, voiceDraftWord, VOICE_DRAFT_TTL, type VoiceDraftState, type VoiceDraftRef } from '../../app/server/voice-draft.js';
 
 export interface Env extends AuthEnv, ControlEnv { ROOMS: DurableObjectNamespace; ART: R2Bucket; CONTROL?: DurableObjectNamespace; ASSETS?: Fetcher }
 interface Speech { leaseId: string; roundId: string; epoch: number; samples: number; firstAudioAt: number; lastAudioAt: number; lastSequence: number }
-type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:'help'|'score'|'top'|'who';userId:string};
+type PilotEvent=GameEvent|{type:'bot-settings'}|{type:'chat-command';command:BotReplyCommand;userId:string}|({type:'voice-guess-draft';word:string}&VoiceDraftRef);
 interface Attachment { identity: AuthIdentity; lastInputAt: number; lastAuthRefreshAt?:number; sentViewRevision?:number; socketId?: string; microphoneLeases?:string[]; speech?: Speech; inputs?: {at:number;n:number}; audioInputs?:{at:number;tokens:number} }
 interface Lease { id:string; sessionId:string; socketId:string; expiresAt:number; lastAudioAt?:number; roundId?:string; epoch?:number }
-interface PilotState { operator?:{enabled:boolean;revision:number}; lease:Lease|null; microphoneStopRevision?:number; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; connectionRevision?:number; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>} }
+interface PilotState { operator?:{enabled:boolean;revision:number}; lease:Lease|null; microphoneStopRevision?:number; rates:Record<string,{at:number;n:number}>; chatConnected:boolean; connectionRevision?:number; viewRevisions?:Partial<Record<AuthIdentity['role'],number>>; botReplies?:{channelAt:number;users:Record<string,number>}; voiceDraft?:VoiceDraftState; voiceDraftLease?:string }
 const AUDIO_LEASE_REFRESH_MS=10_000;
 const eventSchema = z.object({eventId:z.string().min(1).max(200),channelId:z.string().regex(/^[1-9][0-9]{0,24}$/),
   at:z.number().finite(),kind:z.enum(['message','delete','clear-user']),messageId:z.string().min(1).max(200).optional(),
@@ -62,14 +65,25 @@ export class ChannelRoom extends DurableObject<Env> {
     if (!this.env.CONTROL) throw new Error('Control unavailable.');
     return internalFetch(this.env.CONTROL.get(this.env.CONTROL.idFromName('control-v1')),new Request(`https://control.internal${path}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
   }
+  private outboxResetBarrier() {
+    return this.ctx.storage.sql.exec<{id:string;body:string;retry_at:number}>(
+      "SELECT id,body,retry_at FROM pilot_outbox WHERE json_extract(body,'$.event.type')='recording-reset' ORDER BY rowid LIMIT 1",
+    ).toArray()[0];
+  }
   private async flushOutbox() {
     if (!this.pilot() || this.operatorBlocked()) return;
     const rows=await this.serial(async()=>{
       this.ctx.storage.sql.exec('DELETE FROM pilot_outbox WHERE expires_at<=?',Date.now());
+      // A reset must reach Control before any later event, including while its
+      // first delivery is backing off. Only announcements wait; gameplay does not.
+      const barrier=this.outboxResetBarrier();
+      if(barrier) return barrier.retry_at<=Date.now()?[barrier]:[];
       return this.ctx.storage.sql.exec<{id:string;body:string}>('SELECT id,body FROM pilot_outbox WHERE retry_at<=? ORDER BY rowid LIMIT 8',Date.now()).toArray();
     });
     for (const row of rows) {
       if(this.operatorBlocked()) return;
+      // A recording reset may retire rows while a previous delivery awaits Control.
+      if(!await this.serial(async()=>this.ctx.storage.sql.exec('SELECT id FROM pilot_outbox WHERE id=?',row.id).toArray().length>0)) continue;
       try {
         const response=await this.control('/internal/room-event',JSON.parse(row.body));
         // Authorization/validation failures cannot recover by replaying this old
@@ -205,13 +219,21 @@ export class ChannelRoom extends DurableObject<Env> {
         this.ctx.storage.sql.exec('DELETE FROM pilot_chat_receipt WHERE expires<=?',this.now);
         if (chatId) this.ctx.storage.sql.exec('INSERT OR IGNORE INTO pilot_chat_receipt(id,expires) VALUES(?,?)',chatId,this.now+600_000);
         const pending=this.events.get(candidate)??[];
-        if (pending.length && (candidate.data.settings.chatBot || pending.some(item=>item.event.type==='bot-settings'))) {
+        // Retain only bounded IDs for retry suppression, never draft text in game history.
+        // Any phase/epoch/guess change retires a queued public draft immediately.
+        if((this.pilotState.voiceDraft?.latest.expiresAt??0)>this.now) for (const row of this.ctx.storage.sql.exec<{id:string;body:string}>("SELECT id,body FROM pilot_outbox WHERE json_extract(body,'$.event.type')='voice-guess-draft'")) {
+          const event=JSON.parse(row.body).event as VoiceDraftRef;
+          if(!voiceDraftCurrent(candidate,pilotState.voiceDraft,event,this.now) || !candidate.data.settings.chatBot || !pilotState.chatConnected)
+            this.ctx.storage.sql.exec('DELETE FROM pilot_outbox WHERE id=?',row.id);
+        }
+        if(pending.some(item=>item.event.type==='recording-reset')) this.ctx.storage.sql.exec('DELETE FROM pilot_outbox');
+        if (pending.length && (candidate.data.settings.chatBot || pending.some(item=>item.event.type==='bot-settings' || item.event.type==='recording-reset'))) {
           const count=this.ctx.storage.sql.exec<{n:number}>('SELECT count(*) AS n FROM pilot_outbox').one().n;
           // Announcements are best-effort and bounded; never hold gameplay hostage to a chat outage.
           for (const [i,item] of pending.entries()) if (count+i<32) {
             const eventId=`${candidate.data.owner}:${nextRevision}:${i}`;
             this.ctx.storage.sql.exec('INSERT OR IGNORE INTO pilot_outbox(id,body,retry_at,expires_at) VALUES(?,?,?,?)',eventId,
-              JSON.stringify({channelId:candidate.data.owner,eventId,...item}),this.now,this.now+60_000);
+              JSON.stringify({channelId:candidate.data.owner,eventId,...item}),this.now,item.event.type==='voice-guess-draft'?item.event.expiresAt:this.now+60_000);
           }
         }
       }
@@ -298,7 +320,9 @@ export class ChannelRoom extends DurableObject<Env> {
     const deadlines = [game?.nextDeadline() ?? null, receiptAt];
     if (this.pilot()) {
       if (pilot.lease) deadlines.push(pilot.lease.expiresAt,this.speechDeadline(game,pilot));
-      const outbox=this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(retry_at) AS at FROM pilot_outbox').one().at;
+      const barrier=this.outboxResetBarrier();
+      // Younger due rows behind a backed-off reset must not create a hot alarm loop.
+      const outbox=barrier?.retry_at??this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(retry_at) AS at FROM pilot_outbox').one().at;
       const outboxExpiry=this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(expires_at) AS at FROM pilot_outbox').one().at;
       const chat=this.ctx.storage.sql.exec<{at:number|null}>('SELECT min(expires) AS at FROM pilot_chat_receipt').one().at;
       deadlines.push(outbox,outboxExpiry,chat);
@@ -350,6 +374,8 @@ export class ChannelRoom extends DurableObject<Env> {
           ...(socket.speech?{lastAudioAt:socket.speech.lastAudioAt,roundId:socket.speech.roundId,epoch:socket.speech.epoch}:{})};
         game.mic='listening';break;
       }
+      case 'restart-take': game.restartTake(a.takeId); break;
+      case 'reset-chaos-session': game.restartChaosSession(a.sessionId); break;
       case 'skip': game.end('skipped');break;
       case 'pause': game.pause(); break;
       case 'resume': if (this.pilot() && (!pilot.chatConnected || !this.leaseValid())) throw new Error('stream_not_ready');game.resume(); break;
@@ -358,6 +384,21 @@ export class ChannelRoom extends DurableObject<Env> {
       case 'reverse': game.reverse(); break;
       case 'award': game.award(a.roundId, a.hintId); break;
       case 'guess': game.guess(a.roundId, a.epoch, a.text); break;
+      case 'voice-guess-draft': {
+        if(!this.pilot() || identity.authKind!=='pilot-session' || !this.leaseValid() || pilot.lease?.sessionId!==identity.sessionId ||
+          game.phase!=='active' || !game.round?.guessEnabled || game.round.guessUsed || !game.data.settings.chatBot || !pilot.chatConnected)
+          throw new Error('voice_draft_unavailable');
+        if(a.expiresAt<=this.now || a.expiresAt>this.now+VOICE_DRAFT_TTL) throw new Error('voice_draft_expired');
+        const word=voiceDraftWord(a.text);
+        if(pilot.voiceDraft?.roundId!==a.roundId) pilot.voiceDraft=undefined;
+        if(pilot.voiceDraft?.ids.includes(a.draftId)) break;
+        if((pilot.voiceDraft?.ids.length??0)>=3 || !this.takeRate(pilot,this.actorRate(identity,'voice-draft'),6)) throw new Error('voice_draft_limit');
+        const ref={roundId:a.roundId,epoch:a.epoch,draftId:a.draftId,expiresAt:a.expiresAt};
+        pilot.voiceDraft={roundId:a.roundId,ids:[...(pilot.voiceDraft?.ids??[]),a.draftId],latest:ref};
+        pilot.voiceDraftLease=pilot.lease!.id;
+        this.events.get(game)!.push({event:{type:'voice-guess-draft',word,...ref},safeView:game.view('overlay')});
+        break;
+      }
       case 'settings':
         if (!this.pilot() && (a.settings.auto || a.settings.chatBot || a.settings.modCommands)) throw new Error('poc_feature_disabled');
         game.update(a.settings);if(this.pilot())this.events.get(game)!.push({event:{type:'bot-settings'},safeView:game.view('overlay')}); break;
@@ -378,7 +419,7 @@ export class ChannelRoom extends DurableObject<Env> {
     if (previous) return previous.fingerprint === hash
       ? {status:200,body:JSON.parse(previous.body)}
       : {status:409,body:{ok:false,code:'id_conflict',revision:this.revision,generation:this.generation}};
-    const acceptsOlderRevision=this.pilot() && !['start','settings','revoke-connections'].includes(command.action.type);
+    const acceptsOlderRevision=this.pilot() && !['start','settings','restart-take','reset-chaos-session','revoke-connections'].includes(command.action.type);
     if (command.generation !== this.generation || ((command.action.type === 'fixture-chat' || acceptsOlderRevision)
       ? command.expectedRevision > this.revision : command.expectedRevision !== this.revision))
       return {status:409,body:{ok:false,code:'stale_revision',revision:this.revision,generation:this.generation}};
@@ -710,6 +751,11 @@ export class ChannelRoom extends DurableObject<Env> {
       disconnectedSessions=new Set(ids as string[]);
     }
     await this.reconcile();
+    if(path==='/internal/voice-draft-current') {
+      const ref=data.ref as VoiceDraftRef|undefined;
+      return json({current:!!ref && voiceDraftCurrent(this.game,this.pilotState.voiceDraft,ref,this.now) &&
+        !!this.game?.data.settings.chatBot && this.pilotState.chatConnected && this.leaseValid() && this.pilotState.voiceDraftLease===this.pilotState.lease?.id});
+    }
     if(path==='/internal/control') {
       const channel=data.channelId;
       if(!this.game && (typeof data.login!=='string' || !/^[a-z0-9_]{1,25}$/.test(data.login))) return json({error:'Not connected.'},409);
@@ -745,9 +791,11 @@ export class ChannelRoom extends DurableObject<Env> {
     if(path!=='/internal/twitch-chat') return json({error:'Not found.'},404);
     const event=eventSchema.parse(data);
     if(!this.game) return json({ok:true,ignored:true});
-    const command=(event.text??'').trim().toLowerCase();
-    const botCommand=event.kind==='message' && /^!bait (help|score|top|who)$/.test(command);
-    const modCommand=event.kind==='message' && /^!bait (start|pause|resume)$/.test(command) && this.game.data.settings.modCommands &&
+    if(event.kind==='message' && this.game.data.settings.recordingMode && this.game.data.recordingTake &&
+      event.at <= (this.game.data.recordingTake.startedAt??0)) return json({ok:true,ignored:true,reason:'previous_take'});
+    const command=event.kind==='message' ? parseCommand(event.text??'') : null;
+    const botCommand=isBotReplyCommand(command);
+    const modCommand=command!==null && MOD_COMMANDS.has(command) && this.game.data.settings.modCommands &&
       (event.userId===this.channel || (event.badges??[]).some(b=>['moderator','broadcaster'].includes(b)));
     // Ordinary chat outside a running round has no gameplay effect and needs
     // neither a room checkpoint nor a receipt. Control deduplicates delivery.
@@ -766,20 +814,20 @@ export class ChannelRoom extends DurableObject<Env> {
       }
       const badges=event.badges??[];
       const isMod=event.userId===this.channel || badges.some(b=>['moderator','broadcaster'].includes(b));
-      if(candidate.data.settings.modCommands && isMod && /^!bait (start|pause|resume)$/.test(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
+      if(candidate.data.settings.modCommands && isMod && command!==null && MOD_COMMANDS.has(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
         try {
-          if(command==='!bait pause') candidate.pause();
-          else if(pilot.chatConnected && this.leaseValid()) {if(command==='!bait start')candidate.begin();else candidate.resume();}
+          if(command==='pause') candidate.pause();
+          else if(pilot.chatConnected && this.leaseValid()) {if(command==='start')candidate.begin();else candidate.resume();}
         } catch { /* A stale moderator command cannot override the current phase. */ }
-      } else if(/^!bait (help|score|top|who)$/.test(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
+      } else if(isBotReplyCommand(command) && this.now-event.at<=15_000 && event.at<=this.now+2000) {
         // Cooldowns belong before the durable outbox. A user cannot fill the
         // shared bot queue with replies that will be discarded later anyway.
         const replies=pilot.botReplies??{channelAt:0,users:{}};
-        for(const [user,at] of Object.entries(replies.users)) if(this.now-at>=30_000) delete replies.users[user];
-        if(candidate.data.settings.chatBot && this.now-replies.channelAt>=20_000 &&
-          (!replies.users[event.userId] || this.now-replies.users[event.userId]!>=30_000)) {
+        for(const [user,at] of Object.entries(replies.users)) if(this.now-at>=BOT_REPLY_COOLDOWN_MS) delete replies.users[user];
+        if(candidate.data.settings.chatBot && this.now-replies.channelAt>=BOT_REPLY_COOLDOWN_MS &&
+          (!replies.users[event.userId] || this.now-replies.users[event.userId]!>=BOT_REPLY_COOLDOWN_MS)) {
           replies.channelAt=this.now;replies.users[event.userId]=this.now;pilot.botReplies=replies;
-          this.events.get(candidate)!.push({event:{type:'chat-command',command:command.slice(6) as 'help'|'score'|'top'|'who',userId:event.userId},safeView:candidate.view('overlay')});
+          this.events.get(candidate)!.push({event:{type:'chat-command',command,userId:event.userId},safeView:candidate.view('overlay')});
         }
       } else candidate.chat(event.messageId??event.eventId,event.userId,event.name??event.userId,event.text??'',event.at);
     } else if(event.kind==='delete') candidate.dropMessage(event.messageId??'',event.userId);

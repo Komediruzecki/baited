@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { GameView } from '../shared/types';
 import { CardBack } from './CardBack';
 import { CutCard } from './CutCard';
+import { baityChaosCopy } from '../extension/presentation.js';
 
 // Only a server-authorized result belongs here. OBS must never render a review.
 export function ResultCard({
@@ -21,7 +22,8 @@ export function ResultCard({
   if (broadcast && !['caught', 'escaped'].includes(result.outcome)) return null;
   const caught = result.outcome === 'caught';
   const review = result.outcome === 'review';
-  const verdict = review
+  const chaos = baityChaosCopy(result);
+  const verdict = chaos ? chaos[0] : review
     ? 'Heard'
     : caught
       ? 'They said it'
@@ -30,7 +32,7 @@ export function ResultCard({
         : result.outcome === 'overturned'
           ? 'Catch rejected'
           : 'Round ended';
-  const outcome = review
+  const outcome = chaos ? (caught ? 'Correct guess. Chat wins.' : 'Gift removed.') : review
     ? 'Not scored yet'
     : caught
       ? 'Chat wins'

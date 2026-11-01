@@ -225,6 +225,11 @@
   }
 }
 @media (max-width: 600px) {
+  .obs-hud .obs-streak { flex-wrap: wrap; }
+  .obs-hud .obs-streak__count { flex: none; }
+  .obs-hud .obs-streak__label { flex: 1 1 140px; }
+  .obs-hud .obs-streak .streak-row { flex: 1 0 100%; margin-left: 0; justify-content: flex-start; }
+
   .obs-hud .obs-time {
     font-size: 32px;
   }

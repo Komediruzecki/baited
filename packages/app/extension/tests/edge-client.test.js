@@ -226,3 +226,20 @@ test('saturated real viewer projection fits the bounded native frame budget', (t
     assert.equal(h.statuses.at(-1).kind, 'invalid'); assert.equal(h.timers.size, 0);
   } finally { h.client.destroy(); }
 });
+
+test('installed native parser accepts recording rounds and their reset without new Extension fields', () => {
+  const game = new Game({ id:randomUUID(), owner:'1234', channel:'streamer', mode:'twitch', overlayKey:'fixture',
+    settings:{...defaults,recordingMode:true},history:[],priorWins:0,priorPlayed:0,priorBest:0,leaders:{} });
+  for (const target of ['banana','ghost','bait']) {
+    game.begin();
+    const parsed=readState({version:'0.0.1',configured:true,room:game.view('viewer')});
+    assert.equal(parsed.room.round.target,target);
+    assert.equal('recording' in parsed.room,false);
+    assert.equal('settings' in parsed.room,false);
+    game.end('caught'); game.nextAt=0;
+  }
+  game.restartTake(game.data.recordingTake.id);
+  const reset=readState({version:'0.0.1',configured:true,room:game.view('viewer')});
+  assert.equal(reset.room.round,null); assert.equal(reset.room.result,null);
+  assert.deepEqual(reset.room.score,{streak:0,best:0});
+});

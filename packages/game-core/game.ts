@@ -32,8 +32,10 @@ export const settingsSchema = z
     mission: z.enum(['single', 'three']).default('single'),
     missionDuration: z.number().int().min(60).max(900).default(180),
     callBait: z.boolean().default(false),
+    baityChaos: z.boolean().default(false),
     chatBot: z.boolean().default(false),
     modCommands: z.boolean().default(false),
+    recordingMode: z.boolean().default(false),
   })
   .strict();
 export const defaults: Settings = {
@@ -46,12 +48,15 @@ export const defaults: Settings = {
   mission: 'single',
   missionDuration: 180,
   callBait: false,
+  baityChaos: false,
   // Fresh channels announce by default. The schema keeps legacy missing values off.
   chatBot: true,
   modCommands: false,
+  recordingMode: false,
 };
 /** Moments the chat bot may announce. Listeners read public state from the overlay projection. */
 export type GameEvent =
+  | { type: 'recording-reset' }
   | { type: 'start' }
   | { type: 'pause' }
   | { type: 'resume' }
@@ -193,6 +198,7 @@ interface Round {
   printed: { ink?: string; example?: string };
   guessEnabled: boolean;
   guessUsed: boolean;
+  baityChaos: boolean;
   wrongGuessBonus: number;
   hints: Hint[];
   violations: number;
@@ -204,9 +210,13 @@ export interface SavedGame {
   mode: 'demo' | 'twitch';
   overlayKey: string;
   settings: Settings;
+  /** Durable allowance; only explicit session/take resets renew it. */
+  chaosSession?: { id: string; used: boolean };
   history: Result[];
   /** Private repeat history; never included in a Studio, viewer or OBS projection. */
   recentCardForms?: { roundId: string; forms: string[] }[];
+  /** A recording take has its own scoreboard; lifetime history is never erased. */
+  recordingTake?: { id: string; startedAt: number; roundsStarted: number; wins: number; played: number; best: number; bestBeforeRound: number };
   priorWins: number;
   priorPlayed: number;
   priorBest: number;
@@ -237,10 +247,13 @@ const resultSchema = z.object({
   outcome: z.enum(['caught', 'escaped', 'skipped', 'ended', 'overturned', 'review']),
   elapsed: count, participants: count, at: timestamp, confirmAt: timestamp.optional(),
   award: z.object({ name: z.string(), at: timestamp.optional() }).strict().optional(),
-  reason: z.enum(['guess', 'timer']).optional(), milestone: count.optional(), newBadge: z.boolean().optional(),
+  reason: z.enum(['guess', 'timer', 'baity-chaos']).optional(), milestone: count.optional(), newBadge: z.boolean().optional(),
 }).strict().refine((result) => result.confirmAt === undefined ||
   (result.outcome === 'review' && result.confirmAt > result.at && result.confirmAt === result.at + CATCH_CONFIRM_MS),
-  'Only a pending catch can have its bounded confirmation deadline.');
+  'Only a pending catch can have its bounded confirmation deadline.')
+  .refine(result => result.reason !== 'baity-chaos' ||
+    (['caught', 'overturned'].includes(result.outcome) && result.award === undefined && result.confirmAt === undefined),
+  'A Baity intervention is a deliberate result, not speech evidence or an MVP award.');
 const hintSchema = z.object({
   id: z.string(), userId: z.string(), messageId: z.string(), name: z.string().max(40),
   text: z.string().max(500), eligible: z.boolean(), reason: z.string().nullable(), at: timestamp,
@@ -260,9 +273,18 @@ const roundSchema = z.object({
   clues: z.array(z.string()).max(4), acceptedSpellings: z.array(z.string()).max(3),
   cardId: z.string().optional(), cardRevision: z.number().int().positive().optional(), artId: z.string().optional(),
   printed: z.object({ ink: z.string().optional(), example: z.string().optional() }).strict(),
-  guessEnabled: z.boolean(), guessUsed: z.boolean(), wrongGuessBonus: count, hints, violations: count,
+  guessEnabled: z.boolean(), guessUsed: z.boolean(), baityChaos: z.boolean().default(false), wrongGuessBonus: count, hints, violations: count,
 }).strict();
+const chaosSessionSchema = z.object({ id: z.string().uuid(), used: z.boolean() }).strict();
+// This is a generation-zero marker, not an authorization capability. A stable
+// initial ID lets legacy rooms hibernate before their first write without
+// invalidating the owner's reset form. Explicit resets always issue a fresh ID.
+const INITIAL_CHAOS_SESSION = '00000000-0000-4000-8000-000000000000';
 const safeKey = z.string().refine((key) => !['__proto__', 'constructor', 'prototype'].includes(key));
+// Normalize legacy take records at both persistence entry points. Live state and
+// newly written checkpoints always contain an explicit chat-message watermark.
+const recordingTakeSchema = z.object({ id: z.string().uuid(), startedAt: timestamp.default(0), roundsStarted: count, wins: count, played: count, best: count, bestBeforeRound: count }).strict()
+  .refine(take => take.wins <= take.played && take.played <= take.roundsStarted && take.best <= take.wins && take.bestBeforeRound <= take.best);
 const savedSchema = z.object({
   id: z.string(), owner: z.string(), channel: z.string(), mode: z.enum(['demo', 'twitch']),
   overlayKey: z.string(), settings: z.object({
@@ -274,7 +296,9 @@ const savedSchema = z.object({
     chatBot: settingsSchema.shape.chatBot.removeDefault(),
     modCommands: settingsSchema.shape.modCommands.removeDefault(),
   }).strict(), history: z.array(resultSchema).max(100),
+  chaosSession: chaosSessionSchema.optional(),
   recentCardForms: z.array(z.object({ roundId: z.string(), forms: z.array(z.string()) }).strict()).max(12).optional(),
+  recordingTake: recordingTakeSchema.optional(),
   priorWins: count, priorPlayed: count, priorBest: count,
   leaders: z.record(safeKey, z.object({ name: z.string(), rounds: count, baits: count.optional() }).strict())
     .refine((value) => Object.keys(value).length <= 1000),
@@ -364,8 +388,12 @@ export class Game {
     private clock = Date.now,
     private choose = secureIndex,
     private uuid: () => string = () => crypto.randomUUID(),
+    private chaosRoll: (size: number) => number = secureIndex,
   ) {
     data.settings = settingsSchema.parse(data.settings);
+    data.chaosSession = data.chaosSession ? chaosSessionSchema.parse(data.chaosSession) : { id: INITIAL_CHAOS_SESSION, used: false };
+    if (data.recordingTake) data.recordingTake = recordingTakeSchema.parse(data.recordingTake);
+    if (data.settings.recordingMode && !data.recordingTake) this.resetTakeState(true, false);
     // A restart never resumes an old live round or an old streak.
     if (data.mode === 'demo')
       this.connection = { status: 'offline', detail: 'Local demo · simulated chat only' };
@@ -397,7 +425,7 @@ export class Game {
   }
   /** Reject unknown/corrupt schemas. Runtime callbacks, decks and art resolvers must be rebound. */
   static restore(input: unknown, clock = Date.now, choose = secureIndex,
-    uuid: () => string = () => crypto.randomUUID()): Game {
+    uuid: () => string = () => crypto.randomUUID(), chaosRoll = secureIndex): Game {
     // Zod intentionally ignores __proto__ record entries. A durable checkpoint
     // must reject corrupt keys rather than silently lose acknowledged state.
     const rawData = input && typeof input === 'object' ? (input as Record<string, unknown>).data : null;
@@ -407,7 +435,7 @@ export class Game {
       throw new Error('Invalid checkpoint leader key.');
     }
     const state = checkpointSchema.parse(input);
-    const game = new Game(state.data, clock, choose, uuid);
+    const game = new Game(state.data, clock, choose, uuid, chaosRoll);
     game.phase = state.phase;
     game.round = state.round ? {
       ...state.round,
@@ -474,6 +502,8 @@ export class Game {
     }
   }
   get score() {
+    const take = this.data.settings.recordingMode ? this.data.recordingTake : undefined;
+    if (take) return { wins: take.wins, played: take.played, streak: this.streak, best: take.best };
     const caught = this.data.history.filter((r) => r.outcome === 'caught').length;
     return {
       wins: this.data.priorWins + caught,
@@ -483,8 +513,47 @@ export class Game {
     };
   }
   update(settings: unknown) {
-    this.data.settings = settingsSchema.parse(settings);
+    const next = settingsSchema.parse(settings);
+    const changedMode = next.recordingMode !== this.data.settings.recordingMode;
+    if (changedMode && (this.pendingCatch || ['active', 'paused', 'settling'].includes(this.phase)))
+      throw new Error('Finish the current round before changing recording mode.');
+    this.data.settings = next;
+    if (changedMode) this.resetTakeState(next.recordingMode);
     this.changed();
+  }
+  /** Only authenticated owner adapters expose this; takeId rejects stale/double resets. */
+  restartTake(takeId: string) {
+    if (!this.data.settings.recordingMode || !this.data.recordingTake || this.data.recordingTake.id !== takeId)
+      throw new Error('This recording take has changed. Refresh Studio before resetting it.');
+    this.resetTakeState(true);
+    this.changed();
+  }
+  /** A fresh ID makes retries safe; this resets only the allowance, never scores. */
+  restartChaosSession(sessionId: string) {
+    if (this.data.chaosSession?.id !== sessionId)
+      throw new Error('This Baity session has changed. Refresh Studio before resetting it.');
+    if (this.pendingCatch || !['idle', 'cooldown'].includes(this.phase))
+      throw new Error('Finish the current round before starting a new Baity session.');
+    this.data.chaosSession = { id: this.uuid(), used: false };
+    this.changed();
+  }
+  private resetTakeState(recording: boolean, renewChaosSession = true) {
+    this.round = null;
+    this.result = null;
+    this.phase = 'idle';
+    this.nextAt = null;
+    this.mission = null;
+    this.review = null;
+    this.streak = 0;
+    this.skipUsed = false;
+    this.recentChat.clear();
+    this.chatIds.clear();
+    this.bestBeforeRound = this.data.priorBest;
+    if (renewChaosSession) this.data.chaosSession = { id: this.uuid(), used: false };
+    if (recording) this.data.recordingTake = { id: this.uuid(), startedAt: this.clock(), roundsStarted: 0, wins: 0, played: 0, best: 0, bestBeforeRound: 0 };
+    else delete this.data.recordingTake;
+    // Drop pending bot messages from the abandoned take, without posting a spoiler.
+    this.emit({ type: 'recording-reset' });
   }
   get pendingCatch() {
     return this.phase === 'cooldown' && this.result?.outcome === 'review';
@@ -498,7 +567,12 @@ export class Game {
     if (this.phase === 'cooldown' && this.nextAt !== null && this.clock() < this.nextAt)
       throw new Error('Let the cooldown finish first.');
     this.bestBeforeRound = this.data.priorBest;
-    const deck = this.deckFor(this.data.settings.difficulty);
+    const take = this.data.settings.recordingMode ? this.data.recordingTake : undefined;
+    // This private sequence is not part of the normal 100-card deck or any public projection.
+    const scriptedWord = take ? ['banana', 'ghost', 'bait'][take.roundsStarted] : undefined;
+    const deck: DeckCard[] = scriptedWord
+      ? [{ target: scriptedWord, difficulty: 'easy', blockedClues: [], acceptedSpellings: [] }]
+      : this.deckFor(this.data.settings.difficulty);
     if (!deck.length) throw new CardLibraryError(409, 'Choose a playable deck before starting.');
     const window = Math.min(12, Math.max(0, deck.length - 1));
     const pastForms = (entry: Result) =>
@@ -513,7 +587,8 @@ export class Game {
     const fallback = deck.filter((card) => !overlaps(card, latest));
     const pool = eligible.length ? eligible : fallback.length ? fallback : deck;
     const now = this.clock();
-    if (this.mission?.status !== 'active') {
+    if (scriptedWord) this.mission = null;
+    else if (this.mission?.status !== 'active') {
       this.mission =
         this.data.settings.mission === 'three'
           ? {
@@ -531,7 +606,8 @@ export class Game {
       this.mission?.status === 'active'
         ? Math.max(0, this.mission.endsAt - now)
         : this.data.settings.duration * 1000;
-    const card = pool[this.choose(pool.length)];
+    const card = scriptedWord ? deck[0] : pool[this.choose(pool.length)];
+    if (take) { take.bestBeforeRound = take.best; take.roundsStarted++; }
     const word = card.target;
     this.round = {
       id: this.uuid(),
@@ -549,13 +625,14 @@ export class Game {
       votes: new Set(),
       seen: new Set(),
       previousStreak: this.streak,
-      difficulty: this.data.settings.difficulty,
+      difficulty: card.difficulty,
       clues: [...card.blockedClues],
       acceptedSpellings: [...card.acceptedSpellings],
       ...(card.cardId ? { cardId: card.cardId, cardRevision: card.revision } : {}),
       printed: card.cardId ? {} : { ...printed.get(word) },
-      guessEnabled: this.data.settings.callBait,
+      guessEnabled: Boolean(scriptedWord) || this.data.settings.callBait,
       guessUsed: false,
+      baityChaos: this.data.settings.baityChaos,
       wrongGuessBonus: 0,
       hints: [],
       violations: 0,
@@ -664,7 +741,7 @@ export class Game {
       else if (outcome === 'ended') mission.status = 'ended';
     }
     this.review =
-      outcome === 'caught' && now < reviewExpiresAt
+      outcome === 'caught' && reason !== 'baity-chaos' && now < reviewExpiresAt
         ? {
             roundId: r.id,
             word: r.word,
@@ -700,6 +777,12 @@ export class Game {
       }
     }
     this.data.priorBest = Math.max(this.data.priorBest, this.streak);
+    const take = this.data.settings.recordingMode ? this.data.recordingTake : undefined;
+    if (take) {
+      take.played++;
+      if (outcome === 'caught') take.wins++;
+      take.best = Math.max(take.best, this.streak);
+    }
     for (const [id, name] of r.participants) {
       const item = this.data.leaders[id] ?? { name, rounds: 0 };
       item.name = name;
@@ -751,6 +834,11 @@ export class Game {
     // The word has already been revealed. A fresh target is required next round.
     // Historical best is tracked before each round so an overturned win cannot inflate it.
     this.data.priorBest = Math.max(this.streak, this.bestBeforeRound);
+    const take = this.data.settings.recordingMode ? this.data.recordingTake : undefined;
+    if (take) {
+      take.wins = Math.max(0, take.wins - 1);
+      take.best = Math.max(this.streak, take.bestBeforeRound);
+    }
     this.changed();
     this.emit({ type: 'reverse' });
   }
@@ -827,6 +915,12 @@ export class Game {
       throw new Error('Only one word can be submitted.');
     r.guessUsed = true;
     if (matchesCustomTarget(guess[0], r.word, r.acceptedSpellings)) {
+      const session = this.data.chaosSession!;
+      if (r.baityChaos && this.streak >= 3 && !session.used && this.chaosRoll(4) === 0) {
+        session.used = true;
+        this.finish('caught', 'baity-chaos');
+        return { correct: true, bonus: 0, intervened: true };
+      }
       this.finish('escaped', 'guess');
       return { correct: true, bonus: 0 };
     }
@@ -1090,6 +1184,7 @@ export class Game {
             difficulty: r.difficulty,
             guessEnabled: r.guessEnabled,
             guessUsed: r.guessUsed,
+            baityChaos: r.baityChaos,
             wrongGuessBonus: r.wrongGuessBonus,
             ...(role === 'viewer' && ['active', 'paused', 'settling'].includes(this.phase)
               ? { target: r.word, forbiddenClues: [...r.clues], ...r.printed,
@@ -1108,6 +1203,10 @@ export class Game {
       }),
       settings: this.data.settings,
       score: this.score,
+      ...(role === 'studio' ? { chaosSession: { ...this.data.chaosSession! } } : {}),
+      ...(role === 'studio' && this.data.settings.recordingMode && this.data.recordingTake ? {
+        recording: { takeId: this.data.recordingTake.id, roundsStarted: this.data.recordingTake.roundsStarted, scriptedRounds: 3 as const },
+      } : {}),
       participants: r?.participants.size ?? 0,
       voters: r?.votes.size ?? 0,
       voteThreshold: this.data.settings.skipVotes,
