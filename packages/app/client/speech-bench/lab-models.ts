@@ -2,7 +2,7 @@ import { Moonshine, type MoonshineLine } from '../moonshine';
 import { decodeBenchAudio } from './audio';
 import { abortable, type LabDependencies, type LabModel } from './comparison-session';
 import { MicrophoneSample } from './mic-sample';
-import { ONNX_VERSION, TRANSFORMERS_VERSION, WHISPER_MODEL, WHISPER_REVISION, WhisperBench } from './whisper-client';
+import { ONNX_VERSION, TRANSFORMERS_VERSION, WHISPER_MODEL, WHISPER_REVISION, WhisperBench, whisperTimingWarnings } from './whisper-client';
 
 type Sample = { line: MoonshineLine; deliveredMs: number; lastWordLagMs: number | null };
 const percentile = (values: number[], fraction: number) => {
@@ -28,7 +28,7 @@ function moonshineModel(progress: (message: string, seconds?: number) => void): 
     const deliveredMs = performance.now() - started;
     const end = line.words.at(-1)?.end;
     samples.push({ line, deliveredMs, lastWordLagMs: end === undefined ? null : deliveredMs - end * 1000 });
-  }, (message) => progress(message), (message) => failed(new Error(message)));
+  }, (message) => progress(message), (message, error) => failed(error ?? new Error(message)));
   return {
     load: () => Promise.race([worker.load(), failure]),
     async transcribe({ pcm }, _language, signal) {
@@ -79,6 +79,7 @@ export const browserLabDependencies: LabDependencies = {
           model: WHISPER_MODEL, revision: WHISPER_REVISION, dtype: 'q8', device: 'wasm', threads: 1,
           task: 'transcribe', inferenceMs: output.inferenceMs, processingToAudioRatio: output.inferenceMs / (pcm.length / 16),
           wordTimestamps: output.chunks ?? [],
+          warnings: whisperTimingWarnings(output.chunks, pcm.length / 16000),
           cachePolicy: 'Model and binary fetches request cache: no-store; browser model and WASM caches are disabled. Runtime imports use normal browser caching.',
           processingMetric: 'Whole-clip transcription, 30-second chunks with 5-second stride. This is not streaming latency and cannot be compared with Moonshine final-line lag.',
           confidencePolicy: 'Whisper supplies no calibrated word confidence. This result cannot award a win or submit a guess.',

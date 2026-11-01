@@ -8,6 +8,13 @@ export type WhisperWord = { text: string; timestamp: [number, number] };
 export type WhisperResult = { text: string; inferenceMs: number; audioSeconds: number; chunks?: WhisperWord[] };
 export type WhisperOptions = { wordTimestamps?: boolean };
 
+/** Keep raw model output for inspection, but never present impossible timing as valid. */
+export function whisperTimingWarnings(words: WhisperWord[] | undefined, audioSeconds: number): string[] {
+  const invalid = words?.some(({ timestamp: [start, end] }) =>
+    !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || end > audioSeconds);
+  return invalid ? ['Whisper returned word times outside this clip or in the wrong order. The raw times are kept below, but should not be used to align speech.'] : [];
+}
+
 /** Narrow interface keeps the cancellation contract testable without browser/model downloads. */
 export interface BenchWorker {
   onmessage: ((event: MessageEvent) => void) | null;

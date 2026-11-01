@@ -4,7 +4,7 @@ import type { WhisperLanguage } from './whisper-client';
 export type LabProvider = 'moonshine' | 'whisper';
 export type LabPlan = LabProvider | 'both';
 export type LabClip = BenchAudio & { name: string; source: 'microphone' | 'file'; fileBytes?: number };
-export type LabResult = { provider: LabProvider; transcript: string; report: Record<string, unknown> };
+export type LabResult = { provider: LabProvider; transcript: string; failure?: string; report: Record<string, unknown> };
 export type LabPhase = 'idle' | 'reading' | 'permission' | 'recording' | 'loading' | 'running' | 'complete' | 'error';
 export type LabState = {
   phase: LabPhase; busy: boolean; message: string; provider: LabProvider | null;
@@ -30,6 +30,22 @@ export interface LabDependencies {
 const initial = (): LabState => ({ phase: 'idle', busy: false, message: 'Record a phrase or choose a WAV to begin.',
   provider: null, clip: null, results: [], seconds: 0, level: 0 });
 const canceled = () => new DOMException('Comparison canceled.', 'AbortError');
+const providerName = (provider: LabProvider) => provider === 'moonshine' ? 'Moonshine' : 'Whisper';
+function errorDiagnostic(error: unknown): Record<string, unknown> | undefined {
+  if (!(error instanceof Error) || !('diagnostic' in error) || !error.diagnostic || typeof error.diagnostic !== 'object') return;
+  const source = error.diagnostic as Record<string, unknown>;
+  const diagnostic: Record<string, unknown> = {};
+  for (const key of ['stage', 'message', 'file']) {
+    if (typeof source[key] === 'string') diagnostic[key] = source[key].slice(0, 400);
+  }
+  for (const key of ['line', 'column', 'hardwareConcurrency']) {
+    if (typeof source[key] === 'number' && Number.isFinite(source[key])) diagnostic[key] = source[key];
+  }
+  for (const key of ['crossOriginIsolated', 'sharedArrayBuffer']) {
+    if (typeof source[key] === 'boolean') diagnostic[key] = source[key];
+  }
+  return Object.keys(diagnostic).length ? diagnostic : undefined;
+}
 
 /** Await work without allowing a late callback to revive a canceled comparison. */
 export function abortable<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -117,38 +133,67 @@ export class ComparisonSession {
       this.update({ phase: 'error', message: 'Whisper accepts up to one minute. Choose a shorter clip or compare with Moonshine only.' }); return;
     }
     const { valid, signal } = this.begin('loading', 'Preparing the comparison.');
+    const failed: LabProvider[] = [], completed: LabProvider[] = [];
     try {
       for (const provider of plan === 'both' ? ['moonshine', 'whisper'] as const : [plan]) {
-        if (!valid()) return;
-        const name = provider === 'moonshine' ? 'Moonshine' : 'Whisper';
+        if (!valid() || signal.aborted) return;
+        const name = providerName(provider);
         this.update({ provider, phase: 'loading', seconds: 0, message: `Loading ${name}. Your microphone is off.` });
-        const model = this.dependencies.model(provider, (message, seconds) => {
-          if (valid() && this.state.provider === provider) this.update({ message, ...(seconds === undefined ? {} : { seconds }) });
+        let model: LabModel | undefined, result: LabResult | undefined;
+        let stage: 'construct' | 'load' | 'transcribe' = 'construct';
+        let loadMs: number | null = null, active = true;
+        const report = (details: Record<string, unknown>) => ({
+          ...this.dependencies.metadata(), format: 'baited-speech-comparison-v2', ...details,
+          provider, language, stage, at: new Date().toISOString(), label,
+          source: clip.source, file: clip.name, fileBytes: clip.fileBytes, audioSeconds: clip.pcm.length / 16000,
+          sampleRate: 16000, pcmFingerprint: clip.fingerprint, loadMs,
+          privacy: 'Audio stays in this tab. No audio upload, browser speech service, game commands or scoring.',
         });
-        this.model = model;
         try {
+          if (!valid() || signal.aborted) return;
+          model = this.dependencies.model(provider, (message, seconds) => {
+            if (active && valid() && !signal.aborted && this.state.provider === provider) this.update({ message, ...(seconds === undefined ? {} : { seconds }) });
+          });
+          if (!valid() || signal.aborted) { model.close(); model = undefined; return; }
+          this.model = model;
+          stage = 'load';
           const loadingStarted = this.dependencies.now();
           await abortable(model.load(), signal);
-          if (!valid()) return;
-          const loadMs = this.dependencies.now() - loadingStarted;
+          if (!valid() || signal.aborted) return;
+          loadMs = this.dependencies.now() - loadingStarted;
+          stage = 'transcribe';
           this.update({ phase: 'running', message: provider === 'moonshine'
             ? 'Moonshine is replaying your clip at its original speed.' : 'Whisper is transcribing your clip.' });
+          if (!valid() || signal.aborted) return;
           const output = await abortable(model.transcribe(clip, language, signal), signal);
-          if (!valid()) return;
-          const report = { ...this.dependencies.metadata(), ...output.report, at: new Date().toISOString(), label,
-            source: clip.source, file: clip.name, fileBytes: clip.fileBytes, audioSeconds: clip.pcm.length / 16000,
-            sampleRate: 16000, pcmFingerprint: clip.fingerprint, loadMs, transcript: output.transcript,
-            privacy: 'Audio stays in this tab. No audio upload, browser speech service, game commands or scoring.' };
-          this.update({ results: [...this.state.results.slice(-7), { provider, transcript: output.transcript, report }] });
+          if (!valid() || signal.aborted) return;
+          result = { provider, transcript: output.transcript,
+            report: report({ ...output.report, status: 'complete', transcript: output.transcript }) };
+          completed.push(provider);
+        } catch (error) {
+          if (!valid() || signal.aborted) return;
+          const failure = error instanceof Error ? error.message : `${name} could not finish. Try again.`;
+          result = { provider, transcript: '', failure,
+            report: report({ status: 'error', failure, diagnostic: errorDiagnostic(error) }) };
+          failed.push(provider);
         } finally {
-          model.close();
-          if (this.model === model) this.model = undefined;
+          active = false;
+          // Cancellation may already have closed this worker. Never close a newer run's model.
+          if (model && this.model === model) {
+            this.model = undefined;
+            model.close();
+          }
         }
-        // Worker termination precedes construction of the next model.
+        if (!valid() || signal.aborted) return;
+        if (result) this.update({ results: [...this.state.results.slice(-7), result] });
+        // Worker termination precedes saving its result and constructing the next model.
       }
-      if (valid()) {
+      if (valid() && !signal.aborted) {
         ++this.generation; this.abort = undefined;
-        this.update({ phase: 'complete', busy: false, provider: null, message: 'Comparison complete. Check the transcripts against your recording.' });
+        const message = !failed.length ? 'Comparison complete. Check the transcripts against your recording.'
+          : completed.length ? `${failed.map(providerName).join(' and ')} could not finish. ${completed.map(providerName).join(' and ')} results are ready. Your clip is kept for retry.`
+            : `${failed.map(providerName).join(' and ')} could not finish. Your clip is kept. Check the errors below, then retry a model.`;
+        this.update({ phase: failed.length ? 'error' : 'complete', busy: false, provider: null, message });
       }
     } catch (error) { if (valid()) this.fail(error); }
   }

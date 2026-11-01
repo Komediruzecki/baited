@@ -114,10 +114,12 @@ test('worker errors release the model and retain input/results for retry', async
   assert.equal(f.session.state.phase, 'error');
   assert.equal(f.session.state.busy, false);
   assert.equal(f.models[1].closed, true);
-  assert.equal(f.session.state.results.length, 1);
+  assert.equal(f.session.state.results.length, 2);
+  assert.equal(f.session.state.results[0].transcript, 'banana');
+  assert.equal(f.session.state.results[1].failure, 'Whisper files unavailable');
   assert.equal(f.session.state.clip?.pcm, f.pcm);
   f.models[1].progress('late error progress');
-  assert.equal(f.session.state.message, 'Whisper files unavailable');
+  assert.match(f.session.state.message, /Whisper could not finish.*Moonshine results are ready/);
 });
 
 test('duplicate compare clicks cannot create concurrent model residents', async () => {
@@ -139,7 +141,8 @@ test('worker failure during transcription keeps the earlier result and permits a
   assert.equal(f.session.state.clip?.pcm, f.pcm);
   const retry = f.session.compare('whisper', 'en', 'retry');
   await f.finishModel(2, 'retried Whisper result'); await retry;
-  assert.deepEqual(f.session.state.results.map(result => result.transcript), ['saved Moonshine result', 'retried Whisper result']);
+  assert.deepEqual(f.session.state.results.map(result => result.transcript), ['saved Moonshine result', '', 'retried Whisper result']);
+  assert.equal(f.session.state.results[1].failure, 'Whisper worker stopped');
   assert.equal(f.maxOpenModels(), 1);
 });
 
@@ -178,4 +181,98 @@ test('reattaching after effect cleanup restores observable retry without revivin
   await f.finishModel(1, 'new result'); await retry;
   assert.equal(updates.at(-1)?.phase, 'complete');
   assert.deepEqual(updates.at(-1)?.results.map(result => result.transcript), ['new result']);
+});
+
+for (const stage of ['construct', 'load', 'transcribe'] as const) {
+  test(`a Moonshine ${stage} failure is saved and Whisper still receives the retained clip`, async () => {
+    const f = fixture(); await f.record();
+    const failure = Object.assign(new Error('Moonshine could not start on this browser'), {
+      diagnostic: { stage: 'worker-bootstrap', message: 'Module worker failed', file: '/moonshine-worker.js',
+        line: 2, crossOriginIsolated: true, sharedArrayBuffer: true, hardwareConcurrency: 4 },
+    });
+    const create = f.dependencies.model;
+    f.dependencies.model = (provider, progress) => {
+      if (provider === 'moonshine' && stage === 'construct') throw failure;
+      return create(provider, progress);
+    };
+    const both = f.session.compare('both', 'en', 'same clip');
+    if (stage === 'load') f.models[0].load.reject(failure);
+    if (stage === 'transcribe') {
+      f.models[0].load.resolve(); await settle(); f.models[0].pass.reject(failure);
+    }
+    await settle();
+    const whisper = f.models.findIndex(model => model.provider === 'whisper');
+    assert.notEqual(whisper, -1, 'a failed first model must not prevent the second');
+    if (stage !== 'construct') {
+      assert.equal(f.models[0].closed, true);
+      f.models[0].progress('stale Moonshine loading');
+      assert.notEqual(f.session.state.message, 'stale Moonshine loading');
+    }
+    await f.finishModel(whisper, 'Whisper heard the clip'); await both;
+    assert.equal(f.maxOpenModels(), 1);
+    assert.equal(f.captureCalls(), 1);
+    assert.equal(f.inputs.at(-1), f.pcm);
+    assert.equal(f.session.state.clip?.pcm, f.pcm);
+    assert.equal(f.session.state.phase, 'error');
+    assert.equal(f.session.state.busy, false);
+    assert.match(f.session.state.message, /Moonshine.*could not finish.*Whisper.*ready/i);
+    const [failed, succeeded] = f.session.state.results;
+    assert.equal(failed.failure, failure.message);
+    assert.equal(failed.report.status, 'error');
+    assert.equal(failed.report.stage, stage);
+    assert.deepEqual(failed.report.diagnostic, failure.diagnostic);
+    assert.equal(failed.report.loadMs === null, stage !== 'transcribe');
+    assert.equal(succeeded.report.status, 'complete');
+    assert.equal(succeeded.transcript, 'Whisper heard the clip');
+    assert.equal(failed.report.pcmFingerprint, succeeded.report.pcmFingerprint);
+    assert.match(JSON.stringify(f.session.state.results.map(result => result.report)), /Module worker failed/);
+  });
+}
+
+test('cancel while the failed first result is shown stops before constructing the second model', async () => {
+  const f = fixture(); await f.record();
+  f.session.observe(state => { if (state.busy && state.results.some(result => result.report.status === 'error')) f.session.cancel(); });
+  const both = f.session.compare('both', 'en', 'cancel after failure');
+  f.models[0].load.reject(new Error('Moonshine worker stopped')); await both;
+  assert.equal(f.models.length, 1);
+  assert.equal(f.models[0].closed, true);
+  assert.equal(f.session.state.phase, 'idle');
+  assert.equal(f.session.state.results.length, 1);
+  assert.equal(f.session.state.clip?.pcm, f.pcm);
+});
+
+test('both failed models are exported without invented timing and remain saved through a successful retry', async () => {
+  const f = fixture(); await f.record();
+  const both = f.session.compare('both', 'en', 'both failed');
+  f.models[0].load.reject(new Error('Moonshine module failed')); await settle();
+  f.models[1].load.reject(new Error('Whisper files failed')); await both;
+  assert.equal(f.maxOpenModels(), 1);
+  assert.ok(f.models.every(model => model.closed));
+  assert.equal(f.session.state.phase, 'error');
+  assert.match(f.session.state.message, /Moonshine and Whisper could not finish.*clip is kept/);
+  const reports = JSON.parse(JSON.stringify(f.session.state.results.map(result => result.report)));
+  assert.deepEqual(reports.map((report: Record<string, unknown>) => [report.provider, report.status, report.failure, report.loadMs]), [
+    ['moonshine', 'error', 'Moonshine module failed', null],
+    ['whisper', 'error', 'Whisper files failed', null],
+  ]);
+  assert.ok(reports.every((report: Record<string, unknown>) => !('inferenceMs' in report)));
+  const retry = f.session.compare('whisper', 'en', 'retry');
+  await f.finishModel(2, 'Whisper recovered'); await retry;
+  assert.equal(f.session.state.phase, 'complete', 'historical failures do not mark a successful retry as failed');
+  assert.equal(f.session.state.results.length, 3);
+  assert.equal(f.session.state.results[2].transcript, 'Whisper recovered');
+  assert.equal(f.session.state.clip?.pcm, f.pcm);
+});
+
+test('cancel racing a model rejection saves no canceled error and never starts the next model', async () => {
+  const f = fixture(); await f.record();
+  const both = f.session.compare('both', 'en', 'cancel race');
+  f.models[0].load.reject(new Error('worker failed just before cancel'));
+  f.session.cancel(); await both; await settle();
+  assert.equal(f.models.length, 1);
+  assert.equal(f.models[0].closed, true);
+  assert.equal(f.session.state.results.length, 0);
+  assert.equal(f.session.state.phase, 'idle');
+  assert.equal(f.session.state.busy, false);
+  assert.equal(f.session.state.clip?.pcm, f.pcm);
 });

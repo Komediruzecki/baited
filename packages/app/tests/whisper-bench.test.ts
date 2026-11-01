@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { WhisperBench, type BenchWorker } from '../client/speech-bench/whisper-client.js';
+import { WhisperBench, whisperTimingWarnings, type BenchWorker } from '../client/speech-bench/whisper-client.js';
 import { verifyWhisperManifest } from '../client/speech-bench/manifest.js';
 import { ONNX_VERSION, TRANSFORMERS_VERSION, WHISPER_MODEL, WHISPER_REVISION } from '../client/speech-bench/whisper-client.js';
 import { decodeBenchAudio, inspectBenchWav, pcmFingerprint, previewWav } from '../client/speech-bench/audio.js';
@@ -191,4 +191,14 @@ test('word timestamp comparison preserves the model output without invented conf
   assert.deepEqual(await pending, result);
   assert.equal('confidence' in result.chunks[0], false);
   bench.close();
+});
+
+test('a real out-of-clip timestamp is flagged without rewriting the raw model output', () => {
+  const words = [{ text: 'great.', timestamp: [9.12, 16.66] as [number, number] }];
+  assert.equal(whisperTimingWarnings(words, 10).length, 1);
+  assert.deepEqual(words[0].timestamp, [9.12, 16.66]);
+  assert.deepEqual(whisperTimingWarnings([{ text: 'bait', timestamp: [.2, .7] }], 1), []);
+  assert.deepEqual(whisperTimingWarnings(undefined, 1), []);
+  for (const timestamp of [[1, .5], [-1, .5], [0, NaN], [Infinity, 1]])
+    assert.equal(whisperTimingWarnings([{ text: 'bait', timestamp: timestamp as [number, number] }], 1).length, 1);
 });

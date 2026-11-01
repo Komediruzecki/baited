@@ -26,8 +26,9 @@
 .speech-lab-file input::file-selector-button:hover { background: #4a3c58; }
 .speech-lab-note { color: #c9bfd9; font-size: .88rem; line-height: 1.6; }
 .speech-lab-preview { padding: 18px 0 0; }
-.speech-lab-preview > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.speech-lab-preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .speech-lab-preview strong { overflow-wrap: anywhere; }
+.speech-lab-preview .speech-lab-preview-actions { margin-bottom: 0; }
 .speech-lab-preview audio { display: block; width: 100%; margin-top: 12px; }
 .speech-lab-options { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
 .speech-lab-run-label { grid-column: 1 / -1; }
@@ -55,6 +56,9 @@
 .speech-lab-results { margin-top: 40px; }
 .speech-lab-result-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; margin-top: 24px; }
 .speech-lab-result { min-width: 0; background: #1f1b27; padding: 24px; border-top: 2px solid #8c60bc; }
+.speech-lab-result[data-error=true] { border-top-color: #ffc0ba; }
+.speech-lab-failure { color: #ffc0ba; margin: 22px 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.speech-lab-failure strong { display: block; margin-bottom: 8px; }
 .speech-lab-result header { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; }
 .speech-lab-result header span, .speech-lab-result-label { color: #c9bfd9; font-size: .85rem; }
 .speech-lab-result-label { margin-top: 8px; overflow-wrap: anywhere; }
