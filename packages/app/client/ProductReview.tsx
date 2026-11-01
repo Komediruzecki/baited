@@ -18,8 +18,8 @@ function VoicePreview({ state }: { state: VoiceState }) {
   const [message, setMessage] = useState('');
   const ready = state !== 'offline';
   const pending: VoiceGuessSnapshot = state === 'draft' && !canceled
-    ? { draft: { word: 'banana', context: { roundId: 'preview', epoch: 1, leaseId: 'preview', takeId: 'preview' }, expiresAt: Date.now() + 12_000 }, awaitingWord: false, expiresAt: Date.now() + 12_000 }
-    : { draft: null, awaitingWord: false, expiresAt: 0 };
+    ? { draft: { word: 'banana', context: { roundId: 'preview', epoch: 1, leaseId: 'preview', takeId: 'preview' }, expiresAt: Date.now() + 12_000 }, awaitingWord: false, acceptsBareGuess: false, expiresAt: Date.now() + 12_000 }
+    : { draft: null, awaitingWord: false, acceptsBareGuess: false, expiresAt: 0 };
   return <div className="app-shell studio-app studio-shell">
     <div className="workspace"><main className="main-content">
       <div className="page-title"><div><h1>Voice guesses</h1><p>Local visual preview. Microphone and game commands are off.</p></div></div>

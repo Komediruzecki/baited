@@ -1,4 +1,5 @@
 import { operatorAuthorized } from './operator-auth.js';
+import { isKnownAppPath, withErrorDocument } from '../../app/shared/error-pages.js';
 import { authenticateRequest } from "./auth.js";
 import { json, readBounded } from "./protocol.js";
 import { pilotLimits, pilotLogins } from "./pilot-policy.js";
@@ -25,11 +26,11 @@ function cors(response:Response,origin:string|null) {
   return new Response(response.body,{status:response.status,headers,...(response.webSocket?{webSocket:response.webSocket}:{})});
 }
 async function assets(request:Request,env:Env) {
-  if(!env.ASSETS) return json({error:"Not found."},404);
+  if(!env.ASSETS) return withErrorDocument(request,json({error:"Not found."},404));
   const url=new URL(request.url);
   if(request.method!=="GET" && request.method!=="HEAD") return json({error:"Method not allowed."},405);
-  if((/^\/(?:api|auth|v1|internal|creator|card-lab)(?:\/|$)/.test(url.pathname) && url.pathname!=="/card-lab/backs/back-prism.webp") || url.pathname.includes("..")) return json({error:"Not found."},404);
-  const spa=/^\/(?:studio(?:\/(?:setup|settings))?|privacy|overlay\/\d+|play\/\d+)?\/?$/.test(url.pathname);
+  if((/^\/(?:api|auth|v1|internal|creator|card-lab)(?:\/|$)/.test(url.pathname) && url.pathname!=="/card-lab/backs/back-prism.webp") || url.pathname.includes("..")) return withErrorDocument(request,json({error:"Not found."},404));
+  const spa=isKnownAppPath(url.pathname,true);
   const assetUrl=new URL(request.url); if(spa) assetUrl.pathname="/index.html";
   const response=await env.ASSETS.fetch(new Request(assetUrl,{method:request.method,headers:request.headers}));
   const headers=new Headers(response.headers);
@@ -42,7 +43,7 @@ async function assets(request:Request,env:Env) {
   const self=quote+"self"+quote;
   headers.set("content-security-policy",`default-src ${self}; script-src ${self} ${quote}wasm-unsafe-eval${quote}${moonshine?` ${quote}unsafe-eval${quote}`:""}; style-src ${self} ${quote}unsafe-inline${quote}; img-src ${self} data: blob:; media-src ${self} blob:; connect-src ${self} https://download.moonshine.ai; worker-src ${self} blob:; font-src ${self}; frame-ancestors ${quote}none${quote}; base-uri ${quote}none${quote}; form-action ${self} https://id.twitch.tv; object-src ${quote}none${quote}`);
   if(spa) headers.set("cache-control","private, no-store");
-  return new Response(response.body,{status:response.status,headers});
+  return withErrorDocument(request,new Response(response.body,{status:response.status,headers}));
 }
 
 export default {
@@ -68,14 +69,14 @@ export default {
         pilotLimits(env);pilotLogins(env);
         if(!destination(request,env)) return json({error:"Access denied."},403);
         const ingress = await pilotIngress(request, env);
-        if ('response' in ingress) return cors(ingress.response, values(env.EDGE_ALLOWED_ORIGINS).includes(request.headers.get('origin')??'') ? request.headers.get('origin') : null);
+        if ('response' in ingress) return cors(withErrorDocument(request,ingress.response), values(env.EDGE_ALLOWED_ORIGINS).includes(request.headers.get('origin')??'') ? request.headers.get('origin') : null);
         request = ingress.request;
         const publicControl=["/api/session","/api/edge/session","/api/edge/overlay","/api/edge/chat","/api/logout","/api/bot/authorize","/api/twitch/eventsub",
           "/auth/twitch","/auth/twitch/bot","/auth/twitch/callback"];
-        if(publicControl.includes(url.pathname)) return control(env).fetch(request);
+        if(publicControl.includes(url.pathname)) return withErrorDocument(request,await control(env).fetch(request));
       }
       const match=/^\/v1\/rooms\/([1-9][0-9]{0,24})\/(state|commands|socket|art\/[a-zA-Z0-9_-]{1,128})$/.exec(url.pathname);
-      if(!match) return pilot?assets(request,env):json({error:"Not found."},404);
+      if(!match) return pilot?await assets(request,env):json({error:"Not found."},404);
       const channel=match[1]!;const route=match[2]!;
       if(pilot && route.startsWith("art/")) return json({error:"Not found."},404);
       if(request.method==="OPTIONS") {
@@ -108,6 +109,6 @@ export default {
       const room=env.ROOMS.get(env.ROOMS.idFromName(`channel:${channel}`));
       const response=await internalFetch(room,new Request(`https://room.internal/${route}`,{method:request.method,headers:internalHeaders,body}));
       return cors(response,request.headers.get("origin"));
-    } catch { return json({error:"The pilot is temporarily unavailable. Try again shortly."},503); }
+    } catch { return withErrorDocument(request,json({error:"The pilot is temporarily unavailable. Try again shortly."},503)); }
   },
 } satisfies ExportedHandler<Env>;

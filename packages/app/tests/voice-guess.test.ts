@@ -30,7 +30,8 @@ test('split wake, call and word finals are bounded; ordinary speech keeps scorin
   assert.equal(voice.receive(final('Baity bot.'), 100).consumed, true);
   assert.equal(voice.receive(final('I am calling the bait.'), 200).consumed, true);
   assert.equal(voice.receive(final('I can see a ghost'), 300).consumed, false);
-  assert.equal(voice.receive(final('The bait is ghost'), 400).prepared?.word, 'ghost');
+  assert.equal(voice.receive(final('The bait is ghost'), 400).consumed, false, 'Ordinary conversation ends the bare-guess window.');
+  assert.equal(voice.receive(final('Baity bot, the bait is ghost'), 401).prepared?.word, 'ghost');
   assert.equal(voice.receive(final('locking'), 500).submit?.word, 'ghost');
 });
 
@@ -169,7 +170,7 @@ test('ordinary or malformed earlier-prefix continuation cannot retain an old gue
   assert.equal(voice.receive(final('ghost'), 300).consumed, false);
 });
 
-test('a bare-word continuation needs the explicit unfinished guess, confidence and a live deadline', () => {
+test('a bare-word continuation needs explicit intent, confidence and a live deadline', () => {
   const wakeOnly = session();
   wakeOnly.receive(final('Baity bot'), 100);
   assert.equal(wakeOnly.receive(final('Ghost'), 200).consumed, false);
@@ -179,7 +180,8 @@ test('a bare-word continuation needs the explicit unfinished guess, confidence a
   assert.equal(uncertain.consumed, true);
   assert.equal(uncertain.uncertain, true);
   assert.equal(uncertain.prepared, undefined);
-  assert.equal(voice.snapshot(201).awaitingWord, false);
+  assert.equal(voice.snapshot(201).awaitingWord, true, 'An uncertain guess keeps the existing retry window.');
+  assert.equal(voice.snapshot(201).expiresAt, 100 + VOICE_GUESS_TTL_MS);
   voice.receive(final('Baity bot the bait is'), 300);
   assert.equal(voice.receive(final('Ghost'), 300 + VOICE_GUESS_TTL_MS).consumed, false);
   voice.receive(final('Baity bot the bait is'), 20_000);
@@ -282,4 +284,179 @@ test('cancel clears the draft; a new exact command replaces it', () => {
   assert.equal(voice.receive(final('Baity bot cancel'), 300).consumed, true);
   assert.equal(voice.snapshot(301).draft, null);
   assert.equal(voice.receive(final('locked in'), 302).submit, undefined);
+});
+
+
+test('recorded calling-intent finals protect the next bare guess across phrase boundaries', () => {
+  for (const sequence of [
+    ['Hey, baby, bro.', "I'm calling the bake.", 'Banana,'],
+    ['Hail, Betty, but.', "I'm calling the bait.", 'Banana.'],
+    ['Hey, baity,', "I'm calling the bait.", 'Banana,'],
+    ["Hey, baby, I'm calling the bait.", 'Bait.'],
+  ]) {
+    const voice = session();
+    sequence.slice(0, -1).forEach((text, n) => voice.receive(final(text), 100 + n * 1000));
+    const result = voice.receive(final(sequence.at(-1)!), 4100);
+    assert.equal(result.consumed, true, sequence.join(' / '));
+    assert.equal(result.prepared?.word, sequence.at(-1)!.toLowerCase().replace(/[,\.]/g, ''));
+    assert.equal(result.submit, undefined);
+    assert.equal(voice.receive(final('Lock in.'), 5100).submit?.word, result.prepared?.word);
+  }
+});
+
+test('calling-intent bare guesses preserve punctuation, replay, expiry and eligibility boundaries', () => {
+  const voice = session();
+  const call = final("I'm calling the bait.");
+  voice.receive(call, 100);
+  voice.receive(final('.'), 200);
+  assert.equal(voice.snapshot(201).awaitingWord, true);
+  assert.equal(voice.snapshot(201).expiresAt, 100 + VOICE_GUESS_TTL_MS);
+  const word = final('Banana.');
+  assert.equal(voice.receive(word, 300).prepared?.word, 'banana');
+  assert.deepEqual(voice.receive(word, 400), { consumed: true });
+  assert.deepEqual(voice.receive(call, 500), { consumed: true });
+  assert.equal(voice.snapshot(501).draft?.word, 'banana');
+  const lock = final('Locked in.');
+  assert.equal(voice.receive(lock, 600).submit?.word, 'banana');
+  assert.deepEqual(voice.receive(lock, 700), { consumed: true });
+  assert.equal(voice.receive(final('Banana.'), 800).consumed, false);
+  voice.receive(final("I'm calling the bait"), 900);
+  assert.equal(voice.receive(final('Banana'), 900 + VOICE_GUESS_TTL_MS).consumed, false);
+  voice.receive(final("I'm calling the bait"), 20_000);
+  voice.setContext({ ...context, takeId: 'take-2' });
+  assert.equal(voice.receive(final('Banana'), 20_100).consumed, false);
+});
+
+test('punctuation does not cancel an unfinished explicit guess or extend its deadline', () => {
+  const voice = session();
+  voice.receive(final('Baity bot the bait is'), 100);
+  voice.receive(final('.'), 200);
+  assert.equal(voice.snapshot(201).expiresAt, 100 + VOICE_GUESS_TTL_MS);
+  assert.equal(voice.receive(final('Ghost'), 300).prepared?.word, 'ghost');
+});
+
+test('uncertain calling intent keeps a bounded retry window without submitting a guess', () => {
+  const voice = session();
+  const weak = { words: [{ text: 'calling', start: 0, end: 1, confidence: .3 }] };
+  assert.deepEqual(voice.receive(final("I'm calling the bait", weak), 100), { consumed: true, uncertain: true });
+  assert.equal(voice.snapshot(101).awaitingWord, true);
+  assert.deepEqual(voice.receive(final('Banana', weak), 200), { consumed: true, uncertain: true });
+  assert.equal(voice.snapshot(201).draft, null);
+  assert.equal(voice.snapshot(201).expiresAt, 100 + VOICE_GUESS_TTL_MS);
+  assert.equal(voice.receive(final('Lock in'), 300).submit, undefined);
+  assert.equal(voice.receive(final('Banana'), 400).prepared?.word, 'banana');
+  assert.equal(voice.receive(final('Lock in'), 500).submit?.word, 'banana');
+});
+
+test('bare-guess protection ends on ordinary conversation and does not recognize vague near matches', () => {
+  const voice = session();
+  voice.receive(final("I'm calling the bait"), 100);
+  assert.equal(voice.receive(final('You will never bait me'), 200).consumed, false);
+  assert.equal(voice.receive(final('Banana'), 300).consumed, false);
+  for (const text of ['Hey baby I see a ghost', 'Hail Betty but there is a ghost',
+    "I'm calling the bakery", 'I was calling the bake', 'Someone is calling the bait']) {
+    assert.equal(session().receive(final(text), 100).consumed, false, text);
+  }
+});
+
+
+test('recorded ah bait but alias consumes explicit calling intent before a separate bare word', () => {
+  const voice = session();
+  const invocation = final("Ah, bait, but I'm calling the bait.");
+  assert.equal(voice.receive(invocation, 100).consumed, true,
+    'The invocation itself must not become catch evidence when bait is the target.');
+  assert.equal(voice.snapshot(101).awaitingWord, true);
+  const word = final('Banana.');
+  const prepared = voice.receive(word, 1100);
+  assert.equal(prepared.consumed, true);
+  assert.equal(prepared.prepared?.word, 'banana');
+  assert.equal(prepared.submit, undefined);
+  assert.deepEqual(voice.receive(word, 1200), { consumed: true });
+  const lock = final('Lock in.');
+  assert.equal(voice.receive(lock, 2100).submit?.word, 'banana');
+  assert.deepEqual(voice.receive(lock, 2200), { consumed: true });
+});
+
+test('recorded ah bait but alias stays anchored and requires immediate calling intent', () => {
+  for (const text of [
+    'Ah bait but I saw a ghost',
+    "Yesterday ah bait but I'm calling the bait",
+    "Ah bait but yesterday I'm calling the bait",
+    "Ah bait but I'm calling the bakery",
+  ]) assert.equal(session().receive(final(text), 100).consumed, false, text);
+});
+
+
+test('finite hesitations between intent and target score normally without drafting or renewing the window', () => {
+  for (const filler of ['Uh.', 'Um.', 'Ah.', 'Er.', 'Hmm.', 'Okay.', 'Ok.', 'So.', 'Well.']) {
+    const voice = session();
+    voice.receive(final("I'm calling the bait"), 100);
+    assert.equal(voice.receive(final(filler), 200).consumed, false, filler);
+    assert.equal(voice.snapshot(201).draft, null, filler);
+    assert.equal(voice.snapshot(201).acceptsBareGuess, true, filler);
+    assert.equal(voice.snapshot(201).expiresAt, 100 + VOICE_GUESS_TTL_MS, filler);
+    assert.equal(voice.receive(final('Banana'), 300).prepared?.word, 'banana', filler);
+    assert.equal(voice.receive(final('Lock in'), 400).submit?.word, 'banana', filler);
+  }
+});
+
+test('one finite hesitation before a single target is accepted only after explicit intent', () => {
+  for (const text of ['Um, banana.', 'Uh banana', 'Okay, banana']) {
+    const voice = session();
+    assert.equal(voice.receive(final(text), 100).consumed, false);
+    voice.receive(final('Hey Baity'), 200);
+    assert.equal(voice.receive(final(text), 300).consumed, false, 'Wake-only is not permission to dictate a word.');
+    voice.receive(final("I'm calling the bait"), 400);
+    assert.equal(voice.receive(final(text), 500).prepared?.word, 'banana', text);
+  }
+  const voice = session();
+  voice.receive(final("I'm calling the bait"), 100);
+  assert.equal(voice.receive(final('Um I saw a banana'), 200).consumed, false);
+  assert.equal(voice.snapshot(201).acceptsBareGuess, false);
+});
+
+test('calling intent with now or right now arms a guess instead of drafting the adverb', () => {
+  for (const intent of ["I'm calling the bait now", "I'm calling the bait right now", 'I call the bait right now']) {
+    const voice = session();
+    assert.equal(voice.receive(final(intent), 100).consumed, true);
+    assert.equal(voice.snapshot(101).draft, null);
+    assert.equal(voice.snapshot(101).acceptsBareGuess, true);
+    assert.equal(voice.receive(final('Banana'), 200).prepared?.word, 'banana');
+  }
+  assert.equal(session().receive(final("I'm calling the bait banana"), 100).prepared?.word, 'banana',
+    'A valid target in the same final remains supported.');
+});
+
+test('wake-only is distinct from explicit intent and repeated wakes preserve intent, draft and deadline', () => {
+  const voice = session();
+  voice.receive(final('Hey Baity'), 100);
+  assert.equal(voice.snapshot(101).awaitingWord, true);
+  assert.equal(voice.snapshot(101).acceptsBareGuess, false);
+  assert.equal(voice.receive(final('Banana'), 200).consumed, false);
+  voice.receive(final("I'm calling the bait"), 300);
+  for (const [n, text] of ['Hey Baity', '.', 'The', 'Hey Baity', 'The bait'].entries()) {
+    voice.receive(final(text), 400 + n * 100);
+    assert.equal(voice.snapshot(401 + n * 100).acceptsBareGuess, true, text);
+    assert.equal(voice.snapshot(401 + n * 100).expiresAt, 300 + VOICE_GUESS_TTL_MS, text);
+  }
+  const result = voice.receive(final('Bait'), 1000);
+  assert.equal(result.prepared?.word, 'bait');
+  assert.equal(voice.snapshot(1001).acceptsBareGuess, false);
+  voice.receive(final('Hey Baity'), 1100);
+  assert.equal(voice.snapshot(1101).draft?.word, 'bait');
+  assert.equal(voice.snapshot(1101).expiresAt, 1000 + VOICE_GUESS_TTL_MS);
+  assert.equal(voice.receive(final('Lock in'), 1200).submit?.word, 'bait');
+});
+
+test('ordinary speech, cancel, expiry and context changes clear bare-guess permission', () => {
+  for (const ending of ['ordinary', 'cancel', 'expiry', 'context']) {
+    const voice = session();
+    voice.receive(final("I'm calling the bait"), 100);
+    if (ending === 'ordinary') assert.equal(voice.receive(final('I see a ghost'), 200).consumed, false);
+    if (ending === 'cancel') voice.receive(final('cancel'), 200);
+    if (ending === 'expiry') voice.expire(100 + VOICE_GUESS_TTL_MS);
+    if (ending === 'context') voice.setContext(null);
+    assert.equal(voice.snapshot(201).acceptsBareGuess, false, ending);
+    assert.equal(voice.receive(final('Banana'), 300).consumed, false, ending);
+  }
 });

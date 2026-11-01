@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
+import { localSpeechBenchAssets } from './scripts/speech-bench/assets';
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), localSpeechBenchAssets()],
   build: { outDir: 'dist/client' },
   server: {
     host: '127.0.0.1',

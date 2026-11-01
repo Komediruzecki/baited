@@ -233,6 +233,76 @@ test('split and conversational voice guesses stay out of scoring while unrelated
   assert.deepEqual(errors, []);
 });
 
+// These are separate final phrases from the owner's 31 October transcript captures.
+// Final-only recognition must route an armed bare word to the command parser,
+// never to the server's normal catch stream.
+for (const [name, command, target] of [
+  ['exact Baity', ['Hey, baity,', "I'm calling the bait.", 'Banana,'], 'banana'],
+  ['Betty transcription', ['Hail, Betty, but.', "I'm calling the bait.", 'Banana.'], 'banana'],
+  ['baby and bake transcription', ['Hey, baby, bro.', "I'm calling the bake.", 'Banana,'], 'banana'],
+  ['combined baby and bait transcription', ["Hey, baby, I'm calling the bait.", 'Bait.'], 'bait'],
+  ['recorded ah bait but transcription', ["Ah, bait, but I'm calling the bait.", 'Banana.'], 'banana'],
+  ['separate filler finals', ["I'm calling the bait.", 'Uh.', 'Okay.', 'Banana.'], 'banana'],
+  ['one filler prefix', ["I'm calling the bait.", 'Um, banana.'], 'banana'],
+  ['calling now', ["I'm calling the bait now.", 'Banana.'], 'banana'],
+  ['calling right now', ["I'm calling the bait right now.", 'Banana.'], 'banana'],
+  ['repeated wake after intent', ["I'm calling the bait.", 'Hey Baity.', 'Banana.'], 'banana'],
+] as const) {
+  test(`${name}: recorded bare voice guess is consumed before scoring`, async (t) => {
+    const env = browser(t), voice = new VoiceGuessSession(), prepared: string[] = [], submitted: string[] = [];
+    const context = { roundId: 'round', epoch: 1, leaseId: 'capture', takeId: 'take' };
+    let voiceEnabled = true;
+    voice.setContext(context);
+    const { microphone, errors } = env.create('moonshine', undefined, (line) => {
+      voice.setContext(voiceEnabled ? { ...context } : null); // Match Studio's eligibility gate.
+      const result = voice.receive(line);
+      if (result.prepared) prepared.push(result.prepared.word);
+      if (result.submit) submitted.push(result.submit.word);
+      return result.consumed;
+    });
+    const enabling = microphone.enable(); env.requests[0].resolve(env.stream().value);
+    assert.equal(await enabling, true);
+    microphone.connect('round', 1, 'csrf', 'capture');
+    await env.sockets[0].status('listening');
+    const line = (id: string, text: string, isComplete = true): MoonshineLine => ({
+      id, text, isComplete, startTime: 1, duration: 1,
+      words: text.split(/\s+/).map(text => ({ text, start: 1.2, end: 1.8, confidence: 1 })),
+      isUpdated: true, isNew: true, hasTextChanged: true, haveSpeakersChanged: false,
+      lastTranscriptionLatencyMs: 0, speakerSpans: [],
+    });
+    command.forEach((text, n) => {
+      env.workers[0].line(line(`command-${n}`, text, false));
+      env.workers[0].line(line(`command-${n}`, text));
+      env.workers[0].line(line(`command-${n}`, text));
+      env.workers[0].line(line(`punctuation-${n}`, '.'));
+    });
+    assert.deepEqual(prepared, [target]);
+    assert.deepEqual(submitted, [], 'Dictating a word alone must not submit it.');
+    env.workers[0].line(line('lock', 'Locked in'));
+    env.workers[0].line(line('lock', 'Locked in'));
+    assert.deepEqual(submitted, [target]);
+    const sent = env.sockets[0].sent.map(value => JSON.parse(value));
+    for (const filler of command.filter(text => text === 'Uh.' || text === 'Okay.')) {
+      assert.ok(sent.some(value => value.line.text === filler), 'Ordinary fillers remain scoring speech.');
+    }
+    assert.ok(sent.every(value => !value.line.text.toLowerCase().includes(target)),
+      'Neither the dictated target nor bait calling intent can become catch evidence.');
+    assert.ok(sent.every(value => !/\bcalling the (?:bait|bake)\b/i.test(value.line.text)),
+      'Calling intent itself is excluded, including when bait is the secret word.');
+    assert.deepEqual(sent.map(value => value.sequence), sent.map((_, n) => n + 1));
+    const sentCount = sent.length;
+    env.workers[0].line(line('before-disable', "I'm calling the bait"));
+    assert.equal(voice.snapshot().acceptsBareGuess, true);
+    voiceEnabled = false;
+    voice.setContext(null);
+    env.workers[0].line(line('ordinary-target', target));
+    assert.equal(env.sockets[0].sent.length, sentCount + 1);
+    assert.equal(JSON.parse(env.sockets[0].sent.at(-1)!).line.text, target,
+      'The same word outside a voice command still reaches normal scoring.');
+    assert.deepEqual(errors, []);
+  });
+}
+
 test('enable unlocks audio in the click and is singleflight while Moonshine is loading', async (t) => {
   const env = browser(t, { holdModel: true });
   const { microphone } = env.create('moonshine');

@@ -1,3 +1,4 @@
+import { sendErrorDocument } from './error-pages.js';
 import express from 'express';
 import helmet from 'helmet';
 import { createServer, type IncomingMessage } from 'node:http';
@@ -492,12 +493,12 @@ export async function createBait(
     returnTo?: 'cards',
   ) {
     if (!limiter.hit(`oauth:${req.ip}`, 20)) {
-      res.status(429).send('Try again shortly.');
+      if (!sendErrorDocument(req, res, 429, 'limited')) res.status(429).send('Try again shortly.');
       return;
     }
     for (const [id, p] of pendingOAuth) if (p.expires < Date.now()) pendingOAuth.delete(id);
     if (pendingOAuth.size > 1000) {
-      res.status(503).send('Try again shortly.');
+      if (!sendErrorDocument(req, res, 503, 'unavailable')) res.status(503).send('Try again shortly.');
       return;
     }
     // The flow is readable from the state itself, so a callback whose pending entry was lost
@@ -1044,6 +1045,7 @@ export async function createBait(
       res.status(401).json({ error: error.message });
       return;
     }
+    if (sendErrorDocument(req, res, error instanceof ZodError ? 400 : 500)) return;
     const status = error instanceof ZodError ? 400 : 400;
     res.status(status).json({
       error:

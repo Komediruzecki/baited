@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { illustratedWords, proofWords, streakFlameFiles } from '../../app/extension/presentation.js';
+import { renderErrorDocument } from '../../app/shared/error-pages.js';
 
 const edge = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const app = resolve(edge, '../app');
@@ -13,6 +14,7 @@ const output = resolve(edge, 'dist/pilot-assets');
 const runtime = dirname(requireApp.resolve('@moonshine-ai/moonshine-wasm/moonshine.mjs'));
 const publicAssets = [
   'pcm-worklet.js', 'moonshine-worker.js', 'brand/baited-pixel-white.svg',
+  'error-page.css', 'brand/bait-bomb.png',
   ...streakFlameFiles.map((file) => `brand/${file}`),
   'fonts/inter-latin.woff2', 'fonts/intertight-latin.woff2', 'fonts/russo-one.ttf', 'fonts/baited-pixel.ttf',
   'card-lab/backs/back-prism.webp',
@@ -42,6 +44,7 @@ export async function buildPilotAssets() {
     build: { outDir: output, emptyOutDir: true, sourcemap: false } });
   await writeFile(resolve(output, marker), 'Baited edge pilot frontend build. Safe to replace with this script.\n');
   for (const file of publicAssets) await copyFile(resolve(app, 'public', file), resolve(output, file));
+  await writeFile(resolve(output, '404.html'), renderErrorDocument('missing'));
   for (const file of await readdir(runtime)) {
     if (!/\.(?:js|mjs|wasm)$/.test(file)) continue;
     await copyFile(resolve(runtime, file), resolve(output, 'moonshine/runtime-0.1.5-csp1', file));

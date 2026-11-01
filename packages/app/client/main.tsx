@@ -60,6 +60,8 @@ import { microphoneReady, MicrophoneLease, microphoneLeaseMessage } from './safe
 import { MicrophoneFeedback } from './microphone-feedback';
 import { StudioQuickControls, type QuickSetting } from './StudioQuickControls';
 import { StudioLogo } from './StudioLogo';
+import { AppErrorBoundary, ErrorScreen } from './ErrorScreen';
+import { isKnownAppPath, sessionErrorKind, type ErrorKind } from '../shared/error-pages.js';
 import { useSmoothScroll } from './smooth-scroll';
 import 'lenis/dist/lenis.css';
 import './style.css';
@@ -202,7 +204,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
   const voicePreferenceOwner = session.user ? `${session.user.mode}:${session.user.name}` : '';
   const [voiceEnabled, setVoiceEnabled] = useState(() => readVoiceGuessPreference(voicePreferenceOwner));
-  const [voicePending, setVoicePending] = useState<VoiceGuessSnapshot>({ draft: null, awaitingWord: false, expiresAt: 0 });
+  const [voicePending, setVoicePending] = useState<VoiceGuessSnapshot>({ draft: null, awaitingWord: false, acceptsBareGuess: false, expiresAt: 0 });
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceMessage, setVoiceMessage] = useState('');
   const [voiceAnnouncement, setVoiceAnnouncement] = useState('');
@@ -2379,23 +2381,24 @@ function Privacy() {
 }
 function App() {
   const [session, setSession] = useState<SessionInfo | null>(null),
-    [error, setError] = useState(''),
+    [error, setError] = useState<ErrorKind | null>(null),
     [retrying, setRetrying] = useState(false);
   const sessionLoader = useRef<ReturnType<typeof createRuntimeSessionLoader<SessionInfo>> | null>(null);
   const path = location.pathname.split('/').filter(Boolean),
     reload = useCallback(() => { sessionLoader.current?.reload(); }, []);
   useEffect(() => {
-    if (path[0] === 'speech-lab') return;
+    if (!isKnownAppPath(location.pathname) || path[0] === 'speech-lab') return;
     const loader = createRuntimeSessionLoader<SessionInfo>({
       load: (signal) => request<SessionInfo>('/api/session', undefined, undefined, signal),
       automatic: ['overlay', 'play'].includes(path[0]),
-      onSession: (value) => { setSession(value); setError(''); setRetrying(false); },
-      onError: (failure, scheduled) => { setError(failure.message); setRetrying(scheduled); },
+      onSession: (value) => { setSession(value); setError(null); setRetrying(false); },
+      onError: (failure, scheduled) => { setError(sessionErrorKind(failure)); setRetrying(scheduled); },
     });
     sessionLoader.current = loader;
     loader.reload();
     return () => { loader.destroy(); if (sessionLoader.current === loader) sessionLoader.current = null; };
   }, [reload]);
+  if (!isKnownAppPath(location.pathname, Boolean(session) && isEdgeRuntime())) return <ErrorScreen />;
   if (path[0] === 'privacy' && session) return <Privacy />;
   if (path[0] === 'speech-lab') return <SpeechLab />;
   if (path[0] === 'about' && session) return <Landing session={session} reload={reload} />;
@@ -2403,14 +2406,7 @@ function App() {
     return <main className="public-error"><h1>Join the game on Twitch.</h1><p>Open the Baited panel or player Extension on the streamer’s channel to see your card.</p><p>The pilot keeps secret cards inside Twitch, where the streamer and viewers have separate views.</p><a href="https://www.twitch.tv">Open Twitch</a></main>;
   if (session && ['play', 'overlay'].includes(path[0]) && path[1])
     return <PublicRoom id={path[1]} overlay={path[0] === 'overlay'} />;
-  if (error)
-    return (
-      <div className="loading">
-        <p role="alert">{error}</p>
-        {retrying && <p role="status">Reconnecting automatically…</p>}
-        <Button onClick={reload}>Try again</Button>
-      </div>
-    );
+  if (error) return <ErrorScreen kind={error} onRetry={reload} retrying={retrying} />;
   if (!session)
     return (
       <div className="loading">
@@ -2432,4 +2428,4 @@ function App() {
     <Landing session={session} reload={reload} />
   );
 }
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(<AppErrorBoundary><App /></AppErrorBoundary>);
