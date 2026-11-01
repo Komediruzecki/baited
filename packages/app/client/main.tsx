@@ -299,6 +299,13 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
       // Never retry a scoring action automatically: the server may have accepted it.
       if (sameRound()) setVoiceMessage((error as Error).message || 'Could not check the guess. Check the round before trying again.');
     } finally {
+      // Finals spoken while this request was pending still need command
+      // protection, but must not leave a second draft to submit afterward.
+      if (sameRound()) {
+        voiceSession.current.clear();
+        setVoicePending(voiceSession.current.snapshot());
+        setVoiceAnnouncement('');
+      }
       voiceInFlight.current = false;
       setVoiceBusy(false);
     }
@@ -567,8 +574,6 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           // Keep recognizing command wording while a guess is in flight, so
           // repeats cannot become catches or start a second public/scoring request.
           if (voiceInFlight.current) {
-            voiceSession.current.clear();
-            setVoicePending(voiceSession.current.snapshot());
             return true;
           }
           setVoiceMessage(result.uncertain ? 'That command was unclear. Please repeat it or type your guess.' : '');
@@ -1146,6 +1151,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                       <VoiceGuessControl
                         enabled={voiceEnabled}
                         ready={!!voiceContext(studio)}
+                        guessUsed={g.round?.guessUsed ?? false}
                         pending={voicePending}
                         seconds={Math.max(0, Math.ceil((voicePending.expiresAt - now) / 1000))}
                         busy={voiceBusy}

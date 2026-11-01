@@ -28,8 +28,9 @@ const session = () => {
   voice.setContext({ roundId: 'round', epoch: 1, leaseId: 'lease', takeId: 'take' });
   return voice;
 };
-const render = (pending: VoiceGuessSnapshot) => renderToStaticMarkup(React.createElement(VoiceGuessControl, {
+const render = (pending: VoiceGuessSnapshot, guessUsed = false) => renderToStaticMarkup(React.createElement(VoiceGuessControl, {
   enabled: true, ready: true, pending, seconds: 12, busy: false, message: '', announcement: '',
+  guessUsed,
   onToggle() {}, onLock() {}, onCancel() {},
 }));
 
@@ -39,6 +40,13 @@ test('the control offers one-utterance lock-in and optional draft review without
   assert.match(html, /No pauses needed/);
   assert.match(html, /Leave off <q>lock in<\/q> to check the draft first/);
   assert.doesNotMatch(html, /Wait for|wait for the listening/);
+});
+
+test('a used guess explains why calling wording no longer protects the target', () => {
+  const html = render(session().snapshot(100), true);
+  assert.match(html, /role="status">You already used your guess for this word/);
+  assert.match(html, /Voice guesses return with the next word\. Saying the target still counts/);
+  assert.doesNotMatch(html, /No pauses needed|Ready during a live round/);
 });
 
 test('wake-only state asks for intent rather than promising that a bare target is safe', () => {

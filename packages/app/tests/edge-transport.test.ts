@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EdgeRoomTransport, readEdgeBootstrap, readEdgeSnapshot, type EdgeBootstrap, type EdgeSnapshot } from '../client/edge-transport';
 import type { GameView } from '../shared/types';
+import { dispatchVoiceGuess, VoiceGuessSession } from '../client/voice-guess';
 
 const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
 class Socket {
@@ -47,6 +48,120 @@ function harness(random = () => 1) {
 async function ready(h: ReturnType<typeof harness>) {
   const promise = h.client.state(); await flush(); h.sockets[0].receive(snapshot()); return promise;
 }
+
+test('combined voice lock-in reaches the real serialized transport without a draft request ahead of it', async () => {
+  const h = harness();
+  const requests: Promise<unknown>[] = [];
+  let releaseDraft!: (response: Response) => void;
+  const blockedDraft = new Promise<Response>(resolve => { releaseDraft = resolve; });
+  h.commandResponse(init => JSON.parse(String(init?.body)).action.type === 'voice-guess-draft'
+    ? blockedDraft : Response.json({ ok: true, snapshot: snapshot(2) }));
+  try {
+    await ready(h);
+    const draft = { word: 'fish', context: { roundId: 'round-1', epoch: 1, leaseId: 'lease', takeId: 'take' },
+      expiresAt: Date.now() + 15000 };
+    const send = (type: string) => {
+      const request = h.client.command({ type }); requests.push(request);
+      return request.then(() => {});
+    };
+    dispatchVoiceGuess({ consumed: true, prepared: draft, submit: draft }, {
+      busy: false, share: () => send('voice-guess-draft'), submit: () => send('guess'),
+    });
+    await flush();
+    assert.deepEqual(h.calls.map(call => JSON.parse(String(call.init?.body)).action.type), ['guess']);
+    await Promise.all(requests);
+  } finally {
+    releaseDraft(Response.json({ ok: true, snapshot: snapshot(2) }));
+    await Promise.allSettled(requests);
+    h.client.destroy();
+  }
+});
+
+test('a slow public draft cannot delay a later voice lock or rewind its newer result', async () => {
+  const h = harness(), voice = new VoiceGuessSession(), requests: Promise<unknown>[] = [];
+  let releaseDraft!: (response: Response) => void;
+  const blockedDraft = new Promise<Response>(resolve => { releaseDraft = resolve; });
+  h.commandResponse(init => JSON.parse(String(init?.body)).action.type === 'voice-guess-draft'
+    ? blockedDraft : Response.json({ ok: true, snapshot: snapshot(3) }));
+  try {
+    await ready(h);
+    voice.setContext({ roundId: 'round-1', epoch: 1, leaseId: 'lease', takeId: 'take' });
+    const actions = { busy: false,
+      share: () => { const task = h.client.command({ type: 'voice-guess-draft' }); requests.push(task); return task.then(() => {}); },
+      submit: () => { const task = h.client.command({ type: 'guess' }); requests.push(task); return task.then(() => {}); } };
+    for (const text of ['I am calling the bait fish', 'lock in']) {
+      dispatchVoiceGuess(voice.receive({ id: text, text, isComplete: true,
+        words: [{ text, start: 0, end: 1, confidence: 1 }] }), actions);
+      await flush();
+    }
+    assert.deepEqual(h.calls.map(call => JSON.parse(String(call.init?.body)).action.type), ['voice-guess-draft', 'guess']);
+    await requests[1];
+    assert.equal(h.client.current?.revision, 3);
+    releaseDraft(Response.json({ ok: true, snapshot: snapshot(2) }));
+    await requests[0];
+    assert.equal(h.client.current?.revision, 3, 'A late advisory receipt cannot rewind the scoring result.');
+  } finally {
+    releaseDraft(Response.json({ ok: true, snapshot: snapshot(2) }));
+    await Promise.allSettled(requests);
+    h.client.destroy();
+  }
+});
+
+test('advisory drafts wait for prior normal work and each other while normal actions keep their order', async () => {
+  const h = harness(), requests: Promise<unknown>[] = [];
+  let releaseNormal!: (response: Response) => void, releaseDraft!: (response: Response) => void;
+  const blockedNormal = new Promise<Response>(resolve => { releaseNormal = resolve; });
+  const blockedDraft = new Promise<Response>(resolve => { releaseDraft = resolve; });
+  h.commandResponse(init => {
+    const action = JSON.parse(String(init?.body)).action;
+    return action.type === 'pause' ? blockedNormal
+      : action.type === 'voice-guess-draft' && action.word === 'fish' ? blockedDraft
+      : Response.json({ ok: true, snapshot: snapshot(3) });
+  });
+  const types = () => h.calls.map(call => JSON.parse(String(call.init?.body)).action.type);
+  try {
+    await ready(h);
+    requests.push(h.client.command({ type: 'pause' }));
+    requests.push(h.client.command({ type: 'voice-guess-draft', word: 'fish' }));
+    requests.push(h.client.command({ type: 'voice-guess-draft', word: 'ghost' }));
+    requests.push(h.client.command({ type: 'resume' }));
+    await flush(); assert.deepEqual(types(), ['pause']);
+    releaseNormal(Response.json({ ok: true, snapshot: snapshot(2) }));
+    await flush();
+    assert.equal(types().filter(type => type === 'voice-guess-draft').length, 1, 'Only one advisory post runs at a time.');
+    assert.deepEqual(types().filter(type => type !== 'voice-guess-draft'), ['pause', 'resume']);
+    await requests[3];
+    releaseDraft(Response.json({ ok: true, snapshot: snapshot(2) }));
+    await Promise.all(requests);
+    assert.equal(types().filter(type => type === 'voice-guess-draft').length, 2);
+    assert.equal(h.client.current?.revision, 3);
+  } finally {
+    releaseNormal(Response.json({ ok: true, snapshot: snapshot(2) }));
+    releaseDraft(Response.json({ ok: true, snapshot: snapshot(2) }));
+    await Promise.allSettled(requests);
+    h.client.destroy();
+  }
+});
+
+test('an advisory draft from an older generation cannot restore that session after a reset', async () => {
+  const h = harness();
+  let releaseDraft!: (response: Response) => void;
+  let request: Promise<unknown> | undefined;
+  h.commandResponse(() => new Promise<Response>(resolve => { releaseDraft = resolve; }));
+  try {
+    await ready(h);
+    request = h.client.command({ type: 'voice-guess-draft' }); await flush();
+    h.sockets[0].receive({ ...snapshot(1), generation: 2 });
+    releaseDraft(Response.json({ ok: true, snapshot: snapshot(5) }));
+    await request;
+    assert.equal(h.client.current?.generation, 2);
+    assert.equal(h.client.current?.revision, 1);
+  } finally {
+    releaseDraft?.(Response.json({ ok: true, snapshot: snapshot(5) }));
+    await request?.catch(() => {});
+    h.client.destroy();
+  }
+});
 
 test('bootstrap rejects expired or malformed credentials before opening a socket', () => {
   assert.equal(readEdgeBootstrap(bootstrap()).channelId, '1234');

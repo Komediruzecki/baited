@@ -35,6 +35,44 @@ test('completed intent with finite lead-ins is consumed before a BAIT catch', ()
   }
 });
 
+test('Baity bot and bought may split at every final boundary without exposing BAIT', () => {
+  for (const wake of ['Baity bot', 'Baity bought']) {
+    const tokens = `${wake} I am calling the bait fish lock in`.split(' ');
+    for (let mask = 0; mask < 2 ** (tokens.length - 1); mask++) {
+      const parts = [tokens[0]];
+      for (let i = 1; i < tokens.length; i++) {
+        if (mask & (1 << (i - 1))) parts.push(tokens[i]);
+        else parts[parts.length - 1] += ` ${tokens[i]}`;
+      }
+      const voice = session();
+      const results = parts.map((text, index) => voice.receive(final(text), 100 + index));
+      assert.ok(results.every(result => result.consumed), parts.join(' / '));
+      assert.deepEqual(results.flatMap(result => result.submit ? [result.submit.word] : []), ['fish'], parts.join(' / '));
+    }
+  }
+});
+
+test('wake suffix is finite and cannot renew expiry, arm a bare word or swallow ordinary speech', () => {
+  for (const suffix of ['bot', 'bought']) {
+    const voice = session();
+    voice.receive(final('Baity'), 100);
+    assert.equal(voice.receive(final(suffix), 200).consumed, true);
+    assert.equal(voice.snapshot(201).expiresAt, 100 + VOICE_GUESS_TTL_MS);
+    assert.equal(voice.snapshot(201).acceptsBareGuess, false);
+    assert.equal(voice.receive(final('bait'), 202).consumed, false);
+    for (const ending of ['ordinary', 'cancel', 'context', 'expiry']) {
+      const interrupted = session(); interrupted.receive(final('Baity'), 100);
+      if (ending === 'ordinary') assert.equal(interrupted.receive(final('you will never bait me'), 101).consumed, false);
+      if (ending === 'cancel') interrupted.receive(final('cancel'), 101);
+      if (ending === 'context') interrupted.setContext({ ...context, epoch: 2 });
+      assert.equal(interrupted.receive(final(`${suffix} I am calling the bait fish lock in`),
+        ending === 'expiry' ? 100 + VOICE_GUESS_TTL_MS : 102).consumed, false, ending);
+    }
+    const ordinary = session(); ordinary.receive(final('Baity'), 100);
+    assert.equal(ordinary.receive(final(`${suffix} will never bait me`), 101).consumed, false);
+  }
+});
+
 test('calling intent and lock can cross final boundaries without scoring their bait token', () => {
   for (const parts of [
     ['I am calling the', 'bait', 'fish lock in'],
@@ -101,47 +139,64 @@ test('combined lock still needs eligible context, finality and reliable word met
   assert.equal(voice.snapshot(102).expiresAt, 101 + VOICE_GUESS_TTL_MS);
 });
 
-test('a combined final requests its public draft and scoring once without waiting for the bot', async () => {
+test('a combined final submits once and skips the intermediate public draft', async () => {
   const voice = session(), calls: string[] = [];
-  let releaseShare!: () => void, releaseSubmit!: () => void;
+  let releaseSubmit!: () => void;
   let busy = false;
-  const shareDone = new Promise<void>(resolve => { releaseShare = resolve; });
   const submitDone = new Promise<void>(resolve => { releaseSubmit = resolve; });
   const dispatch = (line: MoonshineLine) => dispatchVoiceGuess(voice.receive(line, 100), {
     busy,
-    share: async draft => { calls.push(`share:${draft.word}`); await shareDone; },
+    share: async draft => { calls.push(`share:${draft.word}`); },
     submit: async draft => { busy = true; calls.push(`submit:${draft.word}`); await submitDone; busy = false; },
   });
   const command = final('I am calling the bait fish lock in');
   assert.equal(dispatch(command), true);
-  assert.deepEqual(calls, ['share:fish', 'submit:fish'], 'Scoring starts while the bot request is still pending.');
+  assert.deepEqual(calls, ['submit:fish'], 'Immediate lock-in cannot queue optional bot work ahead of scoring.');
   assert.equal(dispatch(command), false);
   assert.equal(dispatch(final(command.text)), false);
-  assert.deepEqual(calls, ['share:fish', 'submit:fish']);
+  assert.deepEqual(calls, ['submit:fish']);
   voice.setContext({ ...context, epoch: 2 });
-  releaseSubmit(); releaseShare();
-  await Promise.all([shareDone, submitDone]);
+  releaseSubmit(); await submitDone;
   assert.equal(voice.snapshot(101).draft, null, 'A completed old request cannot restore a stale draft.');
   voice.setContext(null);
   dispatch(final(command.text));
-  assert.deepEqual(calls, ['share:fish', 'submit:fish'], 'Ineligible commands cannot create requests.');
+  assert.deepEqual(calls, ['submit:fish'], 'Ineligible commands cannot create requests.');
 });
 
-test('a rejected optional draft request does not delay or retry a combined scoring request', async () => {
+test('a reviewed guess still requests its public draft and a rejected post never retries scoring', async () => {
   const voice = session(), calls: string[] = [];
   let rejectShare!: (error: Error) => void;
   const bot = new Promise<void>((_resolve, reject) => { rejectShare = reject; });
   let shared!: Promise<void>;
-  const command = final('I am calling the bait fish lock in');
+  const command = final('I am calling the bait fish');
   const actions = {
     busy: false,
     share: () => shared = bot.catch(() => { calls.push('share unavailable'); }),
     submit: async () => { calls.push('submit'); },
   };
   dispatchVoiceGuess(voice.receive(command, 100), actions);
-  assert.deepEqual(calls, ['submit']);
+  assert.deepEqual(calls, []);
   rejectShare(new Error('Draft unavailable after the scoring request won the race'));
   await shared;
+  dispatchVoiceGuess(voice.receive(final('lock in'), 101), actions);
   dispatchVoiceGuess(voice.receive(command, 101), actions);
-  assert.deepEqual(calls, ['submit', 'share unavailable'], 'A failed optional post never retries the guess or replays its final.');
+  assert.deepEqual(calls, ['share unavailable', 'submit'], 'A failed optional post never retries the guess or replays its final.');
+});
+
+test('busy dispatch preserves split recognition and clearing at request completion discards ignored drafts', () => {
+  const voice = session(), calls: string[] = [];
+  const actions = { busy: true,
+    share: async () => { calls.push('share'); }, submit: async () => { calls.push('submit'); } };
+  for (const text of ['Baity', 'bot I am calling the', 'bait fish lock', 'in']) {
+    const result = voice.receive(final(text), 100);
+    assert.equal(result.consumed, true, text);
+    assert.equal(dispatchVoiceGuess(result, actions), false);
+  }
+  const ignored = voice.receive(final('I am calling the bait ghost'), 101);
+  assert.equal(dispatchVoiceGuess(ignored, actions), false);
+  assert.equal(voice.snapshot(102).draft?.word, 'ghost');
+  voice.clear(); // Matching Studio's same-context request-finally cleanup.
+  actions.busy = false;
+  dispatchVoiceGuess(voice.receive(final('lock in'), 103), actions);
+  assert.deepEqual(calls, [], 'A draft spoken while busy cannot become a delayed second guess.');
 });

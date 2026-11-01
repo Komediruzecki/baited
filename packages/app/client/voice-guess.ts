@@ -6,14 +6,15 @@ export type VoiceGuessDraft = { word: string; context: VoiceGuessContext; expire
 export type VoiceGuessSnapshot = { draft: VoiceGuessDraft | null; awaitingWord: boolean; acceptsBareGuess: boolean; expiresAt: number };
 export type VoiceGuessResult = { consumed: boolean; submit?: VoiceGuessDraft; prepared?: VoiceGuessDraft; uncertain?: boolean };
 
-// Request the optional public draft without waiting for the bot before scoring.
-// Both callbacks must contain their own error handling; scoring is never retried.
+// Immediate lock-in has no review draft to post. Keep optional public sharing
+// for guesses left in review, and send scoring without an intermediate post.
+// Both callbacks contain their own error handling; scoring is never retried.
 export function dispatchVoiceGuess(result: VoiceGuessResult, actions: {
   busy: boolean; share: (draft: VoiceGuessDraft) => Promise<void>; submit: (draft: VoiceGuessDraft) => Promise<void>;
 }): boolean {
   if (actions.busy) return false;
+  if (result.submit) { void actions.submit(result.submit); return true; }
   if (result.prepared) void actions.share(result.prepared);
-  if (result.submit) void actions.submit(result.submit);
   return true;
 }
 
@@ -55,6 +56,7 @@ export class VoiceGuessSession {
   private pendingGuessPrefix = '';
   private pendingCallPrefix = '';
   private pendingLockPrefix = '';
+  private pendingWakeSuffix = false;
   private expiresAt = 0;
   private consumedIds = new Set<string>();
 
@@ -73,6 +75,7 @@ export class VoiceGuessSession {
   clear() {
     this.draft = null; this.awaitingWord = false; this.acceptsBareGuess = false;
     this.pendingGuessPrefix = ''; this.pendingCallPrefix = ''; this.pendingLockPrefix = ''; this.expiresAt = 0;
+    this.pendingWakeSuffix = false;
   }
 
   expire(now: number) {
@@ -118,9 +121,15 @@ export class VoiceGuessSession {
     // Reported, negated and hypothetical speech never become calling intent.
     const lead = callLead.exec(rest);
     if (lead && (call.test(lead[1]) || callPrefix(lead[1]) || wake.test(lead[1]))) rest = lead[1];
+    // Baity is also a complete short wake. Preserve only its optional bot/bought
+    // suffix for the next final; it never grants bare-word guessing permission.
+    const hadWakeSuffix = this.pendingWakeSuffix;
+    const continuedWake = hadWakeSuffix && /^(?:bot|bought)(?: |$)/.test(rest);
+    this.pendingWakeSuffix = false;
+    if (continuedWake) rest = `baity ${rest}`;
     const addressed = wake.exec(rest) ?? observedWake.exec(rest);
     if (addressed) rest = rest.slice(addressed[0].length);
-    let continuedCall = false;
+    let continuedCall = continuedWake;
     if (this.pendingCallPrefix && !addressed && !call.test(rest) && !cancel.test(rest)) {
       const joined = `${this.pendingCallPrefix} ${rest}`;
       if (call.test(joined) || callPrefix(joined)) { rest = joined; continuedCall = true; }
@@ -133,6 +142,7 @@ export class VoiceGuessSession {
     // This still requires an enabled, eligible voice session and a final line.
     const calling = call.test(rest);
     if (addressed && !rest) {
+      this.pendingWakeSuffix = /^(?:(?:okay|ok|hey|alright) )?baity$/.test(addressed[0].trim());
       // Repeating the bot's name does not erase an intent or a prepared guess.
       // A wake alone never gives permission to say a bare target.
       if (!this.awaitingWord && !this.draft) {
@@ -194,7 +204,7 @@ export class VoiceGuessSession {
         // only these exact prefixes; intermediate pieces do not extend the TTL.
         this.draft = null; this.awaitingWord = true; this.pendingGuessPrefix = afterCall;
         this.acceptsBareGuess = this.acceptsBareGuess || calling || afterCall === 'the bait is';
-        if (addressed || calling || !this.expiresAt) this.expiresAt = now + VOICE_GUESS_TTL_MS;
+        if ((addressed || calling) && !continuedWake || !this.expiresAt) this.expiresAt = now + VOICE_GUESS_TTL_MS;
         handled = true;
       } else if (calling && !afterCall) {
         this.draft = null; this.awaitingWord = true;
@@ -214,7 +224,7 @@ export class VoiceGuessSession {
       // Ordinary conversation ends a narrow prefix continuation. An addressed
       // but unrecognized new request must not leave an older guess to lock in.
       // Neither case suppresses ordinary scoring.
-      if (this.pendingGuessPrefix || this.pendingCallPrefix || this.pendingLockPrefix || this.acceptsBareGuess || addressed) this.clear();
+      if (this.pendingGuessPrefix || this.pendingCallPrefix || this.pendingLockPrefix || hadWakeSuffix || this.acceptsBareGuess || addressed) this.clear();
       return { consumed: false };
     }
     this.remember(line.id);
