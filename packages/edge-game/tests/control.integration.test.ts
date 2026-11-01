@@ -28,6 +28,9 @@ export class FixtureControl extends TwitchControl {
   async fetch(request) {
     await this.ready;
     const url=new URL(request.url);
+    if (url.pathname==='/__fixture/clock') {
+      const at=Number(url.searchParams.get('at'));Date.now=()=>at;return Response.json({at});
+    }
     if (url.pathname==='/__fixture/overlay-hold') {
       this.overlayBody=await request.text();
       const body=new ReadableStream({start:controller=>{this.overlayStream=controller;controller.enqueue(new TextEncoder().encode('{'));}});
@@ -356,6 +359,48 @@ test('bot authorization is owner/CSRF gated and global send reservations are dur
     assert.equal(retriedReset.channels['123'].botGeneration,generationBeforeReset+1);
     await f.request('/__fixture/event', jsonPost({ channelId: '123', eventId: 'disabled', safeView: { ...safeView, settings: { ...safeView.settings, chatBot: false } }, event: { type: 'bot-settings' } }));
     assert.equal((await f.request('/__fixture/state').then((r) => r.json()) as any).queue.length, 0);
+  } finally { await f.mf.dispose(); }
+});
+
+test('Control public reply cooldowns open at 15 seconds per channel and user without crossing channels', {timeout:15_000}, async () => {
+  const f = await fixture();
+  try {
+    const { cookie } = await login(f);
+    await login(f, 'lakeeko');
+    const bootstrap = await f.request('/api/edge/session', { headers: { cookie } }).then(r => r.json()) as any;
+    const botStart = await f.request('/api/bot/authorize', jsonPost({}, { cookie, 'x-csrf-token': bootstrap.csrf }));
+    const botUrl = new URL((await botStart.json() as any).url);
+    assert.equal((await f.request(`/auth/twitch/callback?state=${botUrl.searchParams.get('state')}&code=bot`, { headers: { cookie: cookies(botStart) } })).status, 302);
+    const game = new Game({ id: 'cooldown-room', owner: '123', channel: 'komediruzecki7', mode: 'demo', overlayKey: 'unused',
+      settings: { ...defaults, chatBot: true }, history: [], priorWins: 0, priorPlayed: 0, priorBest: 0, leaders: {} });
+    const safeView = game.view('overlay'), base = Date.now() + 1000;
+    const clock = (at: number) => f.request(`/__fixture/clock?at=${at}`);
+    const post = async (eventId: string, channelId = '123', userId = '555', command = 'help') => {
+      assert.equal((await f.request('/__fixture/event', jsonPost({ channelId, eventId, safeView,
+        event: { type: 'chat-command', command, userId } }))).status, 200);
+    };
+    const state = () => f.request('/__fixture/state').then(r => r.json()) as Promise<any>;
+    await clock(base); await post('first');
+    let current = await state();
+    assert.equal(current.commandCooldowns['channel:123'], base + 15_000);
+    assert.equal(current.commandCooldowns['user:123:555'], base + 15_000);
+    await clock(base + 14_999);
+    await post('same-user', '123', '555', 'score');
+    await post('other-user', '123', '556', 'who');
+    current = await state();
+    assert.equal(current.commandCooldowns['channel:123'], base + 15_000);
+    assert.equal(current.commandCooldowns['user:123:556'], undefined);
+    await post('other-channel', '456');
+    current = await state();
+    assert.equal(current.commandCooldowns['channel:456'], base + 29_999);
+    assert.equal(current.commandCooldowns['user:456:555'], base + 29_999);
+    await clock(base + 15_000); await post('same-user-boundary', '123', '555', 'score');
+    current = await state();
+    assert.equal(current.commandCooldowns['channel:123'], base + 30_000);
+    assert.equal(current.commandCooldowns['user:123:555'], base + 30_000);
+    await clock(base + 30_000); await post('other-user-boundary', '123', '556', 'who');
+    current = await state();
+    assert.equal(current.commandCooldowns['user:123:556'], base + 45_000);
   } finally { await f.mf.dispose(); }
 });
 

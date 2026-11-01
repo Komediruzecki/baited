@@ -101,6 +101,7 @@ export class EdgeRoomTransport {
   private retryUntil = 0;
   private stopped = false;
   private operations: Promise<unknown> = Promise.resolve();
+  private voiceDraftOperations: Promise<unknown> = Promise.resolve();
   private fetch: typeof fetch;
   constructor(private options: Options) { this.fetch = options.fetch ?? globalThis.fetch.bind(globalThis); }
   get bootstrap() { return this.credentials; }
@@ -295,7 +296,13 @@ export class EdgeRoomTransport {
     const abort = () => controller.abort();
     if (signal?.aborted) abort();
     else signal?.addEventListener('abort', abort, { once: true });
-    const operation = this.operations.catch(() => {}).then(async () => {
+    // A voice draft is advisory. It waits for existing game actions and earlier
+    // drafts, but a slow bot post must never hold up a later scoring action.
+    const advisoryDraft = action.type === 'voice-guess-draft';
+    const previous = advisoryDraft
+      ? Promise.all([this.operations.catch(() => {}), this.voiceDraftOperations.catch(() => {})])
+      : this.operations.catch(() => {});
+    const operation = previous.then(async () => {
       const cancelled = () => { if (controller.signal.aborted) throw new DOMException('The request was canceled.', 'AbortError'); };
       cancelled();
       await this.ensure();
@@ -315,7 +322,12 @@ export class EdgeRoomTransport {
       const result = record(body) ? body : {};
       const code = typeof result.code === 'string' && Object.hasOwn(messages, result.code) ? result.code : undefined;
       // Even a refused stale action may carry a newer authoritative projection.
-      if (result.snapshot !== undefined) this.accept(readEdgeSnapshot(result.snapshot));
+      if (result.snapshot !== undefined) {
+        const receipt = readEdgeSnapshot(result.snapshot);
+        // Advisory work can finish after a recording/session reset. Its old
+        // generation must not replace a newer projection received meanwhile.
+        if (!advisoryDraft || this.snapshot?.generation === snapshot.generation) this.accept(receipt);
+      }
       // Keep only safe HTTP/code metadata. Provider messages may contain private detail.
       if (!response.ok || result.ok !== true) throw Object.assign(
         new Error(code ? messages[code] : 'That action could not be completed. Check the round and try again.'),
@@ -333,7 +345,8 @@ export class EdgeRoomTransport {
       signal?.removeEventListener('abort', abort);
       controller.signal.removeEventListener('abort', onAbort);
     });
-    this.operations = task;
+    if (advisoryDraft) this.voiceDraftOperations = task;
+    else this.operations = task;
     return task;
   }
   speechSocket(roundId: string, epoch: number, leaseId: string): SpeechSocket {

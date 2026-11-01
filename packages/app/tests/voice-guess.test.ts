@@ -221,12 +221,12 @@ test('an addressed unrecognized request clears an older draft without suppressin
   assert.equal(voice.receive(final('lock in'), 300).submit, undefined);
 });
 
-test('command and lock in one final creates a draft, never an immediate submission or catch', () => {
+test('command and lock in one final prepares and submits the word without becoming a catch', () => {
   const voice = session();
   for (const ending of ['lock in', 'locked in', 'locking in', 'I am locking in']) {
     const result = voice.receive(final(`Baity bot, the bait is bait, ${ending}`), 100);
-    assert.equal(result.consumed, true); assert.equal(result.submit, undefined);
-    assert.equal(result.prepared?.word, 'bait'); assert.equal(result.confirmSeparately, true);
+    assert.equal(result.consumed, true); assert.equal(result.submit?.word, 'bait');
+    assert.equal(result.prepared?.word, 'bait'); assert.equal(voice.snapshot(101).draft, null);
   }
 });
 
@@ -527,8 +527,13 @@ test('it is or its contraction can introduce one word only after explicit intent
     voice.receive(final("I'm calling the bait"), 400);
     const result = voice.receive(final(text), 500);
     assert.equal(result.prepared?.word, 'banana', text);
-    assert.equal(result.submit, undefined);
-    assert.equal(voice.receive(final('Lock in'), 600).submit?.word, 'banana');
+    if (text.endsWith('lock in')) {
+      assert.equal(result.submit?.word, 'banana');
+      assert.equal(voice.receive(final('Lock in'), 600).submit, undefined);
+    } else {
+      assert.equal(result.submit, undefined);
+      assert.equal(voice.receive(final('Lock in'), 600).submit?.word, 'banana');
+    }
   }
   for (const text of ["It's a banana", 'It is banana bread', 'It was banana', "It's banana and ghost"]) {
     const voice = session(); voice.receive(final("I'm calling the bait"), 100);

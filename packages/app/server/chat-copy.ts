@@ -28,6 +28,8 @@ export type ChatCommand =
   | 'pause'
   | 'resume';
 export const MOD_COMMANDS: ReadonlySet<ChatCommand> = new Set(['start', 'pause', 'resume']);
+/** Public command reply gates; independent of the bot's Twitch send budgets. */
+export const BOT_REPLY_COOLDOWN_MS = 15_000;
 const named: Record<string, ChatCommand> = {
   help: 'help',
   rules: 'help',

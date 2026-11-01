@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { MOD_COMMANDS, parseCommand } from '../../app/server/chat-copy.js';
+import { BOT_REPLY_COOLDOWN_MS, MOD_COMMANDS, parseCommand } from '../../app/server/chat-copy.js';
 import { isBotReplyCommand, type BotReplyCommand } from './chat-commands.js';
 import { Game, defaults, type GameEvent } from '@baited/game-core';
 import { authenticateRequest, identityIsCurrent, type AuthIdentity, type AuthEnv } from './auth.js';
@@ -823,9 +823,9 @@ export class ChannelRoom extends DurableObject<Env> {
         // Cooldowns belong before the durable outbox. A user cannot fill the
         // shared bot queue with replies that will be discarded later anyway.
         const replies=pilot.botReplies??{channelAt:0,users:{}};
-        for(const [user,at] of Object.entries(replies.users)) if(this.now-at>=30_000) delete replies.users[user];
-        if(candidate.data.settings.chatBot && this.now-replies.channelAt>=20_000 &&
-          (!replies.users[event.userId] || this.now-replies.users[event.userId]!>=30_000)) {
+        for(const [user,at] of Object.entries(replies.users)) if(this.now-at>=BOT_REPLY_COOLDOWN_MS) delete replies.users[user];
+        if(candidate.data.settings.chatBot && this.now-replies.channelAt>=BOT_REPLY_COOLDOWN_MS &&
+          (!replies.users[event.userId] || this.now-replies.users[event.userId]!>=BOT_REPLY_COOLDOWN_MS)) {
           replies.channelAt=this.now;replies.users[event.userId]=this.now;pilot.botReplies=replies;
           this.events.get(candidate)!.push({event:{type:'chat-command',command,userId:event.userId},safeView:candidate.view('overlay')});
         }

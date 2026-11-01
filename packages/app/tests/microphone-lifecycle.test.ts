@@ -176,6 +176,54 @@ test('Moonshine commands never reach scoring and do not leave gaps in final sequ
   assert.deepEqual(errors, []);
 });
 
+test('fast and split calling commands protect BAIT while ordinary BAIT speech remains catch evidence', async (t) => {
+  const env = browser(t), voice = new VoiceGuessSession(), submitted: string[] = [];
+  voice.setContext({ roundId: 'round', epoch: 1, leaseId: 'capture', takeId: '' });
+  const { microphone, errors } = env.create('moonshine', undefined, line => {
+    const result = voice.receive(line);
+    if (result.submit) submitted.push(result.submit.word);
+    return result.consumed;
+  });
+  const enabling = microphone.enable(); env.requests[0].resolve(env.stream().value);
+  assert.equal(await enabling, true);
+  microphone.connect('round', 1, 'csrf', 'capture');
+  await env.sockets[0].status('listening');
+  const line = (id: string, text: string): MoonshineLine => ({
+    id, text, isComplete: true, startTime: 1, duration: 1,
+    words: text.split(/\s+/).map(text => ({ text, start: 1.2, end: 1.8, confidence: 1 })),
+    isUpdated: true, isNew: true, hasTextChanged: true, haveSpeakersChanged: false,
+    lastTranscriptionLatencyMs: 0, speakerSpans: [],
+  });
+  for (const [id, text] of [
+    ['fast', 'Okay, so, I am calling the bait, fish, lock in'],
+    ['prefix', 'I am calling the'], ['bait', 'bait'], ['fish-lock', 'fish lock in'],
+  ]) {
+    const final = line(id, text);
+    env.workers[0].line({ ...final, isComplete: false });
+    env.workers[0].line(final);
+    env.workers[0].line(final);
+  }
+  assert.deepEqual(submitted, ['fish', 'fish']);
+  assert.deepEqual(env.sockets[0].sent, [], 'No recognized command BAIT token reaches the catch stream.');
+  for (const [id, text] of [
+    ['ordinary', 'You will never bait me'],
+    ['reported', 'He said I am calling the bait fish lock in'],
+    ['negated', "Don't say I am calling the bait"],
+    ['hypothetical', 'If I am calling the bait'],
+  ]) env.workers[0].line(line(id, text));
+  const sent = env.sockets[0].sent.map(value => JSON.parse(value));
+  assert.deepEqual(sent.map(value => value.sequence), [1, 2, 3, 4]);
+  assert.equal(sent[0].line.text, 'You will never bait me');
+  assert.ok(localTranscript(sent[0], { roundId: 'round', epoch: 1, firstAudioAt: 100000, audioSeconds: 3, lastSequence: 0 }, 103000));
+  voice.setContext(null); // Studio removes eligibility once the round's guess is used.
+  env.workers[0].line(line('after-used-guess', 'I am calling the bait fish lock in'));
+  const afterUsed = JSON.parse(env.sockets[0].sent.at(-1)!);
+  assert.equal(afterUsed.sequence, 5);
+  assert.equal(afterUsed.line.text, 'I am calling the bait fish lock in');
+  assert.deepEqual(submitted, ['fish', 'fish'], 'An ineligible calling phrase remains scoring speech.');
+  assert.deepEqual(errors, []);
+});
+
 test('split and conversational voice guesses stay out of scoring while unrelated speech is sent', async (t) => {
   const env = browser(t), voice = new VoiceGuessSession(), submitted: string[] = [];
   voice.setContext({ roundId: 'round', epoch: 1, leaseId: 'capture', takeId: '' });
