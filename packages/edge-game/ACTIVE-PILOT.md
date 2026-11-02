@@ -1,10 +1,18 @@
 # Cloudflare pilot status
 
+## Card images on the pilot, 2 November 2026 at 19:05 Zagreb
+
+The owner approved the release 2 deploy. Provider version `529c9bb8-499d-4c54-9a40-0c19fccadc9c` serves main `1fb2893` (PR #35). It replaced `6364f9ee-18e6-4339-aa0c-85f23fdab006` (Paolo's channel, `357ffc2`), which is the rollback target. No allowlisted channel was live on Twitch at deploy time, and the pilot had no connected chat, viewer or Studio socket. Configuration and secrets were unchanged since `357ffc2`; the dry run listed the same bindings as the previous receipt, and the upload added 19 changed assets to the 155 already stored.
+
+Streamers can now add their own card images in Studio. Viewers load them from round URLs the room signs (`/api/card-art/round/…`, served with `Cross-Origin-Resource-Policy: cross-origin`), and Control purges or allows a channel's images with `POST /api/operator/card-art`. Twitch already serves `img-src https://pilot-baited.maff.app` for Extension 0.0.3, and the hosted build resolves those paths against the pilot, so no new ZIP was needed.
+
+After the upload, `/health` returned 200 with `enabled:true`; `/studio`, `/studio/cards`, `/privacy` and `/speech-lab` returned 200; a round image URL with a bad signature returned 404 `art_missing`; Studio's image list returned 401 without a session; and the authenticated operator status read `running` at revision 3 with `cardArt` on all three channels (`komediruzecki7` already held 1 image, 326,807 bytes; uploads allowed on every channel). The rooms kept their phases. A Studio tab loaded before the upload can show the error screen on Cards, because its old `CardLibrary` chunk now returns 404; a reload fixes it. A live round with a custom image in the Extension has not been checked, and purge and allow were not run against the pilot. No secret, Twitch setting, Extension ZIP, operator state or tag changed. This is the current deployment; the sections below are historical.
+
 ## Paolo's channel added to the pilot, 2 November 2026 at 14:13 Zagreb
 
 The owner asked to add Paolo (`yahwehwastaken`) to the pilot. Provider version `6364f9ee-18e6-4339-aa0c-85f23fdab006` serves main `357ffc2` (PR #33), which sets `EDGE_CHANNEL_LOGIN_ALLOWLIST=komediruzecki7,lakeeko,yahwehwastaken` and `EDGE_MAX_CHANNELS=3`. It replaced `68a405e5-4e0c-4f89-84aa-a18d10d1e847` (card packs and welcome, `5ad1fed`), which is the rollback target. No allowlisted channel was live on Twitch at deploy time. The dry run listed the same 22 bindings as the previous receipt with only those two values changed, and the upload added 2 changed assets to the 159 already stored.
 
-After the upload, `/health` returned 200 with `enabled:true`; `/studio`, `/studio/cards`, `/privacy` and `/speech-lab` returned 200; and the authenticated operator status read `running` at revision 3 with `limits.streamers: 3`. Both registered rooms (`komediruzecki7`, `lakeeko`) were available. Paolo's channel registers when he first signs into Studio; to run the Extension on his own channel during Hosted Test, his account also needs Twitch's Streamer Allowlist. No secret, Twitch setting, Extension ZIP, operator state or tag changed. This is the current deployment; the sections below are historical.
+After the upload, `/health` returned 200 with `enabled:true`; `/studio`, `/studio/cards`, `/privacy` and `/speech-lab` returned 200; and the authenticated operator status read `running` at revision 3 with `limits.streamers: 3`. Both registered rooms (`komediruzecki7`, `lakeeko`) were available. Paolo's channel registers when he first signs into Studio; to run the Extension on his own channel during Hosted Test, his account also needs Twitch's Streamer Allowlist. No secret, Twitch setting, Extension ZIP, operator state or tag changed.
 
 ## Card packs and the new welcome deployed, 2 November 2026 at 12:10 Zagreb
 
