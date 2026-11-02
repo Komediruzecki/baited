@@ -1,10 +1,16 @@
 # Cloudflare pilot status
 
+## Card packs and the new welcome deployed, 2 November 2026 at 12:10 Zagreb
+
+The owner asked for Card Maker and a redesigned welcome screen on the pilot. Provider version `68a405e5-4e0c-4f89-84aa-a18d10d1e847` serves main `5ad1fed` (PR #31). It replaced `6fa0da92-9767-4984-b667-f10637f1c3f7` (Studio glass, `dece09b`), which is the rollback target. Neither allowlisted channel was live on Twitch at deploy time. The dry run listed the same 22 bindings as the previous receipt, and the upload added 10 changed assets to the 174 already stored, including the two welcome stage images.
+
+Signed-in streamers can now save word packs in Studio's Cards tab (10 packs and 100 cards per channel; six cards at one difficulty make a pack playable) and deal one to the next round. Packs live in the channel's room Durable Object; card images stay off. After the upload, `/health` returned 200 with `enabled:true`, `/studio`, `/studio/cards`, `/privacy` and `/speech-lab` returned 200, the welcome images returned `image/webp`, and `/api/studio/cards` returned 401 without a session. A signed-out browser check found the new welcome sheet (wordmark, five cards, the pilot line, no microphone note) and the privacy page's card packs section. Nobody has used Cards signed in on the live pilot yet. No secret, Twitch setting, Extension ZIP, operator state or tag changed. This is the current deployment; the sections below are historical.
+
 ## Studio glass deployed, 2 November 2026 at 09:15 Zagreb
 
 The owner asked for the Studio glass redesign on the pilot. Provider version `6fa0da92-9767-4984-b667-f10637f1c3f7` serves main `dece09b` (PR #29). It replaced `2b1b3860-2b04-48ae-a2bc-0acee1edf709` (Speech Lab retained clips and model recovery, `7320329`), which is the rollback target. Neither allowlisted channel was live on Twitch at deploy time. The operator state stayed at revision 3, running, with the same allowlist. The pilot assets match the previous receipt: 100 cards, Moonshine 0.1.5 and the pinned Whisper tiny files (58,500,668 bytes).
 
-After the upload, `/health` returned 200 with `enabled:true` and `mode:allowlisted-pilot`, and `/studio`, `/privacy` and `/speech-lab` returned 200. A signed-out headless check found the sign-in sheet, the privacy sheet and the Speech Lab panels drawn as glass over the pixel field. No secret, Twitch setting, Extension ZIP or tag changed. This is the current deployment; the sections below are historical.
+After the upload, `/health` returned 200 with `enabled:true` and `mode:allowlisted-pilot`, and `/studio`, `/privacy` and `/speech-lab` returned 200. A signed-out headless check found the sign-in sheet, the privacy sheet and the Speech Lab panels drawn as glass over the pixel field. No secret, Twitch setting, Extension ZIP or tag changed.
 
 ## Reopened for owner checks, 31 October 2026 at 04:13 Zagreb
 
