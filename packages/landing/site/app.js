@@ -64,7 +64,7 @@ document.addEventListener('visibilitychange', () => {
   document.title = document.hidden ? 'Don’t say it. · baited' : pageTitle
 })
 console.log(
-  '%c baited %c One secret word. Your whole chat against you. Made by irchiinnuss.',
+  '%c baited %c One secret word. Your whole chat against you.',
   'background:#7721e5;color:#fff;font:700 15px/2 sans-serif;padding:0 8px;border-radius:4px',
   'color:#9146ff;font:600 12px sans-serif'
 )
