@@ -197,6 +197,15 @@
 .studio-shell .setup-step p { color: var(--b-muted); font: 400 13px/1.65 var(--b-ui); margin: 0 0 16px; }
 .studio-shell .setup-step .connection-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .studio-shell .setup-step code { color: var(--b-copy); background: var(--b-face-2); font-size: 12px; }
+/* Chat commands as small arcade tags. Baited Pixel at 12px is 1.5 CSS px per font pixel: crisp on 2x screens, and the
+   20px tag sits inside a 13px line without pushing the lines apart. The corners step in 2px, like the pixel field. */
+.studio-shell .setup-step code.chat-command {
+  display: inline-block; padding: 3px 7px; white-space: nowrap; font: 400 12px/14px 'Baited Pixel', var(--b-ui);
+  color: #fff35b; background: #2b1652; box-shadow: inset 0 0 0 2px #8a5cf0; -webkit-font-smoothing: none;
+  clip-path: polygon(0 2px, 2px 2px, 2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px, 100% calc(100% - 2px),
+    calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px), 0 calc(100% - 2px));
+}
+.studio-shell .setup-step .chat-command-word { color: var(--b-lilac); }
 .studio-shell .privacy-panel { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 18px; align-items: start; margin: 24px 0; padding: 20px; border: 1px solid var(--b-line); border-radius: 8px; background: var(--b-panel); }
 .studio-shell .privacy-panel > svg { color: var(--b-lilac); }
 .studio-shell .privacy-panel h3 { margin: 0 0 8px; font: 600 15px/1.4 var(--b-ui); }

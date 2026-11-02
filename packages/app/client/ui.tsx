@@ -96,6 +96,16 @@ export function Button({
 export function Tag({ children, tone = 'muted' }: { children: React.ReactNode; tone?: string }) {
   return <span className={`tag ${tone}`}>{children}</span>;
 }
+/** A chat command as viewers type it: the command word in lilac, anything after it in yellow. */
+export function ChatCommand({ children }: { children: string }) {
+  const [word, ...rest] = children.split(' ');
+  return (
+    <code className="chat-command">
+      <span className="chat-command-word">{word}</span>
+      {rest.length > 0 && ` ${rest.join(' ')}`}
+    </code>
+  );
+}
 export function CopyButton({ value, label = 'Copy link' }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false),
     [error, setError] = useState(false);
