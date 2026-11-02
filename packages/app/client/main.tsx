@@ -694,6 +694,11 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
               </button>
             );
           })}
+          <a className="nav-item nav-item--external" href="/speech-lab" target="_blank" rel="noopener noreferrer" aria-label="Speech lab (opens in a new tab)">
+            <Mic size={18} />
+            Speech lab
+            <ArrowUpRight size={14} aria-hidden="true" />
+          </a>
         </nav>
         <div className="sidebar-bottom">
           <a className="sound-toggle" href="#studio-sound" aria-label="Sound controls">
@@ -1172,6 +1177,12 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
                         : 'Audio streams to Deepgram during rounds.'
                       : 'Speech setup needed'}
                   </div>
+                  {studio.speechProvider === 'moonshine' && <div className="mic-lab-entry">
+                    <a className="inline-link" href="/speech-lab" target="_blank" rel="noopener noreferrer" aria-label="Test a phrase in Speech Lab (opens in a new tab)" aria-describedby="mic-lab-handoff">
+                      Test a phrase in Speech Lab <ArrowUpRight size={15} />
+                    </a>
+                    <p id="mic-lab-handoff">Pause your round and disable this microphone before recording there. Compare models without changing your game’s Moonshine recognizer.</p>
+                  </div>}
                   {!offline &&
                     (active || paused || settling) &&
                     g.round &&
@@ -1977,6 +1988,12 @@ function Setup({
               <Button className="secondary" onClick={onMicrophone}>
                 <Mic size={16} /> Check in studio
               </Button>
+              {studio.speechProvider === 'moonshine' && <div className="setup-speech-lab">
+                <a className="inline-link" href="/speech-lab" target="_blank" rel="noopener noreferrer" aria-label="Compare a phrase in Speech Lab (opens in a new tab)">
+                  Compare a phrase in Speech Lab <ArrowUpRight size={15} />
+                </a>
+                <p className="muted">Pause the round and turn off the Studio microphone before testing. The lab opens separately; Moonshine stays your live game model.</p>
+              </div>}
             </div>
           </section>
         </li>

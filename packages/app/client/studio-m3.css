@@ -761,3 +761,23 @@ dialog.modal::backdrop {
 .modal .how-to .notice { margin: 16px 0 0; padding: 0; border: 0; background: none; }
 .modal .how-to .notice > svg { color: var(--m3-primary); }
 .modal .how-to .notice p { margin: 0; color: var(--m3-on-surface-variant); font: 400 13px/1.5 var(--b-ui); }
+
+/* Speech tests stay separate from the live microphone and round controls. */
+.studio-shell .nav-item--external { display: inline-flex; align-items: center; text-decoration: none; }
+.studio-shell .nav-item--external:focus-visible { outline: 2px solid var(--b-focus); outline-offset: -3px; }
+.studio-shell .mic-lab-entry { grid-column: 1 / -1; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--m3-outline-variant); }
+.studio-shell .mic-lab-entry .inline-link { min-height: 44px; margin: 0; align-items: center; }
+.studio-shell .mic-lab-entry p { margin: 4px 0 0; color: var(--m3-on-surface-variant); font: 400 12px/1.6 var(--b-ui); }
+.studio-shell .setup-speech-lab { margin-top: 14px; }
+.studio-shell .setup-speech-lab .inline-link { min-height: 44px; margin: 0; align-items: center; }
+.studio-shell .setup-speech-lab p { margin: 4px 0 0; font-size: 12px; }
+@media (max-width: 980px) {
+  .studio-shell .sidebar { grid-template-columns: auto 1fr; gap: 8px 0; }
+  .studio-shell .sidebar > .brand { border-radius: 8px; padding-right: 5px; }
+  .studio-shell .sidebar-bottom { grid-column: 2; grid-row: 1; justify-self: end; }
+  .studio-shell .sidebar nav { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; justify-content: space-between; border-radius: 8px; }
+}
+@media (max-width: 600px) {
+  .studio-shell .sidebar nav { flex-wrap: wrap; height: auto; min-height: 54px; }
+  .studio-shell .sidebar .nav-item--external { flex: 0 1 auto; }
+}

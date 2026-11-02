@@ -169,13 +169,13 @@
               <rect x="4" y="8" width="1" height="1" />
               <rect x="5" y="8" width="1" height="1" /></svg></span
         ></a>
-        <a class="nav-cta px-live" href="#contact"
+        <a class="nav-cta px-live" href="#pilot"
           ><svg class="px-icon px-icon--chat" viewBox="0 0 9 9" aria-hidden="true" focusable="false">
             <path d="M1 0h7v1H1zM0 1h1v5H0zM8 1h1v5H8zM1 6h7v1H1zM1 7h2v1H1zM1 8h1v1H1z" />
             <rect class="px-dot" x="2" y="3" width="1" height="1" />
             <rect class="px-dot" x="4" y="3" width="1" height="1" />
             <rect class="px-dot" x="6" y="3" width="1" height="1" /></svg
-          ><span class="nav-cta__label">Get early access</span></a
+          ><span class="nav-cta__label">Try the pilot</span></a
         >
       </nav>
     </header>
@@ -196,14 +196,14 @@
               ><svg class="px-icon px-icon--down" viewBox="0 0 7 9" aria-hidden="true" focusable="false">
                 <path d="M3 0h1v7H3zM0 5h1v1H0zM6 5h1v1H6zM1 6h1v1H1zM5 6h1v1H5zM2 7h1v1H2zM4 7h1v1H4zM3 8h1v1H3z" /></svg></span
             ><span class="px-btn__label">How to play</span></a
-          ><a class="px-btn px-btn--ghost hero-access" href="mailto:hello@irchiinnuss.com?subject=baited%20early%20access"
+          ><a class="px-btn px-btn--ghost hero-access" href="/setup"
             ><span class="px-btn__box" aria-hidden="true"
               ><svg class="px-icon px-icon--chat" viewBox="0 0 9 9" aria-hidden="true" focusable="false">
                 <path d="M1 0h7v1H1zM0 1h1v5H0zM8 1h1v5H8zM1 6h7v1H1zM1 7h2v1H1zM1 8h1v1H1z" />
                 <rect class="px-dot" x="2" y="3" width="1" height="1" />
                 <rect class="px-dot" x="4" y="3" width="1" height="1" />
                 <rect class="px-dot" x="6" y="3" width="1" height="1" /></svg></span
-            ><span class="px-btn__label">Get early access</span></a
+            ><span class="px-btn__label">Pilot setup</span></a
           >
         </div>
         <div class="hero-stage">
@@ -451,8 +451,7 @@
                   <div class="why-card__copy">
                     <h3>You say it. Chat wins.</h3>
                     <p class="why-card__note">
-                      Baited listens on your computer. When it hears the word, you confirm the catch before chat gets the win. If the clock hits
-                      zero first, you escape.
+                      Baited listens on your computer. A catch confirms after 15 seconds unless you reject it. You can reverse a mistaken win afterward. If the clock hits zero first, you escape.
                     </p>
                   </div>
                   <div class="why-card__scene why-catch" aria-hidden="true">
@@ -536,7 +535,7 @@
     </main>
     <footer class="site-footer" id="contact" aria-labelledby="footer-title">
       <div class="footer-edge" aria-hidden="true"></div>
-      <section class="footer-cta">
+      <section class="footer-cta" id="pilot" tabindex="-1">
         <h2 class="footer-title" id="footer-title">
           <span class="footer-title__line"
             ><span
@@ -547,10 +546,18 @@
           >
           <span class="footer-title__line"><span>the bait?</span></span>
         </h2>
+        <div class="footer-pilot">
+          <p class="footer-pilot__status"><span aria-hidden="true"></span>Twitch Hosted Test</p>
+          <p class="footer-pilot__copy">The pilot is open to invited streamers and test viewers. The Extension is not publicly released yet, so signing in alone won’t give a new channel access.</p>
+          <div class="footer-pilot__links">
+            <a href="/setup">Set up your first round <span aria-hidden="true">↗</span></a>
+            <a href="mailto:hello@irchiinnuss.com?subject=Baited%20pilot%20access">Ask for pilot access <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
         <div class="footer-rule">
           <div class="footer-circle-spot">
-            <a class="footer-circle" href="mailto:hello@irchiinnuss.com?subject=baited%20early%20access" data-magnetic="0.3"
-              ><span class="footer-circle__label">Get early access</span
+            <a class="footer-circle" href="https://pilot-baited.maff.app/studio" data-magnetic="0.3"
+              ><span class="footer-circle__label">Open Studio</span
               ><svg class="px-icon px-icon--chat footer-circle__icon" viewBox="0 0 9 9" aria-hidden="true" focusable="false">
                 <path d="M1 0h7v1H1zM0 1h1v5H0zM8 1h1v5H8zM1 6h7v1H1zM1 7h2v1H1zM1 8h1v1H1z" />
                 <rect class="px-dot" x="2" y="3" width="1" height="1" />
@@ -568,6 +575,9 @@
               >
               <a href="#cards"
                 ><svg class="icon" aria-hidden="true"><use href="#i-card" /></svg>Cards</a
+              >
+              <a href="/setup"
+                ><svg class="icon" aria-hidden="true"><use href="#i-doc" /></svg>Pilot setup</a
               >
               <a href="/terms"
                 ><svg class="icon" aria-hidden="true"><use href="#i-doc" /></svg>Terms</a

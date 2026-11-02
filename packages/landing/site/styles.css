@@ -464,7 +464,7 @@ input {
   margin-top: 32px;
 }
 /* The streamer's way in, beside "How to play": an outlined pixel button whose box spreads into a
-   white one on hover. Until the Extension is public it asks for early access by email. */
+   white one on hover. It leads to the Hosted Test setup guide while the pilot is invite-only. */
 .hero-access {
   width: min(100%, 320px);
 }
