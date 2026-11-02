@@ -1,7 +1,7 @@
 import { operatorAuthorized } from './operator-auth.js';
 import { isKnownAppPath, withErrorDocument } from '../../app/shared/error-pages.js';
 import { authenticateRequest } from "./auth.js";
-import { json, readBounded } from "./protocol.js";
+import { CARD_REQUEST_BYTES, json, readBounded } from "./protocol.js";
 import { pilotLimits, pilotLogins } from "./pilot-policy.js";
 import { pilotIngress } from "./ingress.js";
 import { internalFetch } from "./internal-fetch.js";
@@ -47,6 +47,25 @@ async function assets(request:Request,env:Env) {
   return withErrorDocument(request,new Response(response.body,{status:response.status,headers}));
 }
 
+/** Studio's card library. Control checks the session (and the CSRF token for changes); the channel's room owns the data. */
+async function studioCards(request:Request,env:Env,action:string):Promise<Response> {
+  const change=action!=="";
+  if(request.method!==(change?"POST":"GET")) return json({error:"Method not allowed."},405);
+  if(change && request.headers.get("content-type")?.split(";")[0]!=="application/json") return json({error:"Use a JSON request."},415);
+  // Fresh headers: only what Control needs to find the session and check the token.
+  const headers=new Headers({"content-type":"application/json"});
+  for(const name of ["cookie","origin","sec-fetch-site","x-csrf-token"]) {const value=request.headers.get(name);if(value!==null) headers.set(name,value);}
+  const auth=await internalFetch(control(env),new Request("https://control.internal/internal/studio-session",{method:"POST",headers,body:JSON.stringify({mutation:change})}));
+  if(!auth.ok) return auth;
+  const owner=await auth.json() as {channelId:string;login:string};
+  let body:string|undefined;
+  if(change) {try {body=await readBounded(request,CARD_REQUEST_BYTES);} catch {return json({error:"This pack is too large to save."},413);}}
+  const room=env.ROOMS.get(env.ROOMS.idFromName(`channel:${owner.channelId}`));
+  const response=await internalFetch(room,new Request(`https://room.internal/internal/cards${action}`,{method:request.method,
+    headers:{"content-type":"application/json","x-edge-channel-id":owner.channelId,"x-edge-channel-login":owner.login},body}));
+  return new Response(response.body,{status:response.status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
+}
+
 export default {
   async fetch(request:Request,env:Env):Promise<Response> {
     const url=new URL(request.url);
@@ -75,6 +94,8 @@ export default {
         const publicControl=["/api/session","/api/edge/session","/api/edge/overlay","/api/edge/chat","/api/logout","/api/bot/authorize","/api/twitch/eventsub",
           "/auth/twitch","/auth/twitch/bot","/auth/twitch/callback"];
         if(publicControl.includes(url.pathname)) return withErrorDocument(request,await control(env).fetch(request));
+        const cards=/^\/api\/studio\/cards(\/(?:pack|archive|select))?$/.exec(url.pathname);
+        if(cards) return studioCards(request,env,cards[1]??"");
       }
       const match=/^\/v1\/rooms\/([1-9][0-9]{0,24})\/(state|commands|socket|art\/[a-zA-Z0-9_-]{1,128})$/.exec(url.pathname);
       if(!match) return pilot?await assets(request,env):json({error:"Not found."},404);

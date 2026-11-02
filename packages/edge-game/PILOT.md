@@ -6,7 +6,7 @@ Prepared on 29 October 2026 and activated under the owner’s authorization on 3
 
 The owner has enabled the current test. Start with one of the two invited streamers: sign into Studio, connect chat, enable local Moonshine and start a round. A different Twitch account sees the secret card in the native Extension and sends clues through normal Twitch chat. Studio shows those clues and the detected catch for a 15-second review window before automatic confirmation. OBS shows the public result. Run this acceptance sequence before expanding the pilot further.
 
-Use the existing built-in deck only. Card Maker, uploads, custom decks, scanning, R2, D1 and Containers are out of scope. Assets are static; the room and control state live in SQLite Durable Objects.
+The built-in deck plays by default. Since 2 November 2026 the owner has put Card Maker word packs in scope: a signed-in streamer can save up to 10 packs and 100 cards and deal a pack to the next round. Card images, uploads, scanning, R2, D1 and Containers stay out of scope. Assets are static; the room, its card packs and the control state live in SQLite Durable Objects.
 
 The configured hostname is `pilot-baited.maff.app`. Existing `dev-play-baited.maff.app`, `play-baited.maff.app` and landing domains were not moved by this activation. Choosing a different pilot hostname means updating the public origin, exact host/origin allowlists, Extension build values and OAuth callback together.
 
@@ -114,7 +114,7 @@ Local fixture results do not establish these live outcomes. The first run is a f
 
 Room state includes the current round, bounded hint/review history, scores and command/event replay receipts. Control stores encrypted Twitch credentials, sessions, channel registration, bounded delivery retries and bot metadata. Audio is not sent; short final speech text can be used in catch/review state. Built-in artwork is static and public; the selected live word remains role-restricted.
 
-This pilot does not expose Card Maker or account deletion UI. Data deletion is an operator task with a reviewed exact channel/resource list. Disconnecting ends ingestion; it does not erase stored state or revoke every upstream Twitch grant. Retention/deletion automation is a production follow-up, not an implicit promise of this test.
+This pilot exposes Card Maker for word packs only, with no image tools, and no account deletion UI. Data deletion is an operator task with a reviewed exact channel/resource list. Disconnecting ends ingestion; it does not erase stored state or revoke every upstream Twitch grant. Retention/deletion automation is a production follow-up, not an implicit promise of this test.
 
 To end an ordinary test: finish/pause the round, disable the microphone, choose Disconnect chat, confirm subscription removal, sign out and remove the pilot OBS source. Failed Twitch DELETE requests remain in a durable retry queue; the UI must not claim removal before confirmation.
 
@@ -128,4 +128,4 @@ Stop the test immediately if a live secret appears in a Studio/OBS/broadcaster f
 
 ## Follow-ups after a successful pilot
 
-Measure actual Cloudflare request, duration and SQLite-write totals during normal use before increasing admission. Then address retained-data deletion/backup, operational alerts, hot-room fanout and sustained failure/load evidence. Custom cards require the separate trusted image scanning, approval and removal design; they must not be enabled by merely adding an R2 binding.
+Measure actual Cloudflare request, duration and SQLite-write totals during normal use before increasing admission. Then address retained-data deletion/backup, operational alerts, hot-room fanout and sustained failure/load evidence. Custom card images require the separate trusted image scanning, approval and removal design; they must not be enabled by merely adding an R2 binding.

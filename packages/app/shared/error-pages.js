@@ -51,11 +51,11 @@ export function isDocumentNavigation(request) {
 export function isKnownAppPath(pathname, edge = false) {
   // Exact shapes only. A mistyped nested route must not silently become Studio.
   if (pathname === '/index.html') return true;
-  if (/^\/(?:studio(?:\/(?:setup|settings))?|privacy|speech-lab)?\/?$/.test(pathname)) return true;
+  if (/^\/(?:studio(?:\/(?:setup|settings|cards))?|privacy|speech-lab)?\/?$/.test(pathname)) return true;
   if (/^\/(?:overlay|play)\/[a-zA-Z0-9_-]{1,128}\/?$/.test(pathname)) {
     return !edge || /^\/(?:overlay|play)\/[1-9]\d{0,24}\/?$/.test(pathname);
   }
-  return !edge && /^\/(?:about|studio\/cards|speech-lab|card-design-lab|card-lab|card-proofs|product-review)\/?$/.test(pathname);
+  return !edge && /^\/(?:about|speech-lab|card-design-lab|card-lab|card-proofs|product-review)\/?$/.test(pathname);
 }
 
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);

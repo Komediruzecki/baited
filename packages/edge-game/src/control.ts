@@ -379,6 +379,17 @@ export class TwitchControl extends DurableObject<ControlEnv> {
       }
       // Room authentication must not wait behind a control operation delivering a
       // webhook into that same room. Read only the last committed auth snapshot.
+      // The card library reads the same committed session; changes also need the CSRF token.
+      if (request.url === 'https://control.internal/internal/studio-session' && request.method === 'POST') {
+        await this.ready;
+        if (!this.configured()) return denied();
+        if (!this.running()) return json({ error: 'The pilot is stopped.', code: 'pilot_stopped' }, 503);
+        const session = await this.session(request, this.committed);
+        if (!session) return json({ error: 'Connect your Twitch account first.' }, 401);
+        const body = object(JSON.parse(await boundedControlBody(request)));
+        if (body?.mutation !== false && !this.csrf(request, session)) return denied();
+        return json({ channelId: session.channel.id, login: session.channel.login });
+      }
       if (request.url === 'https://control.internal/internal/authorize' && request.method === 'POST') {
         await this.ready;
         if (!this.configured()) return denied();

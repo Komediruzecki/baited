@@ -127,7 +127,8 @@ export class RoomStore {
       CREATE TABLE IF NOT EXISTS receipt (key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL,
         body TEXT NOT NULL, expires INTEGER NOT NULL);
       CREATE INDEX IF NOT EXISTS receipt_expiry ON receipt(expires);
-      CREATE TABLE IF NOT EXISTS approved_art (id TEXT PRIMARY KEY, descriptor TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS approved_art (id TEXT PRIMARY KEY, descriptor TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS card_library (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);`);
     for (const row of sql.exec<{key:string;value:string}>('SELECT key,value FROM state_part')) this.records.set(row.key, row.value);
   }
   load(): unknown | null { return this.records.size ? assemble(this.records) : null; }
@@ -151,6 +152,13 @@ export class RoomStore {
     this.sql.exec('INSERT INTO receipt(key,fingerprint,body,expires) VALUES(?,?,?,?)',key,hash,JSON.stringify(body),now+LIMITS.receiptMs);
   }
   receiptDeadline(): number | null { return this.sql.exec<{at:number|null}>('SELECT min(expires) AS at FROM receipt').one().at; }
+  /** The channel's card library snapshot, written whole by CardLibrary on every change. */
+  cardLibrary(): string | undefined {
+    return this.sql.exec<{body:string}>('SELECT body FROM card_library WHERE id=1').toArray()[0]?.body;
+  }
+  saveCardLibrary(body: string) {
+    this.sql.exec('INSERT INTO card_library(id,body) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body', body);
+  }
   art(id: string): unknown | null {
     const row = this.sql.exec<{descriptor:string}>('SELECT descriptor FROM approved_art WHERE id=?',id).toArray()[0];
     return row ? JSON.parse(row.descriptor) : null;

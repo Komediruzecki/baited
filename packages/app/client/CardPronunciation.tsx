@@ -106,7 +106,7 @@ export function CardPronunciation({ word, spellings, disabled }: {
         : cause instanceof Error ? cause.message : 'Could not open the microphone. Try again on HTTPS or localhost.');
     }
   };
-  return <section className="card-maker__pronunciation" aria-label="Private pronunciation test">
+  return <section className="card-maker__pronunciation panel" aria-label="Private pronunciation test">
     <div className="card-maker__subheading"><h3>Try saying it</h3><span>Private test</span></div>
     <p>Say the word in a sentence. Audio and text stay in this tab. Nothing reaches the round or OBS.</p>
     {capabilityMessage && <p className="card-maker__hint" role="status">{capabilityMessage}</p>}

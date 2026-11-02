@@ -123,7 +123,7 @@ export async function request<T>(path: string, body?: unknown, csrf?: string, si
       else if (path === '/api/studio/catch') action = { type: 'catch', ...value };
       else if (path === '/api/studio/award') action = { type: 'award', ...value };
       else if (path === '/api/studio/microphone') action = { type: 'microphone', ...value, renew: value.renew === true };
-      else throw new Error('The pilot uses the Baited deck. Card making is available in the local app.');
+      else throw new Error('This part of Studio runs in the local app only.');
       snapshot = await transport.command(action, signal);
       if(path==='/api/studio/voice-guess-draft') return {status:'requested'} as T;
       if (path === '/api/studio/microphone') return { armed: value.armed === true } as T;

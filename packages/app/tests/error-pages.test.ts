@@ -33,7 +33,9 @@ test('only exact app destinations are recognized and pilot keeps its smaller rou
     assert.equal(isKnownAppPath(path), false, path);
   }
   assert.equal(isKnownAppPath('/overlay/123', true), true);
-  for (const path of ['/studio/cards', '/card-lab', '/product-review', '/overlay/abc']) assert.equal(isKnownAppPath(path, true), false, path);
+  // The hosted pilot has Cards; the design labs stay on the PC build.
+  assert.equal(isKnownAppPath('/studio/cards', true), true);
+  for (const path of ['/card-lab', '/product-review', '/overlay/abc']) assert.equal(isKnownAppPath(path, true), false, path);
 });
 
 test('standalone error HTML has recovery without JavaScript or sensitive dynamic values', () => {

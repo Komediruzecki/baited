@@ -1,4 +1,5 @@
 import type { AwardBoard, GameView, Studio } from '../shared/types';
+import type { SelectedDeck } from '../shared/card-library';
 import { retryDelay } from './retry';
 
 export interface EdgeBootstrap {
@@ -13,7 +14,7 @@ export interface EdgeBootstrap {
 }
 export interface EdgeSnapshot {
   type: 'snapshot'; protocol: 1; revision: number; generation: number;
-  room: GameView | null; awardBoard?: AwardBoard | null;
+  room: GameView | null; awardBoard?: AwardBoard | null; deck?: SelectedDeck;
   socketId?: string;
 }
 type Listener = { state: (snapshot: EdgeSnapshot) => void; error: (lost: boolean) => void };
@@ -35,6 +36,7 @@ type Options = {
 const messages: Record<string, string> = {
   stale_revision: 'The round changed before that action arrived. Check its state and try again.',
   action_unavailable: 'That action is not available in this round.',
+  deck_unplayable: 'Choose a playable deck in Cards before starting the next round.',
   room_busy: 'The game is busy. Try again in a moment.',
   microphone_required: 'Enable your microphone before starting the round.',
   pilot_full: 'All pilot places are in use. Try again when a game finishes.',
@@ -399,7 +401,7 @@ export class EdgeRoomTransport {
 export function edgeStudio(snapshot: EdgeSnapshot, bootstrap: EdgeBootstrap): Studio {
   if (!snapshot.room) throw new Error('Your channel is not ready yet. Reload Studio to connect.');
   return {
-    room: snapshot.room, awardBoard: snapshot.awardBoard ?? null,
+    room: snapshot.room, awardBoard: snapshot.awardBoard ?? null, ...(snapshot.deck ? { deck: snapshot.deck } : {}),
     viewerUrl: bootstrap.viewerUrl ?? `https://www.twitch.tv/${bootstrap.user?.login ?? ''}`,
     overlayUrl: bootstrap.overlayUrl ?? '', speechProvider: 'moonshine', speechReady: true,
     chatBot: { mode: bootstrap.bot?.authorized ? 'twitch' : bootstrap.bot?.configured ? 'unauthorized' : 'unconfigured',
