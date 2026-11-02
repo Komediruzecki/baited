@@ -1,5 +1,11 @@
 # Cloudflare pilot status
 
+## Studio glass deployed, 2 November 2026 at 09:15 Zagreb
+
+The owner asked for the Studio glass redesign on the pilot. Provider version `6fa0da92-9767-4984-b667-f10637f1c3f7` serves main `dece09b` (PR #29). It replaced `2b1b3860-2b04-48ae-a2bc-0acee1edf709` (Speech Lab retained clips and model recovery, `7320329`), which is the rollback target. Neither allowlisted channel was live on Twitch at deploy time. The operator state stayed at revision 3, running, with the same allowlist. The pilot assets match the previous receipt: 100 cards, Moonshine 0.1.5 and the pinned Whisper tiny files (58,500,668 bytes).
+
+After the upload, `/health` returned 200 with `enabled:true` and `mode:allowlisted-pilot`, and `/studio`, `/privacy` and `/speech-lab` returned 200. A signed-out headless check found the sign-in sheet, the privacy sheet and the Speech Lab panels drawn as glass over the pixel field. No secret, Twitch setting, Extension ZIP or tag changed. This is the current deployment; the sections below are historical.
+
 ## Reopened for owner checks, 31 October 2026 at 04:13 Zagreb
 
 The owner requested the updated pilot for testing. The authenticated operator control reopened it at **revision 3**, with `enabled:true`, `status:running` and the unchanged two-channel allowlist (`komediruzecki7`, `lakeeko`). Both rooms were available and idle, with no sockets, active sessions, connected chats, pending removals or queued announcements at the verification checkpoint. Enabling did not start a round or capture audio.
