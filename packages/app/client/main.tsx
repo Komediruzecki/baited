@@ -60,6 +60,7 @@ import { microphoneReady, MicrophoneLease, microphoneLeaseMessage } from './safe
 import { MicrophoneFeedback } from './microphone-feedback';
 import { StudioQuickControls, type QuickSetting } from './StudioQuickControls';
 import { StudioLogo } from './StudioLogo';
+import { StudioPixelField } from './StudioPixelField';
 import { AppErrorBoundary, ErrorScreen } from './ErrorScreen';
 import { isKnownAppPath, sessionErrorKind, type ErrorKind } from '../shared/error-pages.js';
 import { useSmoothScroll } from './smooth-scroll';
@@ -119,6 +120,7 @@ import './chat-bot.css';
 import './streak.css';
 import './obs-twitch.css';
 import './studio-m3.css';
+import './studio-glass.css';
 import './scrollbars.css';
 import './scrollbars';
 
@@ -670,6 +672,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     readyToBegin = microphoneIsReady && !studio.deck?.problem;
   return (
     <div className="app-shell studio-app studio-shell">
+      <StudioPixelField />
       <aside className="sidebar">
         <StudioLogo />
         <nav aria-label="Studio sections">
