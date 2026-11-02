@@ -45,6 +45,7 @@ test('pilot gateway brands navigation errors, preserves API JSON, and safely rec
     const studio = await get('/studio');
     assert.equal(studio.status, 200);
     assert.equal(await studio.text(), '<h1>Studio fixture</h1>');
+    assert.equal(studio.headers.get('cache-control'), 'private, no-store, no-transform');
     const speechLab = await get('/speech-lab');
     assert.equal(speechLab.status, 200);
     for (const path of ['/assets/whisper-worker-Fixture123.js', '/moonshine-worker.js', '/assets/studio.js']) {

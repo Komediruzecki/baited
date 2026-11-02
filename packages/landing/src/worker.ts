@@ -120,7 +120,9 @@ export default {
     headers.set('X-Content-Type-Options', 'nosniff')
     headers.set('Referrer-Policy', 'no-referrer')
     headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-    headers.set('Cache-Control', 'no-store')
+    // no-transform keeps Cloudflare's zone-wide Web Analytics from injecting its
+    // beacon, which the content policy blocks and the privacy notice rules out.
+    headers.set('Cache-Control', 'no-store, no-transform')
     return new Response(request.method === 'HEAD' ? null : response.body, {
       status: response.status,
       statusText: response.statusText,
