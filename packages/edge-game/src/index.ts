@@ -44,7 +44,8 @@ async function assets(request:Request,env:Env) {
   const quote=String.fromCharCode(39);
   const self=quote+"self"+quote;
   headers.set("content-security-policy",`default-src ${self}; script-src ${self} ${quote}wasm-unsafe-eval${quote}${moonshine?` ${quote}unsafe-eval${quote}`:""}; style-src ${self} ${quote}unsafe-inline${quote}; img-src ${self} data: blob:; media-src ${self} blob:; connect-src ${self}${whisper?"":" https://download.moonshine.ai"}; worker-src ${self} blob:; font-src ${self}; frame-ancestors ${quote}none${quote}; base-uri ${quote}none${quote}; form-action ${self} https://id.twitch.tv; object-src ${quote}none${quote}`);
-  if(spa) headers.set("cache-control","private, no-store");
+  // no-transform keeps Cloudflare's zone-wide Web Analytics beacon out of the pages; the CSP would block it anyway.
+  if(spa) headers.set("cache-control","private, no-store, no-transform");
   return withErrorDocument(request,new Response(response.body,{status:response.status,headers}));
 }
 
