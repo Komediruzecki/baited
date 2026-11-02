@@ -19,7 +19,7 @@ const publicAssets = [
   'error-page.css',
   ...streakFlameFiles.map((file) => `brand/${file}`),
   'fonts/inter-latin.woff2', 'fonts/intertight-latin.woff2', 'fonts/russo-one.ttf', 'fonts/baited-pixel.ttf',
-  'card-lab/backs/back-prism.webp',
+  'card-lab/backs/back-prism.webp', 'welcome/stage-800.webp', 'welcome/stage-1376.webp',
   ...illustratedWords.map((word) => `cards/proofs/${word}.png`),
 ];
 

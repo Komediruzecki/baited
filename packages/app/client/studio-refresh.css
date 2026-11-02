@@ -233,21 +233,6 @@
 .modal :is(input[type='checkbox'], input[type='range']) { accent-color: var(--b-violet); }
 .modal .modal-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .modal .modal-heading .icon-button { width: 44px; height: 44px; color: var(--b-muted); }
-.signin-page { display: grid; place-items: center; min-height: 100dvh; padding: 40px 24px; background: var(--b-night); color: var(--b-copy); font-family: var(--b-ui); }
-.signin-sheet { display: grid; grid-template-columns: 320px minmax(0, 440px); width: min(100%, 840px); border: 1px solid var(--b-line); border-radius: 12px; overflow: clip; background: var(--b-panel); }
-.signin-table { display: grid; place-items: center; padding: 48px; background: var(--b-table-night); }
-.signin-card { position: relative; width: 190px; aspect-ratio: 5/7; transform: rotate(-7deg); }
-.signin-content { display: flex; align-items: stretch; flex-direction: column; padding: 44px 36px; }
-.signin-brand { align-self: flex-start; display: inline-flex; padding-block: 12px; margin-bottom: 20px; }
-.signin-brand .product-brand { width: 116px; }
-.signin-content h1 { margin: 0 0 14px; color: var(--b-paper); font: 400 32px/1.16 var(--b-display); letter-spacing: -.02em; }
-.signin-content > p { margin: 0 0 24px; font: 400 14px/1.6 var(--b-ui); }
-.signin-content > .button + .button { margin-top: 10px; }
-.signin-content .signin-privacy { display: flex; gap: 8px; margin: 22px 0; color: var(--b-muted); font-size: 12px; }
-.signin-privacy svg { flex: none; margin-top: 2px; }
-.signin-content nav { display: flex; flex-wrap: wrap; gap: 16px; }
-.signin-content nav a { display: inline-flex; gap: 6px; align-items: center; min-height: 44px; color: var(--b-lilac); font: 500 12px/1.4 var(--b-ui); }
-.signin-error { padding: 12px; border: 1px solid var(--b-error-edge); color: var(--b-error-text); background: var(--b-error-bg); border-radius: 5px; }
 @media (max-width: 1199px) {
   .studio-shell .sidebar { grid-template-columns: 104px 1fr auto; gap: 16px; }
   .studio-shell .connection-channel { display: none; }
@@ -292,10 +277,6 @@
   .studio-shell .streak-panel + .bottom-grid { margin-top: 18px; }
   .studio-shell .privacy-panel { grid-template-columns: 20px 1fr; }
   .studio-shell .privacy-panel > .button { grid-column: 2; justify-self: start; }
-  .signin-sheet { grid-template-columns: 180px minmax(0, 1fr); }
-  .signin-table { padding: 20px; }
-  .signin-card { width: 120px; }
-  .signin-content { padding: 32px 24px; }
 }
 @media (max-width: 560px) {
   .studio-shell .sidebar { padding-inline: 12px; grid-template-columns: 88px 1fr; }
@@ -359,18 +340,11 @@
   .studio-shell .mission-strip { padding: 12px; gap: 10px; flex-wrap: wrap; }
   .studio-shell .mission-pips { display: flex; }
   .studio-shell .mission-clock { margin-left: auto; }
-  .signin-page { padding: 18px; }
-  .signin-sheet { display: block; }
-  .signin-table { height: 150px; padding: 20px; overflow: clip; }
-  .signin-card { width: 110px; transform: rotate(-7deg) translateY(26px); }
-  .signin-content { padding: 24px; }
-  .signin-content h1 { font-size: 28px; }
-  .signin-brand { margin-bottom: 14px; }
   .modal { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .studio-shell *, .signin-page *, .modal * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-  .studio-shell .studio-card-slot > .card-back, .signin-card { transform: none; }
+  .studio-shell .studio-card-slot > .card-back { transform: none; }
 }
 @media (forced-colors: active) {
   .studio-shell :is(.mission-card, .mic-card, .panel, .tag, .round-secondary), .signin-sheet { border: 1px solid CanvasText; }

@@ -481,7 +481,7 @@ Reuse the landing's play, pause, mic, sound/muted, lock, card and doc icons. Dra
 
 | State | The one primary action | Right-hand stack | Mic column |
 |---|---|---|---|
-| Signed out (`Landing.tsx`) | Connect Twitch | Replace the marketing page with a sign-in sheet: glyph, "Run baited on your channel.", Connect Twitch, "Try the local demo" (if demo is available), privacy line, link to the landing | — |
+| Signed out (`Landing.tsx`) | Connect Twitch | A sign-in sheet under thumbnail C's stage: the Baited wordmark (a link to the landing) over a fanned hand of five deck cards, "One secret word. Your whole chat against you.", one line on how a round works, the pilot line on edge, Connect Twitch, "Try the local demo" (if demo is available), "See how it plays" and Privacy | — |
 | Chat not connected (Twitch mode) | Reconnect chat | "Chat isn't connected." plus `connection.detail`. Checklist: Chat ✕ [Reconnect chat]; Microphone ✕ [Enable microphone]; Viewer link [Copy]. Start is disabled with "Connect chat and turn on your microphone to start." Account sign-in and the chat connection are shown separately. | Off |
 | Demo idle | Start round | Status strip shown. "Ready when chat is." / "Open the viewer room in another tab, then start." Timer shows round length. | Off; Enable is secondary |
 | Model loading | none (Start disabled; reason "Waiting for the speech model.") | readiness row shows the percentage | "Loading the speech model" with a determinate bar parsed from `Loading Moonshine N%` (`moonshine.ts:36`), "About 84 MB, downloaded once and kept in this browser.", [Cancel model loading] |
