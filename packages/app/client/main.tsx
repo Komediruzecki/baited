@@ -67,6 +67,8 @@ import { useSmoothScroll } from './smooth-scroll';
 import 'lenis/dist/lenis.css';
 import './style.css';
 import Landing from './Landing';
+// Here rather than in Landing, so Node tests can render the welcome screen; same cascade position.
+import './welcome.css';
 import { studioPathFromTab, studioSignInPath, studioTabFromPath } from './studio-navigation';
 import {
   productBrand as brand,

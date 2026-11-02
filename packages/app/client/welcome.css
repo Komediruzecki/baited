@@ -1,0 +1,288 @@
+/* Welcome: thumbnail C's stage, the official wordmark and five real deck cards fanned the way the
+   thumbnail fans them, then one clear way in. The stage is a container, so the hand scales with its
+   width; each card is a Cut Open host and drops its small print by itself as it shrinks. */
+.signin-page {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 32px 24px;
+  background: var(--b-night);
+  color: var(--b-copy);
+  font-family: var(--b-ui);
+}
+.signin-page .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.signin-sheet {
+  width: min(100%, 920px);
+  border-radius: 28px;
+  overflow: clip;
+}
+
+.signin-stage {
+  /* Wide hand: the thumbnail's proportions. The middle card stands clear of the foot so its clock reads. */
+  --stage-h: 43.5cqw;
+  --center-w: 21cqw;
+  --side-w: 16.4cqw;
+  --center-drop: 1cqw;
+  --side-drop: 1cqw;
+  --pivot: 215%;
+  --near: 18deg;
+  --far: 36deg;
+  position: relative;
+  z-index: 0;
+  container-type: inline-size;
+  isolation: isolate;
+  overflow: clip;
+  background: #121016;
+  box-shadow: inset 0 -1px 0 rgb(201 168 255 / 24%);
+}
+.signin-stage::before {
+  content: '';
+  display: block;
+  height: var(--stage-h);
+}
+.signin-stage__plate {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 62% 60%;
+}
+/* The stage settles into the sheet's glass at its foot, behind the cards. */
+.signin-stage::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  z-index: -1;
+  height: 38%;
+  background: linear-gradient(180deg, transparent, rgb(15 9 30 / 62%));
+  pointer-events: none;
+}
+.signin-stage__brand {
+  position: absolute;
+  top: 3.6cqw;
+  left: 50%;
+  z-index: 3;
+  display: inline-flex;
+  padding: 6px;
+  translate: -50% 0;
+  border-radius: 8px;
+}
+.signin-stage__brand .product-brand {
+  width: 18cqw;
+  color: #fffdf7;
+  filter: drop-shadow(0 6px 18px rgb(10 4 24 / 65%));
+}
+.signin-hand {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.signin-hand__card.cut-host {
+  --angle: 0deg;
+  position: absolute;
+  left: calc(50% - var(--cut-card-width) / 2);
+  bottom: var(--side-drop);
+  --cut-card-width: var(--side-w);
+  transform-origin: 50% var(--pivot);
+  rotate: var(--angle);
+  filter: drop-shadow(0 18px 26px rgb(8 2 22 / 72%)) drop-shadow(0 0 28px rgb(145 70 255 / 42%));
+  animation: signin-deal 760ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.signin-hand__card.is-far-left { --angle: calc(var(--far) * -1); animation-delay: 160ms; }
+.signin-hand__card.is-left { --angle: calc(var(--near) * -1); animation-delay: 80ms; }
+.signin-hand__card.is-right { --angle: var(--near); animation-delay: 80ms; }
+.signin-hand__card.is-far-right { --angle: var(--far); animation-delay: 160ms; }
+.signin-hand__card.is-center {
+  z-index: 2;
+  bottom: var(--center-drop);
+  --cut-card-width: var(--center-w);
+  filter: drop-shadow(0 24px 34px rgb(8 2 22 / 78%)) drop-shadow(0 0 40px rgb(145 70 255 / 52%));
+}
+.signin-hand__clock {
+  color: #fffc79;
+  font: 700 calc(24 * var(--cut-u)) / 1 var(--b-ui);
+}
+/* The hand deals out from the middle of the deck. */
+@keyframes signin-deal {
+  from {
+    rotate: 0deg;
+    translate: 0 16%;
+    opacity: 0;
+  }
+}
+
+.signin-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 24px 44px;
+  align-items: start;
+  padding: 32px 44px 36px;
+}
+.signin-content h1 {
+  margin: 0;
+  color: var(--b-paper);
+  font: 400 clamp(30px, 3.7vw, 40px) / 1.04 var(--b-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.signin-content h1 > span {
+  display: block;
+}
+.signin-content h1 > span + span {
+  margin-top: 10px;
+  font-size: 0.72em;
+}
+.signin-outline {
+  color: rgb(201 168 255 / 10%);
+  -webkit-text-stroke: 0.035em #c9a8ff;
+  paint-order: stroke fill;
+}
+.signin-mosaic {
+  display: inline-block;
+  width: calc(0.6em * 13 / 3);
+  height: 0.6em;
+  vertical-align: 0;
+  fill: currentColor;
+  shape-rendering: crispEdges;
+}
+.signin-actions {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.signin-actions > p {
+  margin: 0;
+  font: 400 15px/1.55 var(--b-ui);
+}
+.signin-actions > .signin-pilot {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  color: var(--b-muted);
+  font-size: 13px;
+}
+.signin-pilot::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  background: #c9a8ff;
+  translate: 0 -1px;
+}
+.signin-actions > .button {
+  justify-self: stretch;
+}
+.signin-actions > .button.primary {
+  margin-top: 6px;
+}
+.signin-actions nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+.signin-actions nav a {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 44px;
+  color: var(--b-lilac);
+  font: 500 13px/1.4 var(--b-ui);
+}
+.signin-error {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--b-error-edge);
+  border-radius: 8px;
+  color: var(--b-error-text);
+  background: var(--b-error-bg);
+}
+
+/* Tablet: one column under a taller stage with bigger cards. */
+@media (max-width: 899px) {
+  .signin-page {
+    padding: 24px 20px;
+  }
+  .signin-sheet {
+    width: min(100%, 680px);
+  }
+  .signin-stage {
+    --stage-h: 54cqw;
+    --center-w: 26cqw;
+    --side-w: 20.3cqw;
+    --center-drop: 1cqw;
+    --side-drop: 1.5cqw;
+  }
+  .signin-stage__brand {
+    top: 5cqw;
+  }
+  .signin-stage__brand .product-brand {
+    width: 24cqw;
+  }
+  .signin-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 28px 32px 30px;
+  }
+}
+
+/* Phone: the middle three cards, large enough to read the word. */
+@media (max-width: 599px) {
+  .signin-page {
+    align-items: start;
+    padding: 12px;
+  }
+  .signin-sheet {
+    border-radius: 22px;
+  }
+  .signin-stage {
+    --stage-h: 92cqw;
+    --center-w: 46cqw;
+    --side-w: 35cqw;
+    --center-drop: 1.5cqw;
+    --side-drop: 2cqw;
+    --pivot: 190%;
+    --near: 16deg;
+  }
+  .signin-hand__card:is(.is-far-left, .is-far-right) {
+    display: none;
+  }
+  .signin-stage__brand {
+    top: 6cqw;
+  }
+  .signin-stage__brand .product-brand {
+    width: 38cqw;
+  }
+  .signin-content {
+    padding: 24px 20px 22px;
+  }
+  .signin-content h1 {
+    font-size: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signin-hand__card.cut-host {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .signin-stage__plate,
+  .signin-stage::after {
+    display: none;
+  }
+  .signin-outline {
+    color: CanvasText;
+    -webkit-text-stroke: 0;
+  }
+}
