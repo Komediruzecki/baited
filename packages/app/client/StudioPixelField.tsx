@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 
-// The glass containers in studio-glass.css, in Studio and Speech Lab. The pointer over one of them
+// The glass containers in studio-glass.css, in Studio, sign-in and Speech Lab. The pointer over one of them
 // moves its rim light.
 const GLASS = '.mission-card, .mic-card, .panel, .studio-sound-section, .privacy-panel, .rehearsal-tools, .setup-step, '
-  + '.community-scoreline > div, .speech-lab-input, .speech-lab-progress, .speech-lab-result';
+  + '.community-scoreline > div, .speech-lab-input, .speech-lab-progress, .speech-lab-result, .signin-sheet';
 const GRID = 12, REACH = 180, TRAIL = 700, SPARK = 900, FRAME = 1000 / 30;
 const INKS = ['201,168,255', '165,107,255', '145,70,255', '255,252,121'];
 

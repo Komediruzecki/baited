@@ -4,6 +4,7 @@ import { request, isEdgeRuntime } from './api';
 import { productBrand, botNotices, BotSignInLink, Button, Modal } from './ui';
 import { ArrowUpRight, Mic, Play, ShieldCheck } from './pixel-icons';
 import { CardBack } from './CardBack';
+import { StudioPixelField } from './StudioPixelField';
 import { studioPathFromTab, studioSignInPath, studioTabFromPath } from './studio-navigation';
 import { useSmoothScroll } from './smooth-scroll';
 
@@ -39,6 +40,7 @@ export default function Landing({ session, reload }: { session: SessionInfo; rel
     finally { setBusy(false); }
   };
   return <main className="signin-page">
+    <StudioPixelField />
     <section className="signin-sheet" aria-labelledby="signin-title">
       <div className="signin-table" aria-hidden="true"><div className="signin-card"><CardBack /></div></div>
       <div className="signin-content">
