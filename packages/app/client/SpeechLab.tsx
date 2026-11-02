@@ -4,6 +4,7 @@ import { ComparisonSession, type LabPlan, type LabState, type LabResult } from '
 import { browserLabDependencies } from './speech-bench/lab-models';
 import { WHISPER_MODEL, WHISPER_REVISION, type WhisperLanguage } from './speech-bench/whisper-client';
 import { productBrand } from './ui';
+import { StudioPixelField } from './StudioPixelField';
 import './speech-lab.css';
 
 /* Operate: one retained clip anchors the comparison. Inherit Studio's violet,
@@ -95,6 +96,7 @@ export function SpeechLab() {
     { id: 'whisper', name: 'Whisper Tiny', description: 'English or Croatian · whole-clip transcription' },
   ] as const;
   return <div className="speech-lab">
+    <StudioPixelField />
     <header className="speech-lab-header"><a className="speech-lab-brand" href="/studio" aria-label="Baited Studio">{productBrand}</a><a className="button secondary" href="/studio">Back to Studio</a></header>
     <main className="speech-lab-main">
       <div className="speech-lab-title"><p className="speech-lab-kicker">Speech lab</p><h1>Record once. Compare the words.</h1><p>Give Moonshine and Whisper the same clip. Listen back, compare the words they return, then try again.</p><p className="speech-lab-scope"><strong>For comparison.</strong> Choose a model below to test its accuracy. Studio keeps using Moonshine for live rounds.</p></div>
