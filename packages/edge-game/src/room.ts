@@ -1,14 +1,16 @@
 import { DurableObject } from 'cloudflare:workers';
 import { BOT_REPLY_COOLDOWN_MS, MOD_COMMANDS, parseCommand } from '../../app/server/chat-copy.js';
 import { isBotReplyCommand, type BotReplyCommand } from './chat-commands.js';
-import { Game, defaults, type GameEvent } from '@baited/game-core';
+import { CardLibraryError, Game, defaults, type GameEvent } from '@baited/game-core';
+import { CardLibrary } from '../../app/server/card-library-core.js';
+import { archiveInputSchema, selectInputSchema } from '../../app/shared/card-library.js';
 import { authenticateRequest, identityIsCurrent, type AuthIdentity, type AuthEnv } from './auth.js';
 import { serveApprovedArt, type ApprovedArt } from './art.js';
-import { commandSchema, fingerprint, json, LIMITS, PROTOCOL_VERSION, readBounded, type Command, type Receipt } from './protocol.js';
+import { CARD_REQUEST_BYTES, commandSchema, fingerprint, json, LIMITS, PROTOCOL_VERSION, readBounded, type Command, type Receipt } from './protocol.js';
 import { RoomStore } from './state-store.js';
 import { pilotLimits } from './pilot-policy.js';
 import { localTranscript, progressSchema } from '../../app/shared/local-speech.js';
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 import type { ControlEnv } from './control-types.js';
 import { internalFetch } from './internal-fetch.js';
 import { voiceDraftCurrent, voiceDraftWord, VOICE_DRAFT_TTL, type VoiceDraftState, type VoiceDraftRef } from '../../app/server/voice-draft.js';
@@ -28,6 +30,8 @@ const eventSchema = z.object({eventId:z.string().min(1).max(200),channelId:z.str
 /** One channel, one writer. Only the gateway holds a namespace binding. */
 export class ChannelRoom extends DurableObject<Env> {
   private store: RoomStore;
+  private cards: CardLibrary;
+  private cardsLoaded = false;
   private game: Game | null = null;
   private channel = '';
   private revision = 0;
@@ -107,6 +111,11 @@ export class ChannelRoom extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.store = new RoomStore(ctx.storage.sql);
+    this.cards = new CardLibrary({ read: async () => this.store.cardLibrary(), write: async (body) => this.store.saveCardLibrary(body) });
+    // A library that cannot be read keeps rounds on the built-in deck and Cards closed; it is never overwritten.
+    void ctx.blockConcurrencyWhile(async () => {
+      try { await this.cards.load(); this.cardsLoaded = true; } catch { this.cardsLoaded = false; }
+    });
     if (this.pilot() || env.EDGE_OPERATOR_KEY) {
       pilotLimits(env);
       ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS pilot_state(id INTEGER PRIMARY KEY CHECK(id=1),body TEXT NOT NULL);
@@ -145,7 +154,9 @@ export class ChannelRoom extends DurableObject<Env> {
   }
   private bind(game: Game): Game {
     game.canRun = () => this.pilot() && game.mic==='listening' && this.pilotState.chatConnected && this.leaseValid();
-    game.artFor = () => undefined; // Pilot uses only the built-in illustrated deck.
+    game.artFor = () => undefined; // The edge does not serve card artwork yet.
+    const builtin = game.deckFor;
+    game.deckFor = (difficulty) => this.cardsLoaded ? this.cards.resolve(game.data.owner, difficulty) : builtin(difficulty);
     const events: {event:PilotEvent;safeView:ReturnType<Game['view']>}[]=[];
     this.events.set(game,events);
     game.onEvent=(event) => events.push({event,safeView:game.view('overlay')});
@@ -163,12 +174,48 @@ export class ChannelRoom extends DurableObject<Env> {
     let view = this.projections.get(role);
     if (!view && this.game) { view = this.game.view(role); this.projections.set(role, view); }
     return { type: 'snapshot', protocol: PROTOCOL_VERSION, revision: this.revision,
-      ...(role === 'studio' ? { awardBoard: this.game?.awardBoard ?? null } : {}),
+      ...(role === 'studio' ? { awardBoard: this.game?.awardBoard ?? null, deck: this.deck() } : {}),
       generation: this.generation, room: view ? { ...view, serverTime: this.now,
         mission: view.mission && view.mission.endsAt !== null
           ? { ...view.mission, remaining: Math.max(0, view.mission.endsAt - this.now) } : view.mission,
         round: view.round && view.phase === 'active' && view.round.endsAt !== null
           ? { ...view.round, remaining: Math.max(0, view.round.endsAt - this.now) } : view.round } : null };
+  }
+  private deck() {
+    return this.game && this.cardsLoaded ? this.cards.selected(this.game.data.owner, this.game.data.settings.difficulty) : undefined;
+  }
+  /** Studio's card library. Only the gateway reaches it, after Control checked the session and, for changes, the CSRF token. */
+  private async cardRoute(request: Request, path: string): Promise<Response> {
+    const channelId = request.headers.get('x-edge-channel-id') ?? '';
+    if (!/^[1-9][0-9]{0,24}$/.test(channelId) || (this.channel && this.channel !== channelId)) return json({error:'Access denied.'},403);
+    if (!this.cardsLoaded) return json({error:'Your card library is unavailable right now. Rounds use the built-in deck.'},503);
+    await this.reconcile();
+    const difficulty = this.game?.data.settings.difficulty ?? defaults.difficulty;
+    const view = (extra: Record<string, unknown> = {}) => json({ ...this.cards.view(channelId, difficulty), ...extra });
+    try {
+      if (path === '/internal/cards' && request.method === 'GET') return view();
+      if (request.method !== 'POST') return json({error:'Not found.'},404);
+      const body: unknown = JSON.parse(await readBounded(request, CARD_REQUEST_BYTES));
+      let savedPackId: string | undefined;
+      if (path === '/internal/cards/pack') savedPackId = await this.cards.savePack(channelId, body);
+      else if (path === '/internal/cards/archive') {
+        const input = archiveInputSchema.parse(body);
+        await this.cards.archive(channelId, input.id, input.expectedRevision);
+      } else if (path === '/internal/cards/select') {
+        const input = selectInputSchema.parse(body);
+        await this.cards.select(channelId, { mode: input.mode, packId: input.mode === 'builtin' ? null : input.packId ?? null }, input.expectedRevision, difficulty);
+      } else return json({error:'Not found.'},404);
+      // Studio's next-round summary changes with the deck, not with the game revision.
+      this.broadcast();
+      return view(savedPackId ? { savedPackId } : {});
+    } catch (error) {
+      if (error instanceof CardLibraryError) return json({ error: error.message }, error.status);
+      if (error instanceof ZodError) return json({ error: 'Check the highlighted card details.',
+        issues: error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })) }, 400);
+      if (error instanceof SyntaxError) return json({ error: 'Use a valid JSON request.' }, 400);
+      if (error instanceof Error && error.message === 'body_size') return json({ error: 'This pack is too large to save.' }, 413);
+      throw error;
+    }
   }
   private attachment(ws: WebSocket): Attachment | null {
     try { return ws.deserializeAttachment() as Attachment | null; } catch { return null; }
@@ -432,7 +479,8 @@ export class ChannelRoom extends DurableObject<Env> {
     try { this.dispatch(candidate, identity, command, pilot); }
     catch (error) {
       const code=command.action.type==='microphone' && error instanceof Error &&
-        (error.message==='lease_owner' || error.message==='studio_not_connected') ? error.message : 'action_unavailable';
+        (error.message==='lease_owner' || error.message==='studio_not_connected') ? error.message
+        : error instanceof CardLibraryError ? 'deck_unplayable' : 'action_unavailable';
       return {status:409,body:{ok:false,code,revision:this.revision,generation:this.generation}};
     }
     const generation = this.generation + (command.action.type === 'revoke-connections' ? 1 : 0);
@@ -451,6 +499,7 @@ export class ChannelRoom extends DurableObject<Env> {
     const internalPath=new URL(request.url).pathname;
     if((this.pilot() || this.env.EDGE_OPERATOR_KEY) && ['/internal/operator','/internal/operator-status'].includes(internalPath)) return this.operatorRoom(request,internalPath);
     if(this.operatorBlocked()) return json({error:'The pilot is stopped.',code:'pilot_stopped'},503);
+    if (this.pilot() && internalPath.startsWith('/internal/cards')) return this.cardRoute(request,internalPath);
     if (this.pilot() && internalPath.startsWith('/internal/')) return this.internal(request,internalPath);
     // Headers are freshly constructed by the gateway, never copied from callers.
     const identity = JSON.parse(request.headers.get('x-edge-identity') ?? 'null') as AuthIdentity | null;

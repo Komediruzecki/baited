@@ -36,6 +36,8 @@ export function json(value: unknown, status = 200): Response {
   return Response.json(value, { status, headers: { 'cache-control': 'private, no-store',
     'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' } });
 }
+/** A full pack (up to 100 cards) with its field names fits well inside this. */
+export const CARD_REQUEST_BYTES = 64 * 1024;
 export async function readBounded(request: Request, max: number = LIMITS.commandBytes): Promise<string> {
   if (Number(request.headers.get('content-length')) > max) throw new Error('body_size');
   const reader = request.body?.getReader();

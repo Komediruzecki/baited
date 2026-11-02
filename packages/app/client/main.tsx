@@ -189,7 +189,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [modal, setModal] = useState(''),
-    [tab, setTab] = useState<string>(() => isEdgeRuntime() ? 'studio' : studioTabFromPath(location.pathname)),
+    [tab, setTab] = useState<string>(() => studioTabFromPath(location.pathname)),
     // The operator may finish the bot account sign-in while signed in here as a streamer.
     [notice, setNotice] = useState(() => {
       const code = new URLSearchParams(location.search).get('notice') ?? '';
@@ -681,7 +681,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             ['community', 'Community', Users],
             ['cards', 'Cards', Card],
             ['setup', 'Stream setup', Monitor],
-          ].filter(([id]) => !isEdgeRuntime() || id !== 'cards').map(([id, label, Icon]) => {
+          ].map(([id, label, Icon]) => {
             const I = Icon as typeof Monitor;
             return (
               <button
@@ -777,7 +777,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
           )}
           {tab === 'studio' && studio.deck?.problem && <div className="error-banner" role="alert">
             <Card size={18} /><span>{studio.deck.problem}</span>
-            {!isEdgeRuntime() && <Button className="secondary" onClick={() => selectTab('cards')}>Choose a deck</Button>}
+            <Button className="secondary" onClick={() => selectTab('cards')}>Choose a deck</Button>
           </div>}
           {notice && (
             <div className={cx('error-banner', notice.ok && 'info-banner')} role="status">
@@ -1296,7 +1296,7 @@ function Dashboard({ session, reload }: { session: SessionInfo; reload: () => vo
             </>
           )}
           {tab === 'community' && <Community game={g} />}
-          {tab === 'cards' && !isEdgeRuntime() && <React.Suspense fallback={<section className="panel" role="status">Opening your card library…</section>}><CardLibrary csrf={session.csrf!} difficulty={g.settings.difficulty}
+          {tab === 'cards' && <React.Suspense fallback={<section className="panel" role="status">Opening your card library…</section>}><CardLibrary csrf={session.csrf!} difficulty={g.settings.difficulty}
             offline={offline} pronunciationDisabled={consent || micStatus !== 'off' || active || paused || settling || !!pendingCatch}
             onDirtyChange={setCardsDirty} onBusyChange={setCardsBusy} onDeckChange={refreshDeck} /></React.Suspense>}
           {tab === 'setup' && (
@@ -2345,6 +2345,8 @@ function Privacy() {
         <p>The server stores round state, settings, scores and participation. A limited set of recent chat clues is kept for award review and expires after that review window. Twitch delivers channel chat to the game after the streamer connects their account.</p>
         <h2>Who sees the card</h2>
         <p>Twitch identifies Extension viewers. The broadcaster and OBS receive a hidden card during the round; viewers receive the secret word. OBS links are private, read-only capabilities. Do not share one outside your streaming setup.</p>
+        <h2>Your card packs</h2>
+        <p>Card packs you save in Studio keep their words, off-limits words and spellings with your channel’s game room. Pilot packs hold words only, no images. Archiving a pack takes it out of play. To delete your packs, or to report a card someone saw in a round, write to the address above.</p>
         <h2>Sign-in and removal</h2>
         <p>Studio uses an essential session cookie. Twitch authorization is encrypted on the server. Baited adds no advertising cookies. You can sign out, revoke Baited in Twitch settings, or contact the address above to remove your pilot data.</p>
       </main>
