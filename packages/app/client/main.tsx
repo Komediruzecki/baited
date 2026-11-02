@@ -2348,7 +2348,9 @@ function Privacy() {
         <h2>Who sees the card</h2>
         <p>Twitch identifies Extension viewers. The broadcaster and OBS receive a hidden card during the round; viewers receive the secret word. OBS links are private, read-only capabilities. Do not share one outside your streaming setup.</p>
         <h2>Your card packs</h2>
-        <p>Card packs you save in Studio keep their words, off-limits words and spellings with your channel’s game room. Pilot packs hold words only, no images. Archiving a pack takes it out of play. To delete your packs, or to report a card someone saw in a round, write to the address above.</p>
+        <p>Card packs you save in Studio keep their words, off-limits words, spellings and chosen images with your channel’s game room. Archiving a pack takes it out of play. To delete your packs, or to report a card someone saw in a round, write to the address above.</p>
+        <h2>Card images</h2>
+        <p>Studio checks each image on your device before it uploads: an image model runs in your browser and refuses sexual imagery. The game server keeps the fitted PNG (up to 512 px and 1 MB) with your channel’s game room, up to 200 images and 40 MB per channel. Viewers see a card’s image during its round and in that round’s result, through a link that works for that round only. Checks can miss content. To report an image, write to the address above with the channel name and roughly when you saw it. We remove images that break the rules, and a channel that posts them can lose image uploads and its place in the pilot.</p>
         <h2>Sign-in and removal</h2>
         <p>Studio uses an essential session cookie. Twitch authorization is encrypted on the server. Baited adds no advertising cookies. You can sign out, revoke Baited in Twitch settings, or contact the address above to remove your pilot data.</p>
       </main>

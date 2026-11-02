@@ -248,7 +248,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     const state = structuredClone(this.committed), op = state.operator;
     const limits = pilotLimits(this.env);
     const channels = await Promise.all(Object.values(state.channels).map(async c => {
-      let room: Record<string, unknown> = {available:false};
+      let room: Record<string, unknown> = {available:false}, cardArt: Record<string, unknown> | null = null;
       try {
         const response = await internalFetch(this.roomStub(c.id),new Request('https://room.internal/internal/operator-status',{
           method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({channelId:c.id})}));
@@ -257,10 +257,13 @@ export class TwitchControl extends DurableObject<ControlEnv> {
           const counts=['viewerSockets','studioSockets','overlaySockets','participants'] as const;
           if(value?.available===true && typeof value.phase==='string' && value.phase.length<=32 && counts.every(key=>Number.isSafeInteger(value[key]) && value[key]>=0))
             room={available:true,phase:value.phase,viewerSockets:value.viewerSockets,studioSockets:value.studioSockets,overlaySockets:value.overlaySockets,participants:value.participants};
+          const art=object(value?.cardArt);
+          if(art && ['images','bytes'].every(key=>Number.isSafeInteger(art[key]) && art[key]>=0) && ['allowed','refused'].includes(art.uploads))
+            cardArt={images:art.images,bytes:art.bytes,uploads:art.uploads};
         }
       } catch { /* Failed rooms remain visible as unavailable. */ }
       return {login:c.login,chatConnected:this.running(state) && c.chatWanted!==false && c.subscriptionStatus==='enabled',
-        subscriptionStatus:c.subscriptionStatus,pendingDeletion:c.pendingDeletion?.length??0,room};
+        subscriptionStatus:c.subscriptionStatus,pendingDeletion:c.pendingDeletion?.length??0,room,cardArt};
     }));
     const pendingSubscriptions=channels.reduce((sum,c)=>sum+c.pendingDeletion,0);
     const stopping=!!op?.pendingRooms.length || (!this.running(state) && (pendingSubscriptions>0 || this.providerTasks.size>0));
@@ -277,6 +280,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     if(request.method!=='POST') return json({error:'Method not allowed.'},405);
     if(request.headers.get('content-type')?.split(';')[0]!=='application/json') return json({error:'Use JSON.',code:'invalid_request'},415);
     const input=object(JSON.parse(await boundedControlBody(request)));
+    if(path==='/api/operator/card-art') return this.operatorArt(input);
     if(!input || Object.keys(input).some(k=>!['enabled','expectedRevision','reason'].includes(k)) || typeof input.enabled!=='boolean' ||
       !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision<0 || typeof input.reason!=='string' ||
       !input.reason.trim() || input.reason.length>200 || /[\x00-\x1f\x7f]/.test(input.reason)) return json({error:'Invalid operator request.',code:'invalid_request'},400);
@@ -300,6 +304,26 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     if(result) return result;
     await this.syncOperatorRooms(true);
     return this.operatorStatus();
+  }
+  /** Purge a channel's card images (and optionally its packs) and refuse its uploads, or allow uploads again. */
+  private async operatorArt(input: Record<string, any> | null): Promise<Response> {
+    const login=typeof input?.login==='string'?input.login.trim().toLowerCase():'';
+    if(!input || Object.keys(input).some(k=>!['login','action','removePacks','reason'].includes(k)) || !/^[a-z0-9_]{1,25}$/.test(login) ||
+      !['purge','allow'].includes(input.action) || (input.removePacks!==undefined && (typeof input.removePacks!=='boolean' || input.action!=='purge')) ||
+      typeof input.reason!=='string' || !input.reason.trim() || input.reason.length>200 || /[\x00-\x1f\x7f]/.test(input.reason))
+      return json({error:'Invalid operator request.',code:'invalid_request'},400);
+    await this.ready;
+    const channel=Object.values(this.committed.channels).find(c=>c.login===login);
+    if(!channel) return json({error:'No registered channel has that login.',code:'unknown_channel'},404);
+    let result: Record<string, any> | null = null;
+    try {
+      const response=await internalFetch(this.roomStub(channel.id),new Request('https://room.internal/internal/operator-card-art',{method:'POST',
+        headers:{'content-type':'application/json'},body:JSON.stringify({channelId:channel.id,action:input.action,removePacks:input.removePacks===true,reason:input.reason.trim()})}));
+      if(response.ok) result=object(await response.json());
+    } catch { /* Reported as unavailable below. */ }
+    if(!result || !['allowed','refused'].includes(result.uploads) || !['removedImages','removedBytes','removedPacks'].every(key=>Number.isSafeInteger(result![key]) && result![key]>=0))
+      return json({error:'The channel room did not confirm the change. Try again.',code:'room_unavailable'},503);
+    return json({login:channel.login,uploads:result.uploads,removedImages:result.removedImages,removedBytes:result.removedBytes,removedPacks:result.removedPacks});
   }
   private async syncOperatorRooms(force=false): Promise<void> {
     const op=this.committed.operator;
@@ -332,7 +356,7 @@ export class TwitchControl extends DurableObject<ControlEnv> {
     try {
       const url = new URL(request.url);
       if(request.url==='https://control.internal/internal/operator-health' && request.method==='GET') {await this.ready;return json({enabled:this.running()});}
-      if (url.pathname === '/api/operator/status' || url.pathname === '/api/operator/pilot') return await this.operator(request);
+      if (url.pathname === '/api/operator/status' || url.pathname === '/api/operator/pilot' || url.pathname === '/api/operator/card-art') return await this.operator(request);
       await this.ready;
       if (!this.running() && url.origin !== 'https://control.internal' && url.pathname !== WEBHOOK) return json({error:'The pilot is stopped. Try again when the test reopens.',code:'pilot_stopped'},503);
       if (url.pathname === CALLBACK && request.method === 'GET') return await this.callback(request, url);

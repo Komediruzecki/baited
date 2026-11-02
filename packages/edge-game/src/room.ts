@@ -6,7 +6,10 @@ import { CardLibrary } from '../../app/server/card-library-core.js';
 import { archiveInputSchema, selectInputSchema } from '../../app/shared/card-library.js';
 import { authenticateRequest, identityIsCurrent, type AuthIdentity, type AuthEnv } from './auth.js';
 import { serveApprovedArt, type ApprovedArt } from './art.js';
-import { CARD_REQUEST_BYTES, commandSchema, fingerprint, json, LIMITS, PROTOCOL_VERSION, readBounded, type Command, type Receipt } from './protocol.js';
+import { EdgeArtError, RoomArt } from './card-art.js';
+import { artUploadOptionsSchema, CARD_ART_CHECK_HEADER, EDGE_CARD_ART_LIMITS } from '../../app/shared/card-art.js';
+import { CARD_ART_CHECK } from '../../app/shared/card-art-policy.js';
+import { CARD_REQUEST_BYTES, commandSchema, fingerprint, json, LIMITS, PROTOCOL_VERSION, readBounded, readBoundedBytes, type Command, type Receipt } from './protocol.js';
 import { RoomStore } from './state-store.js';
 import { pilotLimits } from './pilot-policy.js';
 import { localTranscript, progressSchema } from '../../app/shared/local-speech.js';
@@ -30,6 +33,7 @@ const eventSchema = z.object({eventId:z.string().min(1).max(200),channelId:z.str
 /** One channel, one writer. Only the gateway holds a namespace binding. */
 export class ChannelRoom extends DurableObject<Env> {
   private store: RoomStore;
+  private art: RoomArt;
   private cards: CardLibrary;
   private cardsLoaded = false;
   private game: Game | null = null;
@@ -111,7 +115,8 @@ export class ChannelRoom extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.store = new RoomStore(ctx.storage.sql);
-    this.cards = new CardLibrary({ read: async () => this.store.cardLibrary(), write: async (body) => this.store.saveCardLibrary(body) });
+    this.art = new RoomArt(ctx.storage.sql);
+    this.cards = this.library();
     // A library that cannot be read keeps rounds on the built-in deck and Cards closed; it is never overwritten.
     void ctx.blockConcurrencyWhile(async () => {
       try { await this.cards.load(); this.cardsLoaded = true; } catch { this.cardsLoaded = false; }
@@ -152,9 +157,13 @@ export class ChannelRoom extends DurableObject<Env> {
     this.receiptAt = this.store.receiptDeadline();
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
   }
+  private library(): CardLibrary {
+    return new CardLibrary({ read: async () => this.store.cardLibrary(), write: async (body) => this.store.saveCardLibrary(body) },
+      (owner, artId) => this.art.canAttach(owner, artId));
+  }
   private bind(game: Game): Game {
     game.canRun = () => this.pilot() && game.mic==='listening' && this.pilotState.chatConnected && this.leaseValid();
-    game.artFor = () => undefined; // The edge does not serve card artwork yet.
+    game.artFor = (roundId, artId) => this.pilot() && this.art.canAttach(game.data.owner, artId) ? this.art.path(game.data.id, roundId, artId) : undefined;
     const builtin = game.deckFor;
     game.deckFor = (difficulty) => this.cardsLoaded ? this.cards.resolve(game.data.owner, difficulty) : builtin(difficulty);
     const events: {event:PilotEvent;safeView:ReturnType<Game['view']>}[]=[];
@@ -217,6 +226,95 @@ export class ChannelRoom extends DurableObject<Env> {
       throw error;
     }
   }
+  /** Images a card, the live round or a saved result still shows. */
+  private artReferences(channelId: string): Set<string> {
+    const references = this.cardsLoaded ? this.cards.referencedArt(channelId) : new Set<string>();
+    if (this.game) {
+      if (this.game.round?.artId) references.add(this.game.round.artId);
+      if (this.game.result?.artId) references.add(this.game.result.artId);
+      for (const result of this.game.data.history) if (result.artId) references.add(result.artId);
+    }
+    return references;
+  }
+  /** Studio's images and the signed round URL. Only the gateway reaches these paths; it checked the session and CSRF token. */
+  private async artRoute(request: Request, path: string): Promise<Response> {
+    const round = /^\/internal\/card-art\/round\/([A-Za-z0-9_-]{1,128})\/([0-9a-f-]{36})\/([0-9a-f-]{36})\/([A-Za-z0-9_-]{43})$/.exec(path);
+    if (round) return this.roundArt(request, round[1]!, round[2]!, round[3]!, round[4]!);
+    const channelId = request.headers.get('x-edge-channel-id') ?? '';
+    if (!/^[1-9][0-9]{0,24}$/.test(channelId) || (this.channel && this.channel !== channelId)) return json({error:'Access denied.'},403);
+    try {
+      if (path === '/internal/card-art' && request.method === 'GET') return json(this.art.list(channelId));
+      if (path === '/internal/card-art' && request.method === 'POST') {
+        if (request.headers.get(CARD_ART_CHECK_HEADER) !== CARD_ART_CHECK)
+          return json({code:'scan_unavailable',error:'Reload Studio so it can check this image on your device, then try again.'},422);
+        const options = artUploadOptionsSchema.parse({ purpose: request.headers.get('x-art-purpose') ?? undefined,
+          source: request.headers.get('x-art-source') ?? undefined, sourceId: request.headers.get('x-art-source-id') ?? undefined });
+        const next = structuredClone(this.pilotState);
+        if (!this.takeRate(next, `art:${channelId}`, 12)) return json({code:'art_busy',error:'Take a moment before adding another image.'},429);
+        this.ctx.storage.transactionSync(() => this.writePilot(next)); this.pilotState = next;
+        const art = await this.art.add(channelId, await readBoundedBytes(request, EDGE_CARD_ART_LIMITS.outputBytes), options, Date.now());
+        return json({ art, limits: EDGE_CARD_ART_LIMITS }, 201);
+      }
+      const file = /^\/internal\/card-art\/([0-9a-f-]{36})(\.png)?$/.exec(path);
+      if (file?.[2] && request.method === 'GET') return new Response(this.art.read(channelId, file[1]!), { headers: { 'content-type': 'image/png',
+        'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff', 'cross-origin-resource-policy': 'same-origin' } });
+      if (file && !file[2] && request.method === 'DELETE') {
+        await this.reconcile();
+        this.art.remove(channelId, file[1]!, this.artReferences(channelId));
+        return json(this.art.list(channelId));
+      }
+      return json({error:'Not found.'},404);
+    } catch (error) {
+      if (error instanceof EdgeArtError) return json({ code: error.code, error: error.message }, error.status);
+      if (error instanceof ZodError) return json({ code: 'invalid_image', error: 'Choose the image again.' }, 400);
+      if (error instanceof Error && error.message === 'body_size')
+        return json({ code: 'invalid_image', error: 'Images are saved at up to 1 MB. Choose it again so Studio can fit it.' }, 413);
+      throw error;
+    }
+  }
+  /** Public, but only with a URL this room signed, and only while that image is on the live card or a revealed result. */
+  private async roundArt(request: Request, room: string, round: string, art: string, token: string): Promise<Response> {
+    const hidden = () => json({code:'art_missing',error:'This artwork is no longer available.'},404);
+    if (!['GET','HEAD'].includes(request.method)) return json({error:'Method not allowed.'},405);
+    await this.reconcile();
+    const game = this.game;
+    if (!game || game.data.id !== room || !this.art.verify(room, round, art, token)) return hidden();
+    const live = game.round?.id === round && game.round.artId === art && ['active','paused','settling'].includes(game.phase);
+    const revealed = game.data.history.some((result) => result.id === round && result.artId === art && ['caught','escaped'].includes(result.outcome));
+    if ((!live && !revealed) || !this.art.canAttach(game.data.owner, art)) return hidden();
+    const bytes = this.art.read(game.data.owner, art);
+    return new Response(request.method === 'HEAD' ? null : bytes, { headers: { 'content-type': 'image/png', 'content-length': String(bytes.byteLength),
+      'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff', 'cross-origin-resource-policy': 'cross-origin' } });
+  }
+  /** Operator moderation from Control: purge deletes every image (and optionally every pack) and refuses new uploads; allow lifts that. */
+  private async operatorArt(request: Request): Promise<Response> {
+    if(request.method!=='POST' || new URL(request.url).origin!=='https://room.internal') return json({error:'Access denied.'},403);
+    const input=JSON.parse(await readBounded(request)) as Record<string,unknown>;
+    if(typeof input.channelId!=='string' || !/^[1-9][0-9]{0,24}$/.test(input.channelId) || (this.channel && this.channel!==input.channelId)) return json({error:'Access denied.'},403);
+    if(!['purge','allow'].includes(input.action as string) || typeof input.removePacks!=='boolean' || typeof input.reason!=='string' || !input.reason || input.reason.length>200)
+      return json({error:'Invalid operator request.'},400);
+    const now=Date.now();
+    if(input.action==='allow') {
+      this.ctx.storage.transactionSync(()=>this.art.allow(input.reason as string,now));
+      return json({uploads:'allowed',removedImages:0,removedBytes:0,removedPacks:0});
+    }
+    let removedPacks=0;
+    const removed=this.ctx.storage.transactionSync(()=>{
+      if(input.removePacks) {
+        removedPacks=this.cardsLoaded?this.cards.view(input.channelId as string,defaults.difficulty).packs.length:0;
+        this.ctx.storage.sql.exec('DELETE FROM card_library');
+      }
+      return this.art.purge(input.reason as string,now);
+    });
+    if(input.removePacks) {
+      // A fresh library reads the now-empty row, so rounds return to the built-in deck.
+      this.cards=this.library();
+      try { await this.cards.load(); this.cardsLoaded=true; } catch { this.cardsLoaded=false; }
+    }
+    // Viewers holding the old card drop its image; the signed URLs already stopped working.
+    this.projections.clear(); this.broadcast(true);
+    return json({uploads:'refused',removedImages:removed.images,removedBytes:removed.bytes,removedPacks});
+  }
   private attachment(ws: WebSocket): Attachment | null {
     try { return ws.deserializeAttachment() as Attachment | null; } catch { return null; }
   }
@@ -226,7 +324,8 @@ export class ChannelRoom extends DurableObject<Env> {
       if (!att || !this.current(att.identity)) ws.close(1008, 'Authorization expired. Reconnect.');
     }
   }
-  private broadcast(): void {
+  /** `everyone` resends to sockets that already have the current view revision, for a change outside the game state. */
+  private broadcast(everyone = false): void {
     this.now = Date.now();
     const frames = new Map<AuthIdentity['role'], string>();
     for (const ws of this.ctx.getWebSockets()) {
@@ -234,7 +333,7 @@ export class ChannelRoom extends DurableObject<Env> {
       if (!att || !this.current(att.identity)) { ws.close(1008, 'Authorization expired. Reconnect.'); continue; }
       if (ws.readyState !== WebSocket.OPEN) continue;
       const viewRevision=this.pilotState.viewRevisions?.[att.identity.role]??this.revision;
-      if(this.pilot() && att.identity.role!=='studio' && att.sentViewRevision===viewRevision) continue;
+      if(!everyone && this.pilot() && att.identity.role!=='studio' && att.sentViewRevision===viewRevision) continue;
       let frame = frames.get(att.identity.role);
       if (!frame) { frame = JSON.stringify(this.snapshot(att.identity.role)); frames.set(att.identity.role, frame); }
       try { ws.send(frame);att.sentViewRevision=viewRevision;ws.serializeAttachment(att); } catch { ws.close(1013, 'Reconnect to catch up.'); }
@@ -498,7 +597,10 @@ export class ChannelRoom extends DurableObject<Env> {
   private async fetchRequest(request: Request): Promise<Response> {
     const internalPath=new URL(request.url).pathname;
     if((this.pilot() || this.env.EDGE_OPERATOR_KEY) && ['/internal/operator','/internal/operator-status'].includes(internalPath)) return this.operatorRoom(request,internalPath);
+    // Moderation works while the pilot is stopped.
+    if(this.pilot() && internalPath==='/internal/operator-card-art') return this.operatorArt(request);
     if(this.operatorBlocked()) return json({error:'The pilot is stopped.',code:'pilot_stopped'},503);
+    if (this.pilot() && (internalPath==='/internal/card-art' || internalPath.startsWith('/internal/card-art/'))) return this.artRoute(request,internalPath);
     if (this.pilot() && internalPath.startsWith('/internal/cards')) return this.cardRoute(request,internalPath);
     if (this.pilot() && internalPath.startsWith('/internal/')) return this.internal(request,internalPath);
     // Headers are freshly constructed by the gateway, never copied from callers.
@@ -755,7 +857,7 @@ export class ChannelRoom extends DurableObject<Env> {
       const sockets=this.openSockets().map(ws=>this.attachment(ws)?.identity.role);
       return json({available:true,phase:this.game?.phase??'idle',viewerSockets:sockets.filter(r=>r==='viewer').length,
         studioSockets:sockets.filter(r=>r==='studio').length,overlaySockets:sockets.filter(r=>r==='overlay').length,
-        participants:this.game?.round?.participants.size??0});
+        participants:this.game?.round?.participants.size??0,cardArt:this.art.status()});
     }
     if(typeof input.enabled!=='boolean' || !Number.isSafeInteger(input.revision) || Number(input.revision)<1) return json({error:'Invalid operator state.'},400);
     const revision=Number(input.revision);

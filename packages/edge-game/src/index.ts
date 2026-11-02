@@ -1,7 +1,8 @@
 import { operatorAuthorized } from './operator-auth.js';
 import { isKnownAppPath, withErrorDocument } from '../../app/shared/error-pages.js';
 import { authenticateRequest } from "./auth.js";
-import { CARD_REQUEST_BYTES, json, readBounded } from "./protocol.js";
+import { CARD_REQUEST_BYTES, json, readBounded, readBoundedBytes } from "./protocol.js";
+import { CARD_ART_CHECK_HEADER, EDGE_CARD_ART_LIMITS } from "../../app/shared/card-art.js";
 import { pilotLimits, pilotLogins } from "./pilot-policy.js";
 import { pilotIngress } from "./ingress.js";
 import { internalFetch } from "./internal-fetch.js";
@@ -47,23 +48,60 @@ async function assets(request:Request,env:Env) {
   return withErrorDocument(request,new Response(response.body,{status:response.status,headers}));
 }
 
+/** Control finds the Studio session and, for a change, checks its CSRF token. */
+async function studioOwner(request:Request,env:Env,change:boolean):Promise<Response|{channelId:string;login:string}> {
+  // Fresh headers: only what Control needs to find the session and check the token.
+  const headers=new Headers({"content-type":"application/json"});
+  for(const name of ["cookie","origin","sec-fetch-site","x-csrf-token"]) {const value=request.headers.get(name);if(value!==null) headers.set(name,value);}
+  const auth=await internalFetch(control(env),new Request("https://control.internal/internal/studio-session",{method:"POST",headers,body:JSON.stringify({mutation:change})}));
+  return auth.ok ? await auth.json() as {channelId:string;login:string} : auth;
+}
+const channelRoom=(env:Env,channelId:string)=>env.ROOMS.get(env.ROOMS.idFromName(`channel:${channelId}`));
+
 /** Studio's card library. Control checks the session (and the CSRF token for changes); the channel's room owns the data. */
 async function studioCards(request:Request,env:Env,action:string):Promise<Response> {
   const change=action!=="";
   if(request.method!==(change?"POST":"GET")) return json({error:"Method not allowed."},405);
   if(change && request.headers.get("content-type")?.split(";")[0]!=="application/json") return json({error:"Use a JSON request."},415);
-  // Fresh headers: only what Control needs to find the session and check the token.
-  const headers=new Headers({"content-type":"application/json"});
-  for(const name of ["cookie","origin","sec-fetch-site","x-csrf-token"]) {const value=request.headers.get(name);if(value!==null) headers.set(name,value);}
-  const auth=await internalFetch(control(env),new Request("https://control.internal/internal/studio-session",{method:"POST",headers,body:JSON.stringify({mutation:change})}));
-  if(!auth.ok) return auth;
-  const owner=await auth.json() as {channelId:string;login:string};
+  const owner=await studioOwner(request,env,change);
+  if(owner instanceof Response) return owner;
   let body:string|undefined;
   if(change) {try {body=await readBounded(request,CARD_REQUEST_BYTES);} catch {return json({error:"This pack is too large to save."},413);}}
-  const room=env.ROOMS.get(env.ROOMS.idFromName(`channel:${owner.channelId}`));
-  const response=await internalFetch(room,new Request(`https://room.internal/internal/cards${action}`,{method:request.method,
+  const response=await internalFetch(channelRoom(env,owner.channelId),new Request(`https://room.internal/internal/cards${action}`,{method:request.method,
     headers:{"content-type":"application/json","x-edge-channel-id":owner.channelId,"x-edge-channel-login":owner.login},body}));
   return new Response(response.body,{status:response.status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
+}
+
+/** Studio's images: list and upload at the root, `/<id>.png` to read one, `/<id>` to delete it. The room stores them. */
+async function studioArt(request:Request,env:Env,rest:string):Promise<Response> {
+  const methods=rest==="" ? ["GET","POST"] : /^\/[0-9a-f-]{36}\.png$/.test(rest) ? ["GET"] : /^\/[0-9a-f-]{36}$/.test(rest) ? ["DELETE"] : null;
+  if(!methods) return json({error:"Not found."},404);
+  if(!methods.includes(request.method)) return json({error:"Method not allowed."},405);
+  const upload=request.method==="POST";
+  if(upload && request.headers.get("content-type")?.split(";")[0]!=="image/png")
+    return json({code:"invalid_image",error:"Studio uploads the PNG it fits on your device. Reload Studio and choose the image again."},415);
+  const owner=await studioOwner(request,env,request.method!=="GET");
+  if(owner instanceof Response) return owner;
+  const headers=new Headers({"x-edge-channel-id":owner.channelId,"x-edge-channel-login":owner.login});
+  let body:Uint8Array|undefined;
+  if(upload) {
+    try {body=await readBoundedBytes(request,EDGE_CARD_ART_LIMITS.outputBytes);}
+    catch {return json({code:"invalid_image",error:"Images are saved at up to 1 MB. Choose it again so Studio can fit it."},413);}
+    for(const name of ["content-type","x-art-purpose","x-art-source","x-art-source-id",CARD_ART_CHECK_HEADER]) {const value=request.headers.get(name);if(value!==null) headers.set(name,value);}
+  }
+  const response=await internalFetch(channelRoom(env,owner.channelId),new Request(`https://room.internal/internal/card-art${rest}`,{method:request.method,headers,body}));
+  const image=response.headers.get("content-type")==="image/png";
+  return new Response(response.body,{status:response.status,headers:{"content-type":image?"image/png":"application/json; charset=utf-8",
+    "cache-control":"private, no-store","x-content-type-options":"nosniff",...(image?{"cross-origin-resource-policy":"same-origin"}:{})}});
+}
+
+/** A round's image for the Extension and overlays. The room checks the signature and that the round shows that image. */
+async function roundArt(request:Request,env:Env,channelId:string,rest:string):Promise<Response> {
+  const url=new URL(request.url), origin=request.headers.get("origin");
+  if(!["GET","HEAD"].includes(request.method)) return json({error:"Method not allowed."},405);
+  if(url.search || (origin && !values(env.EDGE_ALLOWED_ORIGINS).includes(origin))) return json({error:"Not found."},404);
+  const response=await internalFetch(channelRoom(env,channelId),new Request(`https://room.internal/internal/card-art/round/edge-${channelId}/${rest}`,{method:request.method}));
+  return cors(response,origin);
 }
 
 export default {
@@ -80,7 +118,7 @@ export default {
       return json({service:pilot?"baited-edge-pilot":"baited-edge-poc",enabled,mode:pilot?enabled?'allowlisted-pilot':'stopped':"synthetic-proof"});
     }
     try {
-      if(url.pathname==='/api/operator/status' || url.pathname==='/api/operator/pilot') {
+      if(url.pathname==='/api/operator/status' || url.pathname==='/api/operator/pilot' || url.pathname==='/api/operator/card-art') {
         if(!destination(request,env)) return json({error:'Access denied.'},403);
         if(!operatorAuthorized(request,env)) return json({error:'Operator access denied.',code:'operator_auth'},401);
         return control(env).fetch(request);
@@ -96,6 +134,10 @@ export default {
         if(publicControl.includes(url.pathname)) return withErrorDocument(request,await control(env).fetch(request));
         const cards=/^\/api\/studio\/cards(\/(?:pack|archive|select))?$/.exec(url.pathname);
         if(cards) return studioCards(request,env,cards[1]??"");
+        const art=/^\/api\/studio\/card-art(\/[^/]*)?$/.exec(url.pathname);
+        if(art) return studioArt(request,env,art[1]??"");
+        const round=/^\/api\/card-art\/round\/edge-([1-9][0-9]{0,24})\/([0-9a-f-]{36}\/[0-9a-f-]{36}\/[A-Za-z0-9_-]{43})\.png$/.exec(url.pathname);
+        if(round) return roundArt(request,env,round[1]!,round[2]!);
       }
       const match=/^\/v1\/rooms\/([1-9][0-9]{0,24})\/(state|commands|socket|art\/[a-zA-Z0-9_-]{1,128})$/.exec(url.pathname);
       if(!match) return pilot?await assets(request,env):json({error:"Not found."},404);

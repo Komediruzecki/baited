@@ -18,7 +18,7 @@ The server runs **NSFWJS 4.4.0 / MobileNetV2Mid** on the CPU, using TensorFlow.j
 
 The application checks a white and a dark composite so transparency cannot hide the visible image against one background. Each composite is resized to the model's 224-pixel input; fine detail can be lost. The original import and final edited raster go through independent checks. The final record binds its own hash to an approved source ID and source hash owned by the same channel. That records which approved source was used; it cannot prove how an arbitrary raster was created before upload.
 
-The starting policy is fixed in `server/card-art-policy.ts`:
+The starting policy is fixed in `shared/card-art-policy.ts`:
 
 | Outcome | Condition on either composite |
 | --- | --- |

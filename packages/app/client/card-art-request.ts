@@ -1,4 +1,6 @@
-import { CARD_ART_LIMITS, type CardArtUploadResult, type CardArtLibraryView, type CardArtPurpose, type CardArtSource } from '../shared/card-art';
+import { CARD_ART_CHECK_HEADER, CARD_ART_LIMITS, type CardArtUploadResult, type CardArtLibraryView, type CardArtPurpose, type CardArtSource } from '../shared/card-art';
+import { CARD_ART_CHECK } from '../shared/card-art-policy';
+import { isEdgeRuntime } from './api';
 
 async function request(url: string, options: RequestInit): Promise<Response> {
   try { return await fetch(url, options); }
@@ -16,10 +18,13 @@ async function checked<T>(response: Response): Promise<T> {
 export async function uploadCardArt(blob: Blob, csrf: string, purpose: CardArtPurpose = 'card', source: CardArtSource = 'upload', sourceId?: string): Promise<CardArtUploadResult> {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(blob.type)) throw new Error('Choose a PNG, JPEG or WebP image.');
   if (!blob.size || blob.size > CARD_ART_LIMITS.uploadBytes) throw new Error('Choose an image smaller than 5 MB.');
+  // The edge pilot has no server-side scanner: Studio checks and fits the image on this device first.
+  const edge = isEdgeRuntime(), body = edge ? (await (await import('./card-art-check')).checkCardArt(blob)).png : blob;
   return checked(await request('/api/studio/card-art', {
     method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(90_000),
-    headers: { 'Content-Type': blob.type, 'x-csrf-token': csrf, 'x-art-purpose': purpose, 'x-art-source': source, ...(sourceId ? { 'x-art-source-id': sourceId } : {}) },
-    body: blob,
+    headers: { 'Content-Type': body.type, 'x-csrf-token': csrf, 'x-art-purpose': purpose, 'x-art-source': source, ...(sourceId ? { 'x-art-source-id': sourceId } : {}),
+      ...(edge ? { [CARD_ART_CHECK_HEADER]: CARD_ART_CHECK } : {}) },
+    body,
   }));
 }
 export async function listCardArt(): Promise<CardArtLibraryView> {

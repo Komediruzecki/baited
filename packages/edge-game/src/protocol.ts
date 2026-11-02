@@ -39,9 +39,12 @@ export function json(value: unknown, status = 200): Response {
 /** A full pack (up to 100 cards) with its field names fits well inside this. */
 export const CARD_REQUEST_BYTES = 64 * 1024;
 export async function readBounded(request: Request, max: number = LIMITS.commandBytes): Promise<string> {
+  return new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(await readBoundedBytes(request, max));
+}
+export async function readBoundedBytes(request: Request, max: number): Promise<Uint8Array> {
   if (Number(request.headers.get('content-length')) > max) throw new Error('body_size');
   const reader = request.body?.getReader();
-  if (!reader) return '';
+  if (!reader) return new Uint8Array(0);
   const chunks: Uint8Array[] = []; let size = 0;
   try {
     for (;;) {
@@ -53,7 +56,7 @@ export async function readBounded(request: Request, max: number = LIMITS.command
   } finally { reader.releaseLock(); }
   const bytes = new Uint8Array(size); let at = 0;
   for (const chunk of chunks) { bytes.set(chunk, at); at += chunk.length; }
-  return new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(bytes);
+  return bytes;
 }
 export async function fingerprint(text: string): Promise<string> {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
