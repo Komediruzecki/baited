@@ -16,8 +16,8 @@ See [`wrangler.pilot.jsonc`](./wrangler.pilot.jsonc). Admission settings fail cl
 
 | Configuration | Active value | Meaning |
 | --- | --- | --- |
-| `EDGE_CHANNEL_LOGIN_ALLOWLIST` | `komediruzecki7,lakeeko` | Two invited streamer channels. OAuth must prove an allowlisted identity. A browser-supplied channel name grants nothing. |
-| `EDGE_MAX_CHANNELS` | `2` | Allowlist/registered-channel ceiling. Supports up to 10 after review. This is stricter than allowing 10 simultaneous games from an unlimited directory. |
+| `EDGE_CHANNEL_LOGIN_ALLOWLIST` | `komediruzecki7,lakeeko,yahwehwastaken` | Three invited streamer channels. OAuth must prove an allowlisted identity. A browser-supplied channel name grants nothing. |
+| `EDGE_MAX_CHANNELS` | `3` | Allowlist/registered-channel ceiling. Supports up to 10 after review. This is stricter than allowing 10 simultaneous games from an unlimited directory. |
 | `EDGE_MAX_PARTICIPANTS` | `100` | Distinct chat identities admitted to each round. A 101st identity remains in normal Twitch chat but is ignored by the game. Pilot implementation will not accept a value above 100. |
 | `EDGE_MAX_VIEWER_SOCKETS` | `100` | Concurrent viewer connections per channel; separate from participants. Up to 200 configurable after a deliberate capacity review. |
 | `EDGE_CHAT_EVENTS_PER_MINUTE` | `600` | Per-room chat processing budget. Twitch can still deliver more ordinary chat to the ingress. Do not raise this without reviewing the global replay table. |
@@ -36,7 +36,7 @@ The 1,000 ms CPU allowance leaves headroom for room persistence and audience fan
 
 The active microphone has a 30-second lease renewed every 10 seconds and is bound to the exact Studio tab. A new round pauses if no audio timing arrives within five seconds, or if progress subsequently stops for 2.5 seconds. Late frames from a paused or finished round are ignored. Renewals return state in their response; there is no follow-up polling GET.
 
-The active configuration uses `EDGE_CHANNEL_LOGIN_ALLOWLIST=komediruzecki7,lakeeko` and `EDGE_MAX_CHANNELS=2`. The owner authorized both channels before activation. More allowlisted names than the configured ceiling fails validation; it does not select the first names. Any later expansion must update both settings together and receive authorization.
+The active configuration uses `EDGE_CHANNEL_LOGIN_ALLOWLIST=komediruzecki7,lakeeko,yahwehwastaken` and `EDGE_MAX_CHANNELS=3`. The owner authorized the first two channels before activation and added Paolo (`yahwehwastaken`) on 2 November 2026. More allowlisted names than the configured ceiling fails validation; it does not select the first names. Any later expansion must update both settings together and receive authorization.
 
 Adding another invited streamer is a small config change: add the exact login, increase `EDGE_MAX_CHANNELS` as needed, review it, and redeploy configuration. Existing cookies do not grant a removed channel continued admission. Before removing a channel, disconnect its Twitch subscriptions and end its active test; do not rely on an allowlist edit alone as cleanup.
 
