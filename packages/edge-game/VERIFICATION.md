@@ -51,7 +51,7 @@ PR #26 is ready for review and remains unmerged. All four packages passed at run
 
 ## Not established yet
 
-The [inactive deployment receipt](./INACTIVE-DEPLOYMENT.md) is historical; the current active two-channel configuration is recorded above. No actual user OAuth grant, EventSub/bot flow, hosted microphone test, Paolo round, OBS native run, provider billing measurement, load generator, existing-game data migration or production release ran on this cloud pilot. No R2 bucket, D1 database or Container was activated. Local limits and passing fixtures do not establish 1,000-player or 100,000-viewer capacity.
+The [inactive deployment receipt](./INACTIVE-DEPLOYMENT.md) is historical; the active configuration is recorded above, and its three-channel allowlist (since 2 November 2026) in [ACTIVE-PILOT.md](./ACTIVE-PILOT.md). No actual user OAuth grant, EventSub/bot flow, hosted microphone test, Paolo round, OBS native run, provider billing measurement, load generator, existing-game data migration or production release ran on this cloud pilot. No R2 bucket, D1 database or Container was activated. Local limits and passing fixtures do not establish 1,000-player or 100,000-viewer capacity.
 
 See [PILOT.md](./PILOT.md) for the first-live-round sequence. Code-review confirmation is complete. The current PR checks record exact-head CI; the real account/device/game acceptance remains separate from the passing public deployment checks.
 

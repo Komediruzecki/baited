@@ -13,7 +13,7 @@ A Cloudflare Worker routes authenticated traffic to one SQLite Durable Object pe
 
 ## Pilot scope
 
-The active streamer allowlist is `komediruzecki7,lakeeko`, with a two-channel ceiling. Paolo (`yahwehwastaken`) can join as a Twitch-allowlisted viewer; he is not enabled as a pilot streamer. Each channel admits up to 100 distinct chat participants per round and 100 concurrent viewer sockets, with separate capacity for Studio and OBS. These are different limits: a person can open more than one Extension view.
+The active streamer allowlist is `komediruzecki7,lakeeko,yahwehwastaken`, with a three-channel ceiling. Paolo (`yahwehwastaken`) became a pilot streamer on 2 November 2026; on the other channels he joins as a Twitch-allowlisted viewer. Each channel admits up to 100 distinct chat participants per round and 100 concurrent viewer sockets, with separate capacity for Studio and OBS. These are different limits: a person can open more than one Extension view.
 
 The existing illustrated deck is included. Custom decks, card creation, image uploads, scanning and R2 are disabled in this pilot. The existing Node application remains available for those features; this is not a complete product migration.
 
