@@ -81,6 +81,7 @@ import {
   CopyButton,
   Modal,
   HowTo,
+  ChatCommand,
 } from './ui';
 import './brand.css';
 import {
@@ -1958,7 +1959,8 @@ function Setup({
                   : `${connected ? 'Reading chat from' : 'Channel:'} @${game.channel}. ${game.connection.detail}.`}
               </p>
               <p className="setup-commands">
-                <code>!bait</code> joins the round. <code>!skip</code> votes for a new word.
+                <ChatCommand>!bait</ChatCommand> joins the round.{' '}
+                <ChatCommand>!skip</ChatCommand> votes for a new word.
                 Ordinary, non-spoiler chat also counts.
               </p>
               {game.mode === 'twitch' && (
@@ -2145,10 +2147,11 @@ function ChatBotStep({ bot, game }: { bot: ChatBotStatus; game: GameView }) {
         )}
         {isEdgeRuntime() && bot.mode === 'unauthorized' && <EdgeBotSignInButton phase={game.phase} />}
         <p className="setup-commands">
-          Chat can type <code>!bait help</code>, <code>!bait score</code>, <code>!bait top</code> and{' '}
-          <code>!bait who</code>.
-          With moderator commands on, mods can type <code>!bait start</code>,{' '}
-          <code>!bait pause</code> and <code>!bait resume</code>.
+          Chat can type <ChatCommand>!bait help</ChatCommand>,{' '}
+          <ChatCommand>!bait score</ChatCommand>, <ChatCommand>!bait top</ChatCommand> and{' '}
+          <ChatCommand>!bait who</ChatCommand>.
+          With moderator commands on, mods can type <ChatCommand>!bait start</ChatCommand>,{' '}
+          <ChatCommand>!bait pause</ChatCommand> and <ChatCommand>!bait resume</ChatCommand>.
         </p>
         {bot.problem && (
           <div className="notice">
