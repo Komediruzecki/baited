@@ -10,8 +10,9 @@ Requests with an `Origin` or `Cookie` header, a different destination, URL crede
 
 - `GET /api/operator/status` returns the current state.
 - `POST /api/operator/pilot`, `Content-Type: application/json`, changes it. Body: `{ "enabled": false, "expectedRevision": 3, "reason": "Finished testing for today" }`. `expectedRevision` must match the latest status. `reason` must be 1–200 characters without control characters. Unknown fields are rejected.
+- `POST /api/operator/card-art`, `Content-Type: application/json`, moderates one channel's card images (see [Card images](#card-images)).
 
-Both successful requests return:
+The status and pilot requests return:
 
 ```ts
 {
@@ -33,7 +34,8 @@ Both successful requests return:
       studioSockets: number,
       overlaySockets: number,
       participants: number
-    }
+    },
+    cardArt: null | { images: number, bytes: number, uploads: 'allowed' | 'refused' }
   }>,
   stats: {
     registeredChannels: number,
@@ -65,6 +67,20 @@ A completed stopped Room has no scheduled gameplay alarm. Control retains bounde
 Enable is refused while a room acknowledgement, subscription removal, or provider operation is unresolved. A successful enable reopens admission only. Streamers must sign in again, connect chat, enable their microphone, and start a new round. It does not resume capture, an unfinished round, or old bot work. In-flight OAuth begun before a stop is rejected even if the pilot has since been enabled again.
 
 The persisted operator switch cannot override `EDGE_PILOT_ENABLED=false`. Conversely, turning the master flag back on does not override a persisted operator stop.
+
+## Card images
+
+Studio checks each card image in the streamer's browser with the Node scanner's model and thresholds (`screenArt` in `app/shared/card-art-policy.ts`), then uploads a fitted PNG. The room stores it with the channel and enforces what a modified client cannot skip: PNG framing with no animation, text or EXIF chunks, at most 512 px per side and 1 MB per image, 200 images and 40 MB per channel, and 12 uploads a minute. The server does not scan pixels; a server-side scan is a production item.
+
+Viewers get an image only through a URL the room signed for one round and one image (`/api/card-art/round/edge-<channel>/<round>/<image>/<signature>.png`), served while that card is live or in a revealed result. `cardArt` in status counts each channel's stored images and says whether uploads are allowed.
+
+To act on a report:
+
+1. `POST /api/operator/card-art` with `{ "login": "channelname", "action": "purge", "removePacks": false, "reason": "Reported image, 2 Nov" }`. The room deletes every image, retires every signed URL, refuses new uploads and sends viewers a card without the image. `removePacks: true` also deletes the channel's packs, so rounds return to the built-in deck. Cards that pointed at a deleted image show the type-led design.
+2. To remove the channel from the pilot as well, take its login out of `EDGE_CHANNEL_LOGIN_ALLOWLIST` in `wrangler.pilot.jsonc` and deploy (see `PILOT.md`).
+3. `{ "login": "channelname", "action": "allow", "reason": "..." }` lets uploads resume; it restores nothing.
+
+The response is `{ login, uploads, removedImages, removedBytes, removedPacks }`. `login` must belong to a registered channel (`unknown_channel`, 404); a room that does not confirm returns `room_unavailable` (503). This works while the pilot is stopped.
 
 ## Safe first installation on an existing pilot
 

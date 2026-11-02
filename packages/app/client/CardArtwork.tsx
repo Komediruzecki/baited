@@ -3,6 +3,7 @@ import { CARD_ART_LIMITS, type CardArtLibraryView } from '../shared/card-art';
 import type { PixelDocument } from './pixel-art-model';
 import type { PixelArtResult } from './PixelArtEditor';
 import { uploadCardArt, listCardArt, deleteCardArt } from './card-art-request';
+import { isEdgeRuntime } from './api';
 import { Button, Modal } from './ui';
 import { Check, Trash2 } from './icons';
 import './card-artwork.css';
@@ -41,7 +42,7 @@ export function CardArtwork({ artId, csrf, disabled, onChange, onBusyChange }: {
   }, [artId]);
   const feedback = () => { setError(''); setNotice(''); };
   const upload = async (file: File) => {
-    setBusy('Fitting and checking image…'); feedback();
+    setBusy(isEdgeRuntime() ? 'Checking the image on this device…' : 'Fitting and checking image…'); feedback();
     try {
       const result = await uploadCardArt(file, csrf);
       onChange(result.art.id); setDocument(undefined); setSource(undefined);
@@ -99,7 +100,7 @@ export function CardArtwork({ artId, csrf, disabled, onChange, onBusyChange }: {
     </div>
     <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" hidden aria-label="Upload card image" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void upload(file); }} />
     <p className="card-maker__hint">Large photos are resized to fit the card. Nothing is cropped or stretched.</p>
-    <p className="card-artwork__policy">PNG, JPEG or WebP. Up to 5 MB, {CARD_ART_LIMITS.inputEdge} px per side and {CARD_ART_LIMITS.inputPixels / 1_000_000} megapixels. Use images you have permission to share. Sexual imagery is not allowed; images are checked before saving. Checks can miss content or reject a harmless image.</p>
+    <p className="card-artwork__policy">PNG, JPEG or WebP. Up to 5 MB, {CARD_ART_LIMITS.inputEdge} px per side and {CARD_ART_LIMITS.inputPixels / 1_000_000} megapixels. Use images you have permission to share. Sexual imagery is not allowed; {isEdgeRuntime() ? 'Studio checks each image on this device before it uploads, and images that break the rules are removed.' : 'images are checked before saving.'} Checks can miss content or reject a harmless image.</p>
     {!!busy && <p role="status" className="card-artwork__status">{busy}</p>}
     {!!error && <p role="alert" className="card-maker__field-error">{error}</p>}
     {!!notice && <p role="status" className="card-artwork__status">{notice}</p>}
@@ -107,7 +108,7 @@ export function CardArtwork({ artId, csrf, disabled, onChange, onBusyChange }: {
     {libraryOpen && <Modal title="Your saved images" onClose={() => { if (!busy) { setLibraryOpen(false); setRemoving(null); } }}>
       <div className="card-artwork__library">
         <p>Choose an image for this card. A source is the original used to make pixel or ASCII art.</p>
-        <small>{library?.art.length ?? 0}/{CARD_ART_LIMITS.assets} images · {((library?.bytes ?? 0) / 1024 / 1024).toFixed(1)} MB of 100 MB</small>
+        <small>{library?.art.length ?? 0}/{(library?.limits ?? CARD_ART_LIMITS).assets} images · {((library?.bytes ?? 0) / 1024 / 1024).toFixed(1)} MB of {Math.round((library?.limits ?? CARD_ART_LIMITS).storedBytes / 1024 / 1024)} MB</small>
         {!library?.art.length && <p>No saved images yet. Upload one or draw your first card.</p>}
         <div className="card-artwork__grid">{library?.art.map((item, index) => <div key={item.id}>
           <button type="button" className="card-artwork__tile" disabled={!!busy || item.purpose === 'source'} aria-pressed={artId === item.id} aria-label={`Use image ${index + 1}`} onClick={() => { onChange(item.id); setDocument(undefined); setSource(undefined); setLibraryOpen(false); setNotice('Image selected. Save the pack to use it.'); }}><img src={item.url} alt={`Saved ${item.source} ${item.purpose === 'source' ? 'source' : 'artwork'} ${index + 1}`} loading="lazy" width={96} height={96} /><span>{item.purpose === 'source' ? 'Source' : item.source === 'draw' ? 'Drawing' : item.source === 'ascii' ? 'ASCII' : item.source === 'pixel' ? 'Pixel art' : 'Image'}</span></button>

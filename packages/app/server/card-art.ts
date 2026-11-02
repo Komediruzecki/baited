@@ -2,7 +2,7 @@ import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, writeFile, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { CARD_ART_LIMITS, cardArtIdPattern, type CardArtErrorCode, type CardArtLibraryView, type CardArtPurpose, type CardArtSource, type CardArtView } from '../shared/card-art.js';
+import { CARD_ART_LIMITS, cardArtIdPattern, type ArtUploadOptions, type CardArtErrorCode, type CardArtLibraryView, type CardArtView } from '../shared/card-art.js';
 import { CARD_ART_MODEL, CARD_ART_POLICY, screenArt } from './card-art-policy.js';
 import { ArtProcessingError, LocalArtProcessor, type CardArtProcessor } from './card-art-scanner.js';
 import { equal } from './security.js';
@@ -21,12 +21,7 @@ const recordSchema = z.object({
   createdAt: z.number().int().positive(), model: z.string(), policy: z.string(),
 }).strict();
 type ArtRecord = z.infer<typeof recordSchema>;
-export interface ArtUploadOptions { purpose: CardArtPurpose; source: CardArtSource; sourceId?: string }
-export const artUploadOptionsSchema = z.object({
-  purpose: z.enum(['source', 'card']).default('card'),
-  source: z.enum(['upload', 'pixel', 'ascii', 'draw']).default('upload'),
-  sourceId: z.string().regex(cardArtIdPattern).optional(),
-}).strict().refine((value) => !(value.purpose === 'source' && value.sourceId), 'A source image cannot refer to another source.');
+export { artUploadOptionsSchema, type ArtUploadOptions } from '../shared/card-art.js';
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const missing = () => new CardArtError(404, 'art_missing', 'This artwork is no longer available.');
 
