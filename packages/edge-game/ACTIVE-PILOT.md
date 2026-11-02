@@ -1,10 +1,16 @@
 # Cloudflare pilot status
 
+## Paolo's channel added to the pilot, 2 November 2026 at 14:13 Zagreb
+
+The owner asked to add Paolo (`yahwehwastaken`) to the pilot. Provider version `6364f9ee-18e6-4339-aa0c-85f23fdab006` serves main `357ffc2` (PR #33), which sets `EDGE_CHANNEL_LOGIN_ALLOWLIST=komediruzecki7,lakeeko,yahwehwastaken` and `EDGE_MAX_CHANNELS=3`. It replaced `68a405e5-4e0c-4f89-84aa-a18d10d1e847` (card packs and welcome, `5ad1fed`), which is the rollback target. No allowlisted channel was live on Twitch at deploy time. The dry run listed the same 22 bindings as the previous receipt with only those two values changed, and the upload added 2 changed assets to the 159 already stored.
+
+After the upload, `/health` returned 200 with `enabled:true`; `/studio`, `/studio/cards`, `/privacy` and `/speech-lab` returned 200; and the authenticated operator status read `running` at revision 3 with `limits.streamers: 3`. Both registered rooms (`komediruzecki7`, `lakeeko`) were available. Paolo's channel registers when he first signs into Studio; to run the Extension on his own channel during Hosted Test, his account also needs Twitch's Streamer Allowlist. No secret, Twitch setting, Extension ZIP, operator state or tag changed. This is the current deployment; the sections below are historical.
+
 ## Card packs and the new welcome deployed, 2 November 2026 at 12:10 Zagreb
 
 The owner asked for Card Maker and a redesigned welcome screen on the pilot. Provider version `68a405e5-4e0c-4f89-84aa-a18d10d1e847` serves main `5ad1fed` (PR #31). It replaced `6fa0da92-9767-4984-b667-f10637f1c3f7` (Studio glass, `dece09b`), which is the rollback target. Neither allowlisted channel was live on Twitch at deploy time. The dry run listed the same 22 bindings as the previous receipt, and the upload added 10 changed assets to the 174 already stored, including the two welcome stage images.
 
-Signed-in streamers can now save word packs in Studio's Cards tab (10 packs and 100 cards per channel; six cards at one difficulty make a pack playable) and deal one to the next round. Packs live in the channel's room Durable Object; card images stay off. After the upload, `/health` returned 200 with `enabled:true`, `/studio`, `/studio/cards`, `/privacy` and `/speech-lab` returned 200, the welcome images returned `image/webp`, and `/api/studio/cards` returned 401 without a session. A signed-out browser check found the new welcome sheet (wordmark, five cards, the pilot line, no microphone note) and the privacy page's card packs section. Nobody has used Cards signed in on the live pilot yet. No secret, Twitch setting, Extension ZIP, operator state or tag changed. This is the current deployment; the sections below are historical.
+Signed-in streamers can now save word packs in Studio's Cards tab (10 packs and 100 cards per channel; six cards at one difficulty make a pack playable) and deal one to the next round. Packs live in the channel's room Durable Object; card images stay off. After the upload, `/health` returned 200 with `enabled:true`, `/studio`, `/studio/cards`, `/privacy` and `/speech-lab` returned 200, the welcome images returned `image/webp`, and `/api/studio/cards` returned 401 without a session. A signed-out browser check found the new welcome sheet (wordmark, five cards, the pilot line, no microphone note) and the privacy page's card packs section. Nobody has used Cards signed in on the live pilot yet. No secret, Twitch setting, Extension ZIP, operator state or tag changed.
 
 ## Studio glass deployed, 2 November 2026 at 09:15 Zagreb
 
