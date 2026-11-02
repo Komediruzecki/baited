@@ -2334,6 +2334,7 @@ function PublicRoom({ id, overlay }: { id: string; overlay: boolean }) {
 function Privacy() {
   if (isEdgeRuntime()) return (
     <div className="viewer-page">
+      <StudioPixelField />
       <header className="viewer-header"><a className="brand" href="/">{brand}</a><a className="text-button" href="/">Back to baited <ArrowUpRight size={16} /></a></header>
       <main className="privacy-copy">
         <h1>Pilot privacy</h1>
@@ -2351,6 +2352,7 @@ function Privacy() {
   );
   return (
     <div className="viewer-page">
+      <StudioPixelField />
       <header className="viewer-header">
         <a className="brand" href="/">
           {brand}
